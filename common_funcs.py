@@ -37,6 +37,8 @@ import pydensecrf.densecrf as dcrf
 from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_labels
 from skimage.morphology import binary_opening, disk
 
+from collections import defaultdict
+
 #===========================================
 def read_arrays(filename_pattern, shape, dtype):
     """
