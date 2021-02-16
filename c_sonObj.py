@@ -12,6 +12,7 @@ class sonObj:
         self.projDir = projDir   # Project directory
         self.datMetaFile = -1    # DAT metadata file path
         self.sonMetaFile = -1    # SON metadata file path
+        self.outPath = -1        # Location where outputs are saved
         # String
         self.beamName = -1       # Name of sonar beam
         # Number
@@ -19,6 +20,7 @@ class sonObj:
         self.nchunk = nchunk     # Pings per chunk
         self.datLen = -1         # Size of DAT in bytes
         self.headBytes = -1      # Number of ping header bytes in SON record
+        self.pingMax = -1
         # Boolean
         self.isOnix = -1         # Flag indicating if files from ONIX
         self.headValid = -1      # Flag indicating if SON header structure is correct
@@ -523,6 +525,7 @@ class sonObj:
         # Write data to csv
         beam = os.path.split(self.sonFile)[-1].split(".")[0]
         outCSV = os.path.join(self.metaDir, beam+"_meta.csv")
+
         self.sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
         self.sonMetaFile = outCSV
 
@@ -583,3 +586,68 @@ class sonObj:
         #     sonHead['heading'] = bearing
         # print("\n\n", sonHead, "\n\n")
         return sonHead
+
+    # =========================================================
+    def _getScansChunk(self):
+        datMeta = self.humDat
+        sonMetaAll = self.sonMetaAll
+
+        outPath = os.path.join(self.projDir, self.beamName)
+        self.outPath = outPath
+
+        try:
+            os.mkdir(outPath)
+        except:
+            pass
+
+        totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
+        self.pingMax = sonMetaAll['ping_cnt'].max().astype(int)
+        i = 0 #Chunk index
+        while i <= totalChunk:
+            isChunk = sonMetaAll['chunk_id']==i
+            sonMeta = sonMetaAll[isChunk].reset_index()
+            self.headIdx = sonMeta['index'].astype(int)
+            self.pingCnt = sonMeta['ping_cnt'].astype(int)
+            self._loadSonChunk()
+            self._writeTiles(i)
+            i+=1
+
+    # =========================================================
+    def _loadSonChunk(self):
+        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int)
+        file = open(self.sonFile, 'rb')
+        for i in range(len(self.headIdx)):
+            # print("index",i)
+            headIdx = self.headIdx[i]
+            pingCnt = self.pingCnt[i]
+            # print("Ping Count", pingCnt)
+            pingIdx = headIdx + self.headBytes
+            file.seek(pingIdx)
+            k = 0
+            while k < pingCnt:
+                byte = self._fread(file, 1, 'B')[0]
+                sonDat[k,i] = byte
+                # print(k,":",byte)
+                k+=1
+        # print(sonDat)
+        # print(sonDat.shape)
+        file.close()
+        self.sonDat = sonDat
+
+    # =========================================================
+    def _writeTiles(self, k):
+        data = self.sonDat
+        nx, ny = np.shape(data)
+        Z, ind = sliding_window(data, (nx, ny))
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+        Z = Z[0].astype('uint8')
+        imageio.imwrite(os.path.join(self.outPath, 'image-'+addZero+str(k)+'.png'), Z)
