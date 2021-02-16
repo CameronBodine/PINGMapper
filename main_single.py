@@ -24,24 +24,24 @@ if __name__ == "__main__":
     while keep_going is True:
 
         # Header size is: 72
-        # humfile = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014.DAT'
-        # sonpath = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014'
-        # proj_name = 'delete'
+        # humFile = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014.DAT'
+        # sonPath = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014'
+        # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         # Header size is: 152
-        # humfile = 'Z:\\toProcess\\bedPicking\\LakeMarry\\20191106\\Rec00003.DAT'
-        # sonpath = 'Z:\\toProcess\\bedPicking\\LakeMarry\\20191106\\Rec00003'
-        # proj_name = 'delete'
+        # humFile = 'Z:\\toProcess\\bedPicking\\LakeMarry\\20191106\\Rec00003.DAT'
+        # sonPath = 'Z:\\toProcess\\bedPicking\\LakeMarry\\20191106\\Rec00003'
+        # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         # Header size is: 67
         humFile = 'E:/NAU/Python/Py3Hum/example_raw_data/test.DAT'
         sonPath = 'E:/NAU/Python/Py3Hum/example_raw_data/'
-        projDir = 'E:/NAU/Python/PINGMapper/procData'
+        projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         # Onix
-        # humfile = "G:\\Shared drives\\GulfSturgeonProject_NAU\\data\\ExHumFiles\\Onix_sample\\Rec00019.DAT"
-        # sonpath = "G:\\Shared drives\\GulfSturgeonProject_NAU\\data\\ExHumFiles\\Onix_sample\\Rec00019"
-        # proj_name = 'delete'
+        # humFile = "G:\\Shared drives\\GulfSturgeonProject_NAU\\data\\ExHumFiles\\Onix_sample\\Rec00019.DAT"
+        # sonPath = "G:\\Shared drives\\GulfSturgeonProject_NAU\\data\\ExHumFiles\\Onix_sample\\Rec00019"
+        # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         direct = os.path.join('proc_data', projDir)
         if os.path.exists(direct):
