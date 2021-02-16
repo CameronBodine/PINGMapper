@@ -38,7 +38,7 @@ class sonObj:
         # dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
         # data = actual value of the attribute
 
-        humfile = self.humFile
+        humFile = self.humFile
         datLen = self.datLen
         t = self.tempC
         nchunk = self.nchunk
@@ -66,7 +66,7 @@ class sonObj:
             'unknown_6':[56, 0, 4, -1], #Unknown
             'unknown_7':[60, 0, 4, -1], #Unknown
             }
-            humdat = _getHumdat(humdic)
+            humDat = self._getHumdat(humdic)
 
         #Solix (Little Endian)
         elif datLen == 96:
@@ -98,15 +98,73 @@ class sonObj:
             'unknown_13':[88, 0, 4, -1], #Unknown
             'unknown_14':[92, 0, 4, -1]
             }
-            humdat = _getHumdat(humdic)
+            humDat = self._getHumdat(humdic)
 
         #Onix
         else:
             humdic = {}
-            fid2 = open(humfile,'rb')
-            humdat = _decode_onix(fid2)
+            fid2 = open(humFile,'rb')
+            # humDat = self._decode_onix(fid2)
             fid2.close()
 
-        humdat['chunk_size'] = nchunk
-        self.humDat = humdat
+        humDat['chunk_size'] = nchunk
+        self.humDat = humDat
         return
+
+    #===========================================
+    def _getHumdat(self, humdic):
+        """
+        returns data from .DAT file
+        """
+        humFile = self.humFile
+        datLen = self.datLen
+        t = self.tempC
+
+        humDat = {}
+        endian = humdic['endianness']
+        file = open(humFile, 'rb')
+        for key, val in humdic.items():
+            if key == 'endianness':
+                pass
+            else:
+                file.seek(val[0])
+                if val[2] == 4:
+                    byte = struct.unpack(endian, arr('B', self._fread(file, val[2], 'B')).tobytes())[0]
+                elif val[2] < 4:
+                    byte = self._fread(file, val[2], 'B')[0]
+                elif val[2] > 4:
+                    byte = arr('B', self._fread(file, val[2], 'B')).tobytes().decode()
+                else:
+                    byte = -9999
+                humDat[key] = byte
+
+        file.close()
+
+        waterCode = humDat['water_code']
+        if datLen == 64:
+            if waterCode == 0:
+                humDat['water_type'] = 'fresh'
+                S = 1
+            elif waterCode == 1:
+                humDat['water_type'] = 'deep salt'
+                S = 35
+            elif waterCode == 2:
+                humDat['water_type'] = 'shallow salt'
+                S = 30
+            else:
+                humDat['water_type'] = 'unknown'
+        #Need to figure out water code for solix
+        elif datLen == 96:
+            if waterCode == 1:
+                humDat['water_type'] = 'fresh'
+                S = 1
+            else:
+                humDat['water_type'] = 'unknown'
+                c = 1475
+
+        c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35)
+
+        tvg = ((8.5*10**-5)+(3/76923)+((8.5*10**-5)/4))*c
+        humDat['tvg'] = tvg
+
+        return humDat
