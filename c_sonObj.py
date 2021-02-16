@@ -5,10 +5,14 @@ from common_funcs import *
 class sonObj:
     def __init__(self, sonFile, humFile, projDir, tempC, nchunk):
         # Create necessary attributes
-        # String
+        # Path
         self.sonFile = -1        # SON file path
+        self.sonIDXFile = -1     # SON IDX file path
         self.humFile = humFile   # DAT file path
         self.projDir = projDir   # Project directory
+        self.datMetaFile = -1    # DAT metadata file path
+        self.sonMetaFile = -1    # SON metadata file path
+        # String
         self.beamName = -1       # Name of sonar beam
         # Number
         self.tempC = tempC       # Water temperature
@@ -21,6 +25,8 @@ class sonObj:
         # Dictionary
         self.humDat = -1         # Dictionary holding DAT metadata
         self.headStruct = -1     # Dictionary holding SON ping header structure
+        # Data frame
+        self.sonMetaAll = -1     # Dictionary holding SON ping header data
         # Function
         self.trans = -1          # Function to convert utm to lat/lon
 
@@ -465,3 +471,115 @@ class sonObj:
         file.close()
 
         self.headStruct = headStruct
+
+    # =========================================================
+    def _getSonMeta(self):
+        # Read son header for every ping
+        # Save to csv
+        # Prepare dictionary to hold all header data
+        headStruct = self.headStruct
+        nchunk = self.nchunk
+        head = defaultdict(list)
+        for key, val in headStruct.items():
+            head[val[-1]] = []
+
+        # First check if .idx file exists and get that data
+        idx = {'record_num': [],
+               'time_s': [],
+               'index': [],
+               'chunk_id': []}
+
+        idxFile = self.sonFile.replace(".SON", ".IDX")
+        if os.path.exists(idxFile):
+            self.sonIDXFile = idxFile
+            idxLen = os.path.getsize(idxFile)
+            idxFile = open(idxFile, 'rb')
+            i = j = chunk = 0
+            while i < idxLen:
+                idx['time_s'].append(struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0])
+                sonIndex = struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0]
+                idx['index'].append(sonIndex)
+                head['index'].append(sonIndex)
+                idx['chunk_id'].append(chunk)
+                head['chunk_id'].append(chunk)
+                headerDat = self._getHead(sonIndex)
+                for key, val in headerDat.items():
+                    head[key].append(val)
+                idx['record_num'].append(headerDat['record_num'])
+                i+=8
+                j+=1
+                if j == nchunk:
+                    j=0
+                    chunk+=1
+                # print("\n\n", idx, "\n\n")
+        else:
+            sys.exit("idx missing.  need to figure this out")
+
+        # print(head,"\n\n\n")
+        # print(idx)
+        self.sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T
+        idxDF = pd.DataFrame.from_dict(idx, orient="index").T
+
+        # Write data to csv
+        beam = os.path.split(self.sonFile)[-1].split(".")[0]
+        outCSV = os.path.join(self.metaDir, beam+"_meta.csv")
+        self.sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
+        self.sonMetaFile = outCSV
+
+        outCSV = os.path.join(self.metaDir, beam+"_idx.csv")
+        idxDF.to_csv(outCSV, index=False, float_format='%.14f')
+
+    # =========================================================
+    def _getHead(self, sonIndex):
+        headStruct = self.headStruct
+        humDat = self.humDat
+        nchunk = self.nchunk
+        sonHead = {'lat':-1}
+        file = open(self.sonFile, 'rb')
+        for key, val in headStruct.items():
+            index = sonIndex + val[0] + val[1]
+            file.seek(index)
+            if val[2] == 4:
+                byte = struct.unpack('>i', arr('B', self._fread(file, val[2], 'B')).tobytes())[0]
+            elif 1 < val[2] <4:
+                byte = struct.unpack('>h', arr('b', self._fread(file, val[2],'b')).tobytes() )[0]
+            else:
+                byte = self._fread(file, val[2], 'b')[0]
+            # print(val[-1],":",byte)
+            sonHead[val[-1]] = byte
+
+        file.close()
+
+        # Make necessary conversions
+        lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_y']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (sonHead['utm_x'] * 57.295779513082302) / 6378388.0
+
+        sonHead['lon'] = lon
+        sonHead['lat'] = lat
+
+        lon, lat = self.trans(lon, lat)
+        sonHead['e'] = lon
+        sonHead['n'] = lat
+
+        sonHead['instr_heading'] = sonHead['instr_heading']/10
+        sonHead['speed_ms'] = sonHead['speed_ms']/10
+        sonHead['inst_dep_m'] = sonHead['inst_dep_m']/10
+        sonHead['f'] = sonHead['f']/1000
+        sonHead['time_s'] = sonHead['time_s']/1000
+        sonHead['tempC'] = self.tempC*10
+        # Can we figure out a way to base transducer length on where we think the recording came from?
+        # I can't see anywhere where this value is used.
+        sonHead['t'] = 0.108
+        try:
+            starttime = float(humDat['unix_time'])
+            sonHead['caltime'] = starttime + sonHead['time_s']
+        except :
+            sonHead['caltime'] = 0
+
+        # if sonHead['beam']==3 or sonHead['beam']==2:
+        #     dist = ((np.tan(25*0.0174532925))*sonHead['inst_dep_m']) +(tvg)
+        #     bearing = 0.0174532925*sonHead['instr_heading'] - (pi/2)
+        #     bearing = bearing % 360
+        #     sonHead['heading'] = bearing
+        # print("\n\n", sonHead, "\n\n")
+        return sonHead
