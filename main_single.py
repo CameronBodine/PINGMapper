@@ -34,8 +34,8 @@ if __name__ == "__main__":
         # proj_name = 'delete'
 
         # Header size is: 67
-        humFile = 'example_raw_data/test.DAT'
-        sonPath = 'example_raw_data/'
+        humFile = 'E:/NAU/Python/Py3Hum/example_raw_data/test.DAT'
+        sonPath = 'E:/NAU/Python/Py3Hum/example_raw_data/'
         projDir = 'E:/NAU/Python/PINGMapper/procData'
 
         # Onix
