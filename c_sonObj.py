@@ -104,7 +104,7 @@ class sonObj:
         else:
             humdic = {}
             fid2 = open(humFile,'rb')
-            # humDat = self._decode_onix(fid2)
+            humDat = self._decodeOnix(fid2)
             fid2.close()
 
         humDat['chunk_size'] = nchunk
@@ -168,3 +168,34 @@ class sonObj:
         humDat['tvg'] = tvg
 
         return humDat
+
+    # =========================================================
+    def _decodeOnix(self, fid2):
+        """
+        returns data from .DAT file
+        """
+
+        dumpstr = fid2.read()
+        fid2.close()
+
+        if sys.version.startswith('3'):
+          dumpstr = ''.join(map(chr, dumpstr))
+
+        humdat = {}
+        hd = dumpstr.split('<')[0]
+        tmp = ''.join(dumpstr.split('<')[1:])
+        humdat['NumberOfPings'] = int(tmp.split('NumberOfPings=')[1].split('>')[0])
+        humdat['TotalTimeMs'] = int(tmp.split('TotalTimeMs=')[1].split('>')[0])
+        humdat['linesize'] = int(tmp.split('PingSizeBytes=')[1].split('>')[0])
+        humdat['FirstPingPeriodMs'] = int(tmp.split('FirstPingPeriodMs=')[1].split('>')[0])
+        humdat['BeamMask'] = int(tmp.split('BeamMask=')[1].split('>')[0])
+        humdat['Chirp1StartFrequency'] = int(tmp.split('Chirp1StartFrequency=')[1].split('>')[0])
+        humdat['Chirp1EndFrequency'] = int(tmp.split('Chirp1EndFrequency=')[1].split('>')[0])
+        humdat['Chirp2StartFrequency'] = int(tmp.split('Chirp2StartFrequency=')[1].split('>')[0])
+        humdat['Chirp2EndFrequency'] = int(tmp.split('Chirp2EndFrequency=')[1].split('>')[0])
+        humdat['Chirp3StartFrequency'] = int(tmp.split('Chirp3StartFrequency=')[1].split('>')[0])
+        humdat['Chirp3EndFrequency'] = int(tmp.split('Chirp3EndFrequency=')[1].split('>')[0])
+        humdat['SourceDeviceModelId2D'] = int(tmp.split('SourceDeviceModelId2D=')[1].split('>')[0])
+        humdat['SourceDeviceModelIdSI'] = int(tmp.split('SourceDeviceModelIdSI=')[1].split('>')[0])
+        humdat['SourceDeviceModelIdDI'] = int(tmp.split('SourceDeviceModelIdDI=')[1].split('>')[0])
+        return humdat
