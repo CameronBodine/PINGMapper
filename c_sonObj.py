@@ -11,6 +11,9 @@ class sonObj:
         self.tempC = tempC
         self.nchunk = nchunk
         self.datLen = -1
+        self.isOnix = -1
+        self.humDat = -1
+        self.trans = -1
 
         return
 
@@ -45,6 +48,7 @@ class sonObj:
 
         #1199, Helix
         if datLen == 64:
+            self.isOnix = 0
             humdic = {
             'endianness':'>i', #>=big endian; I=unsigned Int
             'SP1':[0, 0, 1, -1], #Unknown (spacer)
@@ -70,6 +74,7 @@ class sonObj:
 
         #Solix (Little Endian)
         elif datLen == 96:
+            self.isOnix = 0
             humdic = {
             'endianness':'<i', #<=little endian; I=unsigned Int
             'SP1':[0, 0, 1, -1], #Unknown (spacer)
@@ -102,6 +107,7 @@ class sonObj:
 
         #Onix
         else:
+            self.isOnix = 1
             humdic = {}
             fid2 = open(humFile,'rb')
             humDat = self._decodeOnix(fid2)
@@ -199,3 +205,24 @@ class sonObj:
         humdat['SourceDeviceModelIdSI'] = int(tmp.split('SourceDeviceModelIdSI=')[1].split('>')[0])
         humdat['SourceDeviceModelIdDI'] = int(tmp.split('SourceDeviceModelIdDI=')[1].split('>')[0])
         return humdat
+
+    # =========================================================
+    def _getEPSG(self):
+        if self.isOnix == 0:
+            utm_x = self.humDat['utm_x']
+            utm_y = self.humDat['utm_y']
+        else:
+            try:
+                pass
+            except:
+                pass
+
+        lat = np.arctan(np.tan(np.arctan(np.exp(utm_y/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (utm_x * 57.295779513082302) / 6378388.0
+
+        self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
+
+        try:
+            self.trans = pyproj.Proj(init=self.humDat['epsg'])
+        except:
+            self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
