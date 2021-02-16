@@ -10,6 +10,7 @@ class sonObj:
         self.projDir = projDir
         self.tempC = tempC
         self.nchunk = nchunk
+        self.datLen = -1
 
         return
 
