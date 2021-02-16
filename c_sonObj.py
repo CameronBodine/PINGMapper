@@ -5,7 +5,7 @@ from common_funcs import *
 class sonObj:
     def __init__(self, sonFile, humFile, projDir, tempC, nchunk):
         # Create necessary attributes
-        self.sonFile = sonFile
+        self.sonFile = -1
         self.humFile = humFile
         self.projDir = projDir
         self.tempC = tempC
@@ -14,13 +14,14 @@ class sonObj:
         self.isOnix = -1
         self.humDat = -1
         self.trans = -1
+        self.beamName = -1
+        self.headBytes = -1
 
         return
 
     # =========================================================
     def _toCSV(self, data, outFile):
-        pd.DataFrame.from_dict(data, orient='index').T.to_csv(outDir, index = False)
-
+        pd.DataFrame.from_dict(data, orient='index').T.to_csv(outFile, index = False)
 
     # =========================================================
     def _fread(self, infile, num, typ):
@@ -231,3 +232,35 @@ class sonObj:
             self.trans = pyproj.Proj(init=self.humDat['epsg'])
         except:
             self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
+
+    # =========================================================
+    def _cntHead(self):
+        file = open(self.sonFile, 'rb')
+        i = 0
+        foundEnd = False
+        while foundEnd is False and i < 200:
+            lastPos = file.tell() # Get current position in file
+            byte = self._fread(file, 1, 'B')
+            # print("Val: {} Pos: {}".format(byte, lastPos))
+            if byte[0] == 33 and lastPos > 3:
+                # Double check we found the actual end
+                file.seek(-6, 1)
+                byte = self._fread(file, 1, 'B')
+                if byte[0] == 160:
+                    foundEnd = True
+                else:
+                    # Didn't find the end of header
+                    # Move cursor back to lastPos
+                    file.seek(lastPos)
+            else:
+                # Haven't found the end
+                pass
+            i+=1
+
+        # i reaches 200, then we have exceeded known Humminbird header length
+        if i == 200:
+            i = 0
+
+        file.close()
+        self.headBytes = i
+        return i
