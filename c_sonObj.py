@@ -17,13 +17,12 @@ class sonObj:
         self.headBytes = -1      # Number of ping header bytes in SON record
         # Boolean
         self.isOnix = -1         # Flag indicating if files from ONIX
+        self.headValid = -1      # Flag indicating if SON header structure is correct
         # Dictionary
         self.humDat = -1         # Dictionary holding DAT metadata
         self.headStruct = -1     # Dictionary holding SON ping header structure
         # Function
         self.trans = -1          # Function to convert utm to lat/lon
-
-
 
         return
 
@@ -374,3 +373,23 @@ class sonObj:
             headStruct = {}
 
         self.headStruct = headStruct
+
+    # =========================================================
+    def _checkHeadStruct(self):
+        headStruct = self.headStruct
+        if len(headStruct) > 0:
+            file = open(self.sonFile, 'rb')
+
+            for key, val in headStruct.items():
+                file.seek(val[0])
+                byte = self._fread(file, 1, 'B')[0]
+                # print(val[3], "::", key, ":", byte)
+                if np.floor(key) == byte:
+                    headValid = [True]
+                else:
+                    headValid = [False, key, val, byte]
+                    break
+            file.close()
+        else:
+            headValid = [-1]
+        self.headValid = headValid
