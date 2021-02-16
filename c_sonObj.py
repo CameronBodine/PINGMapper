@@ -18,6 +18,11 @@ class sonObj:
         return
 
     # =========================================================
+    def _toCSV(self, data, outFile):
+        pd.DataFrame.from_dict(data, orient='index').T.to_csv(outDir, index = False)
+
+
+    # =========================================================
     def _fread(self, infile, num, typ):
         """
         This function reads binary data in a file
