@@ -10,7 +10,6 @@ https://github.com/dbuscombe-usgs/PyHum
 
 """
 
-from common_funcs import *
 from pj_readFiles import read_master_func
 import shutil
 
