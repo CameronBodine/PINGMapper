@@ -26,6 +26,7 @@ class sonObj:
         self.nchunk = nchunk
         self.humDatStruct = None
         self.humDat = None
+        self.headStruct = None
         # Function
         self.trans = None          # Function to convert utm to lat/lon
 
@@ -239,6 +240,38 @@ class sonObj:
             self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
 
         return
+
+    # =========================================================
+    def _cntHead(self):
+        file = open(self.sonFile, 'rb')
+        i = 0
+        foundEnd = False
+        while foundEnd is False and i < 200:
+            lastPos = file.tell() # Get current position in file
+            byte = self._fread(file, 1, 'B')
+            # print("Val: {} Pos: {}".format(byte, lastPos))
+            if byte[0] == 33 and lastPos > 3:
+                # Double check we found the actual end
+                file.seek(-6, 1)
+                byte = self._fread(file, 1, 'B')
+                if byte[0] == 160:
+                    foundEnd = True
+                else:
+                    # Didn't find the end of header
+                    # Move cursor back to lastPos
+                    file.seek(lastPos)
+            else:
+                # Haven't found the end
+                pass
+            i+=1
+
+        # i reaches 200, then we have exceeded known Humminbird header length
+        if i == 200:
+            i = 0
+
+        file.close()
+        self.headBytes = i
+        return i
 
     # =========================================================
     def _loadSon(self):
