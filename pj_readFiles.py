@@ -2,10 +2,15 @@
 
 from common_funcs import *
 from c_sonObj import sonObj
+from dask.distributed import Client, wait
+from joblib import delayed as jd
+import time
 
 
 #===========================================
 def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
+    start_time = time.time()
+    # client = Client()
 
     ###################################
     # Decode DAT file (varies by model)
@@ -155,15 +160,31 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
             toProcess.append(son)
 
     if len(toProcess) > 0:
+        # for son in toProcess:
+        #     son._getSonMeta()
         # backend="threading" makes it so same object is returned
-        Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10, backend="threading")(delayed(son._getSonMeta)() for son in toProcess)
+        Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10, backend="threading")(jd(son._getSonMeta)() for son in toProcess)
     print("Done!")
 
     ########################
     # Let's export the tiles
     print("\nGetting sonar data and exporting tile images:")
 
-    son = sonObjs[2]
-    # son._getScansChunk()
-    Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10, backend="threading")(delayed(son._getScansChunk)() for son in sonObjs)
+    Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)() for son in sonObjs)
+
+    for son in sonObjs:
+        print(son)
+
+    ## Below works
+    # try:
+    #     B000 = client.submit(sonObjs[0]._getScansChunk)
+    #     B001 = client.submit(sonObjs[1]._getScansChunk)
+    #     B002 = client.submit(sonObjs[2]._getScansChunk)
+    #     B003 = client.submit(sonObjs[3]._getScansChunk)
+    # except:
+    #     pass
+    # wait(B003)
+    ## Above works
+
     print("Done!")
+    print(round((time.time() - start_time),ndigits=2))
