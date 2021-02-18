@@ -16,9 +16,11 @@ class sonObj:
         # Number
         self.headBytes = None
         self.datLen = None
-        self.isOnix = None
         self.tempC = tempC       # Water temperature
         self.nchunk = nchunk     # Pings per chunk
+        # Boolean
+        self.isOnix = None    # Flag indicating if files from ONIX
+        self.headValid = None # Flag indicating if SON header structure is correct
         # List/Dictionary
         self.headIdx = None
         self.pingCnt = None
@@ -272,6 +274,109 @@ class sonObj:
         file.close()
         self.headBytes = i
         return i
+
+    # =========================================================
+    def _getHeadStruct(self):
+        # Returns dictionary with header structure
+        # Format: byteVal : [byteIndex, offset, dataLen, name]
+        # byteVal = Spacer value (integer) preceding attribute values (i.e. depth)
+        # byteIndex = Index indicating position of byteVal
+        # offset = Byte offset for the actual data
+        # dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
+        # name = name of attribute
+
+        headBytes = self.headBytes
+
+        if headBytes == 67:
+            headStruct = {
+            128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
+            129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
+            130:[14, 1, 4, 'utm_x'], #UTM X
+            131:[19, 1, 4, 'utm_y'], #UTM Y
+            132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
+            132.2:[24, 3, 2, 'instr_heading'], #Heading
+            133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
+            133.2:[29, 3, 2, 'speed_ms'], #Speed in meters/second
+            135:[34, 1, 4, 'inst_dep_m'], #Depth in centimeters, then converted to meters
+            80:[39, 1, 1, 'beam'], #Beam number: 0 (50 or 83 kHz), 1 (200 kHz), 2 (SI Poort), 3 (SI Starboard)
+            81:[41, 1, 1, 'volt_scale'], #Volt Scale (?)
+            146:[43, 1, 4, 'f'], #Frequency of beam in hertz
+            83:[48, 1, 1, "unknown_83"], #Unknown (number of satellites???)
+            84:[50, 1, 1, "unknown_84"], #Unknown
+            149:[52, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
+            86:[57, 1, 1, 'unknown_86'], #Unknown (+-X error)
+            87:[59, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            160:[61, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
+            }
+
+        # 1199 and Helix
+        elif headBytes == 72:
+            headStruct = {
+            128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
+            129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
+            130:[14, 1, 4, 'utm_x'], #UTM X
+            131:[19, 1, 4, 'utm_y'], #UTM Y
+            132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
+            132.2:[24, 3, 2, 'instr_heading'], #Heading
+            133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
+            133.2:[29, 3, 2, 'speed_ms'], #Speed in meters/second
+            134:[34, 1, 4, 'unknown_134'], #Unknown
+            135:[39, 1, 4, 'inst_dep_m'], #Depth in centimeters, then converted to meters
+            80:[44, 1, 1, 'beam'], #Beam number: 0 (50 or 83 kHz), 1 (200 kHz), 2 (SI Poort), 3 (SI Starboard)
+            81:[46, 1, 1, 'volt_scale'], #Volt Scale (?)
+            146:[48, 1, 4, 'f'], #Frequency of beam in hertz
+            83:[53, 1, 1, "unknown_83"], #Unknown (number of satellites???)
+            84:[55, 1, 1, "unknown_84"], #Unknown
+            149:[57, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
+            86:[62, 1, 1, 'unknown_86'], #Unknown (+-X error)
+            87:[64, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            160:[66, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
+            }
+
+        # Solix
+        elif headBytes == 152:
+            headStruct = {
+            128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
+            129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
+            130:[14, 1, 4, 'utm_x'], #UTM X
+            131:[19, 1, 4, 'utm_y'], #UTM Y
+            132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
+            132.2:[24, 3, 2, 'instr_heading'], #Heading
+            133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
+            133.2:[29, 3, 2, 'speed_ms'], #Speed in meters/second
+            134:[34, 1, 4, 'unknown_134'], #Unknown
+            135:[39, 1, 4, 'inst_dep_m'], #Depth in centimeters, then converted to meters
+            136:[44, 1, 4, 'unknown_136'], #Unknown
+            137:[49, 1, 4, 'unknown_137'], #Unknown
+            138:[54, 1, 4, 'unknown_138'], #Unknown
+            139:[59, 1, 4, 'unknown_139'], #Unkown
+            140:[64, 1, 4, 'unknown_140'], #Unknown
+            141:[69, 1, 4, 'unknown_141'], #Unknown
+            142:[74, 1, 4, 'unknown_142'], #Unknown
+            143:[79, 1, 4, 'unknown_143'], #Unknown
+            80:[84, 1, 1, 'beam'], #Beam number: 0 (50 or 83 kHz), 1 (200 kHz), 2 (SI Poort), 3 (SI Starboard)
+            81:[86, 1, 1, 'volt_scale'], #Volt Scale (?)
+            146:[88, 1, 4, 'f'], #Frequency of beam in hertz
+            83:[93, 1, 1, "unknown_83"], #Unknown (number of satellites???)
+            84:[95, 1, 1, "unknown_84"], #Unknown
+            149:[97, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
+            86:[102, 1, 1, 'unknown_86'], #Unknown (+-X error)
+            87:[104, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            152:[106, 1, 4, 'unknown_152'], #Unknown
+            153:[111, 1, 4, 'unknown_153'], #Unknown
+            154:[116, 1, 4, 'unknown_154'], #Unknown
+            155:[121, 1, 4, 'unknown_155'], #Unknown
+            156:[126, 1, 4, 'unknown_156'], #Unknown
+            157:[131, 1, 4, 'unknown_157'], #Unknown
+            158:[136, 1, 4, 'unknown_158'], #Unknown
+            159:[141, 1, 4, 'unknown_159'], #Unknown
+            160:[146, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
+            }
+        else:
+            headStruct = {}
+
+        self.headStruct = headStruct
+        return
 
     # =========================================================
     def _loadSon(self):
