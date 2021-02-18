@@ -1,7 +1,7 @@
 """
 Part of PING Mapper software
 
-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
+Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 
 This software builds upon PyHum software,
 originally developed by Dr. Daniel Buscombe
@@ -24,9 +24,9 @@ if __name__ == "__main__":
     while keep_going is True:
 
         # Header size is: 72
-        # humFile = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014.DAT'
-        # sonPath = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014'
-        # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
+        humFile = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014.DAT'
+        sonPath = 'Z:\\toProcess\\bedPicking\\SantaFe\\20170801\\R00014'
+        projDir = 'E:\\NAU/Python\\PINGMapper\\procData\\delete'
 
         # Header size is: 152
         # humFile = 'Z:\\toProcess\\bedPicking\\LakeMarry\\20191106\\Rec00003.DAT'
@@ -34,9 +34,9 @@ if __name__ == "__main__":
         # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         # Header size is: 67
-        humFile = 'E:/NAU/Python/Py3Hum/example_raw_data/test.DAT'
-        sonPath = 'E:/NAU/Python/Py3Hum/example_raw_data/'
-        projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
+        # humFile = 'E:/NAU/Python/Py3Hum/example_raw_data/test.DAT'
+        # sonPath = 'E:/NAU/Python/Py3Hum/example_raw_data/'
+        # projDir = 'E:/NAU/Python/PINGMapper/procData/delete'
 
         # Onix
         # humFile = "G:\\Shared drives\\GulfSturgeonProject_NAU\\data\\ExHumFiles\\Onix_sample\\Rec00019.DAT"
