@@ -47,7 +47,7 @@ The header for a sonar record contains metadata specific to that sonar record.  
 ##### Humminbird 900 Series
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
-| Start             | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
 | Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
 | **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record id |
 | Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
@@ -67,3 +67,19 @@ The header for a sonar record contains metadata specific to that sonar record.  
 | Tag 50            | +39    | 1      | 8     | `50`          | 80            | - |
 | **Sonar Beam**    | +40    | 1      | 8     | *Varies*      | *Varies*      | 0=low freq down; 1=hi freq down; 2=SI Port; 3=SI Star; 4=very high down |
 | Tag 51            | +41    | 1      | 8     | `51`          | 81            | - |
+| **Volt Scale**    | +42    | 1      | 8     | *Varies*      | *Varies*      | Voltage in tenths |
+| Tag 92            | +43    | 1      | 8     | `92`          | 146           | - |
+| **Frequency**     | +44    | 4      | 32    | *Varies*      | *Varies*      | Frequency in hertz |
+| Tag 53            | +48    | 1      | 8     | `53`          | 83            | - |
+| **Unknown**       | +49    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
+| Tag 54            | +50    | 1      | 8     | `54`          | 84            | - |
+| **Unknown**       | +51    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
+| Tag 95            | +52    | 1      | 8     | `149`         | 149           | - |
+| **Unknown**       | +53    | 4      | 32    | `00 00 00 1A` | 26            | Unknown |
+| Tag 56            | +57    | 1      | 8     | `56`          | 86            | - |
+| **+- UTM X (?)**  | +58    | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM X in centimeters |
+| Tag 57            | +59    | 1      | 8     | `57`          | 87            | - |
+| **+- UTM Y (?)**  | +60    | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM Y in centimeters |
+| Tag A0            | +61    | 1      | 8     | `A0`          | 160           | - |
+| Bytes in Ping     | +62    | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
+| End Head          | +66    | 1      | 8     | `21`          | 33            | End of sonar record header |
