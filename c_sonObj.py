@@ -7,15 +7,15 @@ class sonObj:
         # Path
         self.projDir = projDir   # Project directory
         self.humFile = humFile   # DAT file path
-        self.outPath = -1 # Location where outputs are saved
-        self.sonFile = -1 # SON file path
+        self.outPath = None # Location where outputs are saved
+        self.sonFile = None # SON file path
         # Number
-        self.headbytes = -1
+        self.headbytes = None
         # List
-        self.headIdx = -1
-        self.pingCnt = -1
-        self.pingMax = -1
-        self.nchunk = -1
+        self.headIdx = None
+        self.pingCnt = None
+        self.pingMax = None
+        self.nchunk = None
 
         return
 
@@ -51,4 +51,11 @@ class sonObj:
 
     # =
     def __str__(self):
-        return "Test"
+        output = "sonObj Contents"
+        output += '\n\t'
+        output += self.__repr__()
+        temp = vars(self)
+        for item in temp:
+            output += '\n\t'
+            output += "{} : {}".format(item, temp[item])
+        return output
