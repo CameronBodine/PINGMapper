@@ -194,17 +194,6 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
     Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)() for son in sonObjs)
 
-
-
-
-
-
-
-
-
-
-
-
     for son in sonObjs:
         print("\n\n")
         print(son)
