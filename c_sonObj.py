@@ -585,18 +585,32 @@ class sonObj:
         # print("\n\n", sonHead, "\n\n")
         return sonHead
 
+    # =========================================================
+    def _getScansChunk(self):
+        sonMetaAll = pd.read_csv(self.sonMetaFile)
 
+        totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
+        self.pingMax = sonMetaAll['ping_cnt'].max().astype(int)
+        i = 0 #Chunk index
+        while i <= totalChunk:
+            isChunk = sonMetaAll['chunk_id']==i
+            sonMeta = sonMetaAll[isChunk].reset_index()
+            self.headIdx = sonMeta['index'].astype(int)
+            self.pingCnt = sonMeta['ping_cnt'].astype(int)
+            self._loadSonChunk()
+            self._writeTiles(i)
+            i+=1
 
     # =========================================================
-    def _loadSon(self):
-        sonDat = np.zeros((self.pingMax, self.nchunk)).astype(int)
+    def _loadSonChunk(self):
+        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int)
         file = open(self.sonFile, 'rb')
         for i in range(len(self.headIdx)):
             # print("index",i)
             headIdx = self.headIdx[i]
             pingCnt = self.pingCnt[i]
             # print("Ping Count", pingCnt)
-            pingIdx = headIdx + self.headbytes
+            pingIdx = headIdx + self.headBytes
             file.seek(pingIdx)
             k = 0
             while k < pingCnt:
@@ -609,6 +623,23 @@ class sonObj:
         file.close()
         self.sonDat = sonDat
 
+    # =========================================================
+    def _writeTiles(self, k):
+        data = self.sonDat
+        nx, ny = np.shape(data)
+        Z, ind = sliding_window(data, (nx, ny))
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+        Z = Z[0].astype('uint8')
+        imageio.imwrite(os.path.join(self.outDir, 'image-'+addZero+str(k)+'.png'), Z)
 
     # =========================================================
     def __str__(self):
