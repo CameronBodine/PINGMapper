@@ -1,3 +1,4 @@
 procData/*
 __pycache__/*
-oldFiles/
+oldFiles/*
+main_single.py
