@@ -19,6 +19,8 @@ The initial release of PyHum documented the known binary structure of Humminbird
 
 ### SON File Structure
 A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
+
+<center>
 | File Name | Description                 | Frequency         |
 | --------- | --------------------------- | ----------------- |
 | B000.SON  | Low Frequency Down Scan     | 83 kHz            |
@@ -26,6 +28,7 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 | B002.SON  | Side Scan Port              | 455/800/1,200 kHz |
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Mega Frequency Down Scan    | 1,200 kHz         |
+</center>
 
 Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see additional information below).  The header is followed by 8-byte (0-255 Integer) values representing all the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.
 
@@ -36,5 +39,7 @@ The number of bytes for a sonar record varies in two ways.  First, depending on 
 | 67 Bytes      | 9xx              |
 | 72 Bytes      | 11xx, Helix, Onix|
 | 152 Bytes     | Solix            |
+
+Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit
 
 #### Humminbird 900 Series SON
