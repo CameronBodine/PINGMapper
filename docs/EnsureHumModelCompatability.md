@@ -15,4 +15,11 @@ This report documents a new workflow for decoding and loading sonar recordings, 
 ## DAT and SON Binary Structure
 The initial release of PyHum documented the known binary structure of Humminbird sonar files (https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst).  Using this as a guide, DAT and SON files were further explored using a program called Hexinator (https://hexinator.com/).  Hexinator interface allows you to quickly view binary data in hexidecimal format.  It has a tool that allows you to annotate the file with known structures and elements, known as a grammer, which can be applied to any open binary file which aides in seeing differences in the binary structure.
 
-![text](/docs/attach/Hexinator.PNG?raw=true)
+![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
+
+### SON File Structure
+A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
+| File Name | Sonar Channel | Frequency |
+| --------- | ------------- | --------- |
+| B000      | Low Frequency | 83 kHz    |
+#### Humminbird 900 Series
