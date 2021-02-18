@@ -2,20 +2,20 @@
 from common_funcs import *
 
 class sonObj:
-    def __init__(self, son, datMeta, sonMeta, headbytes, outPath, maxRange):
+    def __init__(self, sonFile, humFile, projDir, tempC, nchunk):
         # Create necessary attributes
         # Path
         self.projDir = projDir   # Project directory
         self.humFile = humFile   # DAT file path
-        self.outPath = outPath # Location where outputs are saved
-        self.sonFile = son # SON file path
+        self.outPath = -1 # Location where outputs are saved
+        self.sonFile = -1 # SON file path
         # Number
-        self.headbytes = headbytes
+        self.headbytes = -1
         # List
-        self.headIdx = sonMeta['index'].astype(int)
-        self.pingCnt = sonMeta['ping_cnt'].astype(int)
-        self.pingMax = maxRange.astype(int)
-        self.nchunk = datMeta['chunk_size'][0]
+        self.headIdx = -1
+        self.pingCnt = -1
+        self.pingMax = -1
+        self.nchunk = -1
 
         return
 
@@ -47,3 +47,8 @@ class sonObj:
         # print(sonDat.shape)
         file.close()
         self.sonDat = sonDat
+
+
+    # =
+    def __str__(self):
+        return "Test"
