@@ -9,6 +9,10 @@ class sonObj:
         self.humFile = humFile   # DAT file path
         self.outPath = None # Location where outputs are saved
         self.sonFile = None # SON file path
+        self.sonMetaDir = None # Metadata file directory
+        self.datMetaFile = None    # DAT metadata file path
+        # String
+        self.beamName = None       # Name of sonar beam
         # Number
         self.headBytes = None
         self.datLen = None
@@ -22,6 +26,8 @@ class sonObj:
         self.nchunk = nchunk
         self.humDatStruct = None
         self.humDat = None
+        # Function
+        self.trans = None          # Function to convert utm to lat/lon
 
         return
 
@@ -125,7 +131,7 @@ class sonObj:
         datLen = self.datLen
         t = self.tempC
 
-        humDat = {}
+        humDat = defaultdict(dict)
         endian = humdic['endianness']
         file = open(humFile, 'rb')
         for key, val in humdic.items():
@@ -209,6 +215,29 @@ class sonObj:
         humdat['SourceDeviceModelIdSI'] = int(tmp.split('SourceDeviceModelIdSI=')[1].split('>')[0])
         humdat['SourceDeviceModelIdDI'] = int(tmp.split('SourceDeviceModelIdDI=')[1].split('>')[0])
         self.humDat = humdat
+        return
+
+    # =========================================================
+    def _getEPSG(self):
+        if self.isOnix == 0:
+            utm_x = self.humDat['utm_x']
+            utm_y = self.humDat['utm_y']
+        else:
+            try:
+                pass
+            except:
+                pass
+
+        lat = np.arctan(np.tan(np.arctan(np.exp(utm_y/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (utm_x * 57.295779513082302) / 6378388.0
+
+        self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
+
+        try:
+            self.trans = pyproj.Proj(init=self.humDat['epsg'])
+        except:
+            self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
+
         return
 
     # =========================================================
