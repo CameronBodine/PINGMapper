@@ -4,9 +4,14 @@ from common_funcs import *
 class pyread:
     def __init__(self, son, datMeta, sonMeta, headbytes, outPath, maxRange):
         # Create necessary attributes
-        self.outPath = outPath
-        self.sonFile = son
+        # Path
+        self.projDir = projDir   # Project directory
+        self.humFile = humFile   # DAT file path
+        self.outPath = outPath # Location where outputs are saved
+        self.sonFile = son # SON file path
+        # Number
         self.headbytes = headbytes
+        # List
         self.headIdx = sonMeta['index'].astype(int)
         self.pingCnt = sonMeta['ping_cnt'].astype(int)
         self.pingMax = maxRange.astype(int)
