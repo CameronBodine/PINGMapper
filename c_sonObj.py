@@ -379,6 +379,34 @@ class sonObj:
         return
 
     # =========================================================
+    def _checkHeadStruct(self):
+        headStruct = self.headStruct
+        if len(headStruct) > 0:
+            file = open(self.sonFile, 'rb')
+
+            for key, val in headStruct.items():
+                file.seek(val[0])
+                byte = self._fread(file, 1, 'B')[0]
+                # print(val[3], "::", key, ":", byte)
+                if np.floor(key) == byte:
+                    headValid = [True]
+                else:
+                    headValid = [False, key, val, byte]
+                    break
+            file.close()
+        else:
+            headValid = [-1]
+        self.headValid = headValid
+        return
+
+
+
+
+
+
+
+
+    # =========================================================
     def _loadSon(self):
         sonDat = np.zeros((self.pingMax, self.nchunk)).astype(int)
         file = open(self.sonFile, 'rb')
@@ -401,7 +429,7 @@ class sonObj:
         self.sonDat = sonDat
 
 
-    # =
+    # =========================================================
     def __str__(self):
         output = "sonObj Contents"
         output += '\n\t'
