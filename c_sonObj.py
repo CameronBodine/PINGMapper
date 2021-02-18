@@ -589,8 +589,7 @@ class sonObj:
 
     # =========================================================
     def _getScansChunk(self):
-        datMeta = self.humDat
-        sonMetaAll = self.sonMetaAll
+        sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         outPath = os.path.join(self.projDir, self.beamName)
         self.outPath = outPath
