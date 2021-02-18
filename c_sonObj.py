@@ -399,7 +399,78 @@ class sonObj:
         self.headValid = headValid
         return
 
+    # =========================================================
+    def _decodeHeadStruct(self):
+        headBytes = self.headBytes
+        headStruct = {}
+        toCheck = {
+            128:[-1, 1, 4, 'record_num'], #Record Number (Unique for each ping)
+            129:[-1, 1, 4, 'time_s'], #Time Elapsed milliseconds
+            130:[-1, 1, 4, 'utm_x'], #UTM X
+            131:[-1, 1, 4, 'utm_y'], #UTM Y
+            132.1:[-1, 1, 2, 'gps1'], #GPS quality flag (?)
+            132.2:[-1, 3, 2, 'instr_heading'], #Heading
+            133.1:[-1, 1, 2, 'gps2'], #GPS quality flag (?)
+            133.2:[-1, 3, 2, 'speed_ms'], #Speed in meters/second
+            134:[-1, 1, 4, 'unknown_134'], #Unknown
+            135:[-1, 1, 4, 'inst_dep_m'], #Depth in centimeters, then converted to meters
+            136:[-1, 1, 4, 'unknown_136'], #Unknown
+            137:[-1, 1, 4, 'unknown_137'], #Unknown
+            138:[-1, 1, 4, 'unknown_138'], #Unknown
+            139:[-1, 1, 4, 'unknown_139'], #Unkown
+            140:[-1, 1, 4, 'unknown_140'], #Unknown
+            141:[-1, 1, 4, 'unknown_141'], #Unknown
+            142:[-1, 1, 4, 'unknown_142'], #Unknown
+            143:[-1, 1, 4, 'unknown_143'], #Unknown
+            80:[-1, 1, 1, 'beam'], #Beam number: 0 (50 or 83 kHz), 1 (200 kHz), 2 (SI Poort), 3 (SI Starboard)
+            81:[-1, 1, 1, 'volt_scale'], #Volt Scale (?)
+            146:[-1, 1, 4, 'f'], #Frequency of beam in hertz
+            83:[-1, 1, 1, "unknown_83"], #Unknown (number of satellites???)
+            84:[-1, 1, 1, "unknown_84"], #Unknown
+            149:[-1, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
+            86:[-1, 1, 1, 'unknown_86'], #Unknown (+-X error)
+            87:[-1, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            152:[-1, 1, 4, 'unknown_152'], #Unknown
+            153:[-1, 1, 4, 'unknown_153'], #Unknown
+            154:[-1, 1, 4, 'unknown_154'], #Unknown
+            155:[-1, 1, 4, 'unknown_155'], #Unknown
+            156:[-1, 1, 4, 'unknown_156'], #Unknown
+            157:[-1, 1, 4, 'unknown_157'], #Unknown
+            158:[-1, 1, 4, 'unknown_158'], #Unknown
+            159:[-1, 1, 4, 'unknown_159'], #Unknown
+            160:[-1, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
+            }
 
+        file = open(self.sonFile, 'rb')
+        lastPos = 0
+        head = self._fread(file, 4,'B')
+
+        if head[0] == 192 and head[1] == 222 and head[2] == 171 and head[3] == 33:
+            while lastPos < headBytes - 1:
+                lastPos = file.tell() # Get current position in file
+                byte = self._fread(file, 1, 'B')[0]
+                # print("B: ", byte, " I: ", lastPos, " H: ", headBytes-1)
+                if byte != 132 and byte != 133:
+                    meta = toCheck[byte]
+                    meta[0] = lastPos
+                    headStruct[byte] = meta
+                    file.seek(meta[0]+meta[1]+meta[2])
+                else:
+                    byte = byte + 0.1
+                    meta0_1 = toCheck[byte]
+                    meta0_1[0] = lastPos
+                    headStruct[byte] = meta0_1
+                    byte = byte + 0.1
+                    meta0_2 = toCheck[byte]
+                    meta0_2[0] = lastPos
+                    headStruct[byte] = meta0_2
+                    file.seek(meta0_2[0]+meta0_2[1]+meta0_2[2])
+                lastPos = file.tell()
+
+        file.close()
+
+        self.headStruct = headStruct
+        return
 
 
 
