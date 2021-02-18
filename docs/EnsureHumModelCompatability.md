@@ -20,18 +20,17 @@ The initial release of PyHum documented the known binary structure of Humminbird
 ### SON File Structure
 A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
 
-<center>
 | File Name | Description                 | Frequency         |
 | --------- | --------------------------- | ----------------- |
-| B000.SON  | Low Frequency Down Scan     | 83 kHz            |
+| B000.SON  | Low Frequency Down Scan     | 50/83 kHz         |
 | B001.SON  | High Frequency Down Scan    | 200 kHz           |
 | B002.SON  | Side Scan Port              | 455/800/1,200 kHz |
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Mega Frequency Down Scan    | 1,200 kHz         |
-</center>
 
-Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see additional information below).  The header is followed by 8-byte (0-255 Integer) values representing all the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.
+Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see additional information below).  The header is followed by 8-byte (0-255 Integer) values representing all the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
 
+#### Sonar Record Structure
 The number of bytes for a sonar record varies in two ways.  First, depending on the model (and potentially firmware version), the number of bytes in the sonar record header vary in length.  Three different lengths have been identified so far:
 
 | Header Length | Humminbird Model |
@@ -40,6 +39,31 @@ The number of bytes for a sonar record varies in two ways.  First, depending on 
 | 72 Bytes      | 11xx, Helix, Onix|
 | 152 Bytes     | Solix            |
 
-Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit
+Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird model make automatically decoding the file a non-trivial task.  Each sonar record always begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By simply counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.
 
-#### Humminbird 900 Series SON
+##### Header Structure
+The header for a sonar record contains metadata specific to that sonar record.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  This data is always preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is always tagged by a hexidecimal value of `87`.  While the variety of information that is stored in the header varies by Humminbird model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset, the data that follows the tag, and the size (in bytes) of the data.
+
+##### Humminbird 900 Series
+| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
+| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
+| Start             | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
+| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record id |
+| Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
+| **Time Elapsed**  | +10    | 4      | 32    | *Varies*      | *Varies*      | Time elapsed (in milliseconds) |
+| Tag 82            | +14    | 1      | 8     | `82`          | 130           | - |
+| **UTM X**         | +15    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Easting |
+| Tag 83            | +19    | 1      | 8     | `83`          | 131           | - |
+| **UTM Y**         | +20    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Northing |
+| Tag 84            | +24    | 1      | 8     | `84`          | 132           | - |
+| **GPS Flag (?)**  | +25    | 2      | 16    | *Varies*      | *Varies*      | Quality flag for heading (?) 0=bad; 1=good |
+| **Heading**       | +27    | 2      | 16    | *Varies*      | *Varies*      | Heading in tenths of a degree |
+| Tag 85            | +29    | 1      | 8     | `85`          | 133           | - |
+| **GPS Flag (?)**  | +30    | 2      | 16    | *Varies*      | *Varies*      | Quality flag for speed (?) 0=bad; 1=good |
+| **Speed**         | +32    | 2      | 16    | *Varies*      | *Varies*      | Vessel speed in centimeters/second|
+| Tag 87            | +34    | 1      | 8     | `87`          | 135           | - |
+| **Depth**         | +35    | 4      | 32    | *Varies*      | *Varies*      | Sensor depth in centimeters |
+| Tag 50            | +39    | 1      | 8     | `50`          | 80            | - |
+| **Sonar Beam**    | +40    | 1      | 8     | *Varies*      | *Varies*      | 0=low freq down; 1=hi freq down; 2=SI Port; 3=SI Star; 4=very high down |
+| Tag 51            | +41    | 1      | 8     | `51`          | 81            | - |
