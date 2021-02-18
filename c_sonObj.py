@@ -1,7 +1,7 @@
 
 from common_funcs import *
 
-class pyread:
+class sonObj:
     def __init__(self, son, datMeta, sonMeta, headbytes, outPath, maxRange):
         # Create necessary attributes
         # Path
