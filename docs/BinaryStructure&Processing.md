@@ -87,7 +87,7 @@ Header Length (Bytes): **67**
 
 
 ##### Humminbird 1100 & Helix Series
-Header Length (Bytes): **72**
+Header Length (Bytes): **72**  
 *Note:* The structure is the same as 900 series for offset 0 - 33.
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
