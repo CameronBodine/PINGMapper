@@ -120,7 +120,7 @@ Header Length (Bytes): **72**
 | **Unknown**       | +54    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
 | Tag 54            | +55    | 1      | 8     | `54`          | 84            | - |
 | **Unknown**       | +56    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
-| Tag 95            | +57    | 1      | 8     | `149`         | 149           | - |
+| Tag 95            | +57    | 1      | 8     | `95`          | 149           | - |
 | **Unknown**       | +58    | 4      | 32    | `00 00 00 1A` | 26            | Unknown |
 | Tag 56            | +62    | 1      | 8     | `56`          | 86            | - |
 | **+- UTM X (?)**  | +63    | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM X in centimeters |
@@ -129,3 +129,80 @@ Header Length (Bytes): **72**
 | Tag A0            | +66    | 1      | 8     | `A0`          | 160           | - |
 | Bytes in Ping     | +67    | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
 | End Head          | +71    | 1      | 8     | `21`          | 33            | End of sonar record header |
+
+
+##### Humminbird Solix Series
+Header Length (Bytes): **152**  
+*Note:* The structure is the same as 1100/Helix series for offset 0 - 43.
+| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
+| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
+| Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
+| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record id |
+| Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
+| **Time Elapsed**  | +10    | 4      | 32    | *Varies*      | *Varies*      | Time elapsed (in milliseconds) |
+| Tag 82            | +14    | 1      | 8     | `82`          | 130           | - |
+| **UTM X**         | +15    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Easting |
+| Tag 83            | +19    | 1      | 8     | `83`          | 131           | - |
+| **UTM Y**         | +20    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Northing |
+| Tag 84            | +24    | 1      | 8     | `84`          | 132           | - |
+| **GPS Flag (?)**  | +25    | 2      | 16    | *Varies*      | *Varies*      | Quality flag for heading (?) 0=bad; 1=good |
+| **Heading**       | +27    | 2      | 16    | *Varies*      | *Varies*      | Heading in tenths of a degree |
+| Tag 85            | +29    | 1      | 8     | `85`          | 133           | - |
+| **GPS Flag (?)**  | +30    | 2      | 16    | *Varies*      | *Varies*      | Quality flag for speed (?) 0=bad; 1=good |
+| **Speed**         | +32    | 2      | 16    | *Varies*      | *Varies*      | Vessel speed in centimeters/second|
+| Tag 86            | +34    | 1      | 8     | `86`          | 134           | - |
+| **Unknown**       | +35    | 4      | 32    | `00 00 00 00` | 0             | Unknown |
+| Tag 87            | +39    | 1      | 8     | `87`          | 135           | - |
+| **Depth**         | +40    | 4      | 32    | *Varies*      | *Varies*      | Sensor depth in centimeters |
+| Tag 88            | +44    | 1      | 8     | `88`          | 136           | - |
+| **Unknown**       | +45    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 89            | +49    | 1      | 8     | `89`          | 137           | - |
+| **Unknown**       | +50    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8A            | +54    | 1      | 8     | `8A`          | 138           | - |
+| **Unknown**       | +55    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8B            | +59    | 1      | 8     | `8B`          | 139           | - |
+| **Unknown**       | +60    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8C            | +64    | 1      | 8     | `8C`          | 140           | - |
+| **Unknown**       | +65    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8D            | +69    | 1      | 8     | `8D`          | 141           | - |
+| **Unknown**       | +70    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8E            | +74    | 1      | 8     | `8E`          | 142           | - |
+| **Unknown**       | +75    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 8F            | +79    | 1      | 8     | `8F`          | 143           | - |
+| **Unknown**       | +80    | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 50            | +84    | 1      | 8     | `50`          | 80            | - |
+| **Sonar Beam**    | +85    | 1      | 8     | *Varies*      | *Varies*      | 0=low freq down; 1=hi freq down; 2=SI Port; 3=SI Star; 4=very high down |
+| Tag 51            | +86    | 1      | 8     | `51`          | 81            | - |
+| **Volt Scale**    | +87    | 1      | 8     | *Varies*      | *Varies*      | Voltage in tenths |
+| Tag 92            | +88    | 1      | 8     | `92`          | 146           | - |
+| **Frequency**     | +89    | 4      | 32    | *Varies*      | *Varies*      | Frequency in hertz |
+| Tag 53            | +93    | 1      | 8     | `53`          | 83            | - |
+| **Unknown**       | +94    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
+| Tag 54            | +95    | 1      | 8     | `54`          | 84            | - |
+| **Unknown**       | +96    | 1      | 8     | *Varies*      | *Varies*      | Unknown |
+| Tag 95            | +97    | 1      | 8     | `95`          | 149           | - |
+| **Unknown**       | +98    | 4      | 32    | `00 00 00 1A` | 26            | Unknown |
+| Tag 56            | +102   | 1      | 8     | `56`          | 86            | - |
+| **+- UTM X (?)**  | +103   | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM X in centimeters |
+| Tag 57            | +104   | 1      | 8     | `57`          | 87            | - |
+| **+- UTM Y (?)**  | +105   | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM Y in centimeters |
+| Tag 98            | +106   | 1      | 8     | `98`          | 152           | - |
+| **Unknown**       | +107   | 4      | 32    | `00 00 00 04` | 4             | Unknown |
+| Tag 99            | +111   | 1      | 8     | `99`          | 153           | - |
+| **Unknown**       | +112   | 4      | 32    | `00 00 00 4B` | 75            | Unknown |
+| Tag 9A            | +116   | 1      | 8     | `9A`          | 154           | - |
+| **Unknown**       | +117   | 4      | 32    | `00 00 00 5F` | 95            | Unknown |
+| Tag 9B            | +121   | 1      | 8     | `9B`          | 155           | - |
+| **Unknown**       | +122   | 4      | 32    | `00 00 00 0C` | 12            | Unknown |
+| Tag 9C            | +126   | 1      | 8     | `9C`          | 156           | - |
+| **Unknown**       | +127   | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 9D            | +131   | 1      | 8     | `9D`          | 157           | - |
+| **Unknown**       | +132   | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 9E            | +136   | 1      | 8     | `9E`          | 158           | - |
+| **Unknown**       | +137   | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag 9F            | +141   | 1      | 8     | `9F`          | 159           | - |
+| **Unknown**       | +142   | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
+| Tag A0            | +146   | 1      | 8     | `A0`          | 160           | - |
+| Bytes in Ping     | +147   | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
+| End Head          | +151   | 1      | 8     | `21`          | 33            | End of sonar record header |
