@@ -1,5 +1,5 @@
 
-# Developing and documenting pj_readFiles.py and c_sonObj.py functionality
+# Humminbird Recording: Binary Structure & Processing
 By Cameron S. Bodine
 
 ## Introduction
