@@ -500,8 +500,9 @@ class sonObj:
                 idx['time_s'].append(struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0])
                 sonIndex = struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0]
                 idx['index'].append(sonIndex)
-                head['index'].append(sonIndex)
                 idx['chunk_id'].append(chunk)
+
+                head['index'].append(sonIndex)
                 head['chunk_id'].append(chunk)
                 headerDat = self._getHead(sonIndex)
                 for key, val in headerDat.items():
@@ -514,7 +515,30 @@ class sonObj:
                     chunk+=1
                 # print("\n\n", idx, "\n\n")
         else:
-            sys.exit("idx missing.  need to figure this out")
+            # sys.exit("idx missing.  need to figure this out")
+            print("\n\n{} is missing.  Automatically decoding SON file...".format(idxFile))
+            sonFile = self.sonFile
+            fileLen = os.path.getsize(sonFile)
+            file = open(sonFile, 'rb')
+            i = j = chunk = 0
+            while i < fileLen:
+                file.seek(i)
+                headStart = struct.unpack('>I', arr('B', self._fread(file, 4, 'B')).tobytes())[0]
+                if headStart == 3235818273: # We are at the beginning of a sonar record
+                    head['index'].append(i)
+                    head['chunk_id'].append(chunk)
+                else:
+                    "Not at head of sonar record"
+                    sys.exit()
+
+                headerDat = self._getHead(i)
+                for key, val in headerDat.items():
+                    head[key].append(val)
+                i = i + self.headBytes + headerDat['ping_cnt']
+                j+=1
+                if j == nchunk:
+                    j=0
+                    chunk+=1
 
         # print(head,"\n\n\n")
         # print(idx)
@@ -523,12 +547,11 @@ class sonObj:
 
         # Write data to csv
         outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
-
         sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
         # self.sonMetaFile = outCSV
 
-        outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_idx.csv")
-        idxDF.to_csv(outCSV, index=False, float_format='%.14f')
+        # outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_idx.csv")
+        # idxDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     # =========================================================
     def _getHead(self, sonIndex):
