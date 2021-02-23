@@ -46,6 +46,7 @@ The header for a sonar record contains metadata specific to that sonar record.  
 
 ##### Humminbird 900 Series
 Header Length (Bytes): **67**
+
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
 | Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
@@ -89,6 +90,7 @@ Header Length (Bytes): **67**
 ##### Humminbird 1100 & Helix Series
 Header Length (Bytes): **72**  
 *Note:* The structure is the same as 900 series for offset 0 - 33.
+
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
 | Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
@@ -134,6 +136,7 @@ Header Length (Bytes): **72**
 ##### Humminbird Solix Series
 Header Length (Bytes): **152**  
 *Note:* The structure is the same as 1100/Helix series for offset 0 - 43.
+
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
 | Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
@@ -206,3 +209,12 @@ Header Length (Bytes): **152**
 | Tag A0            | +146   | 1      | 8     | `A0`          | 160           | - |
 | Bytes in Ping     | +147   | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
 | End Head          | +151   | 1      | 8     | `21`          | 33            | End of sonar record header |
+
+
+Example of first and last 4 sonar records from randomly selected sonar files:
+
+**1199**
+![Img of 1199 Son Header](/docs/attach/1199SonHead.PNG?raw=true "Hexinator Screen Shot")
+
+**Helix**
+![Img of Helix Son Header](/docs/attach/HelixSonHead.PNG?raw=true "Hexinator Screen Shot")
