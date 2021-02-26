@@ -5,32 +5,33 @@ class sonObj:
     def __init__(self, sonFile, humFile, projDir, tempC, nchunk):
         # Create necessary attributes
         # Path
-        self.projDir = projDir   # Project directory
-        self.humFile = humFile   # DAT file path
-        self.outDir = None # Location where outputs are saved
-        self.sonFile = None # SON file path
-        self.metaDir = None # Metadata file directory
-        self.datMetaFile = None    # DAT metadata file path
-        self.sonMetaFile = None
-        self.sonIdxFile = None
+        self.projDir = projDir      # Project directory
+        self.outDir = None          # Location where outputs are saved
+        self.humFile = humFile      # DAT file path
+        self.sonFile = None         # SON file path
+        self.sonIdxFile = None      # IDX file path
+        self.metaDir = None         # Metadata file directory
+        self.datMetaFile = None     # DAT metadata file path
+        self.sonMetaFile = None     # SON metadata file path
+
         # String
-        self.beamName = None       # Name of sonar beam
+        self.beamName = None        # Name of sonar beam
         # Number
-        self.headBytes = None
-        self.datLen = None
-        self.tempC = tempC       # Water temperature
-        self.nchunk = nchunk     # Pings per chunk
+        self.headBytes = None       # Number of header bytes for a sonar return
+        self.datLen = None          # Length in bytes of DAT file
+        self.tempC = tempC          # Water temperature
+        self.nchunk = nchunk        # Pings per chunk
+        self.pingMax = None         # Stores highest pingCnt value (highest range)
+        self.nchunk = nchunk        # Number of sonar records per chunk
         # Boolean
-        self.isOnix = None    # Flag indicating if files from ONIX
-        self.headValid = None # Flag indicating if SON header structure is correct
+        self.isOnix = None          # Flag indicating if files from ONIX
+        self.headValid = None       # Flag indicating if SON header structure is correct
         # List/Dictionary
-        self.headIdx = None
-        self.pingCnt = None
-        self.pingMax = None
-        self.nchunk = nchunk
-        self.humDatStruct = None
-        self.humDat = None
-        self.headStruct = None
+        self.headIdx = None         # List to hold byte index of each sonar record
+        self.pingCnt = None         # Number of ping returns for each sonar record
+        self.humDatStruct = None    # Dictionary holding DAT file structure
+        self.humDat = None          # Dictionary holding DAT file contents
+        self.headStruct = None      # Dictionary holding sonar record header structure
         # Function
         self.trans = None          # Function to convert utm to lat/lon
 
@@ -38,6 +39,9 @@ class sonObj:
 
     # =========================================================
     def _fread(self, infile, num, typ):
+        """
+        This function reads binary data in a file
+        """
         dat = arr(typ)
         dat.fromfile(infile, num)
         return(list(dat))
@@ -45,9 +49,9 @@ class sonObj:
     #===========================================
     def _getHumDatStruct(self):
         """
-        determines .DAT file structure then
-        gets the data from .DAT using getHumdat()
-        or decode_onix()
+        Determines .DAT file structure then
+        gets the data from .DAT using _getHumdat()
+        or _decode_onix()
         """
         # Returns dictionary with dat structure
         # Format: name : [byteIndex, offset, dataLen, data]
@@ -192,7 +196,7 @@ class sonObj:
     # =========================================================
     def _decodeOnix(self):
         """
-        returns data from .DAT file
+        returns data from Onix .DAT file
         """
         fid2 = open(self.humFile, 'rb')
 
@@ -224,6 +228,9 @@ class sonObj:
 
     # =========================================================
     def _getEPSG(self):
+        """
+        Determines appropriate UTM zone based on location
+        """
         if self.isOnix == 0:
             utm_x = self.humDat['utm_x']
             utm_y = self.humDat['utm_y']
@@ -247,6 +254,9 @@ class sonObj:
 
     # =========================================================
     def _cntHead(self):
+        """
+        Determine SON sonar return header length
+        """
         file = open(self.sonFile, 'rb')
         i = 0
         foundEnd = False
@@ -279,13 +289,15 @@ class sonObj:
 
     # =========================================================
     def _getHeadStruct(self):
-        # Returns dictionary with header structure
-        # Format: byteVal : [byteIndex, offset, dataLen, name]
-        # byteVal = Spacer value (integer) preceding attribute values (i.e. depth)
-        # byteIndex = Index indicating position of byteVal
-        # offset = Byte offset for the actual data
-        # dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
-        # name = name of attribute
+        """
+        Returns dictionary with header structure
+        Format: byteVal : [byteIndex, offset, dataLen, name]
+        byteVal = Spacer value (integer) preceding attribute values (i.e. depth)
+        byteIndex = Index indicating position of byteVal
+        offset = Byte offset for the actual data
+        dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
+        name = name of attribute
+        """
 
         headBytes = self.headBytes
 
@@ -382,6 +394,10 @@ class sonObj:
 
     # =========================================================
     def _checkHeadStruct(self):
+        """
+        Check to make sure sonar return header
+        structure determined appropriately
+        """
         headStruct = self.headStruct
         if len(headStruct) > 0:
             file = open(self.sonFile, 'rb')
@@ -403,6 +419,11 @@ class sonObj:
 
     # =========================================================
     def _decodeHeadStruct(self):
+        """
+        If sonar return header structure not
+        previously known, attempt to automatically
+        decode.
+        """
         headBytes = self.headBytes
         headStruct = {}
         toCheck = {
@@ -476,9 +497,13 @@ class sonObj:
 
     # =========================================================
     def _getSonMeta(self):
-        # Read son header for every ping
-        # Save to csv
-        # Prepare dictionary to hold all header data
+        """
+        Use idx file to find every sonar record in son file.
+        If idx file is not present, automatically determine
+        sonar record return location in bytes.
+        Then call _getHead() to decode sonar return header.
+        """
+
         headStruct = self.headStruct
         nchunk = self.nchunk
         head = defaultdict(list)
@@ -528,8 +553,7 @@ class sonObj:
                     head['index'].append(i)
                     head['chunk_id'].append(chunk)
                 else:
-                    "Not at head of sonar record"
-                    sys.exit()
+                    sys.exit("Not at head of sonar record")
 
                 headerDat = self._getHead(i)
                 for key, val in headerDat.items():
@@ -555,6 +579,11 @@ class sonObj:
 
     # =========================================================
     def _getHead(self, sonIndex):
+        """
+        Helper function called by _getSonMeta().
+        Given a byte index location, grab appropriate
+        sonar record metadata.
+        """
         headStruct = self.headStruct
         humDat = self.humDat
         nchunk = self.nchunk
@@ -610,14 +639,22 @@ class sonObj:
 
     # =========================================================
     def _getScansChunk(self):
+        """
+        Main function to read sonar record ping return values.
+        Stores the number of pings per chunk, chunk id, and
+        byte index location in son file, then calls
+        _loadSonChunk() to read the data, then calls
+        _writeTiles to save an unrectified image.
+        """
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
-        self.pingMax = sonMetaAll['ping_cnt'].max().astype(int)
+        # self.pingMax = sonMetaAll['ping_cnt'].max().astype(int)
         i = 0 #Chunk index
         while i <= totalChunk:
             isChunk = sonMetaAll['chunk_id']==i
             sonMeta = sonMetaAll[isChunk].reset_index()
+            self.pingMax = sonMeta['ping_cnt'].max().astype(int)
             self.headIdx = sonMeta['index'].astype(int)
             self.pingCnt = sonMeta['ping_cnt'].astype(int)
             self._loadSonChunk()
@@ -626,6 +663,11 @@ class sonObj:
 
     # =========================================================
     def _loadSonChunk(self):
+        """
+        Reads in sonar record ping values based on byte
+        index location in son file and number of pings
+        to return.
+        """
         sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int)
         file = open(self.sonFile, 'rb')
         for i in range(len(self.headIdx)):
@@ -648,6 +690,11 @@ class sonObj:
 
     # =========================================================
     def _writeTiles(self, k):
+        """
+        Using currently saved sonar record ping returns
+        in self.sonDAT, saves an unrectified image of the
+        sonar echogram.
+        """
         data = self.sonDat
         nx, ny = np.shape(data)
         Z, ind = sliding_window(data, (nx, ny))
@@ -666,6 +713,9 @@ class sonObj:
 
     # =========================================================
     def __str__(self):
+        """
+        Generic print function to print contenst of sonObj.
+        """
         output = "sonObj Contents"
         output += '\n\t'
         output += self.__repr__()
