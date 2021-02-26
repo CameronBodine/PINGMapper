@@ -17,6 +17,9 @@ The initial release of PyHum documented the known binary structure of Humminbird
 
 ![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
 
+### DAT File Structure
+*Need to add info*
+
 ### SON File Structure
 A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
 
@@ -211,10 +214,16 @@ Header Length (Bytes): **152**
 | End Head          | +151   | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-Example of first and last 4 sonar records from randomly selected sonar files:
+Example of first and last 4 sonar records from randomly selected sonar files.  Values displayed are in hexadecimal.
 
 **1199**
 ![Img of 1199 Son Header](/docs/attach/1199SonHead.PNG?raw=true "Hexinator Screen Shot")
 
 **Helix**
 ![Img of Helix Son Header](/docs/attach/HelixSonHead.PNG?raw=true "Hexinator Screen Shot")
+
+## DAT and SON Reading & Processing
+
+Two scripts, modeled after PyHum, have been developed to read in and decode DAT and SON files, export sonar record metadata, and export un-rectified imagery of the sonar echogram.  The first script `pj_readFiles.py` handles the creation and manipulation of a `class sonObj` instance. The `class sonObj` is contained in `c_sonObj.py` which holds the attributes and functions for reading, decoding, and fetching data from DAT and SON files. These two scripts work in tandem to retrieve data from DAT and SON files.  The `class sonObj` in `c_sonObj.py` will first be described, then `pj_readFiles.py` will be described to show how it interacts with the class.
+
+### `pj_readFiles.py`
