@@ -2,7 +2,7 @@
 from common_funcs import *
 
 class sonObj:
-    def __init__(self, sonFile, humFile, projDir, tempC, nchunk):
+    def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=512):
         # Create necessary attributes
         # Path
         self.projDir = projDir      # Project directory
@@ -11,8 +11,9 @@ class sonObj:
         self.sonFile = None         # SON file path
         self.sonIdxFile = None      # IDX file path
         self.metaDir = None         # Metadata file directory
-        self.datMetaFile = None     # DAT metadata file path
-        self.sonMetaFile = None     # SON metadata file path
+        self.datMetaFile = None     # DAT metadata file path (csv)
+        self.sonMetaFile = None     # SON metadata file path (csv)
+        self.sonMetaPickle = None   # SON metadata pickle path
 
         # String
         self.beamName = None        # Name of sonar beam
@@ -506,6 +507,7 @@ class sonObj:
 
         headStruct = self.headStruct
         nchunk = self.nchunk
+        idxFile = self.sonIdxFile
         head = defaultdict(list)
         for key, val in headStruct.items():
             head[val[-1]] = []
@@ -516,8 +518,9 @@ class sonObj:
                'index': [],
                'chunk_id': []}
 
-        idxFile = self.sonFile.replace(".SON", ".IDX")
-        if os.path.exists(idxFile):
+        # idxFile = self.sonFile.replace(".SON", ".IDX")
+        if idxFile != "NA":
+            self.sonIdxFile = idxFile
             idxLen = os.path.getsize(idxFile)
             idxFile = open(idxFile, 'rb')
             i = j = chunk = 0
