@@ -176,6 +176,16 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
     if len(toProcess) > 0:
         Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
     # toProcess[0]._getSonMeta()
+
+    # Let's pickle sonObj so we can reload later
+    for son in sonObjs:
+        beam = os.path.split(son.sonFile)[-1]
+        outFile = os.path.join(son.metaDir, beam+".meta")
+        son.sonMetaPickle = outFile
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(son, sonFile)
+
+    print(sonObjs[0])
     print("Done!")
 
     ########################
