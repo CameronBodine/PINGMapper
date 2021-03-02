@@ -9,6 +9,20 @@ import time
 def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
     start_time = time.time()
 
+    ####################################
+    # Remove project directory if exists
+    if os.path.exists(projDir):
+        shutil.rmtree(projDir)
+    else:
+        pass
+
+    ######################
+    # Create the directory
+    try:
+        os.mkdir(projDir)
+    except:
+        pass
+
     ###################################
     # Decode DAT file (varies by model)
     print("\nGetting DAT Metadata...")
@@ -93,7 +107,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         else:
             pass
-
+    print(sonObjs)
 
     ################################################
     # # Determine ping header length (varies by model)
@@ -173,19 +187,18 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
         else:
             toProcess.append(son)
 
+    for son in sonObjs:
+        idxFile = son.sonFile.replace(".SON", ".IDX")
+        if os.path.exists(idxFile):
+            son.sonIdxFile = idxFile
+        else:
+            son.sonIdxFile = "NA"
+
+
     if len(toProcess) > 0:
         Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        # print(test)
     # toProcess[0]._getSonMeta()
-
-    # Let's pickle sonObj so we can reload later
-    for son in sonObjs:
-        beam = os.path.split(son.sonFile)[-1]
-        outFile = os.path.join(son.metaDir, beam+".meta")
-        son.sonMetaPickle = outFile
-        with open(outFile, 'wb') as sonFile:
-            pickle.dump(son, sonFile)
-
-    print(sonObjs[0])
     print("Done!")
 
     ########################
@@ -205,8 +218,16 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
     Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)() for son in sonObjs)
 
-    # for son in sonObjs:
-    #     print("\n\n")
-    #     print(son)
+    ############################################
+    # Let's pickle sonObj so we can reload later
+    for son in sonObjs:
+        outFile = son.sonMetaFile.replace(".csv", ".meta")
+        son.sonMetaPickle = outFile
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(son, sonFile)
+
+    for son in sonObjs:
+        print("\n\n")
+        print(son)
 
     print(round((time.time() - start_time),ndigits=2))
