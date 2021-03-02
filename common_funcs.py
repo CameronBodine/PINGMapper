@@ -39,6 +39,7 @@ from skimage.morphology import binary_opening, disk
 
 from collections import defaultdict
 from copy import deepcopy
+import pickle
 
 #===========================================
 def read_arrays(filename_pattern, shape, dtype):
