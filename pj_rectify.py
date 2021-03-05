@@ -32,9 +32,6 @@ def getBearing(pntA, pntB, geometry='geometry'):
 
 #===========================================
 def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
-    # rowA = gdf.loc[i][geometry]
-    # rowB = gdf.loc[i+1][geometry]
-    # print(rowA)
     geom = gdf.loc[i][geometry]
     pntA = geom.coords[0]
     pntB = geom.coords[1]
@@ -116,19 +113,23 @@ def rectify_master_func(sonFiles, humFile, projDir):
     for son in portstar:
         son._loadSonMeta()
 
+    ###################################
     # Delete duplicates sharing lat/lon
     son = portstar[0]
     df = son.sonMetaDF
     df.drop_duplicates(subset=['e', 'n'], inplace=True)
     df.reset_index(inplace=True)
 
-    ##################
-    # Make a trackline
+    ########################################
+    # Make a trackline from raw track points
     pd.options.display.float_format = '{:.6f}'.format
 
+    # Export raw track points (duplicate lat/lon removed)
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs=son.humDat['epsg'])
     gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
 
+    ###############################
+    # Create lines from trackpoints
     x = 0
     df = pd.DataFrame(columns = ['id', 'geometry', 'cog_raw'])
     while x < len(gdf) - 1:
@@ -136,9 +137,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
         x = x+1
     df.set_index('id', inplace=True)
 
-    # test = df.loc[1]['geometry'].coords[0]
-    # print(test[0])
-
+    # Calculate COG from tracklines
     for i, row in df.iterrows():
         geom = row['geometry']
         pntA = geom.coords[0]
@@ -146,9 +145,12 @@ def rectify_master_func(sonFiles, humFile, projDir):
         bearing = getBearing(pntA, pntB)
         df.loc[i, 'cog_raw'] = bearing
 
+    # Save raw trackline to file
     line = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
     line.to_file(os.path.join(portstar[0].metaDir, "Tracklines_raw.shp"))
 
+    ############################################
+    # Merge consecutive tracklines with same COG
     filt = pd.DataFrame(columns = ['geometry', 'cog_raw'])
     i = 0
     next = i+1
@@ -175,10 +177,12 @@ def rectify_master_func(sonFiles, humFile, projDir):
             i=next
             next=i+1
 
+    # Export merged tracklines
     line = gpd.GeoDataFrame(filt, geometry='geometry', crs=son.humDat['epsg'])
     line.to_file(os.path.join(portstar[0].metaDir, "Tracklines_merge.shp"))
 
-
+    #########################################
+    # Calculate midpoint of merged tracklines
     dfMid = pd.DataFrame(columns = ['geometry'])
     x=0
     while x < len(line) - 1:
@@ -186,15 +190,19 @@ def rectify_master_func(sonFiles, humFile, projDir):
         x+=1
     dfMid.reset_index(inplace=True)
 
+    # Save midpoints to file
     gdf = gpd.GeoDataFrame(dfMid, geometry='geometry', crs=son.humDat['epsg'])
     gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_midpnt.shp"))
 
+    ############################################
+    # Create 'smoothed' trackline from midpoints
     x = 0
     df = pd.DataFrame(columns = ['geometry'])
     while x < len(gdf) - 1:
         df = makeLines(gdf, df, x)
         x = x+1
 
+    # Save 'smoothed' trackline to file
     df = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
     df.to_file(os.path.join(portstar[0].metaDir, "Tracklines_midpnt.shp"))
 
