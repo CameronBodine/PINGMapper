@@ -107,7 +107,6 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         else:
             pass
-    print(sonObjs)
 
     ################################################
     # # Determine ping header length (varies by model)
@@ -226,8 +225,8 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
         with open(outFile, 'wb') as sonFile:
             pickle.dump(son, sonFile)
 
-    for son in sonObjs:
-        print("\n\n")
-        print(son)
+    # for son in sonObjs:
+    #     print("\n\n")
+    #     print(son)
 
     print(round((time.time() - start_time),ndigits=2))
