@@ -34,7 +34,9 @@ class sonObj:
         self.humDat = None          # Dictionary holding DAT file contents
         self.headStruct = None      # Dictionary holding sonar record header structure
         # Function
-        self.trans = None          # Function to convert utm to lat/lon
+        self.trans = None           # Function to convert utm to lat/lon
+        # DataFrame
+        self.sonMetaDF = None       # Pandas df to hold son metadata
 
         return
 
@@ -713,6 +715,15 @@ class sonObj:
             addZero = ''
         Z = Z[0].astype('uint8')
         imageio.imwrite(os.path.join(self.outDir, 'image-'+addZero+str(k)+'.png'), Z)
+
+    # =========================================================
+    def _loadSonMeta(self):
+        """
+        Load sonar metadata from csv to pandas df
+        """
+        meta = pd.read_csv(self.sonMetaFile)
+        self.sonMetaDF = meta
+        return
 
     # =========================================================
     def __str__(self):
