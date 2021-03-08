@@ -32,7 +32,8 @@ def getBearing(pntA, pntB, geometry='geometry'):
 
 #===========================================
 def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
-    geom = gdf.loc[i][geometry]
+    row = gdf.loc[i]
+    geom = row[geometry]
     pntA = geom.coords[0]
     pntB = geom.coords[1]
 
@@ -40,8 +41,11 @@ def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
     midY = (pntA[1] + pntB[1])/2
     midpoint = Point(midX, midY)
 
-    data = {'geometry': [midpoint]}
-    df_pnt = pd.DataFrame(data, columns =['geometry'])
+    caltime = (row['timeStart'] + row['timeEnd'])/2
+
+    data = {'geometry': [midpoint],
+            'caltime': caltime}
+    df_pnt = pd.DataFrame(data, columns =list(data.keys()))
 
     df_out = pd.concat([df_out, df_pnt])
 
@@ -66,16 +70,24 @@ def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
 #===========================================
 def makeLines(gdf, df_out, i, geometry = 'geometry'):
     # http://ryan-m-cooper.com/blog/gps-points-to-line-segments.html
-    geom0 = gdf.loc[i][geometry]
-    geom1 = gdf.loc[i + 1][geometry]
+    row0 = gdf.loc[i]
+    row1 = gdf.loc[i + 1]
+
+    time0 = row0['caltime']
+    time1 = row1['caltime']
+
+    geom0 = row0[geometry]
+    geom1 = row1[geometry]
 
     start, end = [(geom0.x, geom0.y), (geom1.x, geom1.y)]
     line = LineString([start, end])
 
     # Create a DataFrame to hold record
     data = {'id': int(i),
+            'timeStart': time0,
+            'timeEnd': time1,
             'geometry': [line]}
-    df_line = pd.DataFrame(data, columns = ['id', 'geometry'])
+    df_line = pd.DataFrame(data, columns = list(data.keys()))
 
     # Add record DataFrame of compiled records
     df_out = pd.concat([df_out, df_line])
@@ -115,15 +127,16 @@ def rectify_master_func(sonFiles, humFile, projDir):
 
     ###################################
     # Delete duplicates sharing lat/lon
+    pd.options.display.float_format = '{:.6f}'.format
+
     son = portstar[0]
-    df = son.sonMetaDF
+    dfOrig = son.sonMetaDF
+    df = dfOrig.copy()
     df.drop_duplicates(subset=['e', 'n'], inplace=True)
     df.reset_index(inplace=True)
 
     ########################################
     # Make a trackline from raw track points
-    pd.options.display.float_format = '{:.6f}'.format
-
     # Export raw track points (duplicate lat/lon removed)
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs=son.humDat['epsg'])
     gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
@@ -131,7 +144,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
     ###############################
     # Create lines from trackpoints
     x = 0
-    df = pd.DataFrame(columns = ['id', 'geometry', 'cog_raw'])
+    df = pd.DataFrame(columns = ['id', 'timeStart', 'timeEnd', 'geometry', 'cog_raw'])
     while x < len(gdf) - 1:
         df = makeLines(gdf, df, x)
         x = x+1
@@ -168,10 +181,14 @@ def rectify_master_func(sonFiles, humFile, projDir):
                 rowB = df.loc[next-1].to_dict()
                 start = rowA['geometry'].coords[0]
                 end = rowB['geometry'].coords[1]
+                timeStart = rowA['timeStart']
+                timeEnd = rowB['timeEnd']
                 geom = LineString([start, end])
 
                 dict = {'geometry': geom,
-                        'cog_raw': rowA['cog_raw']}
+                        'cog_raw': rowA['cog_raw'],
+                        'timeStart': timeStart,
+                        'timeEnd': timeEnd}
                 filt = filt.append(dict, ignore_index=True)
 
             i=next
