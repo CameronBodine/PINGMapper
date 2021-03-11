@@ -5,7 +5,7 @@ from common_funcs import *
 from c_sonObj import sonObj
 # from osgeo import ogr
 # import fiona
-from shapely.geometry import mapping, LineString, Point, Polygon
+# from shapely.geometry import mapping, LineString, Point, Polygon
 # import geopandas as gpd
 import time
 import matplotlib.pyplot as plt
@@ -160,10 +160,28 @@ def rectify_master_func(sonFiles, humFile, projDir):
     u_interp = dfOrig.time_s.to_numpy() # Collect time elapsed from all pings
     x_interp = splev(u_interp, tck) # Interpolate positions based on time elapsed
 
-    # Save interpolated points to file
-    smooth = {'X': x_interp[0],
-              'Y': x_interp[1]}
+    # Store smoothed trackpoints in df
+    smooth = {'lon_smth': x_interp[0],
+              'lat_smth': x_interp[1]}
     smoothDF = pd.DataFrame(smooth)
+
+    # Calculate utm coordinates from smooth trackpoints
+    trans = sonObjs[0].trans
+    e_smth, n_smth = trans(smooth['lon_smth'], smooth['lat_smth'])
+    smoothDF['e_smth'] = e_smth
+    smoothDF['n_smth'] = n_smth
+
+    # Get record number for port and starboard pings
+    for son in sonObjs:
+        son._loadSonMeta()
+        record_num = son.sonMetaDF['record_num']
+        beam = son.beamName
+        if beam == "sidescan_port":
+            smoothDF['port_record_num'] = record_num
+        elif beam == "sidescan_starboard":
+            smoothDF['star_record_num'] = record_num
+
+    # Save interpolated points to file
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
     smoothDF.to_csv(outCSV, index=False, float_format='%.14f')
 
@@ -173,4 +191,4 @@ def rectify_master_func(sonFiles, humFile, projDir):
     # plt.savefig(os.path.join(portstar[0].metaDir, "test.png"))
 
 
-#######################################################################################################
+    ############################################################################
