@@ -3,14 +3,13 @@
 
 from common_funcs import *
 from c_sonObj import sonObj
-from osgeo import ogr
-import fiona
-import shapely
+# from osgeo import ogr
+# import fiona
 from shapely.geometry import mapping, LineString, Point, Polygon
-import geopandas as gpd
-from centerline.geometry import Centerline
+# import geopandas as gpd
 import time
-import math
+import matplotlib.pyplot as plt
+from scipy.interpolate import splprep, splev
 
 #===========================================
 
@@ -53,22 +52,6 @@ def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
     df_out = pd.concat([df_out, df_pnt])
 
     return df_out
-
-# #===========================================
-# def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
-#     pntA = gdf.loc[i][geometry]
-#     pntB = gdf.loc[i+1][geometry]
-#
-#     midX = (pntA.x + pntB.x)/2
-#     midY = (pntA.y + pntB.y)/2
-#     midpoint = Point(midX, midY)
-#
-#     data = {'geometry': [midpoint]}
-#     df_pnt = pd.DataFrame(data, columns =['geometry'])
-#
-#     df_out = pd.concat([df_out, df_pnt])
-#
-#     return df_out
 
 #===========================================
 def makeLines(gdf, df_out, i, geometry = 'geometry'):
@@ -128,6 +111,14 @@ def rectify_master_func(sonFiles, humFile, projDir):
     for son in portstar:
         son._loadSonMeta()
 
+
+    ############################################################################
+    # Smoothing Trackline
+    # Tool:
+    # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
+    # Adapted from:
+    # https://github.com/remisalmon/gpx_interpolate
+    print("\nSmoothing trackline...")
     ###################################
     # Delete duplicates sharing lat/lon
     pd.options.display.float_format = '{:.6f}'.format
@@ -136,358 +127,50 @@ def rectify_master_func(sonFiles, humFile, projDir):
     dfOrig = son.sonMetaDF
     df = dfOrig.copy()
     df.drop_duplicates(subset=['e', 'n'], inplace=True)
-    # df.reset_index(inplace=True)
 
-#######################################################################################################
-    # Tool:
-    # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
-    # Adapted from:
-    # https://github.com/remisalmon/gpx_interpolate
-    import matplotlib.pyplot as plt
-    from scipy.interpolate import splprep, splev
-
-    ## Best Result ##
+    ##########################################
+    # Filter Trackpoints:
+    # Select every 10 position, including last
     last = dfOrig.iloc[-1].to_dict()
     df20 = df.iloc[::10].reset_index(drop=True)
     df = df20.append(last, ignore_index=True)
-    ## Best Result ##
 
-    ## Nope ##
-    # first10 = df.iloc[:10].reset_index(drop=True)
-    # mid = df.iloc[10::10].reset_index(drop=True)
-    # last = dfOrig.iloc[-1].to_dict()
-    # df = first10.append(mid, ignore_index=True)
-    # df = df.append(last, ignore_index=True)
-    ## Nope ##
-
+    # Save to file
     outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
     df.to_csv(outCSV, index=False, float_format='%.14f')
 
-    # df.sort_values('lon', inplace=True)
-
-    n = len(dfOrig)
+    ############################################
+    # Smooth trackline and interpolate all pings
+    n = len(dfOrig) # Total pings to interpolate
 
     #User params
     deg = 5 # interp in degree: 1 for linear; 2-5 for spline
     num = n # Number of interpolated track points
 
+    # Collect lon, lat, and time ellapsed
     x = df.lon.to_numpy()
     y = df.lat.to_numpy()
     t = df.time_s.to_numpy() # Cumulative time elapsed
-    t[0] = 0
-    print(len(x))
-    print(len(y))
-    print(len(t))
 
-
+    # Fit spline to filtered trackpoints
     tck, _ = splprep([x,y], u=t, k=deg, s=0)
 
-    # u_interp = np.linspace(0, t.max(), num)
-    u_interp = dfOrig.time_s.to_numpy()
-    x_interp = splev(u_interp, tck)
+    # Interpolate positions
+    print("\nInterpolating ping locations...")
+    u_interp = dfOrig.time_s.to_numpy() # Collect time elapsed from all pings
+    x_interp = splev(u_interp, tck) # Interpolate positions based on time elapsed
 
+    # Save interpolated points to file
     smooth = {'X': x_interp[0],
               'Y': x_interp[1]}
     smoothDF = pd.DataFrame(smooth)
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
     smoothDF.to_csv(outCSV, index=False, float_format='%.14f')
 
-    plt.figure()
-    plt.plot(x, y, 'x', x_interp[0], x_interp[1])
-    # plt.plot(xnew, ynew)
-    plt.savefig(os.path.join(portstar[0].metaDir, "test.png"))
+    # Plot smoothed trackline
+    # plt.figure()
+    # plt.plot(x, y, 'x', x_interp[0], x_interp[1])
+    # plt.savefig(os.path.join(portstar[0].metaDir, "test.png"))
 
 
 #######################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # #******Midpoint Workflow Start***********#
-    # ########################################
-    # # Make a trackline from raw track points
-    # # Export raw track points (duplicate lat/lon removed)
-    # gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs=son.humDat['wgs'])
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
-    #
-    # ###############################
-    # # Create lines from trackpoints
-    # x = 0
-    # df = pd.DataFrame(columns = ['id', 'timeStart', 'timeEnd', 'geometry', 'cog_raw'])
-    # while x < len(gdf) - 1:
-    #     df = makeLines(gdf, df, x)
-    #     x = x+1
-    # df.set_index('id', inplace=True)
-    #
-    # # Calculate COG from tracklines
-    # for i, row in df.iterrows():
-    #     geom = row['geometry']
-    #     pntA = geom.coords[0]
-    #     pntB = geom.coords[1]
-    #     bearing = getBearing(pntA, pntB)
-    #     df.loc[i, 'cog_raw'] = bearing
-    #
-    # # Save raw trackline to file
-    # line = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['wgs'])
-    # line.to_file(os.path.join(portstar[0].metaDir, "Tracklines_raw.shp"))
-    #
-    # ############################################
-    # # Merge consecutive tracklines with same COG
-    # filt = pd.DataFrame(columns = ['timeStart', 'timeEnd', 'geometry', 'cog_raw'])
-    # i = 0
-    # next = i+1
-    # while next <= len(df) - 1:
-    #     bA = df.loc[i, 'cog_raw']
-    #     bB = df.loc[next, 'cog_raw']
-    #     if bA == bB and next < len(df) - 1:
-    #         next+=1
-    #     else:
-    #         if next-i==1: #Didn't find another seg w/ same heading
-    #             row = df.loc[i].to_dict()
-    #             filt = filt.append(row, ignore_index=True)
-    #         else:
-    #             rowA = df.loc[i].to_dict()
-    #             rowB = df.loc[next-1].to_dict()
-    #             start = rowA['geometry'].coords[0]
-    #             end = rowB['geometry'].coords[1]
-    #             timeStart = rowA['timeStart']
-    #             timeEnd = rowB['timeEnd']
-    #             geom = LineString([start, end])
-    #
-    #             dict = {'geometry': geom,
-    #                     'cog_raw': rowA['cog_raw'],
-    #                     'timeStart': timeStart,
-    #                     'timeEnd': timeEnd}
-    #             filt = filt.append(dict, ignore_index=True)
-    #
-    #         i=next
-    #         next=i+1
-    #
-    # # Export merged tracklines
-    # line = gpd.GeoDataFrame(filt, geometry='geometry', crs=son.humDat['wgs'])
-    # line.to_file(os.path.join(portstar[0].metaDir, "Tracklines_merge.shp"))
-    #
-    # #########################################
-    # # Calculate midpoint of merged tracklines
-    # dfMid = pd.DataFrame(columns = ['geometry'])
-    # x=0
-    # while x <= len(line) - 1:
-    #     dfMid = getMidpoint(line, dfMid, x)
-    #     x+=1
-    # dfMid.reset_index(inplace=True)
-    #
-    # # Save midpoints to file
-    # gdf = gpd.GeoDataFrame(dfMid, geometry='geometry', crs=son.humDat['wgs'])
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_midpnt.shp"))
-    #
-    # ############################################
-    # # Create 'smoothed' trackline from midpoints
-    # x = 0
-    # df = pd.DataFrame(columns = ['geometry'])
-    # while x < len(gdf) - 1:
-    #     df = makeLines(gdf, df, x)
-    #     x = x+1
-    #
-    # # Save 'smoothed' trackline to file
-    # df = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['wgs'])
-    # df.to_file(os.path.join(portstar[0].metaDir, "Tracklines_midpnt.shp"))
-    # #******Midpoint Workflow End***********#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #################################################
-    # gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.e, df.n), crs=son.humDat['epsg'])
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
-    #
-    # dfMid = pd.DataFrame(columns = ['geometry'])
-    # x = 0
-    # while x < len(gdf) - 1:
-    #     dfMid = getMidpoint(gdf, dfMid, x)
-    #     x+=1
-    # dfMid.reset_index(inplace=True)
-    #
-    # gdf = gpd.GeoDataFrame(dfMid, geometry='geometry', crs=son.humDat['epsg'])
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_midpnt.shp"))
-    # print(gdf)
-    #
-    # x = 0
-    # df = pd.DataFrame(columns = ['geometry'])
-    # while x < len(gdf) - 1:
-    #     df = makeLines(gdf, df, x)
-    #     x = x+1
-    #
-    # df = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
-    # df.to_file(os.path.join(portstar[0].metaDir, "Tracklines_midpnt.shp"))
-    #################################################
-
-
-
-
-    #################################################
-    # # Below works, but relies on centerline library
-    # # which doesn't perform well (noisy output)
-    # gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.e, df.n), crs=son.humDat['epsg'])
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
-    #
-    # df = pd.DataFrame(columns = ['geometry'])
-    #
-    # x = 0
-    # while x < len(gdf) - 1:
-    #     df = makeLines(gdf, df, x)
-    #     x = x+1
-    #
-    # df = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
-    # df.to_file(os.path.join(portstar[0].metaDir, "Tracklines_raw.shp"))
-    #
-    # gdf = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
-    # gdf['diss'] = 1
-    # dis = gdf.dissolve(by="diss")
-    # dis.to_file(os.path.join(portstar[0].metaDir, "Trackline_dis_raw.shp"))
-    #
-    # buf = dis.geometry.buffer(10)
-    # # buf = buf.simplify(0.5)
-    # buf.to_file(os.path.join(portstar[0].metaDir, "Trackline_buf.shp"))
-    #
-    # cntr = Centerline(buf.geometry[1])
-    # cntr = shapely.ops.linemerge(cntr)
-    # cntr = cntr.simplify(5)
-    # cntr = gpd.GeoSeries(cntr, crs=son.humDat['epsg'])
-    # cntr.to_file(os.path.join(portstar[0].metaDir, "Trackline_cntr.shp"))
-    ################################################
-
-
-    # smth = interp1d(df.e, df.n, kind='cubic')
-    # df['e_smth'] = smth.x
-    # df['n_smth'] = smth.y
-    #
-    # df.to_csv(os.path.join(portstar[0].metaDir, "test.csv"))
-    #
-    # gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.e, df.n), crs=son.humDat['epsg'])
-    # print(gdf.head())
-    # # gdf.reset_index(inplace=True)
-    # gdf.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_raw.shp"))
-    #
-    # smth = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['e_smth'], df['n_smth']), crs=son.humDat['epsg'])
-    # print(smth.head())
-    # # smth.reset_index(inplace=True)
-    # smth.to_file(os.path.join(portstar[0].metaDir, "Trackpnts_smth.shp"))
-
-    # pnt = []
-    # for index, row in df.iterrows():
-    #     pnt.append([Point(row['e'], row['n'])])
-    # print(pnt)
-
-    # line = []
-    # x = 0
-    # while x < len(pnt) - 1:
-    #     A = pnt[x]
-    #     B = pnt[x+1]
-    #     line.append(LineString([A, B]))
-    #     x+=1
-    # print(line)
-
-    # line = ogr.Geometry(ogr.wkbLineString)
-    # for index, row in df.iterrows():
-    #     line.AddPoint(row['e'], row['n'])
-    # print(line)
-
-
-
-
-    #
-    # df = pd.DataFrame(columns = ['id', 'geometry'])
-    # x = 0
-    # while x < len(gdf) - 1:
-    #     df = makeLines(gdf, df, x)
-    #     x = x+1
-    # gdf = gpd.GeoDataFrame(df, geometry='geometry', crs=son.humDat['epsg'])
-    # gdf['diss'] = 1
-    # dis = gdf.dissolve(by="diss")
-    # dis.to_file(os.path.join(portstar[0].metaDir, "Trackline_raw.shp"))
-    #
-    # geo = shapely.ops.linemerge(gdf.geometry)
-    # print(geo)
-    #
-    # s = gpd.GeoSeries(gdf.geometry)
-    # s.simplify(10, False)
-    # s.to_file(os.path.join(portstar[0].metaDir, "Trackline_smooth.shp"))
-
-
-
-
-
-
-
-
-
-    # for son in sonObjs:
-    #     print("\n\n")
-    #     print(son)
