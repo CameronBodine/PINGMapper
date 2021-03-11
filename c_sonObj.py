@@ -247,6 +247,7 @@ class sonObj:
         lon = (utm_x * 57.295779513082302) / 6378388.0
 
         self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
+        self.humDat['wgs'] = "epsg:4326"
 
         try:
             self.trans = pyproj.Proj(init=self.humDat['epsg'])
