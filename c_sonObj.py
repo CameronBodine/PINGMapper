@@ -623,6 +623,12 @@ class sonObj:
         sonHead['instr_heading'] = sonHead['instr_heading']/10
         sonHead['speed_ms'] = sonHead['speed_ms']/10
         sonHead['inst_dep_m'] = sonHead['inst_dep_m']/10
+
+        # Add tvg depth correction?
+        # tvg = humDat['tvg']
+        # dist_tvg = np.squeeze(((np.tan(np.radians(25)))*np.squeeze(humDat['inst_dep_m'].values))-(tvg))
+        # sonHead['inst_dep_m_tvg'] = dist_tvg
+
         sonHead['f'] = sonHead['f']/1000
         sonHead['time_s'] = sonHead['time_s']/1000
         sonHead['tempC'] = self.tempC*10
