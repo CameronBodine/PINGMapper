@@ -381,8 +381,8 @@ class sonObj:
             86:[102, 1, 1, 'unknown_86'], #Unknown (+-X error)
             87:[104, 1, 1, 'unknown_87'], #Unknown (+-Y error)
             152:[106, 1, 4, 'unknown_152'], #Unknown
-            153:[111, 1, 4, 'unknown_153'], #Unknown
-            154:[116, 1, 4, 'unknown_154'], #Unknown
+            153:[111, 1, 4, 'f_min'], #Frequency Range (min)
+            154:[116, 1, 4, 'f_max'], #Frequency Range (max)
             155:[121, 1, 4, 'unknown_155'], #Unknown
             156:[126, 1, 4, 'unknown_156'], #Unknown
             157:[131, 1, 4, 'unknown_157'], #Unknown
