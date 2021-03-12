@@ -11,11 +11,13 @@ import time
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
+pd.set_option('precision', 16)
+
 #===========================================
 
 
 #===========================================
-def getBearing(pntA, pntB, geometry='geometry'):
+def getBearing(pntA, pntB):
 
     lonA, latA = pntA[0], pntA[1]
     lonB, latB = pntB[0], pntB[1]
@@ -31,6 +33,44 @@ def getBearing(pntA, pntB, geometry='geometry'):
 
     return round(db, 1)
 
+#===========================================
+def getRangeCoords(df, pix_m):
+    # extent = RangeDF['ping_cnt'].to_numpy()
+    # yvec = np.squeeze(np.linspace(np.squeeze(pix_m),extent*np.squeeze(pix_m),extent))
+
+    # print(df.info(),'\n')
+
+    df['range'] = df['ping_cnt'] * pix_m
+
+    # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
+    R = 6371.393*1000 #Radius of the Earth
+    # R = 6378.1
+    brng = np.deg2rad(df['ping_bearing']).to_numpy()
+    d = (df['range'].to_numpy())
+
+    # print(df.iloc[0])
+    # print((df['lats']).to_numpy())
+
+    lat1 = np.deg2rad(df['lats']).to_numpy()
+    lon1 = np.deg2rad(df['lons']).to_numpy()
+    # print(np.finfo(lon1[0]).precision)
+
+    lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
+           np.cos(lat1) * np.sin(d/R) * np.cos(brng))
+
+
+    lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
+                              np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
+    lat2 = np.degrees(lat2)
+    lon2 = np.degrees(lon2)
+
+    df['latr'] = lat2
+    df['lonr'] = lon2
+    print(df.lats)
+
+    # print(df.head())
+    # print(df.tail(),'\n\n')
+    return df
 
 #===========================================
 def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
@@ -136,15 +176,15 @@ def rectify_master_func(sonFiles, humFile, projDir):
     df = df20.append(last, ignore_index=True)
 
     # Save to file
-    outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
-    df.to_csv(outCSV, index=False, float_format='%.14f')
+    # outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
+    # df.to_csv(outCSV, index=False, float_format='%.14f')
 
     ############################################
     # Smooth trackline and interpolate all pings
     n = len(dfOrig) # Total pings to interpolate
 
     #User params
-    deg = 5 # interp in degree: 1 for linear; 2-5 for spline
+    deg = 3 # interp in degree: 1 for linear; 2-5 for spline
     num = n # Number of interpolated track points
 
     # Collect lon, lat, and time ellapsed
@@ -161,34 +201,110 @@ def rectify_master_func(sonFiles, humFile, projDir):
     x_interp = splev(u_interp, tck) # Interpolate positions based on time elapsed
 
     # Store smoothed trackpoints in df
-    smooth = {'lon_smth': x_interp[0],
-              'lat_smth': x_interp[1]}
-    smoothDF = pd.DataFrame(smooth)
+    smooth = {'lons': x_interp[0],
+              'lats': x_interp[1]}
+    sDF = pd.DataFrame(smooth) # smoothed DF
 
     # Calculate utm coordinates from smooth trackpoints
     trans = sonObjs[0].trans
-    e_smth, n_smth = trans(smooth['lon_smth'], smooth['lat_smth'])
-    smoothDF['e_smth'] = e_smth
-    smoothDF['n_smth'] = n_smth
+    e_smth, n_smth = trans(smooth['lons'], smooth['lats'])
+    sDF['es'] = e_smth
+    sDF['ns'] = n_smth
+
+    # Calculate COG from smoothed lat/lon
+    i = 0
+    while i < len(sDF) - 1:
+        pntA = sDF.loc[i, ['lons', 'lats']]
+        pntB = sDF.loc[i+1, ['lons', 'lats']]
+        cog = getBearing(pntA, pntB)
+        sDF.loc[i, 'cog'] = cog
+        i+=1
+    sDF.loc[len(sDF) - 1, 'cog'] = cog
 
     # Get record number for port and starboard pings
+    # Calculate ping direction
     for son in sonObjs:
         son._loadSonMeta()
         record_num = son.sonMetaDF['record_num']
         beam = son.beamName
         if beam == "sidescan_port":
-            smoothDF['port_record_num'] = record_num
+            sDF['port_record_num'] = record_num
+            sDF['port_ping_bearing'] = (sDF['cog'] - 90) % 360
         elif beam == "sidescan_starboard":
-            smoothDF['star_record_num'] = record_num
-
-    # Save interpolated points to file
-    outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
-    smoothDF.to_csv(outCSV, index=False, float_format='%.14f')
+            sDF['star_record_num'] = record_num
+            sDF['star_ping_bearing'] = (sDF['cog'] + 90) % 360
 
     # Plot smoothed trackline
     # plt.figure()
     # plt.plot(x, y, 'x', x_interp[0], x_interp[1])
-    # plt.savefig(os.path.join(portstar[0].metaDir, "test.png"))
-
-
+    # plt.savefig(os.path.join(portstar[0].metaDir, "SmoothedTrackPlt.png"))
     ############################################################################
+
+    # Workflow for getting outer extent of rectified image
+    # Need to make some sort of loop???? (maybe not yet)
+
+    # 3) Calculate pixel size
+    # load some general info from first ping
+    son = portstar[0] # grab first sonObj
+    humDat = son.humDat # get DAT metadata
+
+    water_type = humDat['water_type'] # load water type
+    if water_type=='fresh':
+        S = 1
+    elif water_type=='shallow salt':
+        S = 30
+    elif water_type=='deep salt':
+        S = 35
+    else:
+        S = 1
+
+    # What 't' to use?????
+    # t = dfOrig.iloc[0]['tempC']/100 # water temperature/10
+    t = dfOrig.iloc[0]['t']
+    f = dfOrig.iloc[0]['f'] # frequency
+    c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
+
+    # theta at 3dB in the horizontal
+    theta3dB = np.arcsin(c/(t*(f*1000)))
+    #resolution of 1 sidescan pixel to nadir
+    ft = (np.pi/2)*(1/theta3dB) #/ (f/455)
+
+    # theta = np.squeeze(metadata['heading'].values)/(180/np.pi)
+    #
+    # #dx = np.arcsin(c/(1000*t*f))
+    pix_m = (1/ft)#*1.1 # size of pixel in meters (??)
+
+    # Prepare portside data
+    pRangeDF = sDF[['lons','lats','port_record_num','port_ping_bearing']].set_index('port_record_num')
+    for son in portstar:
+        if son.beamName=='sidescan_port':
+            sonDF = son.sonMetaDF
+        else:
+            pass
+    sonDF = sonDF[['ping_cnt', 'record_num']].set_index('record_num')
+    pRangeDF = pRangeDF.join(sonDF)
+    pRangeDF.rename(columns={'port_ping_bearing':'ping_bearing'}, inplace=True)
+
+    # Prepare starboard data
+    sRangeDF = sDF[['lons','lats','star_record_num','star_ping_bearing']].set_index('star_record_num')
+    for son in portstar:
+        if son.beamName=='sidescan_starboard':
+            sonDF = son.sonMetaDF
+        else:
+            pass
+    sonDF = sonDF[['ping_cnt', 'record_num']].set_index('record_num')
+    sRangeDF = sRangeDF.join(sonDF)
+    sRangeDF.rename(columns={'star_ping_bearing':'ping_bearing'}, inplace=True)
+
+    pRangeDF = getRangeCoords(pRangeDF, pix_m)
+    sRangeDF = getRangeCoords(sRangeDF, pix_m)
+
+    # Save interpolated points to file
+    outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
+    sDF.to_csv(outCSV, index=False, float_format='%.14f')
+
+    outCSV = os.path.join(portstar[0].metaDir, "Port_extent.csv")
+    pRangeDF.to_csv(outCSV, index=False, float_format='%.14f')
+
+    outCSV = os.path.join(portstar[0].metaDir, "Star_extent.csv")
+    sRangeDF.to_csv(outCSV, index=False, float_format='%.14f')
