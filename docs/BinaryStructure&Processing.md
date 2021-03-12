@@ -196,9 +196,9 @@ Header Length (Bytes): **152**
 | Tag 98            | +106   | 1      | 8     | `98`          | 152           | - |
 | **Unknown**       | +107   | 4      | 32    | `00 00 00 04` | 4             | Unknown |
 | Tag 99            | +111   | 1      | 8     | `99`          | 153           | - |
-| **Unknown**       | +112   | 4      | 32    | `00 00 00 4B` | 75            | Unknown |
+| **Unknown**       | +112   | 4      | 32    | `00 00 00 4B` | 75            | Unknown (Frequency Min??) |
 | Tag 9A            | +116   | 1      | 8     | `9A`          | 154           | - |
-| **Unknown**       | +117   | 4      | 32    | `00 00 00 5F` | 95            | Unknown |
+| **Unknown**       | +117   | 4      | 32    | `00 00 00 5F` | 95            | Unknown (Frequency Max??)|
 | Tag 9B            | +121   | 1      | 8     | `9B`          | 155           | - |
 | **Unknown**       | +122   | 4      | 32    | `00 00 00 0C` | 12            | Unknown |
 | Tag 9C            | +126   | 1      | 8     | `9C`          | 156           | - |
