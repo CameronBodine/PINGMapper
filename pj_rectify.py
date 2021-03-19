@@ -1,6 +1,6 @@
 
 
-
+from __future__ import division
 from common_funcs import *
 from c_sonObj import sonObj
 # from osgeo import ogr
@@ -10,6 +10,7 @@ from c_sonObj import sonObj
 import time
 import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
+
 
 pd.set_option('precision', 16)
 
@@ -31,93 +32,198 @@ def getBearing(pntA, pntB):
     db = np.degrees(bearing)
     db = (db + 360) % 360
 
-    return round(db, 1)
+    # return np.round(db, 1)
+    return db
 
 #===========================================
-def getRangeCoords(df, pix_m):
+def getRangeCoords(df, pix_m, side):
     # extent = RangeDF['ping_cnt'].to_numpy()
     # yvec = np.squeeze(np.linspace(np.squeeze(pix_m),extent*np.squeeze(pix_m),extent))
 
     # print(df.info(),'\n')
 
-    df['range'] = df['ping_cnt'] * pix_m
+    lats = 'lats'
+    lons = 'lons'
+    range = side+'_range'
+    ping_cnt = 'ping_cnt'
+    ping_bearing = side+'_ping_bearing'
+    lonr = side+'_lonr'
+    latr = side+'_latr'
+
+    # Calculate max range for each chunk
+    chunk = df.groupby('chunk_id')
+    maxPing = chunk[ping_cnt].max()
+    for i in maxPing.index:
+        df.loc[df['chunk_id']==i, range] = maxPing[i]*pix_m
 
     # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
     R = 6371.393*1000 #Radius of the Earth
     # R = 6378.1
-    brng = np.deg2rad(df['ping_bearing']).to_numpy()
-    d = (df['range'].to_numpy())
+    brng = np.deg2rad(df[ping_bearing]).to_numpy()
+    d = (df[range].to_numpy())
 
     # print(df.iloc[0])
     # print((df['lats']).to_numpy())
 
-    lat1 = np.deg2rad(df['lats']).to_numpy()
-    lon1 = np.deg2rad(df['lons']).to_numpy()
+    lat1 = np.deg2rad(df[lats]).to_numpy()
+    lon1 = np.deg2rad(df[lons]).to_numpy()
     # print(np.finfo(lon1[0]).precision)
 
     lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
            np.cos(lat1) * np.sin(d/R) * np.cos(brng))
-
 
     lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
                               np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
     lat2 = np.degrees(lat2)
     lon2 = np.degrees(lon2)
 
-    df['latr'] = lat2
-    df['lonr'] = lon2
-    print(df.lats)
+    df[lonr] = lon2
+    df[latr] = lat2
 
     # print(df.head())
     # print(df.tail(),'\n\n')
     return df
 
 #===========================================
-def getMidpoint(gdf, df_out, i, geometry = 'geometry'):
-    row = gdf.loc[i]
-    geom = row[geometry]
-    pntA = geom.coords[0]
-    pntB = geom.coords[1]
+def interpTrack(df, dfOrig=None, xlon='lon', ylat='lat', xutm='utm_x',
+                yutm='utm_y', zU='time_s', filt=0, dist=0, deg=3, dropDup=False):
+    # Make copy of df to work on
+    if dfOrig is None:
+        dfOrig = df
+        df = dfOrig.copy()
 
-    midX = (pntA[0] + pntB[0])/2
-    midY = (pntA[1] + pntB[1])/2
-    midpoint = Point(midX, midY)
+    # Drop Duplicates
+    if dropDup is True:
+        df.drop_duplicates(subset=[xlon, ylat], inplace=True)
 
-    caltime = (row['timeStart'] + row['timeEnd'])/2
+    # Extract every `filt` record, including last value
+    if filt>0:
+        lastRow = df.iloc[-1].to_dict()
+        try:
+            dfFilt = df.iloc[::filt].reset_index(drop=False)
+        except:
+            dfFilt = df.iloc[::filt].reset_index(drop=True)
+        dfFilt = dfFilt.append(lastRow, ignore_index=True)
+    else:
+        dfFilt = df.reset_index(drop=False)
 
-    data = {'geometry': [midpoint],
-            'caltime': caltime}
-    df_pnt = pd.DataFrame(data, columns =list(data.keys()))
+    # Filter by distance
+    if dist>0:
+        for i, row in dfFilt.iterrows():
+            pntAx, pntAy = row[xutm], row[yutm]
+            try:
+                pntBx, pntBy = dfFilt.iloc[i+1][xutm], dfFilt.iloc[i+1][yutm]
+                pntDist = np.sqrt( (pntBx-pntAx)**2 + (pntBy - pntAy)**2)
+            except:
+                pntDist = 0
 
-    df_out = pd.concat([df_out, df_pnt])
+            if pntDist < dist and pntDist != 0:
+                dfFilt.drop(i+1, inplace=True)
+    else:
+        pass
 
-    return df_out
+    # Try smoothing trackline
+    x=dfFilt[xlon].to_numpy()
+    y=dfFilt[ylat].to_numpy()
+    t=dfFilt[zU].to_numpy()
+
+    # Attempt to fix error
+    # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
+    okay = np.where(np.abs(np.diff(x))+np.abs(np.diff(y))>0)
+    x = np.r_[x[okay], x[-1]]
+    y = np.r_[y[okay], y[-1]]
+    t = np.r_[t[okay], t[-1]]
+
+    tck, _ = splprep([x,y], u=t, k=deg, s=0)
+
+    u_interp = dfOrig[zU].to_numpy()
+    x_interp = splev(u_interp, tck)
+
+    # Store smoothed trackpoints in df
+    smooth = {xlon+'s': x_interp[0],
+              ylat+'s': x_interp[1],
+              'record_num': dfOrig.index.values}
+    sDF = pd.DataFrame(smooth).set_index('record_num')
+
+    dfOrig.set_index('record_num')
+
+    for col in list(df.columns):
+        sDF[col] = dfOrig[col]
+
+    sDF.reset_index(drop=True)
+    try:
+        dfOrig.reset_index(drop=False)
+    except:
+        dfOrig.reset_index(drop=True)
+
+    return sDF, dfFilt, dfOrig
+
+# #===========================================
+# def lineIntersect(line1, line2):
+#     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+#     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+#     print(line1[0][0])
+#     print(line1[1][0])
+#
+#     def det(a, b):
+#         return a[0] * b[1] - a[1] * b[0]
+#
+#     div = det(xdiff, ydiff)
+#     if div == 0:
+#         isIntersect = False
+#     else:
+#         isIntersect = True
+#
+#     return isIntersect
 
 #===========================================
-def makeLines(gdf, df_out, i, geometry = 'geometry'):
-    # http://ryan-m-cooper.com/blog/gps-points-to-line-segments.html
-    row0 = gdf.loc[i]
-    row1 = gdf.loc[i + 1]
+def lineIntersect(line1, line2):
+    #https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
+    def line(p1, p2):
+        A = (p1[1] - p2[1])
+        B = (p2[0] - p1[0])
+        C = (p1[0]*p2[1] - p2[0]*p1[1])
+        return A, B, -C
 
-    time0 = row0['caltime']
-    time1 = row1['caltime']
+    def intersection(L1, L2):
+        D  = L1[0] * L2[1] - L1[1] * L2[0]
+        Dx = L1[2] * L2[1] - L1[1] * L2[2]
+        Dy = L1[0] * L2[2] - L1[2] * L2[0]
+        if D != 0:
+            x=Dx/D
+            y=Dy/D
+            return x,y
+        else:
+            return False
 
-    geom0 = row0[geometry]
-    geom1 = row1[geometry]
+    def isBetween(line1, c):
+        ax = line1[0][0]
+        ay = line1[0][1]
+        bx = line1[1][0]
+        by = line2[1][1]
+        cx = c[0]
+        cy = c[1]
+        xIntersect=yIntersect=False
+        if (cx >= min(ax,bx)) and (cx <= max(ax,bx)):
+            xIntersect = True
+        if (cy >= min(ay,by)) and (cy <= max(ay,by)):
+            yIntersect = True
+        if xIntersect is True and yIntersect is True:
+            isIntersect = True
+        else:
+            isIntersect = False
+        return isIntersect
 
-    start, end = [(geom0.x, geom0.y), (geom1.x, geom1.y)]
-    line = LineString([start, end])
 
-    # Create a DataFrame to hold record
-    data = {'id': int(i),
-            'timeStart': time0,
-            'timeEnd': time1,
-            'geometry': [line]}
-    df_line = pd.DataFrame(data, columns = list(data.keys()))
 
-    # Add record DataFrame of compiled records
-    df_out = pd.concat([df_out, df_line])
-    return df_out
+    L1 = line(line1[0], line1[1])
+    L2 = line(line2[0], line2[1])
+    c = intersection(L1, L2)
+    if c is not False:
+        I = isBetween(line1, c)
+    else:
+        I = False
+    return I
 
 #===========================================
 def rectify_master_func(sonFiles, humFile, projDir):
@@ -151,100 +257,78 @@ def rectify_master_func(sonFiles, humFile, projDir):
     for son in portstar:
         son._loadSonMeta()
 
-
     ############################################################################
     # Smoothing Trackline
     # Tool:
     # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
-    print("\nSmoothing trackline...")
+    print("\n\tSmoothing trackline...")
     ###################################
-    # Delete duplicates sharing lat/lon
-    pd.options.display.float_format = '{:.6f}'.format
-
+    # Load sonMetaDF
     son = portstar[0]
-    dfOrig = son.sonMetaDF
-    df = dfOrig.copy()
-    df.drop_duplicates(subset=['e', 'n'], inplace=True)
+    df = son.sonMetaDF
 
     ##########################################
-    # Filter Trackpoints:
-    # Select every 10 position, including last
-    last = dfOrig.iloc[-1].to_dict()
-    df20 = df.iloc[::10].reset_index(drop=True)
-    df = df20.append(last, ignore_index=True)
+    # Filter, smooth and interpolate Trackpoints:
+    sDF, dfFilt, dfOrig = interpTrack(df, xlon='lon', ylat='lat', xutm='utm_x', yutm='utm_y',
+                                      zU='time_s', filt=50, dist=0, deg=3, dropDup=True)
 
-    # Save to file
-    # outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
-    # df.to_csv(outCSV, index=False, float_format='%.14f')
+    # ##########################################################
+    # Get first ping for each chunk, and last ping for recording
+    # chunkDF = df.groupby('chunk_id').first().reset_index(drop=False)
+    # chunkDF = chunkDF.append(df.iloc[-1], ignore_index=True)
+    #
+    # sDF, dfFilt, dfOrig = interpTrack(chunkDF, df, xlon='lon', ylat='lat', xutm='utm_x', yutm='utm_y',
+    #                                   zU='time_s', filt=0, dist=0, deg=3, dropDup=False)
 
     ############################################
     # Smooth trackline and interpolate all pings
-    n = len(dfOrig) # Total pings to interpolate
-
-    #User params
-    deg = 3 # interp in degree: 1 for linear; 2-5 for spline
-    num = n # Number of interpolated track points
-
-    # Collect lon, lat, and time ellapsed
-    x = df.lon.to_numpy()
-    y = df.lat.to_numpy()
-    t = df.time_s.to_numpy() # Cumulative time elapsed
-
-    # Fit spline to filtered trackpoints
-    tck, _ = splprep([x,y], u=t, k=deg, s=0)
-
-    # Interpolate positions
-    print("\nInterpolating ping locations...")
-    u_interp = dfOrig.time_s.to_numpy() # Collect time elapsed from all pings
-    x_interp = splev(u_interp, tck) # Interpolate positions based on time elapsed
-
-    # Store smoothed trackpoints in df
-    smooth = {'lons': x_interp[0],
-              'lats': x_interp[1]}
-    sDF = pd.DataFrame(smooth) # smoothed DF
-
-    # Calculate utm coordinates from smooth trackpoints
     trans = sonObjs[0].trans
-    e_smth, n_smth = trans(smooth['lons'], smooth['lats'])
+    e_smth, n_smth = trans(sDF['lons'].to_numpy(), sDF['lats'].to_numpy())
     sDF['es'] = e_smth
     sDF['ns'] = n_smth
 
+    #####################################
     # Calculate COG from smoothed lat/lon
-    i = 0
-    while i < len(sDF) - 1:
-        pntA = sDF.loc[i, ['lons', 'lats']]
-        pntB = sDF.loc[i+1, ['lons', 'lats']]
-        cog = getBearing(pntA, pntB)
-        sDF.loc[i, 'cog'] = cog
-        i+=1
-    sDF.loc[len(sDF) - 1, 'cog'] = cog
+    print("\n\tCalculating COG...")
+    # SLOWWWWWW
+    # i = 0
+    # while i < len(sDF) - 1:
+    #     pntA = sDF.loc[i, ['lons', 'lats']]
+    #     pntB = sDF.loc[i+1, ['lons', 'lats']]
+    #     cog = getBearing(pntA, pntB)
+    #     sDF.loc[i, 'cog'] = cog
+    #     i+=1
+    # sDF.loc[len(sDF) - 1, 'cog'] = cog
 
-    # Get record number for port and starboard pings
-    # Calculate ping direction
-    for son in sonObjs:
-        son._loadSonMeta()
-        record_num = son.sonMetaDF['record_num']
-        beam = son.beamName
-        if beam == "sidescan_port":
-            sDF['port_record_num'] = record_num
-            sDF['port_ping_bearing'] = (sDF['cog'] - 90) % 360
-        elif beam == "sidescan_starboard":
-            sDF['star_record_num'] = record_num
-            sDF['star_ping_bearing'] = (sDF['cog'] + 90) % 360
+    lonA = sDF['lons'].to_numpy()
+    latA = sDF['lats'].to_numpy()
+    lonA = lonA[:-1]
+    latA = latA[:-1]
+    pntA = [lonA,latA]
 
-    # Plot smoothed trackline
-    # plt.figure()
-    # plt.plot(x, y, 'x', x_interp[0], x_interp[1])
-    # plt.savefig(os.path.join(portstar[0].metaDir, "SmoothedTrackPlt.png"))
-    ############################################################################
+    lonB = sDF['lons'].to_numpy()
+    latB = sDF['lats'].to_numpy()
+    lonB = lonB[1:]
+    latB = latB[1:]
+    pntB = [lonB,latB]
 
-    # Workflow for getting outer extent of rectified image
-    # Need to make some sort of loop???? (maybe not yet)
+    brng = getBearing(pntA,pntB)
+    last = brng[-1]
+    brng = np.append(brng, last)
 
-    # 3) Calculate pixel size
+    sDF['cog'] = brng
+
+
+
+
+
+
+    ########################################
     # load some general info from first ping
+    # Info used to calc pixel size in meters
+    print("\n\tDetermine Pixel Size...")
     son = portstar[0] # grab first sonObj
     humDat = son.humDat # get DAT metadata
 
@@ -258,8 +342,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
     else:
         S = 1
 
-    # What 't' to use?????
-    # t = dfOrig.iloc[0]['tempC']/100 # water temperature/10
     t = dfOrig.iloc[0]['t']
     f = dfOrig.iloc[0]['f'] # frequency
     c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
@@ -274,37 +356,64 @@ def rectify_master_func(sonFiles, humFile, projDir):
     # #dx = np.arcsin(c/(1000*t*f))
     pix_m = (1/ft)#*1.1 # size of pixel in meters (??)
 
-    # Prepare portside data
-    pRangeDF = sDF[['lons','lats','port_record_num','port_ping_bearing']].set_index('port_record_num')
-    for son in portstar:
-        if son.beamName=='sidescan_port':
-            sonDF = son.sonMetaDF
-        else:
-            pass
-    sonDF = sonDF[['ping_cnt', 'record_num']].set_index('record_num')
-    pRangeDF = pRangeDF.join(sonDF)
-    pRangeDF.rename(columns={'port_ping_bearing':'ping_bearing'}, inplace=True)
+    ################################################
+    # Get record number for port and starboard pings
+    # Calculate ping direction
+    # Calculate range extent lat/lon
+    print("\n\tCalculate Ping Range Extent Lat/Lon...")
+    for son in sonObjs:
+        son._loadSonMeta()
+        record_num = son.sonMetaDF['record_num'].to_numpy()
+        time_s = son.sonMetaDF['time_s'].to_numpy()
+        beam = son.beamName
+        trans = son.trans
+        if beam == "sidescan_port":
+            sDF['port_record_num'] = record_num
+            sDF['port_ping_bearing'] = (sDF['cog'] - 90) % 360
+            sDF['port_time_s'] = time_s
+            sDF = getRangeCoords(sDF, pix_m, 'port')
+            e_smth, n_smth = trans(sDF['port_lonr'].to_numpy(), sDF['port_latr'].to_numpy())
+            sDF['port_er'] = e_smth
+            sDF['port_nr'] = n_smth
+            # sDF, dfFilt, dfOrig = interpTrack(sDF, xlon='port_lonr', ylat='port_latr', xutm='port_er', yutm='port_nr',
+                                              # zU='time_s', filt=100, dist=0, deg=3, dropDup=True)
+        elif beam == "sidescan_starboard":
+            sDF['star_record_num'] = record_num
+            sDF['star_ping_bearing'] = (sDF['cog'] + 90) % 360
+            sDF['star_time_s'] = time_s
+            sDF = getRangeCoords(sDF, pix_m, 'star')
+            e_smth, n_smth = trans(sDF['star_lonr'].to_numpy(), sDF['star_latr'].to_numpy())
+            sDF['star_er'] = e_smth
+            sDF['star_nr'] = n_smth
+            # sDF, dfFilt, dfOrig = interpTrack(sDF, dfOrig=dfOrig, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
+                                              # zU='time_s', filt=500, dist=0, deg=3, dropDup=True)
 
-    # Prepare starboard data
-    sRangeDF = sDF[['lons','lats','star_record_num','star_ping_bearing']].set_index('star_record_num')
-    for son in portstar:
-        if son.beamName=='sidescan_starboard':
-            sonDF = son.sonMetaDF
-        else:
-            pass
-    sonDF = sonDF[['ping_cnt', 'record_num']].set_index('record_num')
-    sRangeDF = sRangeDF.join(sonDF)
-    sRangeDF.rename(columns={'star_ping_bearing':'ping_bearing'}, inplace=True)
+    # Try determining if pings cross
+    starDF = sDF.iloc[::100].reset_index(drop=True)
+    starDF = starDF.append(sDF.iloc[-1])
+    i=0
+    print(len(starDF))
+    while i < len(starDF)-1:
+        print(i)
+        row = starDF.iloc[i]
+        row2 = starDF.iloc[i+1]
+        line1 = ((row['es'],row['ns']), (row['star_er'], row['star_nr']))
+        line2 = ((row2['es'],row2['ns']), (row2['star_er'], row2['star_nr']))
+        isIntersect = lineIntersect(line1,line2)
+        print(isIntersect,'\n')
+        i+=1
 
-    pRangeDF = getRangeCoords(pRangeDF, pix_m)
-    sRangeDF = getRangeCoords(sRangeDF, pix_m)
 
-    # Save interpolated points to file
+    ##############
+    # Save to file
+    print("\n\tExport tracks...")
+    outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
+    dfFilt.to_csv(outCSV, index=False, float_format='%.14f')
+
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
     sDF.to_csv(outCSV, index=False, float_format='%.14f')
 
-    outCSV = os.path.join(portstar[0].metaDir, "Port_extent.csv")
-    pRangeDF.to_csv(outCSV, index=False, float_format='%.14f')
+    outCSV = os.path.join(portstar[0].metaDir, "Trackline_star.csv")
+    starDF.to_csv(outCSV, index=False, float_format='%.14f')
 
-    outCSV = os.path.join(portstar[0].metaDir, "Star_extent.csv")
-    sRangeDF.to_csv(outCSV, index=False, float_format='%.14f')
+    print('\nDONE!!!')
