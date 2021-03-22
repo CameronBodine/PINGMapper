@@ -197,24 +197,23 @@ def lineIntersect(line1, line2):
             return False
 
     def isBetween(line1, c):
-        ax = line1[0][0]
-        ay = line1[0][1]
-        bx = line1[1][0]
-        by = line2[1][1]
-        cx = c[0]
-        cy = c[1]
+        ax, ay = line1[0][0], line1[0][1]
+        bx, by = line1[1][0], line2[1][1]
+        cx, cy = c[0], c[1]
         xIntersect=yIntersect=False
-        if (cx >= min(ax,bx)) and (cx <= max(ax,bx)):
+
+        print(min(ax,bx),':',cx,':',max(ax,bx))
+        print(min(ay,by),':',cy,':',max(ay,by))
+
+        if (cx >= min(ax,bx)-5) and (cx <= max(ax,bx)+5):
             xIntersect = True
-        if (cy >= min(ay,by)) and (cy <= max(ay,by)):
+        if (cy >= min(ay,by)-5) and (cy <= max(ay,by)+5):
             yIntersect = True
         if xIntersect is True and yIntersect is True:
             isIntersect = True
         else:
             isIntersect = False
         return isIntersect
-
-
 
     L1 = line(line1[0], line1[1])
     L2 = line(line2[0], line2[1])
@@ -321,10 +320,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
     sDF['cog'] = brng
 
 
-
-
-
-
     ########################################
     # load some general info from first ping
     # Info used to calc pixel size in meters
@@ -388,20 +383,53 @@ def rectify_master_func(sonFiles, humFile, projDir):
             # sDF, dfFilt, dfOrig = interpTrack(sDF, dfOrig=dfOrig, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
                                               # zU='time_s', filt=500, dist=0, deg=3, dropDup=True)
 
+    ################################
     # Try determining if pings cross
     starDF = sDF.iloc[::100].reset_index(drop=True)
     starDF = starDF.append(sDF.iloc[-1])
-    i=0
     print(len(starDF))
-    while i < len(starDF)-1:
-        print(i)
-        row = starDF.iloc[i]
-        row2 = starDF.iloc[i+1]
-        line1 = ((row['es'],row['ns']), (row['star_er'], row['star_nr']))
-        line2 = ((row2['es'],row2['ns']), (row2['star_er'], row2['star_nr']))
-        isIntersect = lineIntersect(line1,line2)
-        print(isIntersect,'\n')
-        i+=1
+    starDForig = starDF.copy()
+
+    
+
+    # ############################################################################
+    # # This works ok (start) #
+    # drop = np.empty((len(starDF)), dtype=bool)
+    # drop[:] = np.nan
+    # drop[0] = False
+    # # drop = []
+    # i=0
+    # next = i+1
+    # while next < len(starDF)-1:
+    #     row = starDF.iloc[i]
+    #     row2 = starDF.iloc[next]
+    #     line1 = ((row['es'],row['ns']), (row['star_er'], row['star_nr']))
+    #     line2 = ((row2['es'],row2['ns']), (row2['star_er'], row2['star_nr']))
+    #     isIntersect = lineIntersect(line1,line2)
+    #     print(row['record_num'],i,next,isIntersect,'\n')
+    #     if drop[i] is np.nan:
+    #         drop[i] = isIntersect
+    #     # drop[i] = isIntersect
+    #     if isIntersect is True:
+    #         # drop[i] = isIntersect
+    #         drop[i-1] = isIntersect #Try dropping point before too
+    #         drop[next] = isIntersect
+    #         next+=1
+    #     else:
+    #         # drop[i] = isIntersect
+    #         drop[next] = isIntersect
+    #         i+=1
+    #         next=i+1
+    # drop[-1] = False
+    # # drop=np.array(drop)
+    # print(np.count_nonzero(np.isnan(drop)))
+    #
+    # starDF = starDF[~drop]
+    #
+    # starSmthDF, dfFilt, sDF = interpTrack(starDF, dfOrig=sDF, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
+    #                                   zU='time_s', filt=0, dist=0, deg=3, dropDup=True)
+    # # This works ok (end) #
+    # ############################################################################
 
 
     ##############
@@ -416,4 +444,10 @@ def rectify_master_func(sonFiles, humFile, projDir):
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_star.csv")
     starDF.to_csv(outCSV, index=False, float_format='%.14f')
 
-    print('\nDONE!!!')
+    outCSV = os.path.join(portstar[0].metaDir, "Trackline_starOrig.csv")
+    starDForig.to_csv(outCSV, index=False, float_format='%.14f')
+
+    outCSV = os.path.join(portstar[0].metaDir, "Trackline_starsmth.csv")
+    starSmthDF.to_csv(outCSV, index=False, float_format='%.14f')
+
+    print('\nSLAMMA JAMMA DING DONG!!!')
