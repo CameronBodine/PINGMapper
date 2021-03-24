@@ -327,16 +327,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
     sDF, dfFilt, dfOrig = interpTrack(df, xlon='lon', ylat='lat', xutm='utm_x', yutm='utm_y',
                                       zU='time_s', filt=50, dist=0, deg=3, dropDup=True)
 
-    # ##########################################################
-    # Get first ping for each chunk, and last ping for recording
-    # chunkDF = df.groupby('chunk_id').first().reset_index(drop=False)
-    # chunkDF = chunkDF.append(df.iloc[-1], ignore_index=True)
-    #
-    # sDF, dfFilt, dfOrig = interpTrack(chunkDF, df, xlon='lon', ylat='lat', xutm='utm_x', yutm='utm_y',
-    #                                   zU='time_s', filt=0, dist=0, deg=3, dropDup=False)
-
-    ############################################
-    # Smooth trackline and interpolate all pings
+    # Calculate smoothed eastings/northings
     trans = sonObjs[0].trans
     e_smth, n_smth = trans(sDF['lons'].to_numpy(), sDF['lats'].to_numpy())
     sDF['es'] = e_smth
@@ -345,15 +336,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
     #####################################
     # Calculate COG from smoothed lat/lon
     print("\n\tCalculating COG...")
-    # SLOWWWWWW
-    # i = 0
-    # while i < len(sDF) - 1:
-    #     pntA = sDF.loc[i, ['lons', 'lats']]
-    #     pntB = sDF.loc[i+1, ['lons', 'lats']]
-    #     cog = getBearing(pntA, pntB)
-    #     sDF.loc[i, 'cog'] = cog
-    #     i+=1
-    # sDF.loc[len(sDF) - 1, 'cog'] = cog
 
     lonA = sDF['lons'].to_numpy()
     latA = sDF['lats'].to_numpy()
@@ -373,7 +355,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
 
     sDF['cog'] = brng
 
-
     ########################################
     # load some general info from first ping
     # Info used to calc pixel size in meters
@@ -391,19 +372,16 @@ def rectify_master_func(sonFiles, humFile, projDir):
     else:
         S = 1
 
-    t = dfOrig.iloc[0]['t']
+    t = dfOrig.iloc[0]['t'] # transducer length
     f = dfOrig.iloc[0]['f'] # frequency
     c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
 
     # theta at 3dB in the horizontal
     theta3dB = np.arcsin(c/(t*(f*1000)))
     #resolution of 1 sidescan pixel to nadir
-    ft = (np.pi/2)*(1/theta3dB) #/ (f/455)
-
-    # theta = np.squeeze(metadata['heading'].values)/(180/np.pi)
-    #
-    # #dx = np.arcsin(c/(1000*t*f))
-    pix_m = (1/ft)#*1.1 # size of pixel in meters (??)
+    ft = (np.pi/2)*(1/theta3dB)
+    # size of pixel in meters
+    pix_m = (1/ft)
 
     ################################################
     # Get record number for port and starboard pings
@@ -424,8 +402,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
             e_smth, n_smth = trans(sDF['port_lonr'].to_numpy(), sDF['port_latr'].to_numpy())
             sDF['port_er'] = e_smth
             sDF['port_nr'] = n_smth
-            # sDF, dfFilt, dfOrig = interpTrack(sDF, xlon='port_lonr', ylat='port_latr', xutm='port_er', yutm='port_nr',
-                                              # zU='time_s', filt=100, dist=0, deg=3, dropDup=True)
+
         elif beam == "sidescan_starboard":
             sDF['star_record_num'] = record_num
             sDF['star_ping_bearing'] = (sDF['cog'] + 90) % 360
@@ -434,8 +411,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
             e_smth, n_smth = trans(sDF['star_lonr'].to_numpy(), sDF['star_latr'].to_numpy())
             sDF['star_er'] = e_smth
             sDF['star_nr'] = n_smth
-            # sDF, dfFilt, dfOrig = interpTrack(sDF, dfOrig=dfOrig, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
-                                              # zU='time_s', filt=500, dist=0, deg=3, dropDup=True)
 
     ################################
     # Try determining if pings cross
@@ -448,15 +423,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
 
     drop = np.empty((len(rDF)), dtype=bool)
     drop[:] = False
-    # drop = {}
-    # for i in idx:
-    #     drop[i] = False
 
-    # i=0
-    # next=i+1
-    # drop[i] = False # Don't drop first ping
-    # drop[idx[0]] = False
-    # while next < len(rDF)-1:
     for i in idx:
         # print(i)
         if i == maxIdx:
@@ -464,81 +431,27 @@ def rectify_master_func(sonFiles, humFile, projDir):
         else:
             cRow = rDF.loc[i]
             if drop[i] != True:
-                # pntA = (cRow['star_er'], cRow['star_nr'])
                 dropping = checkPings(i, rDF, 'star')
                 if len(dropping) > 0:
-                    # drop[i-1] = True
                     drop[i] = True
                     for k, v in dropping.items():
-                        # print(k,v)
                         drop[k] = True
                         last = k+1
-                    # drop[last] = True
-                    # print(i,dropping)
             else:
                 pass
-            # next=5000
     rDF = rDF[~drop]
 
     rSmthDF, dfFilt, sDF = interpTrack(rDF, dfOrig=sDF, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
                                        zU='time_s', filt=0, dist=0, deg=1, dropDup=True)
 
-    # ############################################################################
-    # # This works ok (start) #
-    # drop = np.empty((len(starDF)), dtype=bool)
-    # drop[:] = np.nan
-    # drop[0] = False
-    # # drop = []
-    # i=0
-    # next = i+1
-    # while next < len(starDF)-1:
-    #     row = starDF.iloc[i]
-    #     row2 = starDF.iloc[next]
-    #     line1 = ((row['es'],row['ns']), (row['star_er'], row['star_nr']))
-    #     line2 = ((row2['es'],row2['ns']), (row2['star_er'], row2['star_nr']))
-    #     isIntersect = lineIntersect(line1,line2)
-    #     print(row['record_num'],i,next,isIntersect,'\n')
-    #     if drop[i] is np.nan:
-    #         drop[i] = isIntersect
-    #     # drop[i] = isIntersect
-    #     if isIntersect is True:
-    #         # drop[i] = isIntersect
-    #         drop[i-1] = isIntersect #Try dropping point before too
-    #         drop[next] = isIntersect
-    #         next+=1
-    #     else:
-    #         # drop[i] = isIntersect
-    #         drop[next] = isIntersect
-    #         i+=1
-    #         next=i+1
-    # drop[-1] = False
-    # # drop=np.array(drop)
-    # print(np.count_nonzero(np.isnan(drop)))
-    #
-    # starDF = starDF[~drop]
-    #
-    # starSmthDF, dfFilt, sDF = interpTrack(starDF, dfOrig=sDF, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
-    #                                   zU='time_s', filt=0, dist=0, deg=3, dropDup=True)
-    # # This works ok (end) #
-    # ############################################################################
-
-
     ##############
     # Save to file
     print("\n\tExport tracks...")
-    outCSV = os.path.join(portstar[0].metaDir, "forTrackline.csv")
-    dfFilt.to_csv(outCSV, index=False, float_format='%.14f')
 
-    outCSV = os.path.join(portstar[0].metaDir, "Trackline_smooth.csv")
+    outCSV = os.path.join(portstar[0].metaDir, "Trackline_Smth.csv")
     sDF.to_csv(outCSV, index=False, float_format='%.14f')
 
-    outCSV = os.path.join(portstar[0].metaDir, "Trackline_star.csv")
-    rDF.to_csv(outCSV, index=False, float_format='%.14f')
-
-    outCSV = os.path.join(portstar[0].metaDir, "Trackline_starOrig.csv")
-    # starDForig.to_csv(outCSV, index=False, float_format='%.14f')
-
-    outCSV = os.path.join(portstar[0].metaDir, "Trackline_starsmth.csv")
+    outCSV = os.path.join(portstar[0].metaDir, "Range_StarSmth.csv")
     rSmthDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     print('\nSLAMMA JAMMA DING DONG!!!')
