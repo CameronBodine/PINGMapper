@@ -15,9 +15,6 @@ from scipy.interpolate import splprep, splev
 pd.set_option('precision', 16)
 
 #===========================================
-
-
-#===========================================
 def getBearing(pntA, pntB):
 
     lonA, latA = pntA[0], pntA[1]
@@ -158,26 +155,13 @@ def interpTrack(df, dfOrig=None, xlon='lon', ylat='lat', xutm='utm_x',
 
     return sDF, dfFilt, dfOrig
 
-# #===========================================
-# def lineIntersect(line1, line2):
-#     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-#     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-#     print(line1[0][0])
-#     print(line1[1][0])
-#
-#     def det(a, b):
-#         return a[0] * b[1] - a[1] * b[0]
-#
-#     div = det(xdiff, ydiff)
-#     if div == 0:
-#         isIntersect = False
-#     else:
-#         isIntersect = True
-#
-#     return isIntersect
+#===========================================
+def getDist(aX, aY, bX, bY):
+    dist = np.sqrt( (bX - aX)**2 + (bY - aY)**2)
+    return dist
 
 #===========================================
-def lineIntersect(line1, line2):
+def lineIntersect(line1, line2, range):
     #https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
     def line(p1, p2):
         A = (p1[1] - p2[1])
@@ -196,33 +180,103 @@ def lineIntersect(line1, line2):
         else:
             return False
 
-    def isBetween(line1, c):
+    def isBetween(line1, line2, c):
         ax, ay = line1[0][0], line1[0][1]
         bx, by = line1[1][0], line2[1][1]
         cx, cy = c[0], c[1]
         xIntersect=yIntersect=False
 
-        print(min(ax,bx),':',cx,':',max(ax,bx))
-        print(min(ay,by),':',cy,':',max(ay,by))
+        # if (cx >= min(ax,bx)) and (cx <= max(ax,bx)):
+        #     xIntersect = True
+        # if (cy >= min(ay,by)) and (cy <= max(ay,by)):
+        #     yIntersect = True
+        # if xIntersect is True and yIntersect is True:
+        #     isIntersect = True
+        # else:
+        #     isIntersect = False
 
-        if (cx >= min(ax,bx)-5) and (cx <= max(ax,bx)+5):
-            xIntersect = True
-        if (cy >= min(ay,by)-5) and (cy <= max(ay,by)+5):
-            yIntersect = True
-        if xIntersect is True and yIntersect is True:
-            isIntersect = True
+        if (cx >= min(ax,bx)-5) and (cx <= max(ax,bx)+5) and \
+           (cy >= min(ay,by)-5) and (cy <= max(ay,by)+5):
+           checkDist = True
         else:
-            isIntersect = False
+           checkDist = isIntersect = False
+
+        if checkDist is True:
+            x,y = line2[0][0], line2[0][1]
+            dist = getDist(x, y, cx, cy)
+            # print('d',':',dist,'r',':',range)
+            if range < dist:
+                isIntersect = False
+            else:
+                isIntersect = True
+
+        # print(min(ax,bx),':',cx,':',max(ax,bx))
+        # print(min(ay,by),':',cy,':',max(ay,by), isIntersect,'\n')
         return isIntersect
 
     L1 = line(line1[0], line1[1])
     L2 = line(line2[0], line2[1])
     c = intersection(L1, L2)
     if c is not False:
-        I = isBetween(line1, c)
+        I = isBetween(line1, line2, c)
     else:
         I = False
     return I
+
+#===========================================
+def checkPings(i, df, side):
+    range = side+'_range' # range distance
+    x = side+'_er' # range easting extent
+    y = side+'_nr' # range northing extent
+    dThresh = 'distThresh'
+    tDist = 'track_dist'
+    toCheck = 'toCheck'
+    toDrop = 'toDrop'
+    es = 'es' #Trackline smoothed easting
+    ns = 'ns' #Trackline smoothed northing
+
+    # Filter df
+    rowI = df.loc[i]
+    df = df.copy()
+    df = df.iloc[df.index > i]
+
+    # Calc distance threshold
+    df[dThresh] = rowI[range] + df[range]
+
+    # Calc track straight line distance
+    rowIx, rowIy = rowI[x], rowI[y]
+    dfx, dfy = df[x].to_numpy(), df[y].to_numpy()
+    dist = getDist(rowIx, rowIy, dfx, dfy)
+
+    # Check if dist < distThresh
+    df[tDist] = dist
+    df.loc[df[tDist] <= df[dThresh], toCheck] = True
+    df.loc[df[tDist] > df[dThresh], toCheck] = False
+    df[toCheck]=df[toCheck].astype(bool)
+
+    # Check if we need to drop
+    line1 = ((rowI[es],rowI[ns]), (rowI[x], rowI[y]))
+    dfFilt = df[df[toCheck]==True].copy()
+    dropping = {}
+    # line2 = ((df[es].to_numpy(),df[ns].to_numpy()), (df[x].to_numpy(), df[y].to_numpy()))
+    for i, row in dfFilt.iterrows():
+        line2=((row[es], row[ns]), (row[x], row[y]))
+        isIntersect = lineIntersect(line1, line2, row[range])
+        dfFilt.loc[i, toDrop] = isIntersect
+        if isIntersect == True:
+            dropping[i]=isIntersect
+
+    # print(dfFilt)
+
+    # dfFilt = dfFilt[['record_num', toDrop]].set_index('record_num')
+    # print(dfFilt)
+    # print(dropping)
+
+    # print(df.head())
+    # print(df.tail())
+    # print(df.info())
+
+    return dropping
 
 #===========================================
 def rectify_master_func(sonFiles, humFile, projDir):
@@ -385,12 +439,49 @@ def rectify_master_func(sonFiles, humFile, projDir):
 
     ################################
     # Try determining if pings cross
-    starDF = sDF.iloc[::100].reset_index(drop=True)
-    starDF = starDF.append(sDF.iloc[-1])
-    print(len(starDF))
-    starDForig = starDF.copy()
+    starDF = sDF.iloc[::100]#.reset_index(drop=True)
+    starDF = starDF.append(sDF.iloc[-1], ignore_index=True)
+    # starDForig = starDF.copy()
+    rDF = starDF.copy()
+    idx = rDF.index.tolist()
+    maxIdx = max(idx)
 
-    
+    drop = np.empty((len(rDF)), dtype=bool)
+    drop[:] = False
+    # drop = {}
+    # for i in idx:
+    #     drop[i] = False
+
+    # i=0
+    # next=i+1
+    # drop[i] = False # Don't drop first ping
+    # drop[idx[0]] = False
+    # while next < len(rDF)-1:
+    for i in idx:
+        # print(i)
+        if i == maxIdx:
+            break
+        else:
+            cRow = rDF.loc[i]
+            if drop[i] != True:
+                # pntA = (cRow['star_er'], cRow['star_nr'])
+                dropping = checkPings(i, rDF, 'star')
+                if len(dropping) > 0:
+                    # drop[i-1] = True
+                    drop[i] = True
+                    for k, v in dropping.items():
+                        # print(k,v)
+                        drop[k] = True
+                        last = k+1
+                    # drop[last] = True
+                    # print(i,dropping)
+            else:
+                pass
+            # next=5000
+    rDF = rDF[~drop]
+
+    rSmthDF, dfFilt, sDF = interpTrack(rDF, dfOrig=sDF, xlon='star_lonr', ylat='star_latr', xutm='star_er', yutm='star_nr',
+                                       zU='time_s', filt=0, dist=0, deg=1, dropDup=True)
 
     # ############################################################################
     # # This works ok (start) #
@@ -442,12 +533,12 @@ def rectify_master_func(sonFiles, humFile, projDir):
     sDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_star.csv")
-    starDF.to_csv(outCSV, index=False, float_format='%.14f')
+    rDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_starOrig.csv")
-    starDForig.to_csv(outCSV, index=False, float_format='%.14f')
+    # starDForig.to_csv(outCSV, index=False, float_format='%.14f')
 
     outCSV = os.path.join(portstar[0].metaDir, "Trackline_starsmth.csv")
-    starSmthDF.to_csv(outCSV, index=False, float_format='%.14f')
+    rSmthDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     print('\nSLAMMA JAMMA DING DONG!!!')
