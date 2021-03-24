@@ -249,10 +249,11 @@ class sonObj:
         self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
         self.humDat['wgs'] = "epsg:4326"
 
-        try:
-            self.trans = pyproj.Proj(init=self.humDat['epsg'])
-        except:
-            self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
+        self.trans = pyproj.Proj(self.humDat['epsg'])
+        # try:
+        #     self.trans = pyproj.Proj(init=self.humDat['epsg'])
+        # except:
+        #     self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
 
         return
 
