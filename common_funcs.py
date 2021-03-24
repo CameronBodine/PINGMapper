@@ -13,45 +13,46 @@ Author:    Daniel Buscombe
 import os, sys, struct, gc
 from joblib import Parallel, delayed, cpu_count
 from glob import glob
-import dask.array as da
-import dask.delayed as dd
+# import dask.array as da
+# import dask.delayed as dd
 import numpy as np
 from array import array as arr
-
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-
-from tkinter import simpledialog
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename, askdirectory
-from tkinter import messagebox
-import tkinter.filedialog as filedialog
-
+#
+# import matplotlib
+# matplotlib.use('agg')
+# import matplotlib.pyplot as plt
+#
+# from tkinter import simpledialog
+# from tkinter import Tk
+# from tkinter.filedialog import askopenfilename, askdirectory
+# from tkinter import messagebox
+# import tkinter.filedialog as filedialog
+#
 import pyproj
 import imageio
 from numpy.lib.stride_tricks import as_strided as ast
-from numpy.matlib import repmat
+# from numpy.matlib import repmat
 import pandas as pd
-import pydensecrf.densecrf as dcrf
-from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_labels
-from skimage.morphology import binary_opening, disk
-
+# import pydensecrf.densecrf as dcrf
+# from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_labels
+# from skimage.morphology import binary_opening, disk
+#
 from collections import defaultdict
 from copy import deepcopy
 import pickle
 import shutil
 
 #===========================================
-def read_arrays(filename_pattern, shape, dtype):
-    """
-    This function reads files matching a pattern into 'lazy' dask arrays
-    """
-    lazy_arrays = [dd(imageio.imread)(fn) for fn in sorted(glob(filename_pattern))]
-    lazy_arrays = [da.from_delayed(x, shape=shape, dtype=dtype) for x in lazy_arrays]
-    return da.stack(lazy_arrays) #we stack the array to make it 4d (2d x depth) rather than default
+# def read_arrays(filename_pattern, shape, dtype):
+#     """
+#     This function reads files matching a pattern into 'lazy' dask arrays
+#     """
+#     lazy_arrays = [dd(imageio.imread)(fn) for fn in sorted(glob(filename_pattern))]
+#     lazy_arrays = [da.from_delayed(x, shape=shape, dtype=dtype) for x in lazy_arrays]
+#     return da.stack(lazy_arrays) #we stack the array to make it 4d (2d x depth) rather than default
 
 # =========================================================
+# Keep
 def norm_shape(shap):
    '''
    Normalize numpy array shapes so they're always expressed as a tuple,
@@ -74,6 +75,7 @@ def norm_shape(shap):
    raise TypeError('shape must be an int, or a tuple of ints')
 
 # =========================================================
+# Keep
 def sliding_window(a,ws,ss = None,flatten = True):
     '''
     Return a sliding window over a in any number of dimensions
@@ -120,6 +122,7 @@ def sliding_window(a,ws,ss = None,flatten = True):
     return a.reshape(dim), newshape
 
 # =========================================================
+# Keep
 def convert_wgs_to_utm(lon, lat):
     """
     This function estimates UTM zone from geographic coordinates
@@ -135,62 +138,62 @@ def convert_wgs_to_utm(lon, lat):
     return epsg_code
 
 # =========================================================
-def nan_helper(y):
-   '''
-   function to help manage indices of nans
-   '''
-   return np.isnan(y), lambda z: z.nonzero()[0]
+# def nan_helper(y):
+#    '''
+#    function to help manage indices of nans
+#    '''
+#    return np.isnan(y), lambda z: z.nonzero()[0]
 
 # =========================================================
-def rm_spikes(dat,numstds):
-   """
-   remove spikes in dat
-   """
-   ht = np.mean(dat) + numstds*np.std(dat)
-   lt = np.argmax(np.mean(dat) - numstds*np.std(dat),0)
-
-   index = np.where(dat>ht);
-   if index:
-      dat[index] = np.nan
-
-   index = np.where(dat<lt);
-   if index:
-      dat[index] = np.nan
-
-   # fill nans using linear interpolation
-   nans, y= nan_helper(dat)
-   dat[nans]= np.interp(y(nans), y(~nans), dat[~nans])
-   return dat
-
-# =========================================================
-def ascol( arr ):
-   '''
-   reshapes row matrix to be a column matrix (N,1).
-   '''
-   if len( arr.shape ) == 1: arr = arr.reshape( ( arr.shape[0], 1 ) )
-   return arr
+# def rm_spikes(dat,numstds):
+#    """
+#    remove spikes in dat
+#    """
+#    ht = np.mean(dat) + numstds*np.std(dat)
+#    lt = np.argmax(np.mean(dat) - numstds*np.std(dat),0)
+#
+#    index = np.where(dat>ht);
+#    if index:
+#       dat[index] = np.nan
+#
+#    index = np.where(dat<lt);
+#    if index:
+#       dat[index] = np.nan
+#
+#    # fill nans using linear interpolation
+#    nans, y= nan_helper(dat)
+#    dat[nans]= np.interp(y(nans), y(~nans), dat[~nans])
+#    return dat
 
 # =========================================================
-def set_unary_from_labels(fp, lp, prob, labels):
-   """
-   This function sets unary potentials according to the label matrix
-   """
-   H = fp.shape[0]
-   W = fp.shape[1]
-
-   d = dcrf.DenseCRF2D(H, W, len(labels)) # +1)
-   U = unary_from_labels(lp.astype('int'), len(labels), gt_prob= prob)
-
-   d.setUnaryEnergy(U)
-
-   return d, H, W
+# def ascol( arr ):
+#    '''
+#    reshapes row matrix to be a column matrix (N,1).
+#    '''
+#    if len( arr.shape ) == 1: arr = arr.reshape( ( arr.shape[0], 1 ) )
+#    return arr
 
 # =========================================================
-def runningMeanFast(x, N):
-   '''
-   flawed but fast running mean
-   '''
-   x = np.convolve(x, np.ones((N,))/N)[(N-1):]
-   # the last N values will be crap, so they're set to the global mean
-   x[-N:] = x[-N]
-   return x
+# def set_unary_from_labels(fp, lp, prob, labels):
+#    """
+#    This function sets unary potentials according to the label matrix
+#    """
+#    H = fp.shape[0]
+#    W = fp.shape[1]
+#
+#    d = dcrf.DenseCRF2D(H, W, len(labels)) # +1)
+#    U = unary_from_labels(lp.astype('int'), len(labels), gt_prob= prob)
+#
+#    d.setUnaryEnergy(U)
+#
+#    return d, H, W
+
+# =========================================================
+# def runningMeanFast(x, N):
+#    '''
+#    flawed but fast running mean
+#    '''
+#    x = np.convolve(x, np.ones((N,))/N)[(N-1):]
+#    # the last N values will be crap, so they're set to the global mean
+#    x[-N:] = x[-N]
+#    return x
