@@ -8,7 +8,7 @@ from c_sonObj import sonObj
 # from shapely.geometry import mapping, LineString, Point, Polygon
 # import geopandas as gpd
 import time
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy.interpolate import splprep, splev
 
 
@@ -29,15 +29,10 @@ def getBearing(pntA, pntB):
     db = np.degrees(bearing)
     db = (db + 360) % 360
 
-    # return np.round(db, 1)
     return db
 
 #===========================================
 def getRangeCoords(df, pix_m, side):
-    # extent = RangeDF['ping_cnt'].to_numpy()
-    # yvec = np.squeeze(np.linspace(np.squeeze(pix_m),extent*np.squeeze(pix_m),extent))
-
-    # print(df.info(),'\n')
 
     lats = 'lats'
     lons = 'lons'
@@ -59,12 +54,8 @@ def getRangeCoords(df, pix_m, side):
     brng = np.deg2rad(df[ping_bearing]).to_numpy()
     d = (df[range].to_numpy())
 
-    # print(df.iloc[0])
-    # print((df['lats']).to_numpy())
-
     lat1 = np.deg2rad(df[lats]).to_numpy()
     lon1 = np.deg2rad(df[lons]).to_numpy()
-    # print(np.finfo(lon1[0]).precision)
 
     lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
            np.cos(lat1) * np.sin(d/R) * np.cos(brng))
@@ -77,8 +68,6 @@ def getRangeCoords(df, pix_m, side):
     df[lonr] = lon2
     df[latr] = lat2
 
-    # print(df.head())
-    # print(df.tail(),'\n\n')
     return df
 
 #===========================================
@@ -186,15 +175,6 @@ def lineIntersect(line1, line2, range):
         cx, cy = c[0], c[1]
         xIntersect=yIntersect=False
 
-        # if (cx >= min(ax,bx)) and (cx <= max(ax,bx)):
-        #     xIntersect = True
-        # if (cy >= min(ay,by)) and (cy <= max(ay,by)):
-        #     yIntersect = True
-        # if xIntersect is True and yIntersect is True:
-        #     isIntersect = True
-        # else:
-        #     isIntersect = False
-
         if (cx >= min(ax,bx)-5) and (cx <= max(ax,bx)+5) and \
            (cy >= min(ay,by)-5) and (cy <= max(ay,by)+5):
            checkDist = True
@@ -204,14 +184,11 @@ def lineIntersect(line1, line2, range):
         if checkDist is True:
             x,y = line2[0][0], line2[0][1]
             dist = getDist(x, y, cx, cy)
-            # print('d',':',dist,'r',':',range)
             if range < dist:
                 isIntersect = False
             else:
                 isIntersect = True
 
-        # print(min(ax,bx),':',cx,':',max(ax,bx))
-        # print(min(ay,by),':',cy,':',max(ay,by), isIntersect,'\n')
         return isIntersect
 
     L1 = line(line1[0], line1[1])
@@ -265,16 +242,6 @@ def checkPings(i, df, side):
         dfFilt.loc[i, toDrop] = isIntersect
         if isIntersect == True:
             dropping[i]=isIntersect
-
-    # print(dfFilt)
-
-    # dfFilt = dfFilt[['record_num', toDrop]].set_index('record_num')
-    # print(dfFilt)
-    # print(dropping)
-
-    # print(df.head())
-    # print(df.tail())
-    # print(df.info())
 
     return dropping
 
