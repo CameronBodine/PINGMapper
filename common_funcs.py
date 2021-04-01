@@ -29,7 +29,8 @@ from array import array as arr
 # import tkinter.filedialog as filedialog
 #
 import pyproj
-import imageio
+import imageio # Scikit-image dep; need to update image manip w/ rasterio for consistency
+import rasterio
 from numpy.lib.stride_tricks import as_strided as ast
 # from numpy.matlib import repmat
 import pandas as pd
