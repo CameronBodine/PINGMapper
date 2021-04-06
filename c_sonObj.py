@@ -1,8 +1,8 @@
 
 from common_funcs import *
 
-class sonObj:
-    def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=512):
+class sonObj(object):
+    def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
         # Create necessary attributes
         # Path
         self.projDir = projDir      # Project directory
