@@ -4,39 +4,40 @@ from common_funcs import *
 class sonObj(object):
     def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
         # Create necessary attributes
-        # Path
+        self.sonFile = sonFile       # SON file path
         self.projDir = projDir      # Project directory
-        self.outDir = None          # Location where outputs are saved
         self.humFile = humFile      # DAT file path
-        self.sonFile = None         # SON file path
-        self.sonIdxFile = None      # IDX file path
-        self.metaDir = None         # Metadata file directory
-        self.datMetaFile = None     # DAT metadata file path (csv)
-        self.sonMetaFile = None     # SON metadata file path (csv)
-        self.sonMetaPickle = None   # SON metadata pickle path
-
-        # String
-        self.beamName = None        # Name of sonar beam
-        # Number
-        self.headBytes = None       # Number of header bytes for a sonar return
-        self.datLen = None          # Length in bytes of DAT file
         self.tempC = tempC          # Water temperature
-        self.nchunk = nchunk        # Pings per chunk
-        self.pingMax = None         # Stores highest pingCnt value (highest range)
         self.nchunk = nchunk        # Number of sonar records per chunk
-        # Boolean
-        self.isOnix = None          # Flag indicating if files from ONIX
-        self.headValid = None       # Flag indicating if SON header structure is correct
-        # List/Dictionary
-        self.headIdx = None         # List to hold byte index of each sonar record
-        self.pingCnt = None         # Number of ping returns for each sonar record
-        self.humDatStruct = None    # Dictionary holding DAT file structure
-        self.humDat = None          # Dictionary holding DAT file contents
-        self.headStruct = None      # Dictionary holding sonar record header structure
-        # Function
-        self.trans = None           # Function to convert utm to lat/lon
-        # DataFrame
-        self.sonMetaDF = None       # Pandas df to hold son metadata
+
+        # # Path
+        # self.outDir = None          # Location where outputs are saved
+        # self.sonIdxFile = None      # IDX file path
+        # self.metaDir = None         # Metadata file directory
+        # self.datMetaFile = None     # DAT metadata file path (csv)
+        # self.sonMetaFile = None     # SON metadata file path (csv)
+        # self.sonMetaPickle = None   # SON metadata pickle path
+        #
+        # # String
+        # self.beamName = None        # Name of sonar beam
+        # # Number
+        # self.headBytes = None       # Number of header bytes for a sonar return
+        # self.datLen = None          # Length in bytes of DAT file
+        # self.pingMax = None         # Stores highest pingCnt value (highest range)
+        #
+        # # Boolean
+        # self.isOnix = None          # Flag indicating if files from ONIX
+        # self.headValid = None       # Flag indicating if SON header structure is correct
+        # # List/Dictionary
+        # self.headIdx = None         # List to hold byte index of each sonar record
+        # self.pingCnt = None         # Number of ping returns for each sonar record
+        # self.humDatStruct = None    # Dictionary holding DAT file structure
+        # self.humDat = None          # Dictionary holding DAT file contents
+        # self.headStruct = None      # Dictionary holding sonar record header structure
+        # # Function
+        # self.trans = None           # Function to convert utm to lat/lon
+        # # DataFrame
+        # self.sonMetaDF = None       # Pandas df to hold son metadata
 
         return
 
@@ -731,7 +732,7 @@ class sonObj(object):
         """
         meta = pd.read_csv(self.sonMetaFile)
         self.sonMetaDF = meta
-        return
+        return self
 
     # =========================================================
     def __str__(self):
@@ -746,3 +747,11 @@ class sonObj(object):
             output += '\n\t'
             output += "{} : {}".format(item, temp[item])
         return output
+
+
+# class rectObj(sonObj):
+#     # def __init__(self):
+#     #     super(rectObj,self).__init__()
+#
+#     def testing(self):
+#         print("It worked")
