@@ -672,7 +672,10 @@ class sonObj(object):
             self.headIdx = sonMeta['index'].astype(int)
             self.pingCnt = sonMeta['ping_cnt'].astype(int)
             self._loadSonChunk()
-            self._writeTiles(i)
+            self._writeTiles(i, imgOutPrefix='wcp_')
+            # Routine for removing water column
+            # self._remWater()
+            # self._writeTiles(i, imgOutPrefix='wcr_')
             i+=1
 
     # =========================================================
@@ -703,7 +706,7 @@ class sonObj(object):
         self.sonDat = sonDat
 
     # =========================================================
-    def _writeTiles(self, k):
+    def _writeTiles(self, k, imgOutPrefix):
         """
         Using currently saved sonar record ping returns
         in self.sonDAT, saves an unrectified image of the
@@ -723,7 +726,9 @@ class sonObj(object):
         else:
             addZero = ''
         Z = Z[0].astype('uint8')
-        imageio.imwrite(os.path.join(self.outDir, 'image-'+addZero+str(k)+'.png'), Z)
+
+        channel = os.path.split(self.outDir)[-1]
+        imageio.imwrite(os.path.join(self.outDir, imgOutPrefix+channel+'_'+addZero+str(k)+'.png'), Z)
 
     # =========================================================
     def _loadSonMeta(self):
