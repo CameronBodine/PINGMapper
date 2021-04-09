@@ -317,3 +317,23 @@ class rectObj(sonObj):
         else:
             I = False
         return I
+
+    #===========================================
+    def _rectSon(self, remWater=True):
+        if remWater == True:
+            imgInPrefix = 'wcr_'
+            imgOutPrefix = 'src_'
+        else:
+            imgInPrefix = 'wcp_'
+            imgOutPrefix = 'wcp_'
+
+        # Prepare initial variables
+        outDir = self.outDir #Img output/input directory
+        ssSide = (self.beamName).split('_')[-1] #Port or Star
+        pingMeta = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
+        print(pingMeta)
+        inImgs = sorted(glob(outDir+os.sep+imgInPrefix+"*")) #List of imgs to rectify
+        print(self,'\n\n\n')
+
+
+        pass
