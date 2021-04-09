@@ -9,6 +9,7 @@ from c_rectObj import rectObj
 def rectify_master_func(sonFiles, humFile, projDir):
     flip = False #Flip port/star
     filter = 50 #For filtering pings
+    remWater = False # Export geotiff w/o water
 
     ####################################################
     # Check if sonObj pickle exists, append to metaFiles
@@ -39,7 +40,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
     portstar = []
     for son in rectObjs:
         beam = son.beamName
-        if beam == "sidescan_port" or beam == "sidescan_starboard":
+        if beam == "ss_port" or beam == "ss_star":
             portstar.append(son)
 
     # del rectObjs
@@ -114,3 +115,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
     # Filter pings and interpolate
     for son in portstar:
         son._interpRangeCoords(filter)
+
+    ################################################
+    for son in portstar:
+        son._rectSon(remWater)
