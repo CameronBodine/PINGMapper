@@ -67,7 +67,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
     for chan, file in chanAvail.items():
         if chan == 'B000':
             B000 = deepcopy(son)
-            B000.beamName = 'down_lowfreq'
+            B000.beamName = 'ds_lowfreq'
             B000.outDir = os.path.join(B000.projDir, B000.beamName)
             B000.beam = chan
             B000.sonFile = file
@@ -75,7 +75,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         elif chan == 'B001':
             B001 = deepcopy(son)
-            B001.beamName = 'down_highfreq'
+            B001.beamName = 'ds_highfreq'
             B001.outDir = os.path.join(B001.projDir, B001.beamName)
             B001.beam = chan
             B001.sonFile = file
@@ -83,7 +83,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         elif chan == 'B002':
             B002 = deepcopy(son)
-            B002.beamName = 'sidescan_port'
+            B002.beamName = 'ss_port'
             B002.outDir = os.path.join(B002.projDir, B002.beamName)
             B002.beam = chan
             B002.sonFile = file
@@ -91,7 +91,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         elif chan == 'B003':
             B003 = deepcopy(son)
-            B003.beamName = 'sidescan_starboard'
+            B003.beamName = 'ss_star'
             B003.outDir = os.path.join(B003.projDir, B003.beamName)
             B003.beam = chan
             B003.sonFile = file
@@ -99,7 +99,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
         elif chan == 'B004':
             B004 = deepcopy(son)
-            B004.beamName = 'down_vhighfreq'
+            B004.beamName = 'ds_vhighfreq'
             B004.outDir = os.path.join(B004.projDir, B004.beamName)
             B004.beam = chan
             B004.sonFile = file
