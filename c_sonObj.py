@@ -1,4 +1,3 @@
-
 from common_funcs import *
 
 class sonObj(object):
@@ -62,7 +61,7 @@ class sonObj(object):
         # name = name of attribute
         # byteIndex = Index indicating position of name
         # offset = Byte offset for the actual data
-        # dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
+        # dataLen = number of bytes for data (i.e. utm_e is 4 bytes long)
         # data = actual value of the attribute
 
         humFile = self.humFile
@@ -83,8 +82,8 @@ class sonObj(object):
             'unknown_3':[12, 0, 4, -1], #Unknown
             'unknown_4':[16, 0, 4, -1], #Unknown
             'unix_time':[20, 0, 4, -1], #Unix Time
-            'utm_x':[24, 0, 4, -1], #UTM X
-            'utm_y':[28, 0, 4, -1], #UTM Y
+            'utm_e':[24, 0, 4, -1], #UTM X
+            'utm_n':[28, 0, 4, -1], #UTM Y
             'filename':[32, 0, 10, -1], #Recording name
             'unknown_5':[42, 0, 2, -1], #Unknown
             'numrecords':[44, 0, 4, -1], #Number of records
@@ -108,8 +107,8 @@ class sonObj(object):
             'unknown_3':[12, 0, 4, -1], #Unknown
             'unknown_4':[16, 0, 4, -1], #Unknown
             'unix_time':[20, 0, 4, -1], #Unix Time
-            'utm_x':[24, 0, 4, -1], #UTM X
-            'utm_y':[28, 0, 4, -1], #UTM Y
+            'utm_e':[24, 0, 4, -1], #UTM X
+            'utm_n':[28, 0, 4, -1], #UTM Y
             'filename':[32, 0, 12, -1], #Recording name
             'numrecords':[44, 0, 4, -1], #Number of records
             'recordlens_ms':[48, 0, 4, -1], #Recording length milliseconds
@@ -236,16 +235,16 @@ class sonObj(object):
         Determines appropriate UTM zone based on location
         """
         if self.isOnix == 0:
-            utm_x = self.humDat['utm_x']
-            utm_y = self.humDat['utm_y']
+            utm_e = self.humDat['utm_e']
+            utm_n = self.humDat['utm_n']
         else:
             try:
                 pass
             except:
                 pass
 
-        lat = np.arctan(np.tan(np.arctan(np.exp(utm_y/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
-        lon = (utm_x * 57.295779513082302) / 6378388.0
+        lat = np.arctan(np.tan(np.arctan(np.exp(utm_n/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (utm_e * 57.295779513082302) / 6378388.0
 
         self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
         self.humDat['wgs'] = "epsg:4326"
@@ -301,7 +300,7 @@ class sonObj(object):
         byteVal = Spacer value (integer) preceding attribute values (i.e. depth)
         byteIndex = Index indicating position of byteVal
         offset = Byte offset for the actual data
-        dataLen = number of bytes for data (i.e. utm_x is 4 bytes long)
+        dataLen = number of bytes for data (i.e. utm_e is 4 bytes long)
         name = name of attribute
         """
 
@@ -311,8 +310,8 @@ class sonObj(object):
             headStruct = {
             128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
             129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
-            130:[14, 1, 4, 'utm_x'], #UTM X
-            131:[19, 1, 4, 'utm_y'], #UTM Y
+            130:[14, 1, 4, 'utm_e'], #UTM X
+            131:[19, 1, 4, 'utm_n'], #UTM Y
             132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
             132.2:[24, 3, 2, 'instr_heading'], #Heading
             133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
@@ -334,8 +333,8 @@ class sonObj(object):
             headStruct = {
             128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
             129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
-            130:[14, 1, 4, 'utm_x'], #UTM X
-            131:[19, 1, 4, 'utm_y'], #UTM Y
+            130:[14, 1, 4, 'utm_e'], #UTM X
+            131:[19, 1, 4, 'utm_n'], #UTM Y
             132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
             132.2:[24, 3, 2, 'instr_heading'], #Heading
             133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
@@ -358,8 +357,8 @@ class sonObj(object):
             headStruct = {
             128:[4, 1, 4, 'record_num'], #Record Number (Unique for each ping)
             129:[9, 1, 4, 'time_s'], #Time Elapsed milliseconds
-            130:[14, 1, 4, 'utm_x'], #UTM X
-            131:[19, 1, 4, 'utm_y'], #UTM Y
+            130:[14, 1, 4, 'utm_e'], #UTM X
+            131:[19, 1, 4, 'utm_n'], #UTM Y
             132.1:[24, 1, 2, 'gps1'], #GPS quality flag (?)
             132.2:[24, 3, 2, 'instr_heading'], #Heading
             133.1:[29, 1, 2, 'gps2'], #GPS quality flag (?)
@@ -435,8 +434,8 @@ class sonObj(object):
         toCheck = {
             128:[-1, 1, 4, 'record_num'], #Record Number (Unique for each ping)
             129:[-1, 1, 4, 'time_s'], #Time Elapsed milliseconds
-            130:[-1, 1, 4, 'utm_x'], #UTM X
-            131:[-1, 1, 4, 'utm_y'], #UTM Y
+            130:[-1, 1, 4, 'utm_e'], #UTM X
+            131:[-1, 1, 4, 'utm_n'], #UTM Y
             132.1:[-1, 1, 2, 'gps1'], #GPS quality flag (?)
             132.2:[-1, 3, 2, 'instr_heading'], #Heading
             133.1:[-1, 1, 2, 'gps2'], #GPS quality flag (?)
@@ -500,6 +499,37 @@ class sonObj(object):
 
         self.headStruct = headStruct
         return
+
+    #===========================================
+    def _getPixSize(self, df):
+        # son = portstar[0] # grab first sonObj
+        humDat = self.humDat # get DAT metadata
+
+        water_type = humDat['water_type'] # load water type
+        if water_type=='fresh':
+            S = 1
+        elif water_type=='shallow salt':
+            S = 30
+        elif water_type=='deep salt':
+            S = 35
+        else:
+            S = 1
+
+        t = df['t'].to_numpy() # transducer length
+        # f = df.iloc[0]['f'] # frequency
+        f = df['f'].to_numpy()
+        # f = f.max()
+        c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
+
+        # theta at 3dB in the horizontal
+        theta3dB = np.arcsin(c/(t*(f*1000)))
+        #resolution of 1 sidescan pixel to nadir
+        ft = (np.pi/2)*(1/theta3dB)
+        # size of pixel in meters
+        pix_m = (1/ft)
+        df['pix_m'] = pix_m
+
+        return df
 
     # =========================================================
     def _getSonMeta(self):
@@ -575,12 +605,13 @@ class sonObj(object):
         # print(head,"\n\n\n")
         # print(idx)
         sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T
-        idxDF = pd.DataFrame.from_dict(idx, orient="index").T
+        sonMetaAll = self._getPixSize(sonMetaAll)
+        # idxDF = pd.DataFrame.from_dict(idx, orient="index").T
 
         # Write data to csv
         outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
         sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
-        # self.sonMetaFile = outCSV
+        self.sonMetaFile = outCSV
 
         # outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_idx.csv")
         # idxDF.to_csv(outCSV, index=False, float_format='%.14f')
@@ -612,8 +643,8 @@ class sonObj(object):
         file.close()
 
         # Make necessary conversions
-        lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_y']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
-        lon = (sonHead['utm_x'] * 57.295779513082302) / 6378388.0
+        lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_n']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (sonHead['utm_e'] * 57.295779513082302) / 6378388.0
 
         sonHead['lon'] = lon
         sonHead['lat'] = lat
@@ -635,8 +666,7 @@ class sonObj(object):
         sonHead['time_s'] = sonHead['time_s']/1000
         sonHead['tempC'] = self.tempC*10
         # Can we figure out a way to base transducer length on where we think the recording came from?
-        # I can't see anywhere where this value is used.
-        sonHead['t'] = 0.108
+        sonHead['t'] = 0.216#0.108
         try:
             starttime = float(humDat['unix_time'])
             sonHead['caltime'] = starttime + sonHead['time_s']
