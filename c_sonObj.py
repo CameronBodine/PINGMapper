@@ -537,7 +537,7 @@ class sonObj(object):
         Use idx file to find every sonar record in son file.
         If idx file is not present, automatically determine
         sonar record return location in bytes.
-        Then call _getHead() to decode sonar return header.
+        Then call _getHeader() to decode sonar return header.
         """
 
         headStruct = self.headStruct
@@ -567,7 +567,7 @@ class sonObj(object):
 
                 head['index'].append(sonIndex)
                 head['chunk_id'].append(chunk)
-                headerDat = self._getHead(sonIndex)
+                headerDat = self._getHeader(sonIndex)
                 for key, val in headerDat.items():
                     head[key].append(val)
                 idx['record_num'].append(headerDat['record_num'])
@@ -593,7 +593,7 @@ class sonObj(object):
                 else:
                     sys.exit("Not at head of sonar record")
 
-                headerDat = self._getHead(i)
+                headerDat = self._getHeader(i)
                 for key, val in headerDat.items():
                     head[key].append(val)
                 i = i + self.headBytes + headerDat['ping_cnt']
@@ -617,7 +617,7 @@ class sonObj(object):
         # idxDF.to_csv(outCSV, index=False, float_format='%.14f')
 
     # =========================================================
-    def _getHead(self, sonIndex):
+    def _getHeader(self, sonIndex):
         """
         Helper function called by _getSonMeta().
         Given a byte index location, grab appropriate
