@@ -7,7 +7,7 @@ import time
 
 #===========================================
 def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
-    start_time = time.time()
+    # start_time = time.time()
 
     ####################################
     # Remove project directory if exists
@@ -229,4 +229,4 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
     #     print("\n\n")
     #     print(son)
 
-    print(round((time.time() - start_time),ndigits=2))
+    # print(round((time.time() - start_time),ndigits=2))
