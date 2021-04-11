@@ -78,44 +78,20 @@ def rectify_master_func(sonFiles, humFile, projDir):
     outCSV = os.path.join(son.metaDir, "Trackline_Smth.csv")
     son0.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
 
-    ########################################
-    # load some general info from first ping
-    # Info used to calc pixel size in meters
-    print("\n\tDetermine Pixel Size...")
-    son = portstar[0] # grab first sonObj
-    humDat = son.humDat # get DAT metadata
-
-    water_type = humDat['water_type'] # load water type
-    if water_type=='fresh':
-        S = 1
-    elif water_type=='shallow salt':
-        S = 30
-    elif water_type=='deep salt':
-        S = 35
-    else:
-        S = 1
-
-    t = df.iloc[0]['t'] # transducer length
-    f = df.iloc[0]['f'] # frequency
-    c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
-
-    # theta at 3dB in the horizontal
-    theta3dB = np.arcsin(c/(t*(f*1000)))
-    #resolution of 1 sidescan pixel to nadir
-    ft = (np.pi/2)*(1/theta3dB)
-    # size of pixel in meters
-    pix_m = (1/ft)
-
     ################################################
     # Calculate ping direction
+    print("\n\tCalculating range extent...")
     # Calculate range extent lat/lon
     for son in portstar:
-        son._getRangeCoords(flip, pix_m)
+        son._getRangeCoords(flip)
 
+    print("\n\tSmooth and interpolate range extent...")
     # Filter pings and interpolate
     for son in portstar:
         son._interpRangeCoords(filter)
 
     ################################################
-    for son in portstar:
-        son._rectSon(remWater)
+    # for son in portstar:
+    #     son._rectSon(remWater, pix_m, filter, wgs=False)
+    print("\n\tRectifying and exporting GeoTiffs...")
+    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
