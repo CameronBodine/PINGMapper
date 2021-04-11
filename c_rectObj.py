@@ -2,6 +2,9 @@
 from common_funcs import *
 from c_sonObj import sonObj
 from scipy.interpolate import splprep, splev
+from skimage.transform import PiecewiseAffineTransform, warp
+from rasterio.transform import from_origin
+from PIL import Image
 
 class rectObj(sonObj):
     #===========================================
@@ -9,8 +12,8 @@ class rectObj(sonObj):
         sonObj.__init__(self, sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
 
     #===========================================
-    def _interpTrack(self, df, dfOrig=None, dropDup=True, xlon='lon', ylat='lat', xutm='utm_x',
-                     yutm='utm_y', zU='time_s', filt=0, deg=3):
+    def _interpTrack(self, df, dfOrig=None, dropDup=True, xlon='lon', ylat='lat', xutm='utm_e',
+                     yutm='utm_n', zU='time_s', filt=0, deg=3):
 
         lons = xlon+'s'
         lats = ylat+'s'
@@ -60,6 +63,7 @@ class rectObj(sonObj):
                   'record_num': dfOrig['record_num'],
                   'ping_cnt': dfOrig['ping_cnt'],
                   'time_s': dfOrig['time_s'],
+                  'pix_m': dfOrig['pix_m'],
                   lons: x_interp[0],
                   lats: x_interp[1]}
 
@@ -107,7 +111,7 @@ class rectObj(sonObj):
         return db
 
     #===========================================
-    def _getRangeCoords(self, flip, pix_m):
+    def _getRangeCoords(self, flip):
         lons = 'lons'
         lats = 'lats'
         ping_cnt = 'ping_cnt'
@@ -119,11 +123,14 @@ class rectObj(sonObj):
         range = 'range'
         chunk_id = 'chunk_id'
 
+        self._loadSonMeta()
+        sonMetaDF = self.sonMetaDF
+
         # Get smoothed trackline
         sDF = self.smthTrk
 
         # Determine ping bearing
-        if self.beamName == 'sidescan_port':
+        if self.beamName == 'ss_port':
             rotate = -90
         else:
             rotate = 90
@@ -135,8 +142,9 @@ class rectObj(sonObj):
         # Calculate max range for each chunk
         chunk = sDF.groupby(chunk_id)
         maxPing = chunk[ping_cnt].max()
+        pix_m = chunk['pix_m'].min()
         for i in maxPing.index:
-            sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m
+            sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m[i]
 
         # Calculate range extent lat/lon using bearing and range
         # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
@@ -162,6 +170,7 @@ class rectObj(sonObj):
         e_smth, n_smth = self.trans(sDF[rlon].to_numpy(), sDF[rlat].to_numpy())
         sDF[re] = e_smth
         sDF[rn] = n_smth
+        self.smthTrk = sDF
 
         return
 
@@ -226,8 +235,8 @@ class rectObj(sonObj):
         tDist = 'track_dist'
         toCheck = 'toCheck'
         toDrop = 'toDrop'
-        es = 'utm_xs' #Trackline smoothed easting
-        ns = 'utm_ys' #Trackline smoothed northing
+        es = 'utm_es' #Trackline smoothed easting
+        ns = 'utm_ns' #Trackline smoothed northing
 
         # Filter df
         rowI = df.loc[i]
@@ -301,7 +310,7 @@ class rectObj(sonObj):
 
             if checkDist is True:
                 x,y = line2[0][0], line2[0][1]
-                dist = getDist(x, y, cx, cy)
+                dist = self._getDist(x, y, cx, cy)
                 if range < dist:
                     isIntersect = False
                 else:
@@ -319,21 +328,170 @@ class rectObj(sonObj):
         return I
 
     #===========================================
-    def _rectSon(self, remWater=True):
+    def _rectSon(self, remWater=True, filt=50, wgs=False):
         if remWater == True:
             imgInPrefix = 'wcr_'
-            imgOutPrefix = 'src_'
+            imgOutPrefix = 'rect_src_'
         else:
             imgInPrefix = 'wcp_'
-            imgOutPrefix = 'wcp_'
+            imgOutPrefix = 'rect_wcp_'
 
         # Prepare initial variables
         outDir = self.outDir #Img output/input directory
         ssSide = (self.beamName).split('_')[-1] #Port or Star
-        pingMeta = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        print(pingMeta)
+        pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
         inImgs = sorted(glob(outDir+os.sep+imgInPrefix+"*")) #List of imgs to rectify
-        print(self,'\n\n\n')
+        trkMetaFile = os.path.join(self.metaDir, 'Trackline_Smth.csv')
+
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xRange = 'range_lons'
+            yRange = 'range_lats'
+            xTrk = 'lons'
+            yTrk = 'lats'
+        else:
+            epsg = self.humDat['epsg']
+            xRange = 'range_es'
+            yRange = 'range_ns'
+            xTrk = 'utm_es'
+            yTrk = 'utm_ns'
+
+        # Iterate images and rectify
+        for i in range(0,len(inImgs)):
+
+            ############################
+            # Prepare source coordinates
+            # Open image to rectify
+            img = np.asarray(Image.open(inImgs[i]))
+
+            # Prepare src coordinates
+            rows, cols = img.shape[0], img.shape[1]
+            src_cols = np.arange(0, cols)
+            src_rows = np.linspace(0, rows, 2)
+            src_rows, src_cols = np.meshgrid(src_rows, src_cols)
+            srcAll = np.dstack([src_rows.flat, src_cols.flat])[0]
+
+            # Create mask for filtering array
+            mask = np.zeros(len(srcAll), dtype=bool)
+            mask[0::filt] = 1
+            mask[1::filt] = 1
+            mask[-2], mask[-1] = 1, 1
+
+            # Filter src
+            src = srcAll[mask]
+
+            #################################
+            # Prepare destination coordinates
+            pingMeta = pd.read_csv(pingMetaFile)
+            pingMeta = pingMeta[pingMeta['chunk_id']==i]
+            pix_m = pingMeta['pix_m'].min()
+
+            trkMeta = pd.read_csv(trkMetaFile)
+            trkMeta = trkMeta[trkMeta['chunk_id']==i]
+
+            trkMeta = trkMeta.filter(items=[xTrk, yTrk])
+            pingMeta=pingMeta.join(trkMeta)
+
+            # Get range (outer extent) coordinates
+            xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
+            xyR = np.vstack((xR, yR)).T
+
+            # Get trackline (inner extent) coordinates
+            xT, yT = pingMeta[xTrk].to_numpy().T, pingMeta[yTrk].to_numpy().T
+            xyT = np.vstack((xT, yT)).T
+
+            # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...)
+            dstAll = np.empty([len(xyR)+len(xyT), 2])
+            dstAll[0::2] = xyT
+            dstAll[1::2] = xyR
+
+            # Filter dst
+            dst = dstAll[mask]
+            if i > 0:
+                # Use previous tile's end coordinates
+                dst[0][0] = self.lastTrkX
+                dst[0][1] = self.lastTrkY
+                dst[1][0] = self.lastRngX
+                dst[1][1] = self.lastRngY
+
+            # Store last coordinates to ensure seemless imagery
+            self.lastTrkX = dst[-2][0]
+            self.lastTrkY = dst[-2][1]
+            self.lastRngX = dst[-1][0]
+            self.lastRngY = dst[-1][1]
+
+            # Determine min/max for rescaling
+            xMin, xMax = dst[:,0].min(), dst[:,0].max()
+            yMin, yMax = dst[:,1].min(), dst[:,1].max()
+
+            # Determine output shape
+            outShapeM = [xMax-xMin, yMax-yMin]
+            outShape=[0,0]
+            outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+
+            # Rescale destination coordinates
+            # X values
+            xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
+            xScaled = xStd * (outShape[0] - 0) + 0 # Rescale
+            dst[:,0] = xScaled
+
+            # Y values
+            yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
+            yScaled = yStd * (outShape[1] - 0) + 0 # Rescale
+            dst[:,1] = yScaled
+
+            ########################
+            # Perform transformation
+            # PiecewiseAffineTransform
+            tform = PiecewiseAffineTransform()
+            tform.estimate(src, dst) # Calculate H matrix
+
+            # Warp image
+            out = warp(img.T,
+                       tform.inverse,
+                       output_shape=(outShape[1], outShape[0]),
+                       mode='constant',
+                       cval=np.nan,
+                       clip=False,
+                       preserve_range=True)
+
+            out = np.where(out==255,np.nan,out) # Fixes extra white on curves
+
+            # Rotate 180 and flip
+            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+
+            ##############
+            # Save Geotiff
+            # Determine resolution and calc affine transform matrix
+            xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
+            yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
+
+            xres = (xMax - xMin) / outShape[0]
+            yres = (yMax - yMin) / outShape[1]
+            # transform = Affine.translation(xMin - xres / 2, yMin - yres / 2) * Affine.scale(xres, yres)
+            transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
+
+            # gtiff = 'E:\\NAU\\Python\\PINGMapper\\procData\\SFE_20170801_R00014\\sidescan_port\\image-00010-rect-prj.tif'
+            outImg=os.path.basename(inImgs[i]).replace(imgInPrefix, imgOutPrefix)
+            gtiff = os.path.join(outDir, outImg)
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=out.shape[0],
+                width=out.shape[1],
+                count=1,
+                dtype=out.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw'
+                ) as dst:
+                    dst.nodata=np.nan
+                    dst.write(out,1)
+
+            i+=1
+
 
 
         pass
