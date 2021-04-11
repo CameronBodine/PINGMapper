@@ -666,7 +666,7 @@ class sonObj(object):
         sonHead['time_s'] = sonHead['time_s']/1000
         sonHead['tempC'] = self.tempC*10
         # Can we figure out a way to base transducer length on where we think the recording came from?
-        sonHead['t'] = 0.216#0.108
+        sonHead['t'] = 0.108
         try:
             starttime = float(humDat['unix_time'])
             sonHead['caltime'] = starttime + sonHead['time_s']
