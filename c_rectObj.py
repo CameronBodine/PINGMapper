@@ -170,6 +170,7 @@ class rectObj(sonObj):
         e_smth, n_smth = self.trans(sDF[rlon].to_numpy(), sDF[rlat].to_numpy())
         sDF[re] = e_smth
         sDF[rn] = n_smth
+        sDF = sDF.dropna()
         self.smthTrk = sDF
 
         return
@@ -203,17 +204,33 @@ class rectObj(sonObj):
                 cRow = rDF.loc[i]
                 if drop[i] != True:
                     dropping = self._checkPings(i, rDF)
-                    if len(dropping) > 0:
-                        drop[i] = True #Potentiall remove this
+                    if len(dropping) == 1:
+                        drop[i] = True
+                    elif len(dropping) > 1:
+                        lastKey = max(dropping)
+                        del dropping[lastKey] # Don't remove last element
+                        drop[i] = True # Potentially remove this
                         for k, v in dropping.items():
                             drop[k] = True
                             last = k+1
+                    else:
+                        pass
                 else:
                     pass
         rDF = rDF[~drop]
 
-        rsDF = self._interpTrack(df=rDF, dfOrig=sDF, xlon=rlon, ylat=rlat, xutm=re, yutm=rn,
-                                 filt=0, deg=1)
+        for chunk in pd.unique(rDF['chunk_id']):
+            rchunkDF = rDF[rDF['chunk_id']==chunk].copy()
+            schunkDF = sDF[sDF['chunk_id']==chunk].copy()
+            smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
+                                          ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
+            if 'rsDF' not in locals():
+                rsDF = smthChunk.copy()
+            else:
+                rsDF = rsDF.append(smthChunk, ignore_index=True)
+
+        # rsDF = self._interpTrack(df=rDF, dfOrig=sDF, xlon=rlon, ylat=rlat, xutm=re, yutm=rn,
+        #                          filt=0, deg=1)
 
         e_smth, n_smth = self.trans(rsDF[rlons].to_numpy(), rsDF[rlats].to_numpy())
         rsDF[res] = e_smth
@@ -340,7 +357,7 @@ class rectObj(sonObj):
         outDir = self.outDir #Img output/input directory
         ssSide = (self.beamName).split('_')[-1] #Port or Star
         pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        inImgs = sorted(glob(outDir+os.sep+imgInPrefix+"*")) #List of imgs to rectify
+        allImgs = sorted(glob(outDir+os.sep+imgInPrefix+"*")) #List of imgs to rectify
         trkMetaFile = os.path.join(self.metaDir, 'Trackline_Smth.csv')
 
         if wgs is True:
@@ -356,13 +373,27 @@ class rectObj(sonObj):
             xTrk = 'utm_es'
             yTrk = 'utm_ns'
 
+        # Make sure destination coordinates are available for each image
+        # If dest coords not available, remove image from inImgs
+        allImgsDict = defaultdict()
+        for img in allImgs:
+            imgName=os.path.basename(img).split('.')[0]
+            chunk=int(imgName.split('_')[-1])
+            allImgsDict[chunk] = img
+
+        pingMeta = pd.read_csv(pingMetaFile)
+        chunks = pd.unique(pingMeta['chunk_id'])
+        firstChunk = min(chunks)
+
+        inImgs = {c: allImgsDict[c] for c in chunks}
+
         # Iterate images and rectify
-        for i in range(0,len(inImgs)):
+        for i, imgPath in inImgs.items():
 
             ############################
             # Prepare source coordinates
             # Open image to rectify
-            img = np.asarray(Image.open(inImgs[i]))
+            img = np.asarray(Image.open(imgPath))
 
             # Prepare src coordinates
             rows, cols = img.shape[0], img.shape[1]
@@ -383,11 +414,11 @@ class rectObj(sonObj):
             #################################
             # Prepare destination coordinates
             pingMeta = pd.read_csv(pingMetaFile)
-            pingMeta = pingMeta[pingMeta['chunk_id']==i]
+            pingMeta = pingMeta[pingMeta['chunk_id']==i].reset_index()
             pix_m = pingMeta['pix_m'].min()
 
             trkMeta = pd.read_csv(trkMetaFile)
-            trkMeta = trkMeta[trkMeta['chunk_id']==i]
+            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index()
 
             trkMeta = trkMeta.filter(items=[xTrk, yTrk])
             pingMeta=pingMeta.join(trkMeta)
@@ -407,18 +438,19 @@ class rectObj(sonObj):
 
             # Filter dst
             dst = dstAll[mask]
-            if i > 0:
-                # Use previous tile's end coordinates
-                dst[0][0] = self.lastTrkX
-                dst[0][1] = self.lastTrkY
-                dst[1][0] = self.lastRngX
-                dst[1][1] = self.lastRngY
 
-            # Store last coordinates to ensure seemless imagery
-            self.lastTrkX = dst[-2][0]
-            self.lastTrkY = dst[-2][1]
-            self.lastRngX = dst[-1][0]
-            self.lastRngY = dst[-1][1]
+            # if i > firstChunk:
+            #     # Use previous tile's end coordinates
+            #     dst[0][0] = self.lastTrkX
+            #     dst[0][1] = self.lastTrkY
+            #     dst[1][0] = self.lastRngX
+            #     dst[1][1] = self.lastRngY
+            #
+            # # Store last coordinates to ensure seemless imagery
+            # self.lastTrkX = dst[-2][0]
+            # self.lastTrkY = dst[-2][1]
+            # self.lastRngX = dst[-1][0]
+            # self.lastRngY = dst[-1][1]
 
             # Determine min/max for rescaling
             xMin, xMax = dst[:,0].min(), dst[:,0].max()
@@ -474,6 +506,7 @@ class rectObj(sonObj):
 
             # gtiff = 'E:\\NAU\\Python\\PINGMapper\\procData\\SFE_20170801_R00014\\sidescan_port\\image-00010-rect-prj.tif'
             outImg=os.path.basename(inImgs[i]).replace(imgInPrefix, imgOutPrefix)
+            outImg=outImg.replace('png', 'tif')
             gtiff = os.path.join(outDir, outImg)
             with rasterio.open(
                 gtiff,
@@ -490,7 +523,7 @@ class rectObj(sonObj):
                     dst.nodata=np.nan
                     dst.write(out,1)
 
-            i+=1
+            # i+=1
 
 
 
