@@ -507,7 +507,7 @@ class sonObj(object):
 
         water_type = humDat['water_type'] # load water type
         if water_type=='fresh':
-            S = 1
+            S = 36
         elif water_type=='shallow salt':
             S = 30
         elif water_type=='deep salt':
@@ -516,9 +516,8 @@ class sonObj(object):
             S = 1
 
         t = df['t'].to_numpy() # transducer length
-        # f = df.iloc[0]['f'] # frequency
-        f = df['f'].to_numpy()
-        # f = f.max()
+        # f = df['f'].to_numpy()
+        f = 455
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
 
         # theta at 3dB in the horizontal
