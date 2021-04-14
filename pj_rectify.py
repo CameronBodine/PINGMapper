@@ -9,6 +9,7 @@ from c_rectObj import rectObj
 def rectify_master_func(sonFiles, humFile, projDir):
     flip = False #Flip port/star
     filter = 50 #For filtering pings
+    filterRange = 20
     remWater = False # Export geotiff w/o water
 
     ####################################################
@@ -87,11 +88,12 @@ def rectify_master_func(sonFiles, humFile, projDir):
 
     print("\n\tSmooth and interpolate range extent...")
     # Filter pings and interpolate
-    for son in portstar:
-        son._interpRangeCoords(filter)
+    # for son in portstar:
+    #     son._interpRangeCoords(filterRange)
+    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._interpRangeCoords)(filterRange) for son in portstar)
 
     ################################################
     # for son in portstar:
-    #     son._rectSon(remWater, pix_m, filter, wgs=False)
+    #     son._rectSon(remWater, filter, wgs=False)
     print("\n\tRectifying and exporting GeoTiffs...")
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
