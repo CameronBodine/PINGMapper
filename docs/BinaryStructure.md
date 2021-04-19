@@ -3,17 +3,10 @@
 By Cameron S. Bodine
 
 ## Introduction
-PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird sidescan sonar system.  Developed for Python 2, it can read in Humminbird DAT and SON files, export the data, process radiometric corrections, classify bed texture, and produce maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This report documents new workflows for decoding Humminbird binary sonar recordings that will work on sonar recordings from any Humminbird model with any firmware version.  The goal and objectives for this effort are as follows:
-
-- Ensure functionality with all current Humminbird models.
-    - Collect and catalog sonar recordings from various Humminibrd models (in progress)
-    - Develop workflows to test PyHum on sonar recording catalog. (in progress)
-    - Identify and implement alternative workflows for decoding binary sonar recordings. (in progress)
-
-This report documents a new workflow for decoding and loading sonar recordings, and exporting non-rectified imagery.  First, new findings concerning the DAT and SON binary file structure will be discussed.  Next, two new Python scripts for processing these files will be discussed.  Finally, these new workflows will be tested against a variety of Humminbird sonar recordings to determine if they can successfully decode the binary structure and export relevant data.
+PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird sidescan sonar system.  Developed for Python 2, it decodes Humminbird DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird Recording binary structure.  This report documents new findings on the binary structure of Humminbird sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird Recording: DAT/SON Processing & Raw Data Export](../Processing&RawDataExport.md) for more information).
 
 ## DAT and SON Binary Structure
-The initial release of PyHum documented the known binary structure of Humminbird sonar files (https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst).  Using this as a guide, DAT and SON files were further explored using a program called Hexinator (https://hexinator.com/).  Hexinator interface allows you to quickly view binary data in hexidecimal format.  It has a tool that allows you to annotate the file with known structures and elements, known as a grammer, which can be applied to any open binary file which aides in seeing differences in the binary structure.
+The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface allows you to quickly view binary data in hexidecimal format.  It has a tool that allows you to annotate the file with known structures and elements, known as a grammer, which can be applied to any open binary file which aides in seeing differences in the binary structure.
 
 ![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
 
