@@ -6,12 +6,13 @@ By Cameron S. Bodine
 PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird sidescan sonar system.  Developed for Python 2, it decodes Humminbird DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird Recording binary structure.  This report documents new findings on the binary structure of Humminbird sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird Recording: DAT/SON Processing & Raw Data Export](../docs/Processing&RawDataExport.md) for more information).
 
 ## DAT and SON Binary Structure
-The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface allows you to quickly view binary data in hexidecimal format.  It has a tool that allows you to annotate the file with known structures and elements, known as a grammer, which can be applied to any open binary file which aides in seeing differences in the binary structure.
+The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface displays binary data in hexidecimal format.  Binary files are then annotated with known structures and elements, known as a grammer.  The grammer can be applied to any binary file which aides in identifying differences in the binary structure.  In the screenshot below, the left window shows the color coded hexidecimal characters on the left side with the binary ASCII values on the right.  The right window shows the grammer for the file, indicating Position, Offset, Length, Index, Name, and integer value of the hexidecimal character.
 
 ![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
 
 ### DAT File Structure
 *Need to add info*
+
 
 ### SON File Structure
 A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
@@ -24,7 +25,7 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan Mega Frequency    | 1,200 kHz         |
 
-Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see additional information below).  The header is followed by 8-byte (0-255 Integer) values representing all the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
+Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing all the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
 
 #### Sonar Record Structure
 The number of bytes for a sonar record varies in two ways.  First, depending on the model (and potentially firmware version), the number of bytes in the sonar record header vary in length.  Three different lengths have been identified so far:
