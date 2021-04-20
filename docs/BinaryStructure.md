@@ -2,19 +2,111 @@
 # Humminbird Recording: DAT & SON Binary Structure
 By Cameron S. Bodine
 
-## Introduction
+## 1) Introduction
 PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird sidescan sonar system.  Developed for Python 2, it decodes Humminbird DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird Recording binary structure.  This report documents new findings on the binary structure of Humminbird sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird Recording: DAT/SON Processing & Raw Data Export](../docs/Processing&RawDataExport.md) for more information).
 
-## DAT and SON Binary Structure
+## 2) DAT and SON Binary Structure
 The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface displays binary data in hexidecimal format.  Binary files are then annotated with known structures and elements, known as a grammer.  The grammer can be applied to any binary file which aides in identifying differences in the binary structure.  In the screenshot below, the left window shows the color coded hexidecimal characters on the left side with the binary ASCII values on the right.  The right window shows the grammer for the file, indicating Position, Offset, Length, Index, Name, and integer value of the hexidecimal character.
 
 ![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
 
-### DAT File Structure
+### 2.1) DAT File Structure
 *Need to add info*
+The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird model (and potentially firmware).  The following section indicate the offset from start of the DAT file, length (number of hexidecimal characters), and description of the data.
 
+#### 2.1.1) Humminbird 900/1100/Helix Series
 
-### SON File Structure
+| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
+| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
+| DAT Beginning     | +0     | 1      | 8     | `C1`          | 193           | Beginning of DAT File |
+| Water Type        | +1     | 1      | 8     | *Varies*      | *Varies*      | 0='fresh' (freshwater); 1='deep salt'; 2='shallow salt'; otherwise='unknown' |
+| Unknown           | +2     | 1      | 8     | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +3     | 1      | 8     | `01`          | 1             | Unknown     |
+| Firmware Version (?) | +4  | 4      | 32    | *Varies*      | *Varies*      | Installed firmware version (?) |
+| Unknown           | +8     | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +12    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
+| Unknown           | +16    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unix Date/Time    | +20    | 4      | 32    | *Varies*      | *Varies*      | Recording start date and time |
+| UTM X             | +24    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Easting |
+| UTM Y             | +28    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Northing |
+| Recording Name    | +32    | 4      | 32    | *Varies*      | *Varies*      | Recording name |
+| Unknown           | +42    | 2      | 16    | *Varies*      | *Varies*      | Unknown     |
+| Number of Records | +44    | 4      | 32    | *Varies*      | *Varies*      | Number of sonar records/pings |
+| Length            | +48    | 4      | 32    | *Varies*      | *Varies*      | Length (in milliseconds) of sonar recording |
+| Unknown           | +52    | 2      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +56    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
+| DAT End           | +60    | 1      | 32    | *Varies*      | *Varies*      | End of DAT File |
+
+#### 2.1.2) Humminbird ONIX Series
+The ONIX series has a different structure from other Humminbird models.  The first 48 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.  See tables below for more information.
+
+**Binary Header**
+
+| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
+| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
+| DAT Beginning     | +0     | 1      | 8     | `C1`          | 193           | Beginning of DAT File |
+| Water Type        | +1     | 1      | 8     | *Varies*      | *Varies*      | 0='fresh' (freshwater); 1='deep salt'; 2='shallow salt'; otherwise='unknown' |
+| Unknown           | +2     | 1      | 8     | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +3     | 1      | 8     | `00`          | 0             | Unknown     |
+| Number of Pings   | +4     | 4      | 32    | *Varies*      | *Varies*      | Number of sonar records/pings |
+| Length            | +8     | 4      | 32    | *Varies*      | *Varies*      | Length (in milliseconds) of sonar recording |
+| Ping Size (Bytes) | +12    | 4      | 32    | *Varies*      | *Varies*      | Number of returns per ping |
+| First Ping Period | +16    | 4      | 32    | *Varies*      | *Varies*      | First ping period (in milliseconds) |
+| Beam Mask         | +20    | 4      | 32    | `1E 00 00 00` | 30            | Unknown     |
+| Spacer            | +24    | 24     | 192   | `00`*24       | 0             | Spacer preceding ascii text |
+
+**Ascii Text**
+
+| Name              | Example              |
+| ----------------- | ----------------------
+| Version           | <Version=SonarRecordThumbVersion> |
+| Number of Pings   | <NumberOfPings=11712> |
+| Total Time Ms     | <TotalTimeMs=143092> |
+| Ping Size Bytes   | <PingSizeBytes=1652> |
+| First Ping Period | FirstPingPeriodMs=1> |
+| Beam Mask         | <BeamMask=30> |
+| Chirp 1 Start Freq | <Chirp1StartFrequency=0> |
+| Chirp 1 End Freq  | <Chirp1EndFrequency=0> |
+| Chirp 2 Start Freq | <Chirp2StartFrequency=0> |
+| Chirp 2 End Freq  | <Chirp2EndFrequency=0> |
+| Chirp 3 Start Freq | <Chirp3StartFrequency=0> |
+| Chirp 3 End Freq  | <Chirp3EndFrequency=0> |
+| Source Device Model ID 2D | <SourceDeviceModelId2D=1001> |
+| Source Device Model ID SI | <SourceDeviceModelIdSI=1001> |
+| Source Device Model ID DI | <SourceDeviceModelIdDI=1001> |
+
+#### 2.1.3) Humminbird Solix Series
+
+| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
+| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
+| DAT Beginning     | +0     | 1      | 8     | `C3`          | 195           | Beginning of DAT File |
+| Water Type        | +1     | 1      | 8     | *Varies*      | *Varies*      | *Need's further investigation* |
+| Unknown           | +2     | 1      | 8     | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +3     | 1      | 8     | `01`          | 1             | Unknown     |
+| Firmware Version (?) | +4  | 4      | 32    | *Varies*      | *Varies*      | Installed firmware version (?) |
+| Unknown           | +8     | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +12    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
+| Unknown           | +16    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
+| Unix Date/Time    | +20    | 4      | 32    | *Varies*      | *Varies*      | Recording start date and time |
+| UTM X             | +24    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Easting |
+| UTM Y             | +28    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Northing |
+| Recording Name    | +32    | 4      | 32    | *Varies*      | *Varies*      | Recording name |
+| Unknown           | +42    | 2      | 16    | *Varies*      | *Varies*      | Unknown     |
+| Number of Records | +44    | 4      | 32    | *Varies*      | *Varies*      | Number of sonar records/pings |
+| Length            | +48    | 4      | 32    | *Varies*      | *Varies*      | Length (in milliseconds) of sonar recording |
+| Unknown           | +52    | 2      | 32    | *Varies*      | *Varies*      | Unknown |
+| Unknown           | +56    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +60    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +64    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +68    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
+| Unknown           | +72    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
+| Unknown           | +76    | 4      | 32    | `D4 C3 B2 A1` | 2712847316    | Unknown     |
+| Unknown           | +80    | 4      | 32    | `D4 C3 B2 A1` | 2712847316    | Unknown     |
+| Unknown           | +84    | 4      | 32    | `D4 C3 B2 A1` | 2712847316    | Unknown     |
+| Unknown           | +88    | 4      | 32    | `D4 C3 B2 A1` | 2712847316    | Unknown     |
+| DAT End           | +60    | 1      | 32    | `D4 C3 B2 A1` | 2712847316    | End of DAT File |
+
+### 2.2) SON File Structure
 A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
 
 | File Name | Description                 | Frequency         |
@@ -25,9 +117,9 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan MEGA Frequency    | 1,200 kHz         |
 
-Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
+Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2.2.1.1-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
 
-#### Sonar Record Structure
+#### 2.2.1) Sonar Record Structure
 The number of bytes for a sonar record varies in two ways.  First, the number of bytes in the sonar record header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird models, however, has been identified.  
 
 Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
@@ -40,10 +132,10 @@ Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  
 | 72 Bytes      | 11xx, Helix, Onix|
 | 152 Bytes     | Solix            |
 
-##### Header Structure
+##### 2.2.1.1) Header Structure
 The header for a sonar record contains metadata specific to that sonar record.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of sonar record, the data that follows the tag, and the size (in bytes) of the data.
 
-##### Humminbird 900 Series
+##### 2.2.1.2) Humminbird 900 Series
 Header Length (Bytes): **67**
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
@@ -86,7 +178,7 @@ Header Length (Bytes): **67**
 | End Header        | +66    | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-##### Humminbird 1100 & Helix Series
+##### 2.2.1.3) Humminbird 1100 & Helix Series
 Header Length (Bytes): **72**  
 *Note:* The structure is the same as 900 series for offset 0 - 33.
 
@@ -132,7 +224,7 @@ Header Length (Bytes): **72**
 | End Header        | +71    | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-##### Humminbird Solix Series
+##### 2.2.1.4) Humminbird Solix Series
 Header Length (Bytes): **152**  
 *Note:* The structure is the same as 1100/Helix series for offset 0 - 43.
 
@@ -210,7 +302,7 @@ Header Length (Bytes): **152**
 | End Header        | +151   | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-Example of first and last 4 sonar records from randomly selected sonar files.  Values displayed are in hexadecimal.
+Example of first and last 4 sonar records from sonar files.  Values displayed are in hexadecimal.
 
 **1199**
 ![Img of 1199 Son Header](/docs/attach/1199SonHead.PNG?raw=true "Hexinator Screen Shot")
@@ -218,7 +310,7 @@ Example of first and last 4 sonar records from randomly selected sonar files.  V
 **Helix**
 ![Img of Helix Son Header](/docs/attach/HelixSonHead.PNG?raw=true "Hexinator Screen Shot")
 
-## References
+## 3) References
 
 <a id="1">[1]</a> Buscombe, D., Grams, P. E., & Smith, S. M. C. (2015). Automated Riverbed Sediment Classification Using Low-Cost Sidescan Sonar. Journal of Hydraulic Engineering, 142(2), 06015019. https://doi.org/10.1061/(ASCE)HY.1943-7900.0001079
 
