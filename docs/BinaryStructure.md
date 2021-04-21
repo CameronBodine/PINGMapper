@@ -117,7 +117,7 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan MEGA Frequency    | 1,200 kHz         |
 
-Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2.2.1.1-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
+Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
 
 #### 2.2.1) Sonar Record Structure
 The number of bytes for a sonar record varies in two ways.  First, the number of bytes in the sonar record header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird models, however, has been identified.  
