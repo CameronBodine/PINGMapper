@@ -40,10 +40,13 @@ Once an accurate sonar record header structure is found, each sonar channel's re
 ## 4) Export Raw Sonar Tiles
 After a sonar channel's metadata has been extracted, the sonar pings can be loaded and saved to a PNG.  The `nchunk` parameter dictates the number of pings to include in the exported sonar tile, and each ping is assigned a `chunk_id`.  First, the `son._getScansChunk()` function will open the sonar channel metadata in a Pandas dataframe.  The dataframe is subset by `chunk_id`, then the pings for a given chunk are loaded into memory using `son._loadSonChunk()`, and finally exported to PNG using `son._writeTiles()`.  Out-of-memory errors are avoided by only loading a given chunk at a time rather then loading the entire sonar recording into memory.
 
-## 5) Conclusion
+## 5) Save `son` Object
+The final step of the procedure saves each `son` object to `projDir/meta/beamNumber_beamName_meta.meta`.  Saving the object to file allows easy reloading of the object's attributes for subsequent processing steps.
+
+## 6) Conclusion
 This report documented the procedures for decoding Humminbird [DAT/SON binary files](../docs/BinaryStructure.md), regardless of the Humminbird model or firmware version.  This workflow decodes and exports metadata from DAT and SON files, which is used to export un-rectified sonar tiles.  Any potential out-of-memory issues are avoided by only loading one chunk of pings into memory at a time.  These procedures have been designed to deal with unknown Humminbird sonar recording structures as well as potentially missing IDX files.  The next step is to produce georectified sonar imagery (see [Humminbird Recording: Sonar Georectification](../docs/SonarGeorectification.md) for more information).
 
-## 3) References
+## 7) References
 
 <a id="1">[1]</a> Buscombe, D., Grams, P. E., & Smith, S. M. C. (2015). Automated Riverbed Sediment Classification Using Low-Cost Sidescan Sonar. Journal of Hydraulic Engineering, 142(2), 06015019. https://doi.org/10.1061/(ASCE)HY.1943-7900.0001079
 
