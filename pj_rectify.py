@@ -36,7 +36,6 @@ def rectify_master_func(sonFiles, humFile, projDir):
         del sonTemp
 
     #####################################
-    # Load metadata csv from port or star
     # Determine which sonObj is port/star
     portstar = []
     for son in rectObjs:

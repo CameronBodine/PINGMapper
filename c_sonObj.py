@@ -3,7 +3,7 @@ from common_funcs import *
 class sonObj(object):
     def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
         # Create necessary attributes
-        self.sonFile = sonFile       # SON file path
+        self.sonFile = sonFile      # SON file path
         self.projDir = projDir      # Project directory
         self.humFile = humFile      # DAT file path
         self.tempC = tempC          # Water temperature
