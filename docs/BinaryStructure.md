@@ -1,20 +1,20 @@
 
-# Humminbird Recording: DAT & SON Binary Structure
+# Humminbird&reg; Recording: DAT & SON Binary Structure
 By Cameron S. Bodine
 
 ## 1) Introduction
-PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird sidescan sonar system.  Developed for Python 2, it decodes Humminbird DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird Recording binary structure.  This report documents new findings on the binary structure of Humminbird sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird Recording: DAT/SON Processing & Raw Data Export](../docs/Processing&RawDataExport.md) for more information).
+PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing from a low-cost Humminbird&reg; sidescan sonar system.  Developed for Python 2, it decodes Humminbird&reg; DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird&reg; Recording binary structure.  This report documents new findings on the binary structure of Humminbird&reg; sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird&reg; Recording: DAT/SON Processing & Raw Data Export](../docs/Processing&RawDataExport.md) for more information).
 
 ## 2) DAT and SON Binary Structure
-The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface displays binary data in hexidecimal format.  Binary files are then annotated with known structures and elements, known as a grammer.  The grammer can be applied to any binary file which aides in identifying differences in the binary structure.  In the screenshot below, the left window shows the color coded hexidecimal characters on the left side with the binary ASCII values on the right.  The right window shows the grammer for the file, indicating Position, Offset, Length, Index, Name, and integer value of the hexidecimal character.
+The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird&reg; sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface displays binary data in hexidecimal format.  Binary files are then annotated with known structures and elements, known as a grammer.  The grammer can be applied to any binary file which aides in identifying differences in the binary structure.  In the screenshot below, the left window shows the color coded hexidecimal characters on the left side with the binary ASCII values on the right.  The right window shows the grammer for the file, indicating Position, Offset, Length, Index, Name, and integer value of the hexidecimal character.
 
 ![Img of Hexinator Program](/docs/attach/Hexinator.PNG?raw=true "Hexinator Screen Shot")
 
 ### 2.1) DAT File Structure
 *Need to add info*
-The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird model (and potentially firmware).  The following section indicate the offset from start of the DAT file, length (number of hexidecimal characters), and description of the data.
+The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the DAT file, length (number of hexidecimal characters), and description of the data.
 
-#### 2.1.1) Humminbird 900/1100/Helix Series
+#### 2.1.1) Humminbird&reg; 900/1100/Helix Series
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
@@ -37,8 +37,8 @@ The DAT file contains metadata that applies to the sonar recording.  It includes
 | Unknown           | +56    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
 | DAT End           | +60    | 1      | 32    | *Varies*      | *Varies*      | End of DAT File |
 
-#### 2.1.2) Humminbird ONIX Series
-The ONIX series has a different structure from other Humminbird models.  The first 48 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.  See tables below for more information.
+#### 2.1.2) Humminbird&reg; ONIX Series
+The ONIX series has a different structure from other Humminbird&reg; models.  The first 48 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.  See tables below for more information.
 
 **Binary Header**
 
@@ -75,7 +75,7 @@ The ONIX series has a different structure from other Humminbird models.  The fir
 | Source Device Model ID SI | <SourceDeviceModelIdSI=1001> |
 | Source Device Model ID DI | <SourceDeviceModelIdDI=1001> |
 
-#### 2.1.3) Humminbird Solix Series
+#### 2.1.3) Humminbird&reg; Solix Series
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
@@ -120,7 +120,7 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
 
 #### 2.2.1) Sonar Record Structure
-The number of bytes for a sonar record varies in two ways.  First, the number of bytes in the sonar record header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird models, however, has been identified.  
+The number of bytes for a sonar record varies in two ways.  First, the number of bytes in the sonar record header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
 
 Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
 
@@ -133,9 +133,9 @@ Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  
 | 152 Bytes     | Solix            |
 
 ##### 2.2.1.1) Header Structure
-The header for a sonar record contains metadata specific to that sonar record.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of sonar record, the data that follows the tag, and the size (in bytes) of the data.
+The header for a sonar record contains metadata specific to that sonar record.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of sonar record, the data that follows the tag, and the size (in bytes) of the data.
 
-##### 2.2.1.2) Humminbird 900 Series
+##### 2.2.1.2) Humminbird&reg; 900 Series
 Header Length (Bytes): **67**
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
@@ -178,7 +178,7 @@ Header Length (Bytes): **67**
 | End Header        | +66    | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-##### 2.2.1.3) Humminbird 1100 & Helix Series
+##### 2.2.1.3) Humminbird&reg; 1100 & Helix Series
 Header Length (Bytes): **72**  
 *Note:* The structure is the same as 900 series for offset 0 - 33.
 
@@ -224,7 +224,7 @@ Header Length (Bytes): **72**
 | End Header        | +71    | 1      | 8     | `21`          | 33            | End of sonar record header |
 
 
-##### 2.2.1.4) Humminbird Solix Series
+##### 2.2.1.4) Humminbird&reg; Solix Series
 Header Length (Bytes): **152**  
 *Note:* The structure is the same as 1100/Helix series for offset 0 - 43.
 
