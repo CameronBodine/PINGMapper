@@ -25,7 +25,15 @@ Parameters
 Each of the previously saved sonar objects (`projDir/meta/beamNumber_beamName_meta.meta`) are temporarily loaded and a new `rectObj()` is initialized and all the attributes in the sonar object are loaded into `rectObj()`.  Each sonar channel now has it's own `rectObj()` instance and are stored in the list `rectObjs`.  The objects in `rectObjs` are interrogated to find the port and starboard channels, and are stored in a new list `portstar`.
 
 ## 3) Smooth Trackline
-Modern Humminbird units have a built-in GPS to store the latitude and longitude for each sonar record.  Ports are available on the control head to connect to external GPS if desired.  Unless a survey grade GPS is used, the resulting trackpoints will exhibit a stepwise behavior, with multiple sonar records sharing the same geographic coordinates.  Ideally, the boat is constantly moving with smooth navigation and consistent speed during a sonar survey in order to generate optimal images of the bed.  The raw trackpoints do not accurately reflect this.  Therefore, additional processing of the trackpoints is needed to create a smooth trackline.
+Modern Humminbird units have a built-in GPS to store the latitude and longitude for each sonar record.  Ports are available on the control head to connect to external GPS if desired.  Unless a survey grade GPS is used, the resulting trackpoints will exhibit a stepwise behavior, with multiple sonar records sharing the same geographic coordinates.  Ideally, the boat is constantly moving with smooth navigation and consistent speed during a sonar survey in order to generate optimal images of the bed.  The raw trackpoints do not accurately reflect this, due to GPS uncertainty.  Therefore, additional processing of the trackpoints is needed to create a smooth trackline.
+
+Most sonar surveys are carried out with a single transducer and therefore share the same GPS coordinates.  A smoothed trackline is fit from a single side scan channel then copied to the other channel.  Previously saved sonar channel metadata (see [3) Decode SON files](../docs/Processing&RawDataExport.md#3-Decode_SON_Files)) is loaded to memory for one of `rectObj()` using `son._loadSonMeta()`.  Once loaded, a smoothed trackline is fit to the raw GPS coordinates with `son._interpTrack()`.  The function will filter the GPS points by taking every 50<sup>th</sup> sonar record, including first and last, fit a 3<sup>rd</sup> degree spline, then interpolate every ping along the resulting smoothed line.  Course over ground (COG) is calculated from the smoothed tracklines using `son._getBearing()`.  The smoothed coordinates and COG Pandas dataframe is saved to file (`/projDir/meta/Trackline_Smooth.csv`) and copied to the other side scan channel to determine a chunk's range extent.
+
+### Example of Smoothed Trackline
+![Smoothed Trackline](/docs/attach/SmoothedTrackline.PNG?raw=true "Before & After Trackline Smoothing")
+
+## 4) Calculate Range Extent
+
 
 
 
