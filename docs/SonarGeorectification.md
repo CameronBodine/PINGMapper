@@ -30,7 +30,7 @@ Modern Humminbird units have a built-in GPS to store the latitude and longitude 
 Most sonar surveys are carried out with a single transducer and therefore share the same GPS coordinates.  A smoothed trackline is fit from a single side scan channel then copied to the other channel.  Previously saved sonar channel metadata (see [3) Decode SON files](../docs/Processing&RawDataExport.md#3-Decode_SON_Files)) is loaded to memory for one of `rectObj()` using `son._loadSonMeta()`.  Once loaded, a smoothed trackline is fit to the raw GPS coordinates with `son._interpTrack()`.  The function will filter the GPS points by taking every 50<sup>th</sup> sonar record, including first and last, fit a 3<sup>rd</sup> degree spline, then interpolate every ping along the resulting smoothed line.  Course over ground (COG) is calculated from the smoothed tracklines using `son._getBearing()`.  The smoothed coordinates and COG Pandas dataframe is saved to file (`/projDir/meta/Trackline_Smooth.csv`) and copied to the other side scan channel to determine a chunk's range extent.
 
 ### Example of Smoothed Trackline
-![Smoothed Trackline](/docs/attach/SmoothedTrackline.PNG?raw=true "Before & After Trackline Smoothing")
+![Smoothed Trackline](/docs/attach/SmoothedTrackline.png?raw=true "Before & After Trackline Smoothing")
 
 ## 4) Calculate Range Extent
 
