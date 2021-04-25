@@ -36,15 +36,24 @@ Most sonar surveys are carried out with a single transducer and therefore share 
 The side scan range (in feet, meters, etc.) is set on the Humminbird&reg; control head prior and during a sonar recording.  This setting tells the unit how long to listen to 'listen' for a ping return.  The range set on the Humminbird&reg; is not stored in the DAT or SON files.  PING Mapper estimates the range based on speed of sound in water to determine the size of a ping in meters (`pix_m`) (see [Decode SON Files](../docs/Processing&RawDataExport.md#3-Decode-SON-Files) for more information).  Range extent is calculated by multiplying `pix_m` by the number of ping returns in a sonar record.  Using the latitude, longitude and COG of the beginning of the ping (on the trackline), the geographic coordinates of the last return (range extent) are determined by `son._getRangeExtent()`.
 
 ## 5) Filter and Smooth Range Extent
-
-
+Sonar surveys conducted on sinous systems require extra filtering and processing to ensure that pings do not overlap along bends (see image below).  Filtering is a necessary step for optimal georefrenced imagery.  `son._interpRangeCoords()` will first iterate through all pings to identify and remove overlapping pings with `son._checkPings()`.  The non-overlapping pings are then passed to `son._interpTrack()` to fit a one degree spline to the filtered points, and then all pings are interpolated along the spline.  The result is a Pandas dataframe with the coordinates of the range extent with no overlap between pings.  The dataframe is saved to file (`/projDir/meta/RangeExtent_beam.csv`).
 
 ![Range Extent](/docs/attach/Bearing.PNG?raw=true "Before & After: Filter & Smooth Range Extent")
 
-## 7) References
+## 6) Georectification
+After range extent has been calculated, [sonar tiles](../docs/Processing&RawDataExport.md#4-Export-Raw-Sonar-Tiles) are warped to the curvature of the trackline/range extent and pixel coordinates are converted to geographic coordinates.  This is accomplished with `son._rectSon()`.  Every 50<sup>th</sup> ping's trackline and range extent coordinates are used to facilitate processing speed.  A [Piecewise Affine Transform](https://scikit-image.org/docs/dev/api/skimage.transform.html?highlight=transform#piecewiseaffinetransform?raw=true "Scikit-Image Website") is used to transform the pixel coordinates to geographic coordinates, which then warps the image pixels to the curvature of the trackline/range extent.  The georectified image is saved as a GeoTiff.
+
+![Georectified With Water Column](/docs/attach/GeorectifiedWithWaterColumn.PNG)
+
+Note that these images display the water column, which is not spatially accurate.  Removal of the water column will be discussed in subsequent documentation.
+
+## 7) Conclusion
+This report documented the georectification procedure for Humminbird&reg; sonar recordings.  The workflow included filtering and smoothing the vessel's trackline, calculating the range extent for every ping, and exporting a georectified sonar tile GeoTiff.  Subsequent documentation will outline procedures for accurately calculating the depth at nadir for water column removal and generating spatially accurate GeoTiff's.
+
+## 8) References
 
 <a id="1">[1]</a> Buscombe, D., Grams, P. E., & Smith, S. M. C. (2015). Automated Riverbed Sediment Classification Using Low-Cost Sidescan Sonar. Journal of Hydraulic Engineering, 142(2), 06015019. https://doi.org/10.1061/(ASCE)HY.1943-7900.0001079
 
 <a id="2">[2]</a> Buscombe, D. (2017). Shallow water benthic imaging and substrate characterization using recreational-grade sidescan-sonar. Environmental Modelling and Software, 89, 1–18. https://doi.org/10.1016/j.envsoft.2016.12.003
 
-<a id="3">[3]</a>Kaeser, A. J., & Litts, T. L. (2010). A Novel Technique for Mapping Habitat in Navigable Streams Using Low-cost Side Scan Sonar. Fisheries, 35(4), 163–174. https://doi.org/10.1577/1548-8446-35.4.163
+<a id="3">[3]</a> Kaeser, A. J., & Litts, T. L. (2010). A Novel Technique for Mapping Habitat in Navigable Streams Using Low-cost Side Scan Sonar. Fisheries, 35(4), 163–174. https://doi.org/10.1577/1548-8446-35.4.163
