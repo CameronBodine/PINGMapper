@@ -33,12 +33,13 @@ Most sonar surveys are carried out with a single transducer and therefore share 
 ![Smoothed Trackline](/docs/attach/SmoothedTrackline.PNG?raw=true "Before & After Trackline Smoothing")
 
 ## 4) Calculate Range Extent
-The side scan range (in feet, meters, etc.) is set on the Humminbird&reg; control head prior and during a sonar recording.  This setting tells the unit how long to listen to 'listen' for a ping return.  The range set on the Humminbird&reg; is not stored in the DAT or SON files.  PING Mapper estimates the range based on speed of sound in water (see [Decode SON Files](../docs/Processing&RawDataExport.md#3-Decode-SON-Files) for more information).
+The side scan range (in feet, meters, etc.) is set on the Humminbird&reg; control head prior and during a sonar recording.  This setting tells the unit how long to listen to 'listen' for a ping return.  The range set on the Humminbird&reg; is not stored in the DAT or SON files.  PING Mapper estimates the range based on speed of sound in water to determine the size of a ping in meters (`pix_m`) (see [Decode SON Files](../docs/Processing&RawDataExport.md#3-Decode-SON-Files) for more information).  Range extent is calculated by multiplying `pix_m` by the number of ping returns in a sonar record.  Using the latitude, longitude and COG of the beginning of the ping (on the trackline), the geographic coordinates of the last return (range extent) are determined by `son._getRangeExtent()`.
+
+## 5) Filter and Smooth Range Extent
 
 
 
-
-
+![Range Extent](/docs/attach/Bearing.PNG?raw=true "Before & After: Filter & Smooth Range Extent")
 
 ## 7) References
 
