@@ -92,7 +92,7 @@ def rectify_master_func(sonFiles, humFile, projDir):
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._interpRangeCoords)(filterRange) for son in portstar)
 
     ################################################
+    print("\n\tRectifying and exporting GeoTiffs...")
     # for son in portstar:
     #     son._rectSon(remWater, filter, wgs=False)
-    print("\n\tRectifying and exporting GeoTiffs...")
-    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
+    # Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
