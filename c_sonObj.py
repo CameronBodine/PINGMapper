@@ -757,7 +757,8 @@ class sonObj(object):
         Z = Z[0].astype('uint8')
 
         channel = os.path.split(self.outDir)[-1]
-        imageio.imwrite(os.path.join(self.outDir, imgOutPrefix+channel+'_'+addZero+str(k)+'.png'), Z)
+        projName = os.path.split(self.projDir)[-1]
+        imageio.imwrite(os.path.join(self.outDir, projName+'_'+imgOutPrefix+channel+'_'+addZero+str(k)+'.png'), Z)
 
     # =========================================================
     def _loadSonMeta(self):
