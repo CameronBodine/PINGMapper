@@ -52,8 +52,21 @@ class rectObj(sonObj):
         y = np.r_[y[okay], y[-1]]
         t = np.r_[t[okay], t[-1]]
 
+        # Check if enough points to interpolate
+        # If not, too many overlapping pings
+        if len(x) <= deg:
+            return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
+
         # Interpolate trackline
-        tck, _ = splprep([x,y], u=t, k=deg, s=0)
+        try:
+            tck, _ = splprep([x,y], u=t, k=deg, s=0)
+        except:
+            # Time is messed up (negative time offset)
+            # Use record num instead
+            zU = 'record_num'
+            t = dfFilt[zU].to_numpy()
+            t = np.r_[t[okay], t[-1]]
+            tck, _ = splprep([x,y], u=t, k=deg, s=0)
 
         u_interp = dfOrig[zU].to_numpy()
         x_interp = splev(u_interp, tck)
@@ -357,7 +370,7 @@ class rectObj(sonObj):
         outDir = self.outDir #Img output/input directory
         ssSide = (self.beamName).split('_')[-1] #Port or Star
         pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        allImgs = sorted(glob(outDir+os.sep+imgInPrefix+"*")) #List of imgs to rectify
+        allImgs = sorted(glob(outDir+os.sep+"*"+imgInPrefix+"*")) #List of imgs to rectify
         trkMetaFile = os.path.join(self.metaDir, 'Trackline_Smth.csv')
 
         if wgs is True:
