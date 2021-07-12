@@ -406,7 +406,8 @@ class rectObj(sonObj):
             ############################
             # Prepare source coordinates
             # Open image to rectify
-            img = np.asarray(Image.open(imgPath))
+            img = np.asarray(Image.open(imgPath)).copy()
+            img[0]=0 # To fix extra white on curves
 
             # Prepare src coordinates
             rows, cols = img.shape[0], img.shape[1]
@@ -434,7 +435,7 @@ class rectObj(sonObj):
             trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index()
 
             trkMeta = trkMeta.filter(items=[xTrk, yTrk])
-            pingMeta=pingMeta.join(trkMeta)
+            pingMeta = pingMeta.join(trkMeta)
 
             # Get range (outer extent) coordinates
             xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
@@ -451,19 +452,6 @@ class rectObj(sonObj):
 
             # Filter dst
             dst = dstAll[mask]
-
-            # if i > firstChunk:
-            #     # Use previous tile's end coordinates
-            #     dst[0][0] = self.lastTrkX
-            #     dst[0][1] = self.lastTrkY
-            #     dst[1][0] = self.lastRngX
-            #     dst[1][1] = self.lastRngY
-            #
-            # # Store last coordinates to ensure seemless imagery
-            # self.lastTrkX = dst[-2][0]
-            # self.lastTrkY = dst[-2][1]
-            # self.lastRngX = dst[-1][0]
-            # self.lastRngY = dst[-1][1]
 
             # Determine min/max for rescaling
             xMin, xMax = dst[:,0].min(), dst[:,0].max()
@@ -500,8 +488,6 @@ class rectObj(sonObj):
                        clip=False,
                        preserve_range=True)
 
-            out = np.where(out==255,np.nan,out) # Fixes extra white on curves
-
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
@@ -533,7 +519,7 @@ class rectObj(sonObj):
                 transform=transform,
                 compress='lzw'
                 ) as dst:
-                    dst.nodata=np.nan
+                    dst.nodata=0
                     dst.write(out,1)
 
             # i+=1
