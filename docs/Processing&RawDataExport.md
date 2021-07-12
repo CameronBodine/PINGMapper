@@ -40,9 +40,9 @@ Once an accurate sonar record header structure is found, each sonar channel's re
 ## 4) Export Raw Sonar Tiles
 After a sonar channel's metadata has been extracted, the sonar pings can be loaded and saved to a PNG.  The `nchunk` parameter dictates the number of pings to include in the exported sonar tile, and each ping is assigned a `chunk_id`.  First, the `son._getScansChunk()` function will open the sonar channel metadata in a Pandas dataframe.  The dataframe is subset by `chunk_id`, then the pings for a given chunk are loaded into memory using `son._loadSonChunk()`, and finally exported to PNG using `son._writeTiles()`.  Out-of-memory errors are avoided by only loading a given chunk at a time rather then loading the entire sonar recording into memory.
 
-![Raw Sonar Tile - Boulder](/docs/attach/PRL_Boulder.PNG?raw=true "Boulder Field")
+![Raw Sonar Tile - Boulder](./attach/PRL_Boulder.PNG)
 \
-![Raw Sonar Tile - Wood](/docs/attach/PRL_Wood.PNG?raw=true "Woody Debris")
+![Raw Sonar Tile - Wood](./attach/PRL_Wood.PNG)
 
 ## 5) Save `son` Object
 The final step of the procedure saves each `son` object to `projDir/meta/beamNumber_beamName_meta.meta`.  Saving the object to file allows easy reloading of the object's attributes for subsequent processing steps.

@@ -30,7 +30,7 @@ Modern Humminbird&reg; units have a built-in GPS to store the latitude and longi
 Most sonar surveys are carried out with a single transducer and therefore share the same GPS coordinates for all sonar channels.  A smoothed trackline is fit from a single side scan channel then copied to the other channel.  Previously saved sonar channel metadata (see [3) Decode SON files](../docs/Processing&RawDataExport.md#3-Decode_SON_Files)) is loaded to memory for one of `rectObj()` using `son._loadSonMeta()`.  Once loaded, a smoothed trackline is fit to the raw GPS coordinates with `son._interpTrack()`.  The function will filter the GPS points by taking every 50<sup>th</sup> sonar record, including first and last, fit a 3<sup>rd</sup> degree spline, then interpolate every ping along the resulting smoothed line.  Course over ground (COG) is calculated from the smoothed tracklines using `son._getBearing()`.  The smoothed coordinates and COG Pandas dataframe is saved to file (`/projDir/meta/Trackline_Smooth.csv`) and copied to the other side scan channel to determine a chunk's range extent.
 
 ### Example of Smoothed Trackline
-![Smoothed Trackline](/docs/attach/SmoothedTrackline.PNG?raw=true "Before & After Trackline Smoothing")
+![Smoothed Trackline](./attach/SmoothedTrackline.PNG)
 
 ## 4) Calculate Range Extent
 The side scan range (in feet, meters, etc.) is set on the Humminbird&reg; control head prior and during a sonar recording.  This setting tells the unit how long to 'listen' for a ping return.  The range set on the Humminbird&reg; is not stored in the DAT or SON files.  PING Mapper estimates the range based on speed of sound in water to determine the size of a ping in meters (`pix_m`) (see [Decode SON Files](../docs/Processing&RawDataExport.md#3-Decode-SON-Files) for more information).  Range extent is calculated by multiplying `pix_m` by the number of ping returns in a sonar record.  Using the latitude, longitude and COG of the beginning of the ping (on the trackline), the geographic coordinates of the last return (range extent) are determined by `son._getRangeExtent()`.
@@ -38,12 +38,12 @@ The side scan range (in feet, meters, etc.) is set on the Humminbird&reg; contro
 ## 5) Filter and Smooth Range Extent
 Sonar surveys conducted on sinous systems require extra filtering and processing to ensure that pings do not overlap along bends (see image below).  Filtering is a necessary step for optimal georefrenced imagery.  `son._interpRangeCoords()` will first iterate through all pings to identify and remove overlapping pings with `son._checkPings()`.  The non-overlapping pings are then passed to `son._interpTrack()` to fit a one degree spline to the filtered points, then all pings are interpolated along the spline.  The result is a Pandas dataframe with the coordinates of the range extent with no overlap between pings.  The dataframe is saved to file (`/projDir/meta/RangeExtent_beam.csv`).
 
-![Range Extent](/docs/attach/Bearing.PNG?raw=true "Before & After: Filter & Smooth Range Extent")
+![Range Extent](./attach/Bearing.PNG)
 
 ## 6) Georectification
 After range extent has been calculated, [sonar tiles](../docs/Processing&RawDataExport.md#4-Export-Raw-Sonar-Tiles) are warped to the curvature of the trackline/range extent and pixel coordinates are converted to geographic coordinates.  This is accomplished with `son._rectSon()`.  Every 50<sup>th</sup> ping's trackline and range extent coordinates are used to facilitate processing speed.  A [Piecewise Affine Transform](https://scikit-image.org/docs/dev/api/skimage.transform.html?highlight=transform#piecewiseaffinetransform?raw=true "Scikit-Image Website") is used to transform the pixel coordinates to geographic coordinates, which then warps the image pixels to the curvature of the trackline/range extent.  The georectified image is saved as a GeoTiff.
 
-![Georectified With Water Column](/docs/attach/GeorectifiedWithWaterColumn.PNG)
+![Georectified With Water Column](./attach/GeorectifiedWithWaterColumn.PNG)
 
 Note that these images display the water column, which is not spatially accurate.  Removal of the water column will be discussed in subsequent documentation.
 

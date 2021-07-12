@@ -57,22 +57,22 @@ The ONIX series has a different structure from other Humminbird&reg; models.  Th
 **Ascii Text**
 
 | Name              | Example              |
-| ----------------- | ----------------------
-| Version           | <Version=SonarRecordThumbVersion> |
-| Number of Pings   | <NumberOfPings=11712> |
-| Total Time Ms     | <TotalTimeMs=143092> |
-| Ping Size Bytes   | <PingSizeBytes=1652> |
-| First Ping Period | FirstPingPeriodMs=1> |
-| Beam Mask         | <BeamMask=30> |
-| Chirp 1 Start Freq | <Chirp1StartFrequency=0> |
-| Chirp 1 End Freq  | <Chirp1EndFrequency=0> |
-| Chirp 2 Start Freq | <Chirp2StartFrequency=0> |
-| Chirp 2 End Freq  | <Chirp2EndFrequency=0> |
-| Chirp 3 Start Freq | <Chirp3StartFrequency=0> |
-| Chirp 3 End Freq  | <Chirp3EndFrequency=0> |
-| Source Device Model ID 2D | <SourceDeviceModelId2D=1001> |
-| Source Device Model ID SI | <SourceDeviceModelIdSI=1001> |
-| Source Device Model ID DI | <SourceDeviceModelIdDI=1001> |
+| ----------------- | ---------------------- |
+| Version           | < Version=SonarRecordThumbVersion > |
+| Number of Pings   | < NumberOfPings=11712 > |
+| Total Time Ms     | < TotalTimeMs=143092 > |
+| Ping Size Bytes   | < PingSizeBytes=1652 > |
+| First Ping Period | < FirstPingPeriodMs=1 > |
+| Beam Mask         | < BeamMask=30 > |
+| Chirp 1 Start Freq | < Chirp1StartFrequency=0 > |
+| Chirp 1 End Freq  | < Chirp1EndFrequency=0 > |
+| Chirp 2 Start Freq | < Chirp2StartFrequency=0 > |
+| Chirp 2 End Freq  | < Chirp2EndFrequency=0 > |
+| Chirp 3 Start Freq | < Chirp3StartFrequency=0 > |
+| Chirp 3 End Freq  | < Chirp3EndFrequency=0 > |
+| Source Device Model ID 2D | < SourceDeviceModelId2D=1001 > |
+| Source Device Model ID SI | < SourceDeviceModelIdSI=1001 > |
+| Source Device Model ID DI | < SourceDeviceModelIdDI=1001 > |
 
 #### 2.1.3) Humminbird&reg; Solix Series
 
@@ -304,10 +304,10 @@ Header Length (Bytes): **152**
 Example of first and last 4 sonar records from sonar files.  Values displayed are in hexadecimal.
 
 **1199**
-![Img of 1199 Son Header](/docs/attach/1199SonHead.PNG?raw=true "Hexinator Screen Shot")
+![Img of 1199 Son Header](./attach/1199SonHead.PNG)
 
 **Helix**
-![Img of Helix Son Header](/docs/attach/HelixSonHead.PNG?raw=true "Hexinator Screen Shot")
+![Img of Helix Son Header](./attach/HelixSonHead.PNG)
 
 ## 3) References
 
