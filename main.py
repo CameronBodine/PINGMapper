@@ -26,10 +26,10 @@ if __name__ == "__main__":
 
     while keep_going is True:
 
-        # Solix Mega - Bouie
-        humFile = 'E:\\NAU\\GulfSturgeonProject\\SSS_Data\\Pascagoula\\Field_data\\Bouie\\20210403_Solix_USM1\\Rec00006.DAT'
-        sonPath = 'E:\\NAU\\GulfSturgeonProject\\SSS_Data\\Pascagoula\\Field_data\\Bouie\\20210403_Solix_USM1\\Rec00006'
-        projDir = 'E:/NAU/Python/PINGMapper/procData/delete_GapTest1000'
+        # Path to data/output
+        humFile = '.\\exampleData\\test.DAT'
+        sonPath = '.\\exampleData\\test'
+        projDir = '.\\procData\\PINGMapperTest'
 
         direct = os.path.join('proc_data', projDir)
         if os.path.exists(direct):
