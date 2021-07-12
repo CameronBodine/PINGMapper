@@ -1,0 +1,11 @@
+name: ping2
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python
+  - joblib
+  - scikit-image
+  - pyproj
+  - rasterio
+  - pandas
