@@ -31,10 +31,6 @@ if __name__ == "__main__":
         sonPath = '.\\exampleData\\test'
         projDir = '.\\procData\\PINGMapperTest'
 
-        direct = os.path.join('proc_data', projDir)
-        if os.path.exists(direct):
-            shutil.rmtree(direct)
-
         H.append(humFile)
 
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
