@@ -1,4 +1,4 @@
-name: ping2
+name: ping
 channels:
   - defaults
   - conda-forge
