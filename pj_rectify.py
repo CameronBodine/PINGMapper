@@ -6,10 +6,12 @@ from common_funcs import *
 from c_rectObj import rectObj
 
 #===========================================
-def rectify_master_func(sonFiles, humFile, projDir):
+def rectify_master_func(sonFiles, humFile, projDir, nchunk):
     flip = False #Flip port/star
-    filter = 50 #For filtering pings
-    filterRange = 20
+    # filter = 50 #For filtering pings
+    filter = int(nchunk*0.1)
+    # filterRange = 20
+    filterRange = int(nchunk*0.05)
     remWater = False # Export geotiff w/o water
 
     ####################################################
@@ -60,6 +62,29 @@ def rectify_master_func(sonFiles, humFile, projDir):
     son0._loadSonMeta()
     sonDF = son0.sonMetaDF
     sDF = son0._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3)
+
+    # To remove gap between sonar tiles:
+    # For chunk > 0, use coords from previous chunks last ping
+    # and assign as current chunk's first ping coords
+    chunks = pd.unique(sDF['chunk_id'])
+
+    i = 1
+    while i <= max(chunks):
+        # Get last row of previous chunk
+        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-1]]
+        # Get index of first row of current chunk
+        curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+        curRow = curRow.index[0]
+        # Update current chunks first row from lastRow
+        sDF.at[curRow, "lons"] = lastRow["lons"]
+        sDF.at[curRow, "lats"] = lastRow["lats"]
+        sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+        sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+        sDF.at[curRow, "cog"] = lastRow["cog"]
+        # print(sDF.at[curRow, lons],":", lastRow[lons])
+
+        i+=1
+
     son0.smthTrk = sDF
 
     # Update other channel with smoothed coordinates
@@ -95,4 +120,4 @@ def rectify_master_func(sonFiles, humFile, projDir):
     print("\n\tRectifying and exporting GeoTiffs...")
     # for son in portstar:
     #     son._rectSon(remWater, filter, wgs=False)
-    # Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
+    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
