@@ -277,8 +277,8 @@ class sonObj(object):
                     foundEnd = True
                 else:
                     # Didn't find the end of header
-                    # Move cursor back to lastPos
-                    file.seek(lastPos)
+                    # Move cursor back to lastPos+1
+                    file.seek(lastPos+1)
             else:
                 # Haven't found the end
                 pass
