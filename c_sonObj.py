@@ -1,4 +1,5 @@
 from common_funcs import *
+from scipy.signal import savgol_filter
 
 class sonObj(object):
     def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
@@ -605,6 +606,9 @@ class sonObj(object):
         # print(idx)
         sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T
         sonMetaAll = self._getPixSize(sonMetaAll)
+        lastChunk = sonMetaAll[sonMetaAll['chunk_id']==chunk]
+        if len(lastChunk) <= (nchunk/2):
+            sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
         # idxDF = pd.DataFrame.from_dict(idx, orient="index").T
 
         # Write data to csv
@@ -681,7 +685,7 @@ class sonObj(object):
         return sonHead
 
     # =========================================================
-    def _getScansChunk(self):
+    def _getScansChunk(self, wcp, wcr, detectDepth, smthDep):
         """
         Main function to read sonar record ping return values.
         Stores the number of pings per chunk, chunk id, and
@@ -689,6 +693,8 @@ class sonObj(object):
         _loadSonChunk() to read the data, then calls
         _writeTiles to save an unrectified image.
         """
+        self.wcp = wcp
+        self.wcr = wcr
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
@@ -701,10 +707,12 @@ class sonObj(object):
             self.headIdx = sonMeta['index'].astype(int)
             self.pingCnt = sonMeta['ping_cnt'].astype(int)
             self._loadSonChunk()
-            self._writeTiles(i, imgOutPrefix='wcp_')
+            if self.wcp:
+                self._writeTiles(i, imgOutPrefix='wcp_')
             # Routine for removing water column
-            # self._remWater()
-            # self._writeTiles(i, imgOutPrefix='wcr_')
+            if self.wcr and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                self._remWater(detectDepth, sonMeta, smthDep)
+                self._writeTiles(i, imgOutPrefix='wcr_')
             i+=1
 
     # =========================================================
@@ -770,6 +778,67 @@ class sonObj(object):
         return self
 
     # =========================================================
+    def _remWater(self, detectDepth, sonMeta, smthDep):
+        if detectDepth:
+            print("Automatic depth detection not implemented yet")
+            print("Resorting to Humminbird depth....")
+            #bedPick = self._detectDepth()
+            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        else:
+            # print("\nUsing Humminbird Depth for Water Column Removal")
+            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+
+        if smthDep:
+            try:
+                bedPick = savgol_filter(bedPick, 51, 3)
+            except:
+                pass
+
+        # Slant range correction
+        srcTile = self._SRC(bedPick, 'FlatBottom')
+
+    # =========================================================
+    def _SRC(self, bedPick, type = 'FlatBottom'):
+        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
+        # print('\n\n')
+        # print(srcDat.shape, self.sonDat.shape, len(bedPick))
+        for j in range(self.sonDat.shape[1]): #Iterate each ping
+            depth = bedPick[j]
+            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -1
+            dataExtent = 0
+            for i in range(self.sonDat.shape[0]): #Iterate each ping return
+                if i >= depth:
+                    intensity = self.sonDat[i,j]
+                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int)
+                    pingDat[srcIndex] = intensity
+                    dataExtent = srcIndex
+                else:
+                    pass
+            pingDat[dataExtent:]=0
+
+            # # Make mask so we don't interpolate past range extent
+            # mask = np.ones((self.sonDat.shape[0]))
+            # try:
+            #     gaps = np.where(pingDat==-1)[0]
+            #     topOfLastGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
+            #     mask[topOfLastGap:] = 0
+            # except:
+            #     pass
+
+
+            # Interpolate over gaps
+            pingDat[pingDat==-1] = np.nan
+            nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
+            pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
+
+            # # Apply the mask
+            # pingDat = pingDat*mask
+
+            srcDat[:,j] = np.around(pingDat, 0).astype(int)
+
+        self.sonDat = srcDat
+
+    # =========================================================
     def __str__(self):
         """
         Generic print function to print contenst of sonObj.
@@ -782,11 +851,3 @@ class sonObj(object):
             output += '\n\t'
             output += "{} : {}".format(item, temp[item])
         return output
-
-
-# class rectObj(sonObj):
-#     # def __init__(self):
-#     #     super(rectObj,self).__init__()
-#
-#     def testing(self):
-#         print("It worked")

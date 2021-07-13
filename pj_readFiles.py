@@ -6,7 +6,7 @@ from joblib import delayed
 import time
 
 #===========================================
-def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
+def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, wcr, detectDepth, smthDep):
     # start_time = time.time()
 
     ####################################
@@ -202,20 +202,21 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk):
 
     ########################
     # Let's export the tiles
-    print("\nGetting sonar data and exporting tile images:")
+    if wcp or wcr:
+        print("\nGetting sonar data and exporting tile images:")
 
-    metaDir = sonObjs[0].metaDir
-    sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv')))
-    for i in range(0,len(sonObjs)):
-        sonObjs[i].sonMetaFile = sonMeta[i]
+        metaDir = sonObjs[0].metaDir
+        sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv')))
+        for i in range(0,len(sonObjs)):
+            sonObjs[i].sonMetaFile = sonMeta[i]
 
-    for son in sonObjs:
-        try:
-            os.mkdir(son.outDir)
-        except:
-            pass
+        for son in sonObjs:
+            try:
+                os.mkdir(son.outDir)
+            except:
+                pass
 
-    Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)() for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(wcp, wcr, detectDepth, smthDep) for son in sonObjs)
 
     ############################################
     # Let's pickle sonObj so we can reload later
