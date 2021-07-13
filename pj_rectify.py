@@ -6,13 +6,12 @@ from common_funcs import *
 from c_rectObj import rectObj
 
 #===========================================
-def rectify_master_func(sonFiles, humFile, projDir, nchunk):
+def rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp=False, rect_wcr=False):
     flip = False #Flip port/star
     # filter = 50 #For filtering pings
     filter = int(nchunk*0.1)
     # filterRange = 20
     filterRange = int(nchunk*0.05)
-    remWater = False # Export geotiff w/o water
 
     ####################################################
     # Check if sonObj pickle exists, append to metaFiles
@@ -120,4 +119,11 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk):
     print("\n\tRectifying and exporting GeoTiffs...")
     # for son in portstar:
     #     son._rectSon(remWater, filter, wgs=False)
-    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
+    if rect_wcp:
+        print('\t\tRectifying with Water Column')
+        remWater = False
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
+    if rect_wcr:
+        print('\t\tRectifying with Water Column Removed')
+        remWater = True
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
