@@ -1,5 +1,22 @@
 # PINGMapper
-Python interface for reading, processing, and mapping side scan sonar data
+Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.  Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
+
+1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onyx).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](../issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../docs/BinaryStructure.md).
+
+2. Export all metadata from .DAT and .SON files to .CSV.
+
+3. (Optional) Export un-rectified sonar tiles with water column present (wcp) AND/OR export un-rectified sonar tiles with water column removed and slant range corrected (wcr/scr) using Humminbird depth estimates.
+
+4. Smooth and interpolate GPS track points.
+
+5. (Optional) Export georectified wcp (spatially inaccurate due to presence of water column) AND/OR scr sonar imagery for use in GIS.
+
+## Workflows in the Pipeline
+1. Automatic depth detection
+2. Imagery corrections (radiometric, attenuation, etc.)
+3. Automatic substrate classification
+4. GUI front-end, either as standalone software, or QGIS plugin
+5. So much more...
 
 ## Installation
 1. Install [Anaconda](https://www.anaconda.com) or Miniconda (https://docs.conda.io/en/latest/miniconda.html).
@@ -30,7 +47,7 @@ python main.py
 
 2. Open `main.py` in a text editor/IDE (I use [Atom](https://atom.io/)).
 
-3. Update lines 30-32 with path's to your data and your chosen ouptut directory:
+3. Update lines 30-32 with path's to your data and your chosen output directory:
 ```
 humFile = "C:/user/Cam/myHumDat.DAT"
 sonPath = "C:/user/Cam/myHumDat"
@@ -42,11 +59,21 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
 - (Single forward slash): `humFile = “C:/Users/dwhealdo/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
-4. On line 44, update temperature `t=10` with average temperature during scan.
+4. Line 46: Update temperature `t=10` with average temperature during scan.
 
-5. On line 46, choose the numper of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
+5. Line 47: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-6. Run PING Mapper:
+6. Line 48-49: Export un-rectified sonar tiles with water column present AND/OR water column removed.  NOTE: in order to rectify sonar imagery, un-rectified sonar tiles must be exported first.
+
+7. Line 50 (NOT IMPLEMENTED): Automatically detect depth from sonar imagery.
+
+8. Line 51: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+
+9. Line 54-55: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.  NOTE: in order to rectify sonar imagery, un-rectified sonar tiles must be exported first.
+
+12. Save the file.
+
+11. Run PING Mapper:
 ```
 python main.py
 ```
