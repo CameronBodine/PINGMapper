@@ -37,6 +37,11 @@ sonPath = "C:/user/Cam/myHumDat"
 projDir = "C:/user/Cam/myHumAnswerBox/myHumDat"
 ```
 
+Windows users: Make sure your filepaths are structured in one of the three following file formats:
+- (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
+- (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
+- (Single forward slash): `humFile = “C:/Users/dwhealdo/Documents/Programs/PINGMapper/Rec00012.DAT”`
+
 4. On line 44, update temperature `t=10` with average temperature during scan.
 
 5. On line 46, choose the numper of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
