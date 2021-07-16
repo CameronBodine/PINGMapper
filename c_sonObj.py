@@ -9,6 +9,8 @@ class sonObj(object):
         self.humFile = humFile      # DAT file path
         self.tempC = tempC          # Water temperature
         self.nchunk = nchunk        # Number of sonar records per chunk
+        # self.wcp = False            # Flag indicating if water-column-present tiles exported
+        # self.src = False            # Flag indicating if water-column-removed tiles exported
 
         # # Path
         # self.outDir = None          # Location where outputs are saved
@@ -685,7 +687,7 @@ class sonObj(object):
         return sonHead
 
     # =========================================================
-    def _getScansChunk(self, wcp, wcr, detectDepth, smthDep):
+    def _getScansChunk(self, detectDepth, smthDep):
         """
         Main function to read sonar record ping return values.
         Stores the number of pings per chunk, chunk id, and
@@ -693,8 +695,8 @@ class sonObj(object):
         _loadSonChunk() to read the data, then calls
         _writeTiles to save an unrectified image.
         """
-        self.wcp = wcp
-        self.wcr = wcr
+        # self.wcp = wcp
+        # self.src = src
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
@@ -708,11 +710,11 @@ class sonObj(object):
             self.pingCnt = sonMeta['ping_cnt'].astype(int)
             self._loadSonChunk()
             if self.wcp:
-                self._writeTiles(i, imgOutPrefix='wcp_')
+                self._writeTiles(i, imgOutPrefix='wcp')
             # Routine for removing water column
-            if self.wcr and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 self._remWater(detectDepth, sonMeta, smthDep)
-                self._writeTiles(i, imgOutPrefix='wcr_')
+                self._writeTiles(i, imgOutPrefix='src')
             i+=1
 
     # =========================================================
@@ -764,9 +766,15 @@ class sonObj(object):
             addZero = ''
         Z = Z[0].astype('uint8')
 
+        outDir = os.path.join(self.outDir, imgOutPrefix)
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
         channel = os.path.split(self.outDir)[-1]
         projName = os.path.split(self.projDir)[-1]
-        imageio.imwrite(os.path.join(self.outDir, projName+'_'+imgOutPrefix+channel+'_'+addZero+str(k)+'.png'), Z)
+        imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
 
     # =========================================================
     def _loadSonMeta(self):
@@ -837,6 +845,31 @@ class sonObj(object):
             srcDat[:,j] = np.around(pingDat, 0).astype(int)
 
         self.sonDat = srcDat
+
+    # =========================================================
+    def _getScanChunkSingle(self, chunk, remWater, detectDepth, smthDep):
+        """
+        During rectification, if non-rectified tiles have not
+        been exported, this will load the chunk's scan data
+        from the sonar recording.
+
+        Stores the number of pings per chunk, chunk id, and
+        byte index location in son file, then calls
+        _loadSonChunk() to read the data.
+        """
+        
+        sonMetaAll = pd.read_csv(self.sonMetaFile)
+
+        i = chunk #Chunk index
+
+        isChunk = sonMetaAll['chunk_id']==i
+        sonMeta = sonMetaAll[isChunk].reset_index()
+        self.pingMax = sonMeta['ping_cnt'].max().astype(int)
+        self.headIdx = sonMeta['index'].astype(int)
+        self.pingCnt = sonMeta['ping_cnt'].astype(int)
+        self._loadSonChunk()
+        if remWater:
+            self._remWater(detectDepth, sonMeta, smthDep)
 
     # =========================================================
     def __str__(self):

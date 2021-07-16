@@ -358,20 +358,37 @@ class rectObj(sonObj):
         return I
 
     #===========================================
-    def _rectSon(self, remWater=True, filt=50, wgs=False):
+    def _rectSon(self, detectDepth, smthDep, remWater=True, filt=50, wgs=False):
         if remWater == True:
-            imgInPrefix = 'wcr_'
-            imgOutPrefix = 'rect_src_'
+            imgInPrefix = 'src'
+            imgOutPrefix = 'rect_src'
+            tileFlag = self.src #Indicates if non-rectified src images were exported
         else:
-            imgInPrefix = 'wcp_'
-            imgOutPrefix = 'rect_wcp_'
+            imgInPrefix = 'wcp'
+            imgOutPrefix = 'rect_wcp'
+            tileFlag = self.wcp #Indicates if non-rectified wcp images were exported
 
         # Prepare initial variables
-        outDir = self.outDir #Img output/input directory
+        outDir = self.outDir
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+        outDir = os.path.join(outDir, imgOutPrefix) #Img output/input directory
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        # Locate and open necessary meta files
         ssSide = (self.beamName).split('_')[-1] #Port or Star
         pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        allImgs = sorted(glob(outDir+os.sep+"*"+imgInPrefix+"*")) #List of imgs to rectify
+        pingMeta = pd.read_csv(pingMetaFile)
         trkMetaFile = os.path.join(self.metaDir, 'Trackline_Smth.csv')
+
+        # Determine what chunks to process
+        chunks = pd.unique(pingMeta['chunk_id'])
+        firstChunk = min(chunks)
 
         if wgs is True:
             epsg = self.humDat['wgs']
@@ -386,19 +403,36 @@ class rectObj(sonObj):
             xTrk = 'utm_es'
             yTrk = 'utm_ns'
 
-        # Make sure destination coordinates are available for each image
-        # If dest coords not available, remove image from inImgs
-        allImgsDict = defaultdict()
-        for img in allImgs:
-            imgName=os.path.basename(img).split('.')[0]
-            chunk=int(imgName.split('_')[-1])
-            allImgsDict[chunk] = img
+        if tileFlag:
+            allImgs = sorted(glob(os.path.join(self.outDir, imgInPrefix,"*"+imgInPrefix+"*"))) #List of imgs to rectify
+            # Make sure destination coordinates are available for each image
+            # If dest coords not available, remove image from inImgs
+            allImgsDict = defaultdict()
+            for img in allImgs:
+                imgName=os.path.basename(img).split('.')[0]
+                chunk=int(imgName.split('_')[-1])
+                allImgsDict[chunk] = img
 
-        pingMeta = pd.read_csv(pingMetaFile)
-        chunks = pd.unique(pingMeta['chunk_id'])
-        firstChunk = min(chunks)
+            inImgs = {c: allImgsDict[c] for c in chunks}
+        else:
+            inImgs = defaultdict()
+            for chunk in chunks:
+                if chunk < 10:
+                    addZero = '0000'
+                elif chunk < 100:
+                    addZero = '000'
+                elif chunk < 1000:
+                    addZero = '00'
+                elif chunk < 10000:
+                    addZero = '0'
+                else:
+                    addZero = ''
 
-        inImgs = {c: allImgsDict[c] for c in chunks}
+                projName = os.path.split(self.projDir)[-1]
+                beamName = self.beamName
+                imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png'
+
+                inImgs[int(chunk)] = os.path.join(self.outDir,imgOutPrefix, imgName)
 
         # Iterate images and rectify
         for i, imgPath in inImgs.items():
@@ -406,7 +440,11 @@ class rectObj(sonObj):
             ############################
             # Prepare source coordinates
             # Open image to rectify
-            img = np.asarray(Image.open(imgPath)).copy()
+            if tileFlag:
+                img = np.asarray(Image.open(imgPath)).copy()
+            else:
+                self._getScanChunkSingle(i, remWater, detectDepth, smthDep)
+                img = self.sonDat
             img[0]=0 # To fix extra white on curves
 
             # Prepare src coordinates
