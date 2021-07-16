@@ -6,7 +6,7 @@ from joblib import delayed
 import time
 
 #===========================================
-def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, wcr, detectDepth, smthDep):
+def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detectDepth, smthDep):
     # start_time = time.time()
 
     ####################################
@@ -169,7 +169,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, wcr, detect
                 print("\n#####\nERROR:Unable to decode header structure")
                 print("Expected {} at index {}.".format(headValid[1], headValid[2]))
                 print("Found {} instead.".format(headValid[3]))
-                print("Terminating script.")
+                print("Terminating srcipt.")
                 sys.exit()
 
     ######################################
@@ -193,30 +193,30 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, wcr, detect
         else:
             son.sonIdxFile = "NA"
 
-
     if len(toProcess) > 0:
         Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
-        # print(test)
-    # toProcess[0]._getSonMeta()
+
+    metaDir = sonObjs[0].metaDir
+    sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv')))
+    for i in range(0,len(sonObjs)):
+        sonObjs[i].sonMetaFile = sonMeta[i]
+
+    for son in sonObjs:
+        son.wcp = wcp
+        son.src = src
+        try:
+            os.mkdir(son.outDir)
+        except:
+            pass
+
     print("Done!")
 
     ########################
     # Let's export the tiles
-    if wcp or wcr:
+    if wcp or src:
         print("\nGetting sonar data and exporting tile images:")
 
-        metaDir = sonObjs[0].metaDir
-        sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv')))
-        for i in range(0,len(sonObjs)):
-            sonObjs[i].sonMetaFile = sonMeta[i]
-
-        for son in sonObjs:
-            try:
-                os.mkdir(son.outDir)
-            except:
-                pass
-
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(wcp, wcr, detectDepth, smthDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDepth, smthDep) for son in sonObjs)
 
     ############################################
     # Let's pickle sonObj so we can reload later
@@ -227,7 +227,6 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, wcr, detect
             pickle.dump(son, sonFile)
 
     # for son in sonObjs:
-    #     print("\n\n")
-    #     print(son)
+    #     print("\n\n", son)
 
     # print(round((time.time() - start_time),ndigits=2))

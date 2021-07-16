@@ -46,13 +46,12 @@ if __name__ == "__main__":
     t = 10 #Temperature in Celsius
     nchunk = 500 #Number of pings per chunk
     wcp = True #Export tiles with water column present
-    wcr = True #Export Tiles with water column removed
+    src = True #Export Tiles with water column removed/slant range corrected
     detectDepth = False #True==Automatically detect depth; False==Use Humminbird depth
     smthDep = True #Smooth depth before water column removal
 
-    ## In order to rectify, wcp and/or wcr tiles must have been exported (ie wcr=True)
-    rect_wcp = False #Export rectified tiles with water column present
-    rect_wcr = True #Export rectified tiles with water column removed
+    rect_wcp = True #Export rectified tiles with water column present
+    rect_src = True #Export rectified tiles with water column removed/slant range corrected
 
     #==================================================
     t = float(t)/10
@@ -61,16 +60,16 @@ if __name__ == "__main__":
     print('***** READING *****')
     for k in range(len(H)):
         print("working on "+P[k])
-        read_master_func(S[k], H[k], P[k], t, nchunk, wcp, wcr, detectDepth, smthDep)
+        read_master_func(S[k], H[k], P[k], t, nchunk, wcp, src, detectDepth, smthDep)
 
     #==================================================
-    if rect_wcp or rect_wcr:
+    if rect_wcp or rect_src:
         print('\n===========================================')
         print('===========================================')
         print('***** RECTIFYING *****')
         for k in range(len(H)):
             print("working on "+P[k])
-            rectify_master_func(S[k], H[k], P[k], nchunk, rect_wcp, rect_wcr)
+            rectify_master_func(S[k], H[k], P[k], nchunk, detectDepth, smthDep, rect_wcp, rect_src)
 
     keep_going = False
 print("Total Processing Time: ",round((time.time() - start_time),ndigits=2))
