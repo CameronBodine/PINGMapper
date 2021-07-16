@@ -4,3 +4,5 @@ oldFiles/*
 testData/*
 main_single.py
 rectify_test_affine.py
+
+!procData/OutputsHere.txt
