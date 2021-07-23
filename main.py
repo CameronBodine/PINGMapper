@@ -47,7 +47,7 @@ if __name__ == "__main__":
     nchunk = 500 #Number of pings per chunk
     wcp = True #Export tiles with water column present
     src = True #Export Tiles with water column removed/slant range corrected
-    detectDepth = False #True==Automatically detect depth; False==Use Humminbird depth
+    detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold
     smthDep = True #Smooth depth before water column removal
 
     rect_wcp = True #Export rectified tiles with water column present
