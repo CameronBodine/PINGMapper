@@ -55,65 +55,73 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
     # https://github.com/remisalmon/gpx_interpolate
     print("\n\tSmoothing trackline...")
 
-    # As side scan beams use same transducer/gps coords,
-    # we will smooth one beam's trackline and use for both
-    son0 =  portstar[0]
-    son0._loadSonMeta()
-    sonDF = son0.sonMetaDF
-    sDF = son0._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3)
+    for son in portstar:
+        # As side scan beams use same transducer/gps coords,
+        # we will smooth one beam's trackline and use for both
+        # son0 =  portstar[0]
+        son._loadSonMeta()
+        sonDF = son.sonMetaDF
+        sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3)
 
-    # To remove gap between sonar tiles:
-    # For chunk > 0, use coords from previous chunks last ping
-    # and assign as current chunk's first ping coords
-    chunks = pd.unique(sDF['chunk_id'])
+        # To remove gap between sonar tiles:
+        # For chunk > 0, use coords from previous chunks last ping
+        # and assign as current chunk's first ping coords
+        chunks = pd.unique(sDF['chunk_id'])
 
-    i = 1
-    while i <= max(chunks):
-        # Get last row of previous chunk
-        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-1]]
-        # Get index of first row of current chunk
-        curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-        curRow = curRow.index[0]
-        # Update current chunks first row from lastRow
-        sDF.at[curRow, "lons"] = lastRow["lons"]
-        sDF.at[curRow, "lats"] = lastRow["lats"]
-        sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-        sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-        sDF.at[curRow, "cog"] = lastRow["cog"]
-        # print(sDF.at[curRow, lons],":", lastRow[lons])
+        i = 1
+        while i <= max(chunks):
+            # Get last row of previous chunk
+            lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-1]]
+            # Get index of first row of current chunk
+            curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+            curRow = curRow.index[0]
+            # Update current chunks first row from lastRow
+            sDF.at[curRow, "lons"] = lastRow["lons"]
+            sDF.at[curRow, "lats"] = lastRow["lats"]
+            sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+            sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+            sDF.at[curRow, "cog"] = lastRow["cog"]
+            # print(sDF.at[curRow, lons],":", lastRow[lons])
 
-        i+=1
+            i+=1
 
-    son0.smthTrk = sDF
+        son.smthTrk = sDF
 
-    # Update other channel with smoothed coordinates
-    son1 = portstar[1]
-    sDF = son0.smthTrk.copy()
-    # Update with correct record_num
-    son1._loadSonMeta()
-    df = son1.sonMetaDF
-    sDF['chunk_id'] = df['chunk_id']
-    sDF['record_num'] = df['record_num']
-    son1.smthTrk = sDF
+        del sDF
 
-    del sDF
+        # Save to file
+        outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
+        son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
 
-    # Save to file
-    outCSV = os.path.join(son.metaDir, "Trackline_Smth.csv")
-    son0.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
+    # # Update other channel with smoothed coordinates
+    # son1 = portstar[1]
+    # sDF = son0.smthTrk.copy()
+    # # Update with correct record_num
+    # son1._loadSonMeta()
+    # df = son1.sonMetaDF
+    # sDF['chunk_id'] = df['chunk_id']
+    # sDF['record_num'] = df['record_num']
+    # son1.smthTrk = sDF
+
+    # del sDF
+    #
+    # # Save to file
+    # outCSV = os.path.join(son.metaDir, "Trackline_Smth.csv")
+    # son0.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
 
     ################################################
     # Calculate ping direction
-    print("\n\tCalculating range extent...")
+    print("\n\tCalculating, smoothing, and interpolating range extent...")
     # Calculate range extent lat/lon
-    for son in portstar:
-        son._getRangeCoords(flip)
+    # for son in portstar:
+    #     son._getRangeCoords(flip)
+    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
 
-    print("\n\tSmooth and interpolate range extent...")
+    # print("\n\tSmooth and interpolate range extent...")
     # Filter pings and interpolate
     # for son in portstar:
     #     son._interpRangeCoords(filterRange)
-    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._interpRangeCoords)(filterRange) for son in portstar)
+    # Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._interpRangeCoords)(filterRange) for son in portstar)
 
     ################################################
     print("\n\tRectifying and exporting GeoTiffs...")
@@ -123,6 +131,7 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
         print('\t\tRectifying with Water Column')
         remWater = False
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, wgs=False) for son in portstar)
+        # portstar[-1]._rectSon(detectDepth, smthDep, remWater, filter, wgs=False)
     if rect_src:
         print('\t\tRectifying with Water Column Removed')
         remWater = True

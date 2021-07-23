@@ -124,7 +124,7 @@ class rectObj(sonObj):
         return db
 
     #===========================================
-    def _getRangeCoords(self, flip):
+    def _getRangeCoords(self, flip, filt):
         lons = 'lons'
         lats = 'lats'
         ping_cnt = 'ping_cnt'
@@ -186,7 +186,8 @@ class rectObj(sonObj):
         sDF = sDF.dropna()
         self.smthTrk = sDF
 
-        return
+        self._interpRangeCoords(filt)
+        # return
 
     #===========================================
     def _interpRangeCoords(self, filt):
@@ -248,10 +249,20 @@ class rectObj(sonObj):
         e_smth, n_smth = self.trans(rsDF[rlons].to_numpy(), rsDF[rlats].to_numpy())
         rsDF[res] = e_smth
         rsDF[rns] = n_smth
+        rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
 
-        beam = self.beamName.split('_')[1]
-        outCSV = os.path.join(self.metaDir, "RangeExtent_"+beam+".csv")
-        rsDF.to_csv(outCSV, index=False, float_format='%.14f')
+        # beam = self.beamName.split('_')[1]
+        # outCSV = os.path.join(self.metaDir, "RangeExtent_"+beam+".csv")
+        # rsDF.to_csv(outCSV, index=False, float_format='%.14f')
+
+        # Join smoothed trackline to smoothed range extent
+        # rsDF = rsDF.set_index('record_num').join(sDF.set_index('record_num'))
+        sDF = sDF[['record_num', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog']]
+        rsDF = rsDF.set_index('record_num').join(sDF.set_index('record_num'))
+
+        # Overwrite Trackline_Smth_son.beamName.csv
+        outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
         self.rangeExt = rsDF
         return
@@ -381,13 +392,15 @@ class rectObj(sonObj):
             pass
 
         # Locate and open necessary meta files
-        ssSide = (self.beamName).split('_')[-1] #Port or Star
-        pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        pingMeta = pd.read_csv(pingMetaFile)
-        trkMetaFile = os.path.join(self.metaDir, 'Trackline_Smth.csv')
+        # ssSide = (self.beamName).split('_')[-1] #Port or Star
+        # pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
+        # pingMeta = pd.read_csv(pingMetaFile)
+        trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        trkMeta = pd.read_csv(trkMetaFile)
 
         # Determine what chunks to process
-        chunks = pd.unique(pingMeta['chunk_id'])
+        # chunks = pd.unique(pingMeta['chunk_id'])
+        chunks = pd.unique(trkMeta['chunk_id'])
         firstChunk = min(chunks)
 
         if wgs is True:
@@ -434,6 +447,11 @@ class rectObj(sonObj):
 
                 inImgs[int(chunk)] = os.path.join(self.outDir,imgOutPrefix, imgName)
 
+        # test = {}
+        # test[chunks[-1]] = inImgs[chunks[-1]]
+        #
+        # inImgs = test
+        # print("\n\n\n", inImgs)
         # Iterate images and rectify
         for i, imgPath in inImgs.items():
 
@@ -465,22 +483,26 @@ class rectObj(sonObj):
 
             #################################
             # Prepare destination coordinates
-            pingMeta = pd.read_csv(pingMetaFile)
-            pingMeta = pingMeta[pingMeta['chunk_id']==i].reset_index()
-            pix_m = pingMeta['pix_m'].min()
+            # pingMeta = pd.read_csv(pingMetaFile)
+            # pingMeta = pingMeta[pingMeta['chunk_id']==i].reset_index()
+            # pix_m = pingMeta['pix_m'].min()
 
             trkMeta = pd.read_csv(trkMetaFile)
-            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index()
+            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index(drop=False)
+            pix_m = trkMeta['pix_m'].min()
 
-            trkMeta = trkMeta.filter(items=[xTrk, yTrk])
-            pingMeta = pingMeta.join(trkMeta)
+            # trkMeta = trkMeta.filter(items=[xTrk, yTrk])
+            # pingMeta = pingMeta.join(trkMeta)
 
             # Get range (outer extent) coordinates
-            xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
+            # xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
+            print(trkMeta)
+            xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
             xyR = np.vstack((xR, yR)).T
 
             # Get trackline (inner extent) coordinates
-            xT, yT = pingMeta[xTrk].to_numpy().T, pingMeta[yTrk].to_numpy().T
+            # xT, yT = pingMeta[xTrk].to_numpy().T, pingMeta[yTrk].to_numpy().T
+            xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
             xyT = np.vstack((xT, yT)).T
 
             # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...)
