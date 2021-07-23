@@ -496,7 +496,6 @@ class rectObj(sonObj):
 
             # Get range (outer extent) coordinates
             # xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
-            print(trkMeta)
             xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
             xyR = np.vstack((xR, yR)).T
 
