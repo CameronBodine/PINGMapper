@@ -65,7 +65,7 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 
 6. Line 48-49: Export un-rectified sonar tiles with water column present AND/OR water column removed.  NOTE: in order to rectify sonar imagery, un-rectified sonar tiles must be exported first.
 
-7. Line 50 (NOT IMPLEMENTED): Automatically detect depth from sonar imagery.
+7. Line 50: Option to use Humminbird depth (`detectDepth=0`) or to automatically detect depth through thresholding (`detectDepth=1`)
 
 8. Line 51: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
