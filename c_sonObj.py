@@ -1,6 +1,10 @@
 from common_funcs import *
 from scipy.signal import savgol_filter
 
+from skimage.filters import gaussian
+from skimage.morphology import remove_small_holes, remove_small_objects
+from skimage.measure import label, regionprops
+
 class sonObj(object):
     def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
         # Create necessary attributes
@@ -42,6 +46,30 @@ class sonObj(object):
         # self.sonMetaDF = None       # Pandas df to hold son metadata
 
         return
+
+    #========================================================
+    def _rescale(self, dat, mn, mx):
+        '''
+        rescales an input dat between mn and mx
+        '''
+        m = min(dat.flatten())
+        M = max(dat.flatten())
+        return (mx-mn)*(dat-m)/(M-m)+mn
+
+    #====================================
+    def _standardize(self, img):
+        #standardization using adjusted standard deviation
+        N = np.shape(img)[0] * np.shape(img)[1]
+        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
+        m = np.mean(img)
+        img = (img - m) / s
+        img = self._rescale(img, 0, 1)
+        del m, s, N
+
+        if np.ndim(img)!=3:
+            img = np.dstack((img,img,img))
+
+        return img
 
     # =========================================================
     def _fread(self, infile, num, typ):
@@ -713,9 +741,17 @@ class sonObj(object):
                 self._writeTiles(i, imgOutPrefix='wcp')
             # Routine for removing water column
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                self._remWater(detectDepth, sonMeta, smthDep)
+                newDepth = self._remWater(detectDepth, sonMeta, smthDep)
+                sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * newDepth
                 self._writeTiles(i, imgOutPrefix='src')
+
+            # # Update sonMetaAll with new depth estimate
+            # if detectDepth > 0:
+            #     sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMetaAll['pix_m'] * depth
             i+=1
+
+        if detectDepth > 0:
+            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
 
     # =========================================================
     def _loadSonChunk(self):
@@ -786,27 +822,185 @@ class sonObj(object):
         return self
 
     # =========================================================
+    def _remWater_BinaryThresh(self, acousticBed):
+        # Parameters
+        window = 10 # For peak removal in bed pick: moving window size
+        max_dev = 5 # For peak removal in bed pick: maximum standard deviation
+        pix_buf = 50 # Buffer size around min/max Humminbird depth
+
+        img = self.sonDat
+        img = self._standardize(img)[:,:,0].squeeze()
+        W, H = img.shape[1], img.shape[0]
+
+        ########
+        # Step 1 : Acoustic Bedpick Filter
+        # Use acoustic bed pick to crop image
+        bedMin = max(min(acousticBed)-50, 0)
+        bedMax = max(acousticBed)+pix_buf
+        # print('\n\nHum:',bedMin, bedMax,np.asarray(acousticBed))
+        cropMask = np.ones((H, W)).astype(int)
+        cropMask[:bedMin,:] = 0
+        cropMask[bedMax:,:] = 0
+
+        # Mask the image with bed_mask
+        imgMasked = img*cropMask
+
+        ########
+        # Step 2 - Threshold Filter
+        # Binary threshold masked image
+        imgMasked = gaussian(imgMasked, 3, preserve_range=True)
+        imgMasked[imgMasked==0]=np.nan
+
+        imgBinaryMask = np.zeros((H, W)).astype(bool)
+        for i in range(W):
+            thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i]))
+            stdev = np.nanstd(imgMasked[:,i])
+            imgBinaryMask[:,i] = imgMasked[:,i] > thresh
+
+        # Clean up image binary mask
+        imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+        imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+        imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+        ########
+        # Step 3 - Non-Contiguous region removal
+        # Make sure we didn't accidently zero out the last row, which should be bed.
+        # If we did, we will fill it back in
+        # Try filtering image_binary_mask through labeling regions
+        labelImage, num = label(imgBinaryMask, return_num=True)
+        allRegions = []
+
+        # Find the widest and lowest region
+        max_row = 0
+        finalRegion = 0
+        for region in regionprops(labelImage):
+            allRegions.append(region.label)
+            minr, minc, maxr, maxc = region.bbox
+            # if (maxr > max_row) and (maxc > max_col):
+            if (maxr > max_row):
+                max_row = maxr
+                finalRegion = region.label
+
+        if finalRegion == 0:
+            finalRegion = 1
+
+        # Zero out undesired regions
+        for regionLabel in allRegions:
+            if regionLabel != finalRegion:
+                labelImage[labelImage==regionLabel] = 0
+
+        imgBinaryMask = labelImage
+        imgBinaryMask[imgBinaryMask>0] = 1
+        # print('Step 3')
+        # for i in range(W):
+        #     print(i, imgBinaryMask)
+
+        # # Now fill in above last row filled to make sure no gaps in bed pixels
+        lastRow = bedMax
+        imgBinaryMask[lastRow] = True
+        for i in range(W):
+            if imgBinaryMask[lastRow-1,i] == 0:
+                gaps = np.where(imgBinaryMask[:lastRow,i]==0)[0]
+                # Split each gap cluster into it's own array, subset the last one,
+                ## and take top value
+                topOfGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
+                imgBinaryMask[topOfGap:lastRow,i] = 1
+
+        # Clean up image binary mask
+        imgBinaryMask = imgBinaryMask.astype(bool)
+        imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+        imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+        imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+        ########
+        # Step 4 - Water Below Filter
+        # Iterate each ping and determine if there is water under the bed.
+        # If there is, zero out everything except for the lowest region.
+        # print('Step 4')
+        for i in range(W):
+            labelPing, num = label(imgBinaryMask[:,i], return_num=True)
+            if num > 1:
+                labelPing[labelPing!=num] = 0
+                labelPing[labelPing>0] = 1
+            imgBinaryMask[:,i] = labelPing
+            # print(i, np.unique(labelPing), labelPing)
+
+        ########
+        # Step 5 - Final Bedpick: Locate Bed & Remove Peaks
+        # Now relocate bed from image_binary_mask
+        bed = []
+        for k in range(W):
+            try:
+                b = np.where(imgBinaryMask[:,k]==1)[0][0]
+            except:
+                b=0
+            bed.append(b)
+            # print(k, b)
+        bed = np.array(bed).astype(np.float32)
+
+        # print('Step 5.1:\nAuto:',bed)
+
+        # Remove peaks
+        # Locate peaks
+        i = 0
+        toRemove = []
+        while i < len(bed)-window:
+            vals = bed[i:i+window]
+            mean = np.nanmean(vals)
+            std = np.nanstd(vals)
+            if std > max_dev:
+                difMean = abs(vals - mean)
+                outlier = np.argmax(difMean)
+                toRemove.append(i+outlier)
+            i+=1
+
+        # set peaks to nan
+        toRemove = np.unique(toRemove)
+        for val in toRemove:
+            bed[val]=np.nan
+
+        # Interpolate over nan's
+        nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
+        bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
+
+        # print('\n\nHum:',bedMin, bedMax,np.asarray(acousticBed))
+        # print('Step 5.2:\nAuto:',bed)
+
+        return bed
+
+
+    # =========================================================
     def _remWater(self, detectDepth, sonMeta, smthDep):
-        if detectDepth:
-            print("Automatic depth detection not implemented yet")
-            print("Resorting to Humminbird depth....")
-            #bedPick = self._detectDepth()
+        if detectDepth==0:
             bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-        else:
+            newDepth = 0
+        elif detectDepth==1:
             # print("\nUsing Humminbird Depth for Water Column Removal")
-            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            bedPick = self._remWater_BinaryThresh(acousticBed)
+            newDepth = bedPick.copy()
 
         if smthDep:
             try:
                 bedPick = savgol_filter(bedPick, 51, 3)
+                # Make any potential negatives equal to 0
+                greaterThan0 = bedPick >= 0
+                bedPick = bedPick * greaterThan0
+                ## Potential flag opportunity
+
             except:
                 pass
+        # print(bedPick)
+
+
 
         # Slant range correction
-        srcTile = self._SRC(bedPick, 'FlatBottom')
+        self._SRC(bedPick, 'FlatBottom')
+        return newDepth
 
     # =========================================================
     def _SRC(self, bedPick, type = 'FlatBottom'):
+        # print(bedPick)
         srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
         # print('\n\n')
         # print(srcDat.shape, self.sonDat.shape, len(bedPick))
@@ -816,6 +1010,7 @@ class sonObj(object):
             dataExtent = 0
             for i in range(self.sonDat.shape[0]): #Iterate each ping return
                 if i >= depth:
+                    # print(i,depth)
                     intensity = self.sonDat[i,j]
                     srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int)
                     pingDat[srcIndex] = intensity
@@ -857,7 +1052,7 @@ class sonObj(object):
         byte index location in son file, then calls
         _loadSonChunk() to read the data.
         """
-        
+
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         i = chunk #Chunk index
@@ -869,7 +1064,11 @@ class sonObj(object):
         self.pingCnt = sonMeta['ping_cnt'].astype(int)
         self._loadSonChunk()
         if remWater:
-            self._remWater(detectDepth, sonMeta, smthDep)
+            depth = self._remWater(detectDepth, sonMeta, smthDep)
+            sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
+
+        if detectDepth > 0:
+            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
 
     # =========================================================
     def __str__(self):
