@@ -77,7 +77,7 @@ def sliding_window(a,ws,ss = None,flatten = True):
     if np.any(ws > shap):
         raise ValueError(\
         'ws cannot be larger than a in any dimension.\
- a.shape was %s and ws was %s' % (str(a.shape),str(ws)))
+         a.shape was %s and ws was %s' % (str(a.shape),str(ws)))
     # how many slices will there be in each dimension?
     newshape = norm_shape(((shap - ws) // ss) + 1)
     # the shape of the strided array will be the number of slices in each dimension
