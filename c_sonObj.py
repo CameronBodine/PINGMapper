@@ -1509,7 +1509,7 @@ class sonObj(object):
         if remWater:
             depth = self._remWater(detectDepth, sonMeta, smthDep)
 
-        if detectDepth > 0:
+        if detectDepth > 0 and remWater:
             sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
         return self
