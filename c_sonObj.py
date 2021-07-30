@@ -6,95 +6,152 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 from skimage.measure import label, regionprops
 
 class sonObj(object):
-    def __init__(self, sonFile, humFile, projDir, tempC=0.1, nchunk=500):
+    '''
+    Python class to store everything related to reading and exporting data from
+    Humminbird sonar recordings.
+
+    ----------------
+    Class Attributes
+    ----------------
+    * Alphabetical order *
+    self.beamName : str
+        DESCRIPTION - Name of sonar beam.
+    self.datLen : int
+        DESCRIPTION - Number of bytes of DAT file.
+    self.datMetaFile : str
+        DESCRIPTION - Path to .DAT metadata file (.csv).
+    self.headBytes : int
+        DESCRIPTION - Number of header bytes for a sonar record.
+    self.headIdx : list
+        DESCRIPTION - List to hold byte index (offset) of each sonar record.
+    self.headStruct : dict
+        DESCRIPTION - Dictionary to store sonar record header structure.
+    self.headValid : bool
+        DESCRIPTION - Flag indicating if SON header structure is correct.
+    self.humDatStruct : dict
+        DESCRIPTION - Dictionary to store .DAT file structure.
+    self.humDat : dict
+        DESCRIPTION - Dictionary to store .DAT file contents.
+    self.humFile : str
+        DESCRIPTION - Path to .DAT file.
+    self.isOnix : bool
+        DESCRIPTION - Flag indicating if sonar recording from ONIX.
+    self.metaDir : str
+        DESCRIPTION - Path to metadata directory.
+    self.nchunk : int
+        DESCRIPTION - Number of pings/sonar records per chunk
+    self.outDir : str
+        DESCRIPTION - Path where outputs are saved.
+    self.pingCnt : int
+        DESCRIPTION - Number of ping returns for each sonar record.
+    self.pingMax : int
+        DESCRIPTION - Stores largest pingCnt value (max range) for a currently
+                      loaded sonar chunk.
+    self.projDir : str
+        DESCRIPTION - Path (top level) to output directory.
+    self.sonFile : str
+        DESCRIPTION - Path to .SON file.
+    self.sonIdxFile : str
+        DESCRIPTION - Path to .IDX file.
+    self.sonMetaDF : DataFrame
+        DESCRIPTION - Pandas dataframe to store .SON metadata for currently
+                      loaded sonar chunk.
+    self.sonMetaFile : str
+        DESCRIPTION - Path to .SON metadata file (.csv).
+    self.sonMetaPickle : str
+        DESCRIPTION - Path to .SON metadata pickle file (.meta).
+    self.src : bool
+        DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
+                      removed & slant range corrected (src).
+    self.tempC : float
+        DESCRIPTION - Water temperature (Celcius) during survey divided by 10.
+    self.trans : non-class function
+        DESCRIPTION - Function to convert utm to lat/lon.
+    self.wcp : bool
+        DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
+                      present (wcp).
+    '''
+
+    #===========================================================================
+    def __init__(self,
+                 sonFile,
+                 humFile,
+                 projDir,
+                 tempC=0.1,
+                 nchunk=500):
+        '''
+        Initialize a sonObj instance.
+
+        ----------
+        Parameters
+        ----------
+        self.sonFile : str
+            DESCRIPTION - Path to .SON file.
+            EXAMPLE -     self.sonFile = 'C:/PINGMapper/SonarRecordings/R00001/B002.SON'
+        self.humFile : str
+            DESCRIPTION - Path to .DAT file associated w/ .SON directory.
+            EXAMPLE -     humFile = 'C:/PINGMapper/SonarRecordings/R00001.DAT'
+        projDir : str
+            DESCRIPTION - Path to output directory.
+            EXAMPLE -     projDir = 'C:/PINGMapper/procData/R00001'
+        tempC : float : [Default=0.1]
+            DESCRIPTION - Water temperature (Celcius) during survey divided by 10.
+            EXAMPLE -     tempC = (20/10)
+        nchunk : int : [Default=500]
+            DESCRIPTION - Number of pings per chunk.  Chunk size dictates size of
+                          sonar tiles (sonograms).  Most testing has been on chunk
+                          sizes of 500 (recommended).
+            EXAMPLE -     nchunk = 500
+
+        -------
+        Returns
+        -------
+        sonObj instance.
+        '''
         # Create necessary attributes
         self.sonFile = sonFile      # SON file path
         self.projDir = projDir      # Project directory
         self.humFile = humFile      # DAT file path
         self.tempC = tempC          # Water temperature
         self.nchunk = nchunk        # Number of sonar records per chunk
-        # self.wcp = False            # Flag indicating if water-column-present tiles exported
-        # self.src = False            # Flag indicating if water-column-removed tiles exported
-
-        # # Path
-        # self.outDir = None          # Location where outputs are saved
-        # self.sonIdxFile = None      # IDX file path
-        # self.metaDir = None         # Metadata file directory
-        # self.datMetaFile = None     # DAT metadata file path (csv)
-        # self.sonMetaFile = None     # SON metadata file path (csv)
-        # self.sonMetaPickle = None   # SON metadata pickle path
-        #
-        # # String
-        # self.beamName = None        # Name of sonar beam
-        # # Number
-        # self.headBytes = None       # Number of header bytes for a sonar return
-        # self.datLen = None          # Length in bytes of DAT file
-        # self.pingMax = None         # Stores highest pingCnt value (highest range)
-        #
-        # # Boolean
-        # self.isOnix = None          # Flag indicating if files from ONIX
-        # self.headValid = None       # Flag indicating if SON header structure is correct
-        # # List/Dictionary
-        # self.headIdx = None         # List to hold byte index of each sonar record
-        # self.pingCnt = None         # Number of ping returns for each sonar record
-        # self.humDatStruct = None    # Dictionary holding DAT file structure
-        # self.humDat = None          # Dictionary holding DAT file contents
-        # self.headStruct = None      # Dictionary holding sonar record header structure
-        # # Function
-        # self.trans = None           # Function to convert utm to lat/lon
-        # # DataFrame
-        # self.sonMetaDF = None       # Pandas df to hold son metadata
 
         return
 
-    #========================================================
-    def _rescale(self, dat, mn, mx):
-        '''
-        rescales an input dat between mn and mx
-        '''
-        m = min(dat.flatten())
-        M = max(dat.flatten())
-        return (mx-mn)*(dat-m)/(M-m)+mn
+    ############################################################################
+    # Decode DAT file (varies by model)                                        #
+    ############################################################################
 
-    #====================================
-    def _standardize(self, img):
-        #standardization using adjusted standard deviation
-        N = np.shape(img)[0] * np.shape(img)[1]
-        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
-        m = np.mean(img)
-        img = (img - m) / s
-        img = self._rescale(img, 0, 1)
-        del m, s, N
-
-        if np.ndim(img)!=3:
-            img = np.dstack((img,img,img))
-
-        return img
-
-    # =========================================================
-    def _fread(self, infile, num, typ):
-        """
-        This function reads binary data in a file
-        """
-        dat = arr(typ)
-        dat.fromfile(infile, num)
-        return(list(dat))
-
-    #===========================================
+    #=======================================================================
     def _getHumDatStruct(self):
         """
-        Determines .DAT file structure then
-        gets the data from .DAT using _getHumdat()
-        or _decode_onix()
-        """
-        # Returns dictionary with dat structure
-        # Format: name : [byteIndex, offset, dataLen, data]
-        # name = name of attribute
-        # byteIndex = Index indicating position of name
-        # offset = Byte offset for the actual data
-        # dataLen = number of bytes for data (i.e. utm_e is 4 bytes long)
-        # data = actual value of the attribute
+        Determines .DAT file structure for a sonObj instance.
 
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        A dictionary with .DAT file structure stored in self.humDatStruct with
+        the following format:
+
+        self.humDatStruct = {name : [byteIndex, offset, dataLen, data],
+                             ...} where:
+            name == Name of attribute;
+            byteIndex == Index indicating position of name;
+            offset == Byte offset for the actual data;
+            dataLen == number of bytes for data (i.e. utm_e is 4 bytes long);
+            data = actual value of the attribute.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._getHumDatStruct()
+        """
+
+        # Set variables equal to data stored in attributes.
         humFile = self.humFile
         datLen = self.datLen
         nchunk = self.nchunk
@@ -164,37 +221,59 @@ class sonObj(object):
         self.humDatStruct = humdic
         return
 
-    #===========================================
+    #=======================================================================
     def _getHumdat(self):
         """
-        returns data from .DAT file
+        Decode .DAT file using known DAT file structure.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getHumDatStruct()
+
+        -------
+        Returns
+        -------
+        A dictionary stored in self.humDat containing data from .DAT file.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._getEPSG()
         """
+        # Get necessary class attributes
         humdic = self.humDatStruct
         humFile = self.humFile
         datLen = self.datLen
         t = self.tempC
 
-        humDat = defaultdict(dict)
-        endian = humdic['endianness']
-        file = open(humFile, 'rb')
+        humDat = defaultdict(dict) # Empty dict to store DAT contents
+        endian = humdic['endianness'] # Is data big or little endian?
+        file = open(humFile, 'rb') # Open the file
+        # Search for humdic items in DAT file
         for key, val in humdic.items():
             # print(key,":",val)
             if key == 'endianness':
                 pass
             else:
-                file.seek(val[0])
+                file.seek(val[0]) # Move to correct byte offset
+                # If the expected data is 4 bytes long
                 if val[2] == 4:
-                    byte = struct.unpack(endian, arr('B', self._fread(file, val[2], 'B')).tobytes())[0]
+                    byte = struct.unpack(endian, arr('B', self._fread(file, val[2], 'B')).tobytes())[0] # Decode byte
+                # If the expected data is less than 4 bytes long
                 elif val[2] < 4:
-                    byte = self._fread(file, val[2], 'B')[0]
+                    byte = self._fread(file, val[2], 'B')[0] # Decode byte
+                # If the expected data is less than 4 bytes long
                 elif val[2] > 4:
-                    byte = arr('B', self._fread(file, val[2], 'B')).tobytes().decode()
+                    byte = arr('B', self._fread(file, val[2], 'B')).tobytes().decode() # Decode byte
+                # Something went wrong...
                 else:
                     byte = -9999
-                humDat[key] = byte
+                humDat[key] = byte # Store the data
 
-        file.close()
+        file.close() # Close the file
 
+        # Determine Humminbird water type setting and update (S)alinity appropriately
         waterCode = humDat['water_code']
         if datLen == 64:
             if waterCode == 0:
@@ -217,25 +296,34 @@ class sonObj(object):
                 humDat['water_type'] = 'unknown'
                 c = 1475
 
+        # Calculate speed of sound based on temp & salinity
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35)
 
+        # Calculate time varying gain
         tvg = ((8.5*10**-5)+(3/76923)+((8.5*10**-5)/4))*c
         humDat['tvg'] = tvg
         humDat['nchunk'] = self.nchunk
 
-        self.humDat = humDat
+        self.humDat = humDat # Store data in class attribute for later use
 
         return
 
-    # =========================================================
+    # ======================================================================
     def _decodeOnix(self):
         """
-        returns data from Onix .DAT file
-        """
-        fid2 = open(self.humFile, 'rb')
+        Decodes .DAT file from Onix Humminbird models.  Onix has a significantly
+        different .DAT file structure compared to other Humminbird models,
+        requiring a specific funtion to decode the file.
 
-        dumpstr = fid2.read()
-        fid2.close()
+        -------
+        Returns
+        -------
+        A dictionary stored in self.humDat containing data from .DAT file.
+        """
+        fid2 = open(self.humFile, 'rb') # Open file
+
+        dumpstr = fid2.read() # Store file contents
+        fid2.close() # Close the file
 
         if sys.version.startswith('3'):
           dumpstr = ''.join(map(chr, dumpstr))
@@ -257,29 +345,63 @@ class sonObj(object):
         humdat['SourceDeviceModelId2D'] = int(tmp.split('SourceDeviceModelId2D=')[1].split('>')[0])
         humdat['SourceDeviceModelIdSI'] = int(tmp.split('SourceDeviceModelIdSI=')[1].split('>')[0])
         humdat['SourceDeviceModelIdDI'] = int(tmp.split('SourceDeviceModelIdDI=')[1].split('>')[0])
-        self.humDat = humdat
+        self.humDat = humdat # Store data in class attribute for later use
         return
 
-    # =========================================================
+    # ======================================================================
+    def _fread(self,
+               infile,
+               num,
+               typ):
+        """
+        Helper function that reads binary data in a file.
+        """
+        dat = arr(typ)
+        dat.fromfile(infile, num)
+        return(list(dat))
+
+    # ======================================================================
     def _getEPSG(self):
         """
-        Determines appropriate UTM zone based on location
+        Determines appropriate UTM zone based on location (EPSG 3395 Easting/Northing)
+        provided in .DAT file.  This is used to project coordinates from
+        EPSG 3395 to local UTM zone.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getHumdat()
+
+        -------
+        Returns
+        -------
+        self.trans which will re-poroject Humminbird easting/northings to local UTM zone.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._cntHead()
         """
+        # Check if file from Onix
         if self.isOnix == 0:
-            utm_e = self.humDat['utm_e']
-            utm_n = self.humDat['utm_n']
+            utm_e = self.humDat['utm_e'] # Get easting
+            utm_n = self.humDat['utm_n'] # Get northing
+        # Need to add routine if Onix is encountered
         else:
             try:
                 pass
             except:
                 pass
 
+        # Convert easting/northing to latitude/longitude
         lat = np.arctan(np.tan(np.arctan(np.exp(utm_n/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
         lon = (utm_e * 57.295779513082302) / 6378388.0
 
+        # Determine epsg code
         self.humDat['epsg'] = "epsg:"+str(int(float(convert_wgs_to_utm(lon, lat))))
         self.humDat['wgs'] = "epsg:4326"
 
+        # Configure re-projection function
         self.trans = pyproj.Proj(self.humDat['epsg'])
         # try:
         #     self.trans = pyproj.Proj(init=self.humDat['epsg'])
@@ -288,20 +410,47 @@ class sonObj(object):
 
         return
 
-    # =========================================================
+    ############################################################################
+    # Determine sonar record header length (varies by model)                   #
+    ############################################################################
+
+    # ======================================================================
     def _cntHead(self):
         """
-        Determine SON sonar return header length
+        Determine .SON sonar record header length based on known Humminbird
+        .SON file structure.  Humminbird stores sonar records in packets, where
+        the first x bytes of the packet contain metadata (record number, northing,
+        easting, time elapsed, depth, etc.), proceeded by the sonar returns
+        associated with that sonar record.  This function will search the first
+        sonar record to determine the length of sonar record header.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        self.headBytes, indicating length, in bytes, of sonar record header.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._getHeadStruct()
         """
         file = open(self.sonFile, 'rb')
         i = 0
         foundEnd = False
         while foundEnd is False and i < 200:
-            lastPos = file.tell() # Get current position in file
-            byte = self._fread(file, 1, 'B')
-            # print("Val: {} Pos: {}".format(byte, lastPos))
+            lastPos = file.tell() # Get current position in file (byte offset from beginning)
+            byte = self._fread(file, 1, 'B') # Decode byte value
+
+            # Check if we found the end of the sonar record.
+            ## A 33 **may** indicate end of sonar record.
             if byte[0] == 33 and lastPos > 3:
-                # Double check we found the actual end
+                # Double check we found the actual end by moving backward -6 bytes
+                ## to see if value is 160 (spacer preceding number of ping records)
                 file.seek(-6, 1)
                 byte = self._fread(file, 1, 'B')
                 if byte[0] == 160:
@@ -320,19 +469,41 @@ class sonObj(object):
             i = 0
 
         file.close()
-        self.headBytes = i
+        self.headBytes = i # Store data in class attribute for later use
         return i
 
-    # =========================================================
+    ############################################################################
+    # Get the SON header structure and attributes                              #
+    ############################################################################
+
+    # ======================================================================
     def _getHeadStruct(self):
         """
-        Returns dictionary with header structure
-        Format: byteVal : [byteIndex, offset, dataLen, name]
-        byteVal = Spacer value (integer) preceding attribute values (i.e. depth)
-        byteIndex = Index indicating position of byteVal
-        offset = Byte offset for the actual data
-        dataLen = number of bytes for data (i.e. utm_e is 4 bytes long)
-        name = name of attribute
+        Determines .SON header structure based on self.headBytes.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._cntHead()
+
+        -------
+        Returns
+        -------
+        A dictionary with .SON file structure stored in self.headStruct with
+        the following format:
+
+        self.headStruct = {byteVal : [byteIndex, offset, dataLen, name],
+                           ...} where:
+            byteVal == Spacer value (integer) preceding attribute values (i.e. depth);
+            byteIndex == Index indicating position of byteVal;
+            offset == Byte offset for the actual data;
+            dataLen == number of bytes for data (i.e. utm_e is 4 bytes long);
+            name = name of attribute.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._checkHeadStruct()
         """
 
         headBytes = self.headBytes
@@ -425,40 +596,93 @@ class sonObj(object):
         else:
             headStruct = {}
 
-        self.headStruct = headStruct
+        self.headStruct = headStruct # Store data in class attribute for later use
         return
 
-    # =========================================================
+    # ======================================================================
     def _checkHeadStruct(self):
         """
-        Check to make sure sonar return header
-        structure determined appropriately
-        """
-        headStruct = self.headStruct
-        if len(headStruct) > 0:
-            file = open(self.sonFile, 'rb')
+        Check to make sure sonar record header was structure determined
+        appropriately.  The function searches through first sonar record to make
+        sure each of the previously identified metadata attributes are located
+        at the appropriate byte offset.
 
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getHeadStruct()
+
+        -------
+        Returns
+        -------
+        A boolean flag stored in self.headValid indicating if the sonar record
+        structure was appropriately determined.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        If self.headValid == False:
+            self._decodeHeadStruct
+        else:
+            self._getSonMeta()
+        """
+        headStruct = self.headStruct # Load sonar record header structure
+        if len(headStruct) > 0:
+            file = open(self.sonFile, 'rb') # Open son file
+
+            # Iterate through each headStruct item
             for key, val in headStruct.items():
-                file.seek(val[0])
-                byte = self._fread(file, 1, 'B')[0]
-                # print(val[3], "::", key, ":", byte)
+                file.seek(val[0]) # Move to the appropriate byte offset
+                byte = self._fread(file, 1, 'B')[0] # Decode byte value
+
+                # If the headStruct key is equal to the byte value,
+                ## we are good to go (for now).
                 if np.floor(key) == byte:
                     headValid = [True]
+                # If not, we are encountering an unknown structure.  Return the
+                ## decoded value and expected value for debug.
                 else:
                     headValid = [False, key, val, byte]
                     break
             file.close()
         else:
+            # We never determined the sonar record header structure.
             headValid = [-1]
-        self.headValid = headValid
+        self.headValid = headValid # Store data in class attribute for later use
         return
 
-    # =========================================================
+    # ======================================================================
     def _decodeHeadStruct(self):
         """
-        If sonar return header structure not
-        previously known, attempt to automatically
-        decode.
+        If sonar return header structure not previously known, attempt to
+        automatically decode.  This function will iterate through each byte at
+        the beginning of the sonar file, decode the byte, determine if it matches
+        any known or unknown spacer value (sonar record attribute 'name') and if
+        it does, store the byte offset.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._cntHead()
+
+        -------
+        Returns
+        -------
+        A dictionary with .SON file structure stored in self.headStruct with
+        the following format:
+
+        self.headStruct = {byteVal : [byteIndex, offset, dataLen, name],
+                           ...} where:
+            byteVal == Spacer value (integer) preceding attribute values (i.e. depth);
+            byteIndex == Index indicating position of byteVal;
+            offset == Byte offset for the actual data;
+            dataLen == number of bytes for data (i.e. utm_e is 4 bytes long);
+            name = name of attribute.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._checkHeadStruct()
         """
         headBytes = self.headBytes
         headStruct = {}
@@ -500,40 +724,270 @@ class sonObj(object):
             160:[-1, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
             }
 
-        file = open(self.sonFile, 'rb')
-        lastPos = 0
-        head = self._fread(file, 4,'B')
+        file = open(self.sonFile, 'rb') # Open the file
+        lastPos = 0 # Track last position in file
+        head = self._fread(file, 4,'B') # Get first 4 bytes of file
 
+        # If first four bytes match known Humminbird sonar record header
         if head[0] == 192 and head[1] == 222 and head[2] == 171 and head[3] == 33:
             while lastPos < headBytes - 1:
                 lastPos = file.tell() # Get current position in file
-                byte = self._fread(file, 1, 'B')[0]
-                # print("B: ", byte, " I: ", lastPos, " H: ", headBytes-1)
+                byte = self._fread(file, 1, 'B')[0] # Decode the spacer byte
+                # If spacer byte not equal to 132 or 133
                 if byte != 132 and byte != 133:
-                    meta = toCheck[byte]
-                    meta[0] = lastPos
-                    headStruct[byte] = meta
-                    file.seek(meta[0]+meta[1]+meta[2])
+                    meta = toCheck[byte] # Get associated metadata for known byteVal
+                    meta[0] = lastPos # Store the current position
+                    headStruct[byte] = meta # Store what was found in headStruct
+                    file.seek(meta[0]+meta[1]+meta[2]) # Move to next position in file
+                # Spacer 132/133 store two sets of information per spacer, so
+                ## we need to handle differently.
                 else:
-                    byte = byte + 0.1
-                    meta0_1 = toCheck[byte]
-                    meta0_1[0] = lastPos
-                    headStruct[byte] = meta0_1
-                    byte = byte + 0.1
-                    meta0_2 = toCheck[byte]
-                    meta0_2[0] = lastPos
-                    headStruct[byte] = meta0_2
-                    file.seek(meta0_2[0]+meta0_2[1]+meta0_2[2])
-                lastPos = file.tell()
+                    # Part 1 (first 2 bytes of 4 byte sequence following spacer)
+                    byte = byte + 0.1 # Append .1 to byteVal (i.e. 132.1 or 133.1)
+                    meta0_1 = toCheck[byte] # Get associated metadata for known byteVal
+                    meta0_1[0] = lastPos # Store the current position
+                    headStruct[byte] = meta0_1 # Store what was found in headStruct
 
-        file.close()
+                    # Part 2 (second 2 bytes of 4 byte sequence following spacer)
+                    byte = byte + 0.1 # Append .1 to byteVal (i.e. 132.2 or 133.3)
+                    meta0_2 = toCheck[byte] # Get associated metadata for known byteVal
+                    meta0_2[0] = lastPos # Store the current position
+                    headStruct[byte] = meta0_2 # Store what was found in headStruct
+                    file.seek(meta0_2[0]+meta0_2[1]+meta0_2[2]) # Move to next position in file
+                lastPos = file.tell() # Update with current position
 
-        self.headStruct = headStruct
+        file.close() # Close the file
+
+        self.headStruct = headStruct # Store data in class attribute for later use
         return
 
-    #===========================================
-    def _getPixSize(self, df):
-        # son = portstar[0] # grab first sonObj
+    ############################################################################
+    # Get the metadata for each sonar record                                   #
+    ############################################################################
+
+    # ======================================================================
+    def _getSonMeta(self):
+        """
+        Use .IDX file to find every sonar record in .SON file. If .IDX file is
+        not present, automatically determine each sonar record location in bytes.
+        Then call _getHeader() to decode sonar return header.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getHeadStruct()
+
+        -------
+        Returns
+        -------
+        B00*_**_*****_meta.csv where each row is associated with a sonar record
+        and each column contains a given sonar record's metadata.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        No additional processing is necessary if only interested in data exported
+        to .CSV.  If export of non-rectified imagery is desired, next step is
+        self._getScansChunk().
+        """
+
+        # Get necessary class attributes
+        headStruct = self.headStruct
+        nchunk = self.nchunk
+        idxFile = self.sonIdxFile
+
+        # Prepopulate dictionary w/ attribute names stored in headStruct
+        head = defaultdict(list)
+        for key, val in headStruct.items():
+            head[val[-1]] = []
+
+        # First check if .IDX file exists and get that data
+        # Create a dictionary to store data from .IDX
+        idx = {'record_num': [],
+               'time_s': [],
+               'index': [],
+               'chunk_id': []}
+
+        # If .IDX file exists
+        if idxFile != "NA":
+            idxLen = os.path.getsize(idxFile) # Determine length in bytes
+            idxFile = open(idxFile, 'rb') # Open .IDX file
+            i = j = chunk = 0 # Set counters
+            while i < idxLen:
+                # Decode .IDX data and store in IDX dictionary
+                idx['time_s'].append(struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0])
+                sonIndex = struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0]
+                idx['index'].append(sonIndex)
+                idx['chunk_id'].append(chunk)
+
+                # Store needed data in head dict
+                head['index'].append(sonIndex)
+                head['chunk_id'].append(chunk)
+                headerDat = self._getHeader(sonIndex) # Get and decode header data in .SON file
+                for key, val in headerDat.items():
+                    head[key].append(val) # Store in dictionary
+                idx['record_num'].append(headerDat['record_num'])
+                # Increment counters
+                i+=8
+                j+=1
+                if j == nchunk:
+                    j=0
+                    chunk+=1
+        # If .IDX file is missing
+        ## Attempt to automatically decode .SON file
+        else:
+            print("\n\n{} is missing.  Automatically decoding SON file...".format(idxFile))
+            sonFile = self.sonFile # Get .SON file path
+            fileLen = os.path.getsize(sonFile) # Determine size of .SON file
+            file = open(sonFile, 'rb') # Open .SON file
+            i = j = chunk = 0 # Set counters
+            while i < fileLen:
+                file.seek(i) # Go to appropriate location in file
+                headStart = struct.unpack('>I', arr('B', self._fread(file, 4, 'B')).tobytes())[0]
+                if headStart == 3235818273: # We are at the beginning of a sonar record
+                    # Store needed data in head dict
+                    head['index'].append(i)
+                    head['chunk_id'].append(chunk)
+                else:
+                    sys.exit("Not at head of sonar record")
+
+                headerDat = self._getHeader(i) # Get and decode header data in .SON file
+                for key, val in headerDat.items():
+                    head[key].append(val) # Store in dictionary
+                # Increment counters
+                i = i + self.headBytes + headerDat['ping_cnt'] # Determine location of next sonar record
+                j+=1
+                if j == nchunk:
+                    j=0
+                    chunk+=1
+
+        sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T # Store header metadata in dataframe
+        sonMetaAll = self._getPixSize(sonMetaAll) # Calculate pixel size
+        # Update last chunk size if last chunk too small (for rectification)
+        lastChunk = sonMetaAll[sonMetaAll['chunk_id']==chunk]
+        if len(lastChunk) <= (nchunk/2):
+            sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
+
+        # Write data to csv
+        outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
+        sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
+        self.sonMetaFile = outCSV
+
+    # ======================================================================
+    def _getHeader(self,
+                   sonIndex):
+        """
+        Helper function that, given a byte index location, decodes a sonar
+        record's metadata according to known sonar record header structure.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called by self._getSonMeta()
+
+        -------
+        Returns
+        -------
+        A dictionary containing current sonar record's metadata.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Return metadata to self._getSonMeta()
+        """
+
+        # Get necessary class attributes
+        headStruct = self.headStruct
+        humDat = self.humDat
+        nchunk = self.nchunk
+
+        sonHead = {'lat':-1} # Create dictionary to store sonar record metadata
+        file = open(self.sonFile, 'rb') # Open .SON file
+        # Traverse .SON file based on known headStruct
+        for key, val in headStruct.items():
+            index = sonIndex + val[0] + val[1]
+            file.seek(index) # Go to appropriate location
+            # Decode data based on expected data byte size
+            if val[2] == 4:
+                byte = struct.unpack('>i', arr('B', self._fread(file, val[2], 'B')).tobytes())[0]
+            elif 1 < val[2] <4:
+                byte = struct.unpack('>h', arr('b', self._fread(file, val[2],'b')).tobytes() )[0]
+            else:
+                byte = self._fread(file, val[2], 'b')[0]
+            # print(val[-1],":",byte)
+            sonHead[val[-1]] = byte # Store attribute name and data in sonHead
+
+        file.close() # Close .SON file
+
+        # Make necessary conversions
+        # Convert eastings/northings to latitude/longitude
+        lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_n']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
+        lon = (sonHead['utm_e'] * 57.295779513082302) / 6378388.0
+
+        sonHead['lon'] = lon
+        sonHead['lat'] = lat
+
+        # Reproject latitude/longitude to UTM zone
+        lon, lat = self.trans(lon, lat)
+        sonHead['e'] = lon
+        sonHead['n'] = lat
+
+        # Instrument heading, speed, and depth need to be divided by 10 to be
+        ## in appropriate units.
+        sonHead['instr_heading'] = sonHead['instr_heading']/10
+        sonHead['speed_ms'] = sonHead['speed_ms']/10
+        sonHead['inst_dep_m'] = sonHead['inst_dep_m']/10
+
+        # Add tvg depth correction?
+        # tvg = humDat['tvg']
+        # dist_tvg = np.squeeze(((np.tan(np.radians(25)))*np.squeeze(sonHead['inst_dep_m']))-(tvg))
+        # sonHead['inst_dep_m_tvg'] = dist_tvg
+
+        # Get units into appropriate format
+        sonHead['f'] = sonHead['f']/1000 # Hertz to Kilohertz
+        sonHead['time_s'] = sonHead['time_s']/1000 #milliseconds to seconds
+        sonHead['tempC'] = self.tempC*10
+        # Can we figure out a way to base transducer length on where we think the recording came from?
+        sonHead['t'] = 0.108
+        # Use recording unix time to calculate each sonar records unix time
+        try:
+            starttime = float(humDat['unix_time'])
+            sonHead['caltime'] = starttime + sonHead['time_s']
+        except :
+            sonHead['caltime'] = 0
+
+        # Other corrections Dan did, not implemented yet...
+        # if sonHead['beam']==3 or sonHead['beam']==2:
+        #     dist = ((np.tan(25*0.0174532925))*sonHead['inst_dep_m']) +(tvg)
+        #     bearing = 0.0174532925*sonHead['instr_heading'] - (pi/2)
+        #     bearing = bearing % 360
+        #     sonHead['heading'] = bearing
+        # print("\n\n", sonHead, "\n\n")
+        return sonHead
+
+    #=======================================================================
+    def _getPixSize(self,
+                    df):
+        '''
+        Helper function that determines pixel size of a sonar return based on
+        water type, speed of sound in water, and sonar properties.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from _getSonMeta().
+
+        -------
+        Returns
+        -------
+        Dataframe with pixel size of a single return.  Used for exporting sonar tiles.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Return values to _getSonMeta()
+        '''
+
         humDat = self.humDat # get DAT metadata
 
         water_type = humDat['water_type'] # load water type
@@ -548,7 +1002,7 @@ class sonObj(object):
 
         t = df['t'].to_numpy() # transducer length
         # f = df['f'].to_numpy()
-        f = 455
+        f = 455 # Pixel size is not dependent on different frequency settings on the Humminbird
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
 
         # theta at 3dB in the horizontal
@@ -561,235 +1015,136 @@ class sonObj(object):
 
         return df
 
-    # =========================================================
-    def _getSonMeta(self):
+    ############################################################################
+    # Export un-rectified sonar tiles                                          #
+    ############################################################################
+
+    # ======================================================================
+    def _getScansChunk(self,
+                       detectDepth,
+                       smthDep):
         """
-        Use idx file to find every sonar record in son file.
-        If idx file is not present, automatically determine
-        sonar record return location in bytes.
-        Then call _getHeader() to decode sonar return header.
+        Main function to read sonar record ping return values.  Stores the
+        number of pings per chunk, chunk id, and byte index location in son file,
+        then calls self._loadSonChunk() to read the data into memory, then calls
+        self._writeTiles to save an unrectified image.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getSonMeta()
+
+        -------
+        Returns
+        -------
+        *.PNG un-rectified sonar tiles (sonograms)
+
+        --------------------
+        Next Processing Step
+        --------------------
+        NA
         """
-
-        headStruct = self.headStruct
-        nchunk = self.nchunk
-        idxFile = self.sonIdxFile
-        head = defaultdict(list)
-        for key, val in headStruct.items():
-            head[val[-1]] = []
-
-        # First check if .idx file exists and get that data
-        idx = {'record_num': [],
-               'time_s': [],
-               'index': [],
-               'chunk_id': []}
-
-        # idxFile = self.sonFile.replace(".SON", ".IDX")
-        if idxFile != "NA":
-            self.sonIdxFile = idxFile
-            idxLen = os.path.getsize(idxFile)
-            idxFile = open(idxFile, 'rb')
-            i = j = chunk = 0
-            while i < idxLen:
-                idx['time_s'].append(struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0])
-                sonIndex = struct.unpack('>I', arr('B', self._fread(idxFile, 4, 'B')).tobytes())[0]
-                idx['index'].append(sonIndex)
-                idx['chunk_id'].append(chunk)
-
-                head['index'].append(sonIndex)
-                head['chunk_id'].append(chunk)
-                headerDat = self._getHeader(sonIndex)
-                for key, val in headerDat.items():
-                    head[key].append(val)
-                idx['record_num'].append(headerDat['record_num'])
-                i+=8
-                j+=1
-                if j == nchunk:
-                    j=0
-                    chunk+=1
-                # print("\n\n", idx, "\n\n")
-        else:
-            # sys.exit("idx missing.  need to figure this out")
-            print("\n\n{} is missing.  Automatically decoding SON file...".format(idxFile))
-            sonFile = self.sonFile
-            fileLen = os.path.getsize(sonFile)
-            file = open(sonFile, 'rb')
-            i = j = chunk = 0
-            while i < fileLen:
-                file.seek(i)
-                headStart = struct.unpack('>I', arr('B', self._fread(file, 4, 'B')).tobytes())[0]
-                if headStart == 3235818273: # We are at the beginning of a sonar record
-                    head['index'].append(i)
-                    head['chunk_id'].append(chunk)
-                else:
-                    sys.exit("Not at head of sonar record")
-
-                headerDat = self._getHeader(i)
-                for key, val in headerDat.items():
-                    head[key].append(val)
-                i = i + self.headBytes + headerDat['ping_cnt']
-                j+=1
-                if j == nchunk:
-                    j=0
-                    chunk+=1
-
-        # print(head,"\n\n\n")
-        # print(idx)
-        sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T
-        sonMetaAll = self._getPixSize(sonMetaAll)
-        lastChunk = sonMetaAll[sonMetaAll['chunk_id']==chunk]
-        if len(lastChunk) <= (nchunk/2):
-            sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
-        # idxDF = pd.DataFrame.from_dict(idx, orient="index").T
-
-        # Write data to csv
-        outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
-        sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
-        self.sonMetaFile = outCSV
-
-        # outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_idx.csv")
-        # idxDF.to_csv(outCSV, index=False, float_format='%.14f')
-
-    # =========================================================
-    def _getHeader(self, sonIndex):
-        """
-        Helper function called by _getSonMeta().
-        Given a byte index location, grab appropriate
-        sonar record metadata.
-        """
-        headStruct = self.headStruct
-        humDat = self.humDat
-        nchunk = self.nchunk
-        sonHead = {'lat':-1}
-        file = open(self.sonFile, 'rb')
-        for key, val in headStruct.items():
-            index = sonIndex + val[0] + val[1]
-            file.seek(index)
-            if val[2] == 4:
-                byte = struct.unpack('>i', arr('B', self._fread(file, val[2], 'B')).tobytes())[0]
-            elif 1 < val[2] <4:
-                byte = struct.unpack('>h', arr('b', self._fread(file, val[2],'b')).tobytes() )[0]
-            else:
-                byte = self._fread(file, val[2], 'b')[0]
-            # print(val[-1],":",byte)
-            sonHead[val[-1]] = byte
-
-        file.close()
-
-        # Make necessary conversions
-        lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_n']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
-        lon = (sonHead['utm_e'] * 57.295779513082302) / 6378388.0
-
-        sonHead['lon'] = lon
-        sonHead['lat'] = lat
-
-        lon, lat = self.trans(lon, lat)
-        sonHead['e'] = lon
-        sonHead['n'] = lat
-
-        sonHead['instr_heading'] = sonHead['instr_heading']/10
-        sonHead['speed_ms'] = sonHead['speed_ms']/10
-        sonHead['inst_dep_m'] = sonHead['inst_dep_m']/10
-
-        # Add tvg depth correction?
-        # tvg = humDat['tvg']
-        # dist_tvg = np.squeeze(((np.tan(np.radians(25)))*np.squeeze(humDat['inst_dep_m'].values))-(tvg))
-        # sonHead['inst_dep_m_tvg'] = dist_tvg
-
-        sonHead['f'] = sonHead['f']/1000
-        sonHead['time_s'] = sonHead['time_s']/1000
-        sonHead['tempC'] = self.tempC*10
-        # Can we figure out a way to base transducer length on where we think the recording came from?
-        sonHead['t'] = 0.108
-        try:
-            starttime = float(humDat['unix_time'])
-            sonHead['caltime'] = starttime + sonHead['time_s']
-        except :
-            sonHead['caltime'] = 0
-
-        # if sonHead['beam']==3 or sonHead['beam']==2:
-        #     dist = ((np.tan(25*0.0174532925))*sonHead['inst_dep_m']) +(tvg)
-        #     bearing = 0.0174532925*sonHead['instr_heading'] - (pi/2)
-        #     bearing = bearing % 360
-        #     sonHead['heading'] = bearing
-        # print("\n\n", sonHead, "\n\n")
-        return sonHead
-
-    # =========================================================
-    def _getScansChunk(self, detectDepth, smthDep):
-        """
-        Main function to read sonar record ping return values.
-        Stores the number of pings per chunk, chunk id, and
-        byte index location in son file, then calls
-        _loadSonChunk() to read the data, then calls
-        _writeTiles to save an unrectified image.
-        """
-        # self.wcp = wcp
-        # self.src = src
-        sonMetaAll = pd.read_csv(self.sonMetaFile)
+        sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
-        # self.pingMax = sonMetaAll['ping_cnt'].max().astype(int)
-        i = 0 #Chunk index
+        i = 0 # Chunk index counter
         while i <= totalChunk:
+            # Filter df by chunk
             isChunk = sonMetaAll['chunk_id']==i
             sonMeta = sonMetaAll[isChunk].reset_index()
-            self.pingMax = sonMeta['ping_cnt'].max().astype(int)
-            self.headIdx = sonMeta['index'].astype(int)
-            self.pingCnt = sonMeta['ping_cnt'].astype(int)
+            # Update class attributes based on current chunk
+            self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+            self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+            self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+            # Load chunk's sonar data into memory
             self._loadSonChunk()
+            # Export water column present image
             if self.wcp:
                 self._writeTiles(i, imgOutPrefix='wcp')
-            # Routine for removing water column
+            # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 newDepth = self._remWater(detectDepth, sonMeta, smthDep)
                 sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * newDepth
                 self._writeTiles(i, imgOutPrefix='src')
 
-            # # Update sonMetaAll with new depth estimate
-            # if detectDepth > 0:
-            #     sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMetaAll['pix_m'] * depth
             i+=1
 
+        # Write automatically estimated depth to son metadata .csv
         if detectDepth > 0:
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
 
-    # =========================================================
+        return self
+
+    # ======================================================================
     def _loadSonChunk(self):
         """
-        Reads in sonar record ping values based on byte
-        index location in son file and number of pings
-        to return.
+        Reads in sonar record ping values based on byte index location in son
+        file and number of pings to return.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._getScansChunk() or self._getScanChunkSingle()
+
+        -------
+        Returns
+        -------
+        2-D numpy array containing sonar intensity
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Return numpy array to self._getScansChunk() or self._getScanChunkSingle()
         """
-        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int)
-        file = open(self.sonFile, 'rb')
+        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        file = open(self.sonFile, 'rb') # Open .SON file
+        # Iterate each sonar record
         for i in range(len(self.headIdx)):
-            # print("index",i)
-            headIdx = self.headIdx[i]
-            pingCnt = self.pingCnt[i]
-            # print("Ping Count", pingCnt)
-            pingIdx = headIdx + self.headBytes
-            file.seek(pingIdx)
+            headIdx = self.headIdx[i] # Get current byte offset to sonar record
+            pingCnt = self.pingCnt[i] # Get current ping count
+            pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+            file.seek(pingIdx) # Move to that location
             k = 0
+            # Decode each sonar return and store in array
             while k < pingCnt:
                 byte = self._fread(file, 1, 'B')[0]
                 sonDat[k,i] = byte
-                # print(k,":",byte)
                 k+=1
-        # print(sonDat)
-        # print(sonDat.shape)
-        file.close()
-        self.sonDat = sonDat
 
-    # =========================================================
-    def _writeTiles(self, k, imgOutPrefix):
+        file.close() # Close the file
+        self.sonDat = sonDat # Store array in class attribute
+        return self
+
+    # ======================================================================
+    def _writeTiles(self,
+                    k,
+                    imgOutPrefix):
         """
         Using currently saved sonar record ping returns
         in self.sonDAT, saves an unrectified image of the
         sonar echogram.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._getScansChunk() or self._getScanChunkSingle() after
+        sonar data loaded to memory with self._loadSonChunk()
+
+        -------
+        Returns
+        -------
+        *.PNG of sonogram to output directory
+
+        --------------------
+        Next Processing Step
+        --------------------
+        NA
         """
-        data = self.sonDat
-        nx, ny = np.shape(data)
-        Z, ind = sliding_window(data, (nx, ny))
+        data = self.sonDat # Get the sonar data
+        nx, ny = np.shape(data) # Determine array shape
+        Z, ind = sliding_window(data, (nx, ny)) # Probably don't need this...
+
+        # File name zero padding
         if k < 10:
             addZero = '0000'
         elif k < 100:
@@ -802,42 +1157,96 @@ class sonObj(object):
             addZero = ''
         Z = Z[0].astype('uint8')
 
+        # Prepare output directory
         outDir = os.path.join(self.outDir, imgOutPrefix)
         try:
             os.mkdir(outDir)
         except:
             pass
 
-        channel = os.path.split(self.outDir)[-1]
-        projName = os.path.split(self.projDir)[-1]
+        channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
         imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
 
-    # =========================================================
-    def _loadSonMeta(self):
-        """
-        Load sonar metadata from csv to pandas df
-        """
-        meta = pd.read_csv(self.sonMetaFile)
-        self.sonMetaDF = meta
-        return self
+    # ======================================================================
+    def _remWater(self,
+                  detectDepth,
+                  sonMeta,
+                  smthDep):
+        '''
+        This may change so not documenting yet...
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
 
-    # =========================================================
-    def _remWater_BinaryThresh(self, acousticBed):
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+        if detectDepth==0:
+            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            newDepth = 0
+        elif detectDepth==1:
+            # print("\nUsing Humminbird Depth for Water Column Removal")
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            bedPick = self._remWater_BinaryThresh(acousticBed)
+            newDepth = bedPick.copy()
+
+        if smthDep:
+            try:
+                bedPick = savgol_filter(bedPick, 51, 3)
+                # Make any potential negatives equal to 0
+                greaterThan0 = bedPick >= 0
+                bedPick = bedPick * greaterThan0
+                ## Potential flag opportunity
+
+            except:
+                pass
+
+        # Slant range correction
+        self._SRC(bedPick, 'FlatBottom')
+        return newDepth
+
+    # ======================================================================
+    def _remWater_BinaryThresh(self,
+                               acousticBed):
+        '''
+        Automatically determine depth from rules-based thresholding method.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._remWater()
+
+        -------
+        Returns
+        -------
+        A list with depth estimate for each ping.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns depth estimate to self._remWater()
+        '''
         # Parameters
         window = 10 # For peak removal in bed pick: moving window size
         max_dev = 5 # For peak removal in bed pick: maximum standard deviation
         pix_buf = 50 # Buffer size around min/max Humminbird depth
 
-        img = self.sonDat
-        img = self._standardize(img)[:,:,0].squeeze()
-        W, H = img.shape[1], img.shape[0]
+        img = self.sonDat # Get sonar intensities
+        img = self._standardize(img)[:,:,0].squeeze() # Standardize and rescale
+        W, H = img.shape[1], img.shape[0] # Determine array dimensions
 
-        ########
+        ##################################
         # Step 1 : Acoustic Bedpick Filter
         # Use acoustic bed pick to crop image
         bedMin = max(min(acousticBed)-50, 0)
         bedMax = max(acousticBed)+pix_buf
-        # print('\n\nHum:',bedMin, bedMax,np.asarray(acousticBed))
+
         cropMask = np.ones((H, W)).astype(int)
         cropMask[:bedMin,:] = 0
         cropMask[bedMax:,:] = 0
@@ -845,24 +1254,25 @@ class sonObj(object):
         # Mask the image with bed_mask
         imgMasked = img*cropMask
 
-        ########
+        ###########################
         # Step 2 - Threshold Filter
         # Binary threshold masked image
-        imgMasked = gaussian(imgMasked, 3, preserve_range=True)
-        imgMasked[imgMasked==0]=np.nan
+        imgMasked = gaussian(imgMasked, 3, preserve_range=True) # Do a gaussian blur
+        imgMasked[imgMasked==0]=np.nan # Set zero's to nan
 
-        imgBinaryMask = np.zeros((H, W)).astype(bool)
+        imgBinaryMask = np.zeros((H, W)).astype(bool) # Create array to store thresholded sonar img
+        # Iterate over each sonar record
         for i in range(W):
-            thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i]))
-            stdev = np.nanstd(imgMasked[:,i])
-            imgBinaryMask[:,i] = imgMasked[:,i] > thresh
+            thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i])) # Determine threshold value
+            # stdev = np.nanstd(imgMasked[:,i])
+            imgBinaryMask[:,i] = imgMasked[:,i] > thresh # Keep only intensities greater than threshold
 
         # Clean up image binary mask
         imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
         imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
         imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
 
-        ########
+        ########################################
         # Step 3 - Non-Contiguous region removal
         # Make sure we didn't accidently zero out the last row, which should be bed.
         # If we did, we will fill it back in
@@ -870,7 +1280,7 @@ class sonObj(object):
         labelImage, num = label(imgBinaryMask, return_num=True)
         allRegions = []
 
-        # Find the widest and lowest region
+        # Find the lowest/deepest region (this is the bed pixels)
         max_row = 0
         finalRegion = 0
         for region in regionprops(labelImage):
@@ -881,6 +1291,7 @@ class sonObj(object):
                 max_row = maxr
                 finalRegion = region.label
 
+        # If finalRegion is 0, there is only one region
         if finalRegion == 0:
             finalRegion = 1
 
@@ -889,13 +1300,10 @@ class sonObj(object):
             if regionLabel != finalRegion:
                 labelImage[labelImage==regionLabel] = 0
 
-        imgBinaryMask = labelImage
-        imgBinaryMask[imgBinaryMask>0] = 1
-        # print('Step 3')
-        # for i in range(W):
-        #     print(i, imgBinaryMask)
+        imgBinaryMask = labelImage # Update thresholded image
+        imgBinaryMask[imgBinaryMask>0] = 1 # Now set all val's greater than 0 to 1 to create the mask
 
-        # # Now fill in above last row filled to make sure no gaps in bed pixels
+        # Now fill in above last row filled to make sure no gaps in bed pixels
         lastRow = bedMax
         imgBinaryMask[lastRow] = True
         for i in range(W):
@@ -912,20 +1320,19 @@ class sonObj(object):
         imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
         imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
 
-        ########
+        #############################
         # Step 4 - Water Below Filter
         # Iterate each ping and determine if there is water under the bed.
         # If there is, zero out everything except for the lowest region.
-        # print('Step 4')
+        # Iterate each sonar record
         for i in range(W):
             labelPing, num = label(imgBinaryMask[:,i], return_num=True)
             if num > 1:
                 labelPing[labelPing!=num] = 0
                 labelPing[labelPing>0] = 1
             imgBinaryMask[:,i] = labelPing
-            # print(i, np.unique(labelPing), labelPing)
 
-        ########
+        ###################################################
         # Step 5 - Final Bedpick: Locate Bed & Remove Peaks
         # Now relocate bed from image_binary_mask
         bed = []
@@ -935,13 +1342,10 @@ class sonObj(object):
             except:
                 b=0
             bed.append(b)
-            # print(k, b)
         bed = np.array(bed).astype(np.float32)
 
-        # print('Step 5.1:\nAuto:',bed)
-
-        # Remove peaks
-        # Locate peaks
+        # Peak removal
+        # Locate peaks first
         i = 0
         toRemove = []
         while i < len(bed)-window:
@@ -963,114 +1367,163 @@ class sonObj(object):
         nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
         bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
 
-        # print('\n\nHum:',bedMin, bedMax,np.asarray(acousticBed))
-        # print('Step 5.2:\nAuto:',bed)
-
         return bed
 
+    #=======================================================================
+    def _standardize(self,
+                     img):
+        '''
+        Helper function to standardize an image
+        '''
+        #standardization using adjusted standard deviation
+        N = np.shape(img)[0] * np.shape(img)[1]
+        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
+        m = np.mean(img)
+        img = (img - m) / s
+        img = self._rescale(img, 0, 1)
+        del m, s, N
 
-    # =========================================================
-    def _remWater(self, detectDepth, sonMeta, smthDep):
-        if detectDepth==0:
-            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            newDepth = 0
-        elif detectDepth==1:
-            # print("\nUsing Humminbird Depth for Water Column Removal")
-            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            bedPick = self._remWater_BinaryThresh(acousticBed)
-            newDepth = bedPick.copy()
+        if np.ndim(img)!=3:
+            img = np.dstack((img,img,img))
 
-        if smthDep:
-            try:
-                bedPick = savgol_filter(bedPick, 51, 3)
-                # Make any potential negatives equal to 0
-                greaterThan0 = bedPick >= 0
-                bedPick = bedPick * greaterThan0
-                ## Potential flag opportunity
+        return img
 
-            except:
-                pass
-        # print(bedPick)
+    #=======================================================================
+    def _rescale(self,
+                 dat,
+                 mn,
+                 mx):
+        '''
+        rescales an input dat between mn and mx
+        '''
+        m = min(dat.flatten())
+        M = max(dat.flatten())
+        return (mx-mn)*(dat-m)/(M-m)+mn
 
+    # ======================================================================
+    def _SRC(self,
+             bedPick,
+             type = 'FlatBottom'):
+        '''
+        Slant range correction is the process of relocating sonar returns after
+        water column removal by converting slant range distances to the bed into
+        horizontal distances based off the depth at nadir.  As SSS does not
+        measure depth across the track, we must assume depth is constant across
+        the track (Flat bottom assumption).  The pathagorean theorem is used
+        to calculate horizontal distance from slant range distance and depth at
+        nadir.
 
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._remWater()
 
-        # Slant range correction
-        self._SRC(bedPick, 'FlatBottom')
-        return newDepth
+        -------
+        Returns
+        -------
+        Self w/ array of relocated intensities stored in class attribute.
 
-    # =========================================================
-    def _SRC(self, bedPick, type = 'FlatBottom'):
-        # print(bedPick)
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns relocated bed intensities to self._remWater()
+        '''
+        # Initialize 2d array to store relocated sonar records
         srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
         # print('\n\n')
         # print(srcDat.shape, self.sonDat.shape, len(bedPick))
-        for j in range(self.sonDat.shape[1]): #Iterate each ping
-            depth = bedPick[j]
+        for j in range(self.sonDat.shape[1]): #Iterate each sonar record
+            depth = bedPick[j] # Get depth (in pixels) at nadir
+            # Create 1d array to store relocated bed pixels.  Set to -1 so we
+            ## can later interpolate over gaps.
             pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -1
             dataExtent = 0
-            for i in range(self.sonDat.shape[0]): #Iterate each ping return
+            for i in range(self.sonDat.shape[0]): #Iterate each sonar return
                 if i >= depth:
-                    # print(i,depth)
-                    intensity = self.sonDat[i,j]
-                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int)
-                    pingDat[srcIndex] = intensity
-                    dataExtent = srcIndex
+                    intensity = self.sonDat[i,j] # Get the intensity value
+                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int) #Calculate horizontal range (in pixels)
+                    pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
+                    dataExtent = srcIndex # Store range extent (max range) of sonar record
                 else:
                     pass
-            pingDat[dataExtent:]=0
+            pingDat[dataExtent:]=0 # Zero out values past range extent so we don't interpolate past this
 
-            # # Make mask so we don't interpolate past range extent
-            # mask = np.ones((self.sonDat.shape[0]))
-            # try:
-            #     gaps = np.where(pingDat==-1)[0]
-            #     topOfLastGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
-            #     mask[topOfLastGap:] = 0
-            # except:
-            #     pass
-
-
-            # Interpolate over gaps
+            # Process of relocating bed pixels will introduce across track gaps
+            ## in the array so we will interpolate over gaps to fill them.
             pingDat[pingDat==-1] = np.nan
             nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
             pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
 
-            # # Apply the mask
-            # pingDat = pingDat*mask
-
+            # Store relocated sonar record in output array
             srcDat[:,j] = np.around(pingDat, 0).astype(int)
 
-        self.sonDat = srcDat
+        self.sonDat = srcDat # Store in class attribute for later use
+        return self
 
-    # =========================================================
-    def _getScanChunkSingle(self, chunk, remWater, detectDepth, smthDep):
+    ############################################################################
+    # Miscellaneous                                                            #
+    ############################################################################
+
+    # ======================================================================
+    def _getScanChunkSingle(self,
+                            chunk,
+                            remWater,
+                            detectDepth,
+                            smthDep):
         """
-        During rectification, if non-rectified tiles have not
-        been exported, this will load the chunk's scan data
-        from the sonar recording.
+        During rectification, if non-rectified tiles have not been exported,
+        this will load the chunk's scan data from the sonar recording.
 
-        Stores the number of pings per chunk, chunk id, and
-        byte index location in son file, then calls
-        _loadSonChunk() to read the data.
+        Stores the number of pings per chunk, chunk id, and byte index location
+        in son file, then calls self._loadSonChunk() to read the data.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from child class c_rectObj._rectSon()
+
+        -------
+        Returns
+        -------
+        Self with chunk's sonar intensities loaded in memory
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Return to child class c_rectObj._rectSon() to complete rectification
         """
-
+        # Open sonar metadata file to df
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         i = chunk #Chunk index
-
+        # Filter df by chunk
         isChunk = sonMetaAll['chunk_id']==i
         sonMeta = sonMetaAll[isChunk].reset_index()
-        self.pingMax = sonMeta['ping_cnt'].max().astype(int)
-        self.headIdx = sonMeta['index'].astype(int)
-        self.pingCnt = sonMeta['ping_cnt'].astype(int)
+        # Update class attributes based on current chunk
+        self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+        # Load chunk's sonar data into memory
         self._loadSonChunk()
+        # Remove water if exporting src imagery
         if remWater:
             depth = self._remWater(detectDepth, sonMeta, smthDep)
-            sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
 
         if detectDepth > 0:
+            sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+        return self
 
-    # =========================================================
+    # ======================================================================
+    def _loadSonMeta(self):
+        """
+        Load sonar metadata from csv to pandas df
+        """
+        meta = pd.read_csv(self.sonMetaFile)
+        self.sonMetaDF = meta
+        return self
+
+    # ======================================================================
     def __str__(self):
         """
         Generic print function to print contenst of sonObj.
