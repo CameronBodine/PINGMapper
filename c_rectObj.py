@@ -369,7 +369,7 @@ class rectObj(sonObj):
         return I
 
     #===========================================
-    def _rectSon(self, detectDepth, smthDep, remWater=True, filt=50, wgs=False):
+    def _rectSon(self, detectDepth, smthDep, remWater=True, filt=50, adjDep=0, wgs=False):
         if remWater == True:
             imgInPrefix = 'src'
             imgOutPrefix = 'rect_src'

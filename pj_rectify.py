@@ -130,9 +130,9 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
     if rect_wcp:
         print('\t\tRectifying with Water Column')
         remWater = False
-        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, wgs=False) for son in portstar)
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, adjDep, wgs=False) for son in portstar)
         # portstar[-1]._rectSon(detectDepth, smthDep, remWater, filter, wgs=False)
     if rect_src:
         print('\t\tRectifying with Water Column Removed')
         remWater = True
-        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, wgs=False) for son in portstar)
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, adjDep, wgs=False) for son in portstar)

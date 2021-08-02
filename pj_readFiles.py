@@ -6,7 +6,16 @@ from joblib import delayed
 import time
 
 #===========================================
-def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detectDep, smthDep):
+def read_master_func(sonFiles,
+                     humFile,
+                     projDir,
+                     tempC,
+                     nchunk,
+                     wcp,
+                     src,
+                     detectDep,
+                     smthDep,
+                     adjDep):
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -349,7 +358,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detect
     if wcp or src:
         print("\nGetting sonar data and exporting tile images:")
         # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, smthDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, smthDep, adjDep) for son in sonObjs)
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

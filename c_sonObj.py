@@ -1022,7 +1022,8 @@ class sonObj(object):
     # ======================================================================
     def _getScansChunk(self,
                        detectDepth,
-                       smthDep):
+                       smthDep,
+                       adjDep=0):
         """
         Main function to read sonar record ping return values.  Stores the
         number of pings per chunk, chunk id, and byte index location in son file,
@@ -1063,7 +1064,7 @@ class sonObj(object):
                 self._writeTiles(i, imgOutPrefix='wcp')
             # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                newDepth = self._remWater(detectDepth, sonMeta, smthDep)
+                newDepth = self._remWater(detectDepth, sonMeta, smthDep, adjDep)
                 sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'].values * newDepth
 
                 self._writeTiles(i, imgOutPrefix='src')
@@ -1172,7 +1173,8 @@ class sonObj(object):
     def _remWater(self,
                   detectDepth,
                   sonMeta,
-                  smthDep):
+                  smthDep,
+                  adjDep):
         '''
         This may change so not documenting yet...
         ----------------------------
@@ -1195,6 +1197,9 @@ class sonObj(object):
             acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
             bedPick = self._remWater_BinaryThresh(acousticBed)
             newDepth = bedPick.copy()
+
+        if adjDep > 0:
+            bedPick += adjDep
 
         if smthDep:
             try:
