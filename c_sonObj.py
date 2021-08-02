@@ -1064,11 +1064,11 @@ class sonObj(object):
             # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 newDepth = self._remWater(detectDepth, sonMeta, smthDep)
-                sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * newDepth
+                sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'].values * newDepth
+
                 self._writeTiles(i, imgOutPrefix='src')
 
             i+=1
-
         # Write automatically estimated depth to son metadata .csv
         if detectDepth > 0:
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
@@ -1508,11 +1508,10 @@ class sonObj(object):
         # Remove water if exporting src imagery
         if remWater:
             depth = self._remWater(detectDepth, sonMeta, smthDep)
-
-        if detectDepth > 0 and remWater:
             sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
+
+        if detectDepth > 0:
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
-        return self
 
     # ======================================================================
     def _loadSonMeta(self):
