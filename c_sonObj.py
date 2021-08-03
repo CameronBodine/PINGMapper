@@ -1,5 +1,5 @@
 from common_funcs import *
-from scipy.signal import savgol_filter
+# from scipy.signal import savgol_filter
 
 from skimage.filters import gaussian
 from skimage.morphology import remove_small_holes, remove_small_objects
@@ -1064,15 +1064,11 @@ class sonObj(object):
                 self._writeTiles(i, imgOutPrefix='wcp')
             # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                newDepth = self._remWater(detectDepth, sonMeta, smthDep, adjDep)
-                sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'].values * newDepth
-
+                # self._remWater(detectDepth, sonMeta, adjDep)
+                self._SRC(sonMeta, 'FlatBottom')
                 self._writeTiles(i, imgOutPrefix='src')
 
             i+=1
-        # Write automatically estimated depth to son metadata .csv
-        if detectDepth > 0:
-            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
 
         return self
 
@@ -1170,51 +1166,182 @@ class sonObj(object):
         imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
 
     # ======================================================================
-    def _remWater(self,
-                  detectDepth,
-                  sonMeta,
-                  smthDep,
-                  adjDep):
+    # def _remWater(self,
+    #               detectDepth,
+    #               sonMeta,
+    #               adjDep):
+    #     '''
+    #     Load's appropriate depth data based on detectDepth preference.  Will adjust
+    #     depth measure by number of pixels in adjDep.  Passes depth data to
+    #     self._SRC() to complete water column removal.
+    #
+    #     ----------------------------
+    #     Required Pre-processing step
+    #     ----------------------------
+    #     Called from self._getScansChunk() or self._getScanChunkSingle().
+    #
+    #     -------
+    #     Returns
+    #     -------
+    #     Returns self
+    #
+    #     --------------------
+    #     Next Processing Step
+    #     --------------------
+    #     Passes depth to self._SRC() to complete water column removal.
+    #     '''
+    #     if detectDepth==0:
+    #         bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+    #     elif detectDepth>0:
+    #         bedPick = round(sonMeta['auto_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+    #
+    #     if adjDep > 0:
+    #         bedPick += adjDep
+    #
+    #     # Slant range correction
+    #     self._SRC(bedPick, 'FlatBottom')
+    #     return
+
+    #=======================================================================
+    def _standardize(self,
+                     img):
         '''
-        This may change so not documenting yet...
+        Helper function to standardize an image
+        '''
+        #standardization using adjusted standard deviation
+        N = np.shape(img)[0] * np.shape(img)[1]
+        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
+        m = np.mean(img)
+        img = (img - m) / s
+        img = self._rescale(img, 0, 1)
+        del m, s, N
+
+        if np.ndim(img)!=3:
+            img = np.dstack((img,img,img))
+
+        return img
+
+    #=======================================================================
+    def _rescale(self,
+                 dat,
+                 mn,
+                 mx):
+        '''
+        rescales an input dat between mn and mx
+        '''
+        m = min(dat.flatten())
+        M = max(dat.flatten())
+        return (mx-mn)*(dat-m)/(M-m)+mn
+
+    # ======================================================================
+    def _SRC(self,
+             sonMeta,
+             type = 'FlatBottom'):
+        '''
+        Slant range correction is the process of relocating sonar returns after
+        water column removal by converting slant range distances to the bed into
+        horizontal distances based off the depth at nadir.  As SSS does not
+        measure depth across the track, we must assume depth is constant across
+        the track (Flat bottom assumption).  The pathagorean theorem is used
+        to calculate horizontal distance from slant range distance and depth at
+        nadir.
+
         ----------------------------
         Required Pre-processing step
         ----------------------------
+        Called from self._remWater()
 
         -------
         Returns
         -------
+        Self w/ array of relocated intensities stored in class attribute.
 
         --------------------
         Next Processing Step
         --------------------
+        Returns relocated bed intensities to self._remWater()
         '''
-        if detectDepth==0:
-            bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            newDepth = 0
-        elif detectDepth==1:
-            # print("\nUsing Humminbird Depth for Water Column Removal")
-            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            bedPick = self._remWater_BinaryThresh(acousticBed)
-            newDepth = bedPick.copy()
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
 
-        if adjDep > 0:
-            bedPick += adjDep
+        # Initialize 2d array to store relocated sonar records
+        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
+        # print('\n\n')
+        # print(srcDat.shape, self.sonDat.shape, len(bedPick))
+        for j in range(self.sonDat.shape[1]): #Iterate each sonar record
+            depth = bedPick[j] # Get depth (in pixels) at nadir
+            # Create 1d array to store relocated bed pixels.  Set to -1 so we
+            ## can later interpolate over gaps.
+            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -1
+            dataExtent = 0
+            for i in range(self.sonDat.shape[0]): #Iterate each sonar return
+                if i >= depth:
+                    intensity = self.sonDat[i,j] # Get the intensity value
+                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int) #Calculate horizontal range (in pixels)
+                    pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
+                    dataExtent = srcIndex # Store range extent (max range) of sonar record
+                else:
+                    pass
+            pingDat[dataExtent:]=0 # Zero out values past range extent so we don't interpolate past this
 
-        if smthDep:
-            try:
-                bedPick = savgol_filter(bedPick, 51, 3)
-                # Make any potential negatives equal to 0
-                greaterThan0 = bedPick >= 0
-                bedPick = bedPick * greaterThan0
-                ## Potential flag opportunity
+            # Process of relocating bed pixels will introduce across track gaps
+            ## in the array so we will interpolate over gaps to fill them.
+            pingDat[pingDat==-1] = np.nan
+            nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
+            pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
 
-            except:
-                pass
+            # Store relocated sonar record in output array
+            srcDat[:,j] = np.around(pingDat, 0).astype(int)
 
-        # Slant range correction
-        self._SRC(bedPick, 'FlatBottom')
-        return newDepth
+        self.sonDat = srcDat # Store in class attribute for later use
+        return self
+
+    ############################################################################
+    # For Automatic Depth Detection                                            #
+    ############################################################################
+
+    # ======================================================================
+    def _detectDepth(self,
+                     detectDepth=1,
+                     smthDep=False):
+        '''
+
+        '''
+        sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
+
+        totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
+        i = 0 # Chunk index counter
+        while i <= totalChunk:
+            # Filter df by chunk
+            isChunk = sonMetaAll['chunk_id']==i
+            sonMeta = sonMetaAll[isChunk].reset_index()
+            # Update class attributes based on current chunk
+            self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+            self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+            self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
+
+            if detectDepth==1:
+                acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+                bedPick = self._remWater_BinaryThresh(acousticBed)
+
+            elif detectDepth==2:
+                print('Not implemented')
+                break
+
+            # if smthDep:
+            #     bedPick = savgol_filter(bedPick, 51, 3)
+            #     # Make any potential negatives equal to 0
+            #     greaterThan0 = bedPick >= 0
+            #     bedPick = bedPick * greaterThan0
+
+            sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'dep_m'] = sonMeta['pix_m'].values * bedPick
+            i+=1
+
+        # Write output's to .CSV
+        sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+
+        return self
 
     # ======================================================================
     def _remWater_BinaryThresh(self,
@@ -1374,97 +1501,6 @@ class sonObj(object):
 
         return bed
 
-    #=======================================================================
-    def _standardize(self,
-                     img):
-        '''
-        Helper function to standardize an image
-        '''
-        #standardization using adjusted standard deviation
-        N = np.shape(img)[0] * np.shape(img)[1]
-        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
-        m = np.mean(img)
-        img = (img - m) / s
-        img = self._rescale(img, 0, 1)
-        del m, s, N
-
-        if np.ndim(img)!=3:
-            img = np.dstack((img,img,img))
-
-        return img
-
-    #=======================================================================
-    def _rescale(self,
-                 dat,
-                 mn,
-                 mx):
-        '''
-        rescales an input dat between mn and mx
-        '''
-        m = min(dat.flatten())
-        M = max(dat.flatten())
-        return (mx-mn)*(dat-m)/(M-m)+mn
-
-    # ======================================================================
-    def _SRC(self,
-             bedPick,
-             type = 'FlatBottom'):
-        '''
-        Slant range correction is the process of relocating sonar returns after
-        water column removal by converting slant range distances to the bed into
-        horizontal distances based off the depth at nadir.  As SSS does not
-        measure depth across the track, we must assume depth is constant across
-        the track (Flat bottom assumption).  The pathagorean theorem is used
-        to calculate horizontal distance from slant range distance and depth at
-        nadir.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self._remWater()
-
-        -------
-        Returns
-        -------
-        Self w/ array of relocated intensities stored in class attribute.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        Returns relocated bed intensities to self._remWater()
-        '''
-        # Initialize 2d array to store relocated sonar records
-        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
-        # print('\n\n')
-        # print(srcDat.shape, self.sonDat.shape, len(bedPick))
-        for j in range(self.sonDat.shape[1]): #Iterate each sonar record
-            depth = bedPick[j] # Get depth (in pixels) at nadir
-            # Create 1d array to store relocated bed pixels.  Set to -1 so we
-            ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -1
-            dataExtent = 0
-            for i in range(self.sonDat.shape[0]): #Iterate each sonar return
-                if i >= depth:
-                    intensity = self.sonDat[i,j] # Get the intensity value
-                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int) #Calculate horizontal range (in pixels)
-                    pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
-                    dataExtent = srcIndex # Store range extent (max range) of sonar record
-                else:
-                    pass
-            pingDat[dataExtent:]=0 # Zero out values past range extent so we don't interpolate past this
-
-            # Process of relocating bed pixels will introduce across track gaps
-            ## in the array so we will interpolate over gaps to fill them.
-            pingDat[pingDat==-1] = np.nan
-            nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
-            pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
-
-            # Store relocated sonar record in output array
-            srcDat[:,j] = np.around(pingDat, 0).astype(int)
-
-        self.sonDat = srcDat # Store in class attribute for later use
-        return self
-
     ############################################################################
     # Miscellaneous                                                            #
     ############################################################################
@@ -1474,7 +1510,8 @@ class sonObj(object):
                             chunk,
                             remWater,
                             detectDepth,
-                            smthDep):
+                            smthDep,
+                            adjDep=0):
         """
         During rectification, if non-rectified tiles have not been exported,
         this will load the chunk's scan data from the sonar recording.
@@ -1512,11 +1549,10 @@ class sonObj(object):
         self._loadSonChunk()
         # Remove water if exporting src imagery
         if remWater:
-            depth = self._remWater(detectDepth, sonMeta, smthDep)
-            sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'auto_dep_m'] = sonMeta['pix_m'] * depth
+            # self._remWater(detectDepth, sonMeta, adjDep)
+            self._SRC(sonMeta, 'FlatBottom')
 
-        if detectDepth > 0:
-            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+        return self
 
     # ======================================================================
     def _loadSonMeta(self):

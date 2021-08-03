@@ -6,7 +6,7 @@ from common_funcs import *
 from c_rectObj import rectObj
 
 #===========================================
-def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep, rect_wcp=False, rect_src=False):
+def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep, rect_wcp=False, rect_src=False, adjDep=0):
     flip = False #Flip port/star
     # filter = 50 #For filtering pings
     filter = int(nchunk*0.1)

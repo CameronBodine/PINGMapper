@@ -4,6 +4,7 @@ from common_funcs import *
 from c_sonObj import sonObj
 from joblib import delayed
 import time
+from scipy.signal import savgol_filter
 
 #===========================================
 def read_master_func(sonFiles,
@@ -352,13 +353,72 @@ def read_master_func(sonFiles,
     print("Done!")
 
     ############################################################################
+    # For Automatic Depth Detection                                            #
+    ############################################################################
+
+    #####################################
+    # Determine which sonObj is port/star
+    portstarObjs = []
+    for son in sonObjs:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            portstarObjs.append(son)
+
+    # Automatically detect depth
+    if detectDep > 0:
+        print("\nAutomatically estimating depth:")
+        # Automatically detect depth for each beam independently
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, smthDep) for son in portstarObjs)
+
+        # Reload auto depth estimates
+        print("\n\tUsing max depth from depth picks...")
+        for son in portstarObjs:
+            son._loadSonMeta()
+
+        dep0 = portstarObjs[0].sonMetaDF['dep_m'].values
+        dep1 = portstarObjs[1].sonMetaDF['dep_m'].values
+
+        # Find max depth for each ping
+        maxDep = []
+        for dep in zip(dep0, dep1):
+            maxDep.append(max(dep))
+
+    else:
+        ("\nUsing Humminbird's depth estimate:")
+        for son in portstarObjs:
+            son._loadSonMeta()
+
+        maxDep = portstarObjs[0].sonMetaDF['inst_dep_m'].values
+
+    if smthDep:
+        print("\tSmoothing depth values...")
+        maxDep = savgol_filter(maxDep, 51, 3)
+        greaterThan0 = (maxDep >= 0)
+        maxDep = maxDep * greaterThan0
+
+    if adjDep != 0:
+        adjBy = portstarObjs[0].sonMetaDF['pix_m'][0] * adjDep
+        print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
+        maxDep += adjBy
+
+
+    # Update df's w/ max depth and save to csv
+    for son in portstarObjs:
+        son.sonMetaDF['dep_m'] = maxDep
+        son.sonMetaDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+
+
+    ############################################################################
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
+    # if wcp:
     if wcp or src:
         print("\nGetting sonar data and exporting tile images:")
         # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, smthDep, adjDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, adjDep) for son in sonObjs)
+
+
 
     ##############################################
     # Let's pickle sonObj so we can reload later #
