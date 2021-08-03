@@ -364,47 +364,61 @@ def read_master_func(sonFiles,
         if beam == "ss_port" or beam == "ss_star":
             portstarObjs.append(son)
 
-    # Automatically detect depth
     if detectDep > 0:
         print("\nAutomatically estimating depth:")
-        # Automatically detect depth for each beam independently
+        depFieldIn = 'dep_m'
         Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, smthDep) for son in portstarObjs)
-
-        # Reload auto depth estimates
-        print("\n\tUsing max depth from depth picks...")
-        for son in portstarObjs:
-            son._loadSonMeta()
-
-        dep0 = portstarObjs[0].sonMetaDF['dep_m'].values
-        dep1 = portstarObjs[1].sonMetaDF['dep_m'].values
-
-        # Find max depth for each ping
-        maxDep = []
-        for dep in zip(dep0, dep1):
-            maxDep.append(max(dep))
-
     else:
         ("\nUsing Humminbird's depth estimate:")
-        for son in portstarObjs:
-            son._loadSonMeta()
+        depFieldIn = 'inst_dep_m'
 
-        maxDep = portstarObjs[0].sonMetaDF['inst_dep_m'].values
+    # Load sonar metadata.
+    for son in portstarObjs:
+        son._loadSonMeta()
 
+    # Get depth values for both beams
+    dep0 = portstarObjs[0].sonMetaDF[depFieldIn].values
+    dep1 = portstarObjs[1].sonMetaDF[depFieldIn].values
+
+    # Determine which beam has more records, and temporarily store beam's depth
+    ## values in maxDep.  We have to do this since zip function (below) truncates
+    ## longest list to shortest list.
+    if len(dep0) > len(dep1):
+        maxDep = dep0
+    else:
+        maxDep = dep1
+
+    # Now enumerate both beam's depth values and store only the highest.
+    for i, val in enumerate(zip(dep0, dep1)):
+        val = max(val)
+        maxDep[i] = max(val, maxDep[i])
+
+    # Smooth depth values
     if smthDep:
-        print("\tSmoothing depth values...")
+        print("\nSmoothing depth values...")
         maxDep = savgol_filter(maxDep, 51, 3)
         greaterThan0 = (maxDep >= 0)
         maxDep = maxDep * greaterThan0
 
+    # Adjust depth by user-provided offset
     if adjDep != 0:
         adjBy = portstarObjs[0].sonMetaDF['pix_m'][0] * adjDep
         print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
         maxDep += adjBy
 
-
     # Update df's w/ max depth and save to csv
     for son in portstarObjs:
-        son.sonMetaDF['dep_m'] = maxDep
+        depCopy = maxDep.copy()
+        lengthDif = len(maxDep) - len(son.sonMetaDF)
+        print(son.beamName, lengthDif)
+        if lengthDif > 0:
+            depCopy = depCopy[:-(lengthDif)]
+        elif lengthDif < 0:
+            print('Dataframe is longer then Depth vector, need to troubleshoot.\n\
+                   Please Report.')
+        else:
+            pass
+        son.sonMetaDF['dep_m'] = depCopy
         son.sonMetaDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
 
 
