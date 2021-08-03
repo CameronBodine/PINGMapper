@@ -53,7 +53,7 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
     # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
-    print("\n\tSmoothing trackline...")
+    print("\nSmoothing trackline...")
 
     for son in portstar:
         # As side scan beams use same transducer/gps coords,
@@ -111,7 +111,7 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
 
     ################################################
     # Calculate ping direction
-    print("\n\tCalculating, smoothing, and interpolating range extent...")
+    print("\nCalculating, smoothing, and interpolating range extent:")
     # Calculate range extent lat/lon
     # for son in portstar:
     #     son._getRangeCoords(flip)
@@ -124,15 +124,15 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
     # Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._interpRangeCoords)(filterRange) for son in portstar)
 
     ################################################
-    print("\n\tRectifying and exporting GeoTiffs...")
+    print("\nRectifying and exporting GeoTiffs:\n")
     # for son in portstar:
     #     son._rectSon(remWater, filter, wgs=False)
     if rect_wcp:
-        print('\t\tRectifying with Water Column')
+        print('\tRectifying with Water Column...')
         remWater = False
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, adjDep, wgs=False) for son in portstar)
         # portstar[-1]._rectSon(detectDepth, smthDep, remWater, filter, wgs=False)
     if rect_src:
-        print('\t\tRectifying with Water Column Removed')
+        print('\n\tRectifying with Water Column Removed...')
         remWater = True
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, adjDep, wgs=False) for son in portstar)
