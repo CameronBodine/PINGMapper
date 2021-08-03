@@ -1329,12 +1329,6 @@ class sonObj(object):
                 print('Not implemented')
                 break
 
-            # if smthDep:
-            #     bedPick = savgol_filter(bedPick, 51, 3)
-            #     # Make any potential negatives equal to 0
-            #     greaterThan0 = bedPick >= 0
-            #     bedPick = bedPick * greaterThan0
-
             sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'dep_m'] = sonMeta['pix_m'].values * bedPick
             i+=1
 
