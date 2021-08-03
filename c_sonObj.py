@@ -1323,7 +1323,7 @@ class sonObj(object):
 
             if detectDepth==1:
                 acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-                bedPick = self._remWater_BinaryThresh(acousticBed)
+                bedPick = self._detectDepth_BinaryThresh(acousticBed)
 
             elif detectDepth==2:
                 print('Not implemented')
@@ -1344,7 +1344,7 @@ class sonObj(object):
         return self
 
     # ======================================================================
-    def _remWater_BinaryThresh(self,
+    def _detectDepth_BinaryThresh(self,
                                acousticBed):
         '''
         Automatically determine depth from rules-based thresholding method.
