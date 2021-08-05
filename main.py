@@ -10,7 +10,7 @@ https://github.com/dbuscombe-usgs/PyHum
 
 """
 
-from common_funcs import *
+from funcs_common import *
 from pj_readFiles import read_master_func
 from pj_rectify import rectify_master_func
 
@@ -27,9 +27,12 @@ if __name__ == "__main__":
     while keep_going is True:
 
         # Path to data/output
-        humFile = '.\\exampleData\\test.DAT'
-        sonPath = '.\\exampleData\\test'
-        projDir = '.\\procData\\PINGMapperTest'
+        # humFile = '.\\exampleData\\test.DAT'
+        # sonPath = '.\\exampleData\\test'
+        # projDir = '.\\procData\\PINGMapperTest'
+        humFile = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pascagoula\Field_data\Leaf\20210403_Solix_USM1\Rec00008.DAT'
+        sonPath = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pascagoula\Field_data\Leaf\20210403_Solix_USM1\Rec00008'
+        projDir = r'E:\NAU\Python\PINGMapper\procData\LEA_20210403_USM1_Rec00008_AutoDepEx_Thresh'
 
         H.append(humFile)
 
@@ -46,10 +49,12 @@ if __name__ == "__main__":
     t = 10 #Temperature in Celsius
     nchunk = 500 #Number of pings per chunk
     wcp = False #Export tiles with water column present
-    src = True #Export Tiles with water column removed/slant range corrected
-    detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold
-    smthDep = True #Smooth depth before water column removal
+    src = False #Export Tiles with water column removed/slant range corrected
+    detectDepth = 2 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
+    ## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
+    smthDep = False #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
+    pltBedPick = True
 
     rect_wcp = False #Export rectified tiles with water column present
     rect_src = False #Export rectified tiles with water column removed/slant range corrected
@@ -61,7 +66,7 @@ if __name__ == "__main__":
     print('***** READING *****')
     for k in range(len(H)):
         print("working on "+P[k])
-        read_master_func(S[k], H[k], P[k], t, nchunk, wcp, src, detectDepth, smthDep, adjDep)
+        read_master_func(S[k], H[k], P[k], t, nchunk, wcp, src, detectDepth, smthDep, adjDep, pltBedPick)
 
     #==================================================
     if rect_wcp or rect_src:
@@ -70,7 +75,7 @@ if __name__ == "__main__":
         print('***** RECTIFYING *****')
         for k in range(len(H)):
             print("working on "+P[k])
-            rectify_master_func(S[k], H[k], P[k], nchunk, detectDepth, smthDep, rect_wcp, rect_src)
+            rectify_master_func(S[k], H[k], P[k], nchunk, detectDepth, smthDep, rect_wcp, rect_src, adjDep)
 
     keep_going = False
 print("Total Processing Time: ",round((time.time() - start_time),ndigits=2))

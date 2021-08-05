@@ -1,6 +1,6 @@
 
 
-from common_funcs import *
+from funcs_common import *
 from c_sonObj import sonObj
 from joblib import delayed
 import time
@@ -16,7 +16,8 @@ def read_master_func(sonFiles,
                      src,
                      detectDep,
                      smthDep,
-                     adjDep):
+                     adjDep,
+                     pltBedPick):
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -364,12 +365,18 @@ def read_master_func(sonFiles,
         if beam == "ss_port" or beam == "ss_star":
             portstarObjs.append(son)
 
-    if detectDep > 0:
+    if detectDep == 0 and pltBedPick:
+        print("\nUsing Humminbird's depth estimate and plotting:")
+        Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
+        depFieldIn = 'inst_dep_m'
+    elif detectDep > 0:
         print("\nAutomatically estimating depth:")
         depFieldIn = 'dep_m'
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, smthDep) for son in portstarObjs)
+        # Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
+        # portstarObjs[0]._detectDepth(detectDep, pltBedPick)
     else:
-        ("\nUsing Humminbird's depth estimate:")
+        print("\nUsing Humminbird's depth estimate:")
         depFieldIn = 'inst_dep_m'
 
     # Load sonar metadata.
@@ -380,6 +387,10 @@ def read_master_func(sonFiles,
     dep0 = portstarObjs[0].sonMetaDF[depFieldIn].values
     dep1 = portstarObjs[1].sonMetaDF[depFieldIn].values
 
+    # # Try removing outliers
+    # dep0 = np.where(abs(dep0 - np.mean(dep0)) < 2 * np.std(dep0), dep0, 0)
+    # dep1 = np.where(abs(dep1 - np.mean(dep1)) < 2 * np.std(dep1), dep1, 0)
+
     # Determine which beam has more records, and temporarily store beam's depth
     ## values in maxDep.  We have to do this since zip function (below) truncates
     ## longest list to shortest list.
@@ -388,14 +399,34 @@ def read_master_func(sonFiles,
     else:
         maxDep = dep1
 
-    # Now enumerate both beam's depth values and store only the highest.
+    # Now enumerate both beam's depth values and store only the largest.
     for i, val in enumerate(zip(dep0, dep1)):
+        # print(i, val)
         val = max(val)
         maxDep[i] = max(val, maxDep[i])
+
+    # Do final outlier removal per chunk ?????
+    i = 0
+    while i <= (len(maxDep)-nchunk):
+        # print('\n\n',maxDep[i:i+nchunk])
+        depSub = maxDep[i:i+nchunk]
+        depSub = np.where(abs(depSub - np.median(depSub)) < 2 * np.std(depSub), depSub, 0)
+        maxDep[i:i+nchunk] = depSub
+        # print(depSub)
+        i+=nchunk
+
+    # Set 0's to nan and interpolate over them
+    if np.sum(maxDep) > 0:
+        # Remove bedpick==0 and Interpolate
+        maxDep[maxDep==0] = np.nan
+        # Interpolate over nan's
+        nans, x = np.isnan(maxDep), lambda z: z.nonzero()[0]
+        maxDep[nans] = np.interp(x(nans), x(~nans), maxDep[~nans])
 
     # Smooth depth values
     if smthDep:
         print("\nSmoothing depth values...")
+        print(maxDep)
         maxDep = savgol_filter(maxDep, 51, 3)
         greaterThan0 = (maxDep >= 0)
         maxDep = maxDep * greaterThan0
@@ -410,7 +441,6 @@ def read_master_func(sonFiles,
     for son in portstarObjs:
         depCopy = maxDep.copy()
         lengthDif = len(maxDep) - len(son.sonMetaDF)
-        print(son.beamName, lengthDif)
         if lengthDif > 0:
             depCopy = depCopy[:-(lengthDif)]
         elif lengthDif < 0:
@@ -420,6 +450,11 @@ def read_master_func(sonFiles,
             pass
         son.sonMetaDF['dep_m'] = depCopy
         son.sonMetaDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+
+    # Export final picks
+    if pltBedPick:
+        print('\n\tExporting final bedpicks...')
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._writeFinalBedPick)() for son in portstarObjs)
 
 
     ############################################################################

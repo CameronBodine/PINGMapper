@@ -1,9 +1,15 @@
-from common_funcs import *
+from funcs_common import *
+from funcs_bedpick import *
 # from scipy.signal import savgol_filter
 
 from skimage.filters import gaussian
 from skimage.morphology import remove_small_holes, remove_small_objects
 from skimage.measure import label, regionprops
+from skimage.io import imsave
+
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
 
 class sonObj(object):
     '''
@@ -1054,7 +1060,7 @@ class sonObj(object):
             isChunk = sonMetaAll['chunk_id']==i
             sonMeta = sonMetaAll[isChunk].reset_index()
             # Update class attributes based on current chunk
-            self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+            self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
             self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
             self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
             # Load chunk's sonar data into memory
@@ -1202,37 +1208,6 @@ class sonObj(object):
     #     self._SRC(bedPick, 'FlatBottom')
     #     return
 
-    #=======================================================================
-    def _standardize(self,
-                     img):
-        '''
-        Helper function to standardize an image
-        '''
-        #standardization using adjusted standard deviation
-        N = np.shape(img)[0] * np.shape(img)[1]
-        s = np.maximum(np.std(img), 1.0/np.sqrt(N))
-        m = np.mean(img)
-        img = (img - m) / s
-        img = self._rescale(img, 0, 1)
-        del m, s, N
-
-        if np.ndim(img)!=3:
-            img = np.dstack((img,img,img))
-
-        return img
-
-    #=======================================================================
-    def _rescale(self,
-                 dat,
-                 mn,
-                 mx):
-        '''
-        rescales an input dat between mn and mx
-        '''
-        m = min(dat.flatten())
-        M = max(dat.flatten())
-        return (mx-mn)*(dat-m)/(M-m)+mn
-
     # ======================================================================
     def _SRC(self,
              sonMeta,
@@ -1300,9 +1275,56 @@ class sonObj(object):
     ############################################################################
 
     # ======================================================================
+    def _writeBedPick(self,
+                      k,
+                      acousticBed = None,
+                      bed1 = None,
+                      bed2 = None,
+                      finalBed = None,
+                      imgOutPrefix = 'bedpick'):
+        data = self.sonDat # Get the sonar data
+
+        # File name zero padding
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        # Prepare output directory
+        outDir = os.path.join(self.outDir, imgOutPrefix)
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+        outFile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png')
+        # imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
+
+        plt.imshow(data, cmap='gray')
+        if acousticBed is not None:
+            plt.plot(acousticBed, 'y-.', lw=1, label='Acoustic Depth')
+        if bed1 is not None:
+            plt.plot(bed1, 'm-.', lw=1, label='Auto Depth 1')
+        if bed2 is not None:
+            plt.plot(bed2, 'r-.', lw=1, label='Auto Depth 2')
+        if finalBed is not None:
+            plt.plot(finalBed, 'b-.', lw=1, label='Auto Depth Final')
+        plt.legend(loc = 'lower right', prop={'size':4})
+        plt.savefig(outFile, dpi=300, bbox_inches='tight')
+        plt.close()
+
+    # ======================================================================
     def _detectDepth(self,
                      detectDepth=1,
-                     smthDep=False):
+                     pltBedPick=False):
         '''
 
         '''
@@ -1310,24 +1332,46 @@ class sonObj(object):
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
         i = 0 # Chunk index counter
+        # i = 1
+
         while i <= totalChunk:
+            print("\t{}: {} of {}".format(self.beamName, i, int(totalChunk)))
             # Filter df by chunk
             isChunk = sonMetaAll['chunk_id']==i
             sonMeta = sonMetaAll[isChunk].reset_index()
             # Update class attributes based on current chunk
-            self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+            self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
             self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
             self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
             # Load chunk's sonar data into memory
             self._loadSonChunk()
 
-            if detectDepth==1:
+            if detectDepth==0:
                 acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-                bedPick = self._detectDepth_BinaryThresh(acousticBed)
+                bedPick1 = None
+                bedPick2 = None
+                bedPick = acousticBed
+
+            elif detectDepth==1:
+                acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+                bedPick1 = self._detectDepth_BinaryThresh(acousticBed)
+                bedPick2 = None
+                bedPick = bedPick1
 
             elif detectDepth==2:
-                print('Not implemented')
-                break
+                acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+                bedPick1 = None
+                bedPick2 = self._detectDepth_segZoo_ResU_Net(acousticBed, doThresh=True)
+                bedPick = bedPick2
+
+            elif detectDepth==3:
+                acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+                bedPick1 = self._detectDepth_BinaryThresh(acousticBed)
+                bedPick2 = self._detectDepth_segZoo_ResU_Net(acousticBed, doThresh=True)
+                bedPick = bedPick2
+
+            if pltBedPick:
+                self._writeBedPick(i, acousticBed, bedPick1, bedPick2)
 
             sonMetaAll.loc[sonMetaAll['chunk_id']==i, 'dep_m'] = sonMeta['pix_m'].values * bedPick
             i+=1
@@ -1339,7 +1383,7 @@ class sonObj(object):
 
     # ======================================================================
     def _detectDepth_BinaryThresh(self,
-                               acousticBed):
+                                  acousticBed):
         '''
         Automatically determine depth from rules-based thresholding method.
 
@@ -1364,7 +1408,7 @@ class sonObj(object):
         pix_buf = 50 # Buffer size around min/max Humminbird depth
 
         img = self.sonDat # Get sonar intensities
-        img = self._standardize(img)[:,:,0].squeeze() # Standardize and rescale
+        img = standardize(img)[:,:,0].squeeze() # Standardize and rescale
         W, H = img.shape[1], img.shape[0] # Determine array dimensions
 
         ##################################
@@ -1470,30 +1514,235 @@ class sonObj(object):
             bed.append(b)
         bed = np.array(bed).astype(np.float32)
 
-        # Peak removal
-        # Locate peaks first
-        i = 0
-        toRemove = []
-        while i < len(bed)-window:
-            vals = bed[i:i+window]
-            mean = np.nanmean(vals)
-            std = np.nanstd(vals)
-            if std > max_dev:
-                difMean = abs(vals - mean)
-                outlier = np.argmax(difMean)
-                toRemove.append(i+outlier)
-            i+=1
-
-        # set peaks to nan
-        toRemove = np.unique(toRemove)
-        for val in toRemove:
-            bed[val]=np.nan
+        # # Peak removal
+        # # Locate peaks first
+        # i = 0
+        # toRemove = []
+        # while i < len(bed)-window:
+        #     vals = bed[i:i+window]
+        #     mean = np.nanmean(vals)
+        #     std = np.nanstd(vals)
+        #     if std > max_dev:
+        #         difMean = abs(vals - mean)
+        #         outlier = np.argmax(difMean)
+        #         toRemove.append(i+outlier)
+        #     i+=1
+        #
+        # # set peaks to nan
+        # toRemove = np.unique(toRemove)
+        # for val in toRemove:
+        #     bed[val]=np.nan
 
         # Interpolate over nan's
         nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
         bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
 
         return bed
+
+    # ======================================================================
+    def _detectDepth_segZoo_ResU_Net(self,
+                                     acousticBed,
+                                     doThresh=False):
+        # Trained w/ Segmentation Zoo: https://github.com/dbuscombe-usgs/segmentation_zoo
+        '''
+        '''
+        # Parameters
+        USE_GPU = False
+        weights = r'.\models\bedpick\bedpick_ModelWeights.h5'
+        win_overlap_r = 0.5
+        win_overlap_c = 0.5
+
+        configfile = weights.replace('.h5','.json').replace('weights', 'config')
+
+        with open(configfile) as f:
+            config = json.load(f)
+
+        # for k in config.keys():
+        #     exec(k+'=config["'+k+'"]')
+        globals().update(config)
+
+        # Initialize the model
+        model = res_unet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS), BATCH_SIZE, NCLASSES)
+        model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = [mean_iou, dice_coef])
+        model.load_weights(weights)
+
+        # Convert array to tensor
+        image, w, h, bigimage = seg_file2tensor_3band(self.sonDat, TARGET_SIZE, resize=True)
+        if image is None:
+            image = bigimage#/255
+        w = image.shape[0]; h = image.shape[1] #Model target size shape
+        W_orig = bigimage.shape[0]; H_orig = bigimage.shape[1] #Original image shape
+
+        image = standardize(image.numpy()).squeeze()
+        bigimage = standardize(bigimage.numpy()).squeeze()
+
+        if doThresh:
+            ##############
+            # Testing binary threshold filter
+            threshBed = self._detectDepth_BinaryThresh(acousticBed).astype(int)
+
+            # Create a mask from acoustic bedpick
+            msk = np.ones((W_orig, H_orig)).astype(int)
+            for i, bed in enumerate(threshBed):
+                msk[:bed,i] = 0
+
+            imgBed = bigimage*msk # Mask out the water, leaving only bed pix
+            imgWat = bigimage*(~msk) # Mask out the bed, leaving only water pix
+
+            # Find standard deviations for bed and water
+            bedStdv = np.nanstd(imgBed)
+            watStdv = np.nanstd(imgWat)
+
+            # # Add a standard deviation to 'bed' region
+            # imgBed[imgBed>0] = imgBed[imgBed>0]+(bedStdv)
+            # # Set negative values to 0
+            # imgBed[imgBed<0] = 0
+            # imgBed[imgBed>1] = 1
+
+            # Subtract a standard deviation from 'water' region
+            imgWat[imgWat>0] = imgWat[imgWat>0]-(watStdv)
+            imgWat[imgWat<0] = 0.05
+            imgWat[imgWat>1] = 1
+
+            bigimage = imgBed + imgWat
+
+            ######################
+            # End threshold filter
+            ######################
+
+        # Determine window indecies ensuring complete coverage
+        row_i, stride_r = getWindowIndices(W_orig, w, win_overlap_r)
+        col_i, stride_c = getWindowIndices(H_orig, h, win_overlap_c)
+
+        # Predict over a moving window
+        for win_r in row_i:
+            for win_c in col_i:
+                winImage = bigimage[win_r:win_r+w, win_c:win_c+h]
+
+                E = []; W = []
+                E.append(model.predict(tf.expand_dims(winImage, 0) , batch_size=1).squeeze())
+                W.append(1)
+
+                K.clear_session()
+
+                est_label = np.average(np.dstack(E), axis=-1, weights=np.array(W))
+                est_label /= est_label.max()
+
+                # if np.max(est_label)-np.min(est_label) > .5:
+                #     thres = threshold_otsu(est_label)
+                #     print("Threshold: %f" % (thres))
+                # else:
+                #     thres = .9
+                #     print("Default threshold: %f" % (thres))
+                thres = 0.90
+
+                var = np.std(np.dstack(E), axis=-1)
+
+                conf = 1-est_label
+                conf[est_label<thres] = est_label[est_label<thres]
+                conf = 1-conf
+
+                conf[np.isnan(conf)] = 0
+                conf[np.isinf(conf)] = 0
+
+                model_conf = np.sum(conf)/np.prod(conf.shape)
+                # print('Overall model confidence = %f'%(model_conf))
+
+                est_label[est_label<thres] = 0
+                est_label[est_label>thres] = 1
+                est_label = remove_small_holes(est_label.astype(bool), 2*w)
+                est_label = remove_small_objects(est_label, 2*w)
+                est_label[est_label<thres] = 0
+                est_label[est_label>thres] = 1
+                est_label = np.squeeze(est_label[:w,:h])
+
+                ## Add results to predictStack
+                # First determine row/col offset so predictions population at appropriate index
+                row_off = win_r
+                col_off = win_c
+
+                # Create nan array of original size to store results
+                winPredict = np.zeros((W_orig, H_orig))
+                winPredict[:,:] = np.nan
+
+                # Store results
+                winPredict[row_off:row_off+w, col_off:col_off+h] = est_label
+
+                # Stack results
+                if row_off==0 and col_off==0:
+                    predictStack = winPredict.copy()
+                else:
+                    predictStack = np.dstack((predictStack, winPredict))
+                del winPredict
+
+        # Now we have all our results
+        # Find the mean of the stack
+        predictStack = np.nanmean(predictStack, axis=-1)
+
+        # Threshold predictions
+        predictStack = np.nan_to_num(predictStack, nan=1)
+        predictStack[predictStack>=0.5] = 1
+        predictStack[predictStack<0.5] = 0
+
+        ###########################
+        # Post-prediction filtering
+        # 1) Remove bed floating on water
+        # Determine if more then one water region
+        waterRegions = predictStack.copy()
+        waterRegions[waterRegions==0] = 2 # Change water pix values to 2
+        waterRegions[waterRegions==1] = 0
+
+        labelImage, num = label(waterRegions, return_num=True)
+
+        pingsFiltered = np.zeros((H_orig)).astype(bool)
+        if num > 1:
+            for i in range(H_orig):
+                gaps = np.where(predictStack[:,i]==0)[0]
+                # Split each gap cluster into it's own array, subset the last one,
+                ## and take top value
+                if len(gaps) > 1:
+                    topOfGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
+                    if topOfGap > 0:
+                        predictStack[:topOfGap,i] = 0
+                        pingsFiltered[i] = True
+
+        # Locate the bed
+        bed = []
+        for k in range(H_orig):
+            try:
+                b = np.where(predictStack[:,k]==1)[0][0]
+            except:
+                b=0
+            bed.append(b)
+
+        bed = np.array(bed).astype(np.float32)
+
+        # Set outliers to zero.  We will interpolate over them during final bedpick
+        bed = np.where(abs(bed - np.median(bed)) < 2 * np.std(bed), bed, 0)
+
+        return bed.astype(int)
+
+    # ======================================================================
+    def _writeFinalBedPick(self):
+        sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
+
+        totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
+        i = 0 # Chunk index counter
+
+        while i <= totalChunk:
+            # Filter df by chunk
+            isChunk = sonMetaAll['chunk_id']==i
+            sonMeta = sonMetaAll[isChunk].reset_index()
+            # Update class attributes based on current chunk
+            self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+            self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+            self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            finalBed = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            self._writeBedPick(i, acousticBed, finalBed = finalBed, imgOutPrefix = 'bedpick_final')
+            i+=1
 
     ############################################################################
     # Miscellaneous                                                            #
@@ -1536,7 +1785,7 @@ class sonObj(object):
         isChunk = sonMetaAll['chunk_id']==i
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].max().astype(int) # store to determine max range per chunk
+        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
         self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
         self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
         # Load chunk's sonar data into memory
