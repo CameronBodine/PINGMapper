@@ -1,6 +1,6 @@
 
 from __future__ import division
-from common_funcs import *
+from funcs_common import *
 
 # from c_sonObj import sonObj
 from c_rectObj import rectObj
