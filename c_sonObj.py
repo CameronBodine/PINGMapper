@@ -1581,7 +1581,7 @@ class sonObj(object):
             # Testing binary threshold filter
             threshBed = self._detectDepth_BinaryThresh(acousticBed).astype(int)
 
-            # Create a mask from acoustic bedpick
+            # Create a mask from rules-based threshold bedpick
             msk = np.ones((W_orig, H_orig)).astype(int)
             for i, bed in enumerate(threshBed):
                 msk[:bed,i] = 0
