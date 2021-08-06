@@ -415,6 +415,11 @@ def read_master_func(sonFiles,
         # print(depSub)
         i+=nchunk
 
+    # If we have too many consecutive zero's, bedbick was likely unsuccesfull.
+    ## Replace those depth values with acoustic pick
+    maxConsecZero = 10
+
+
     # Set 0's to nan and interpolate over them
     if np.sum(maxDep) > 0:
         # Remove bedpick==0 and Interpolate

@@ -30,9 +30,9 @@ if __name__ == "__main__":
         # humFile = '.\\exampleData\\test.DAT'
         # sonPath = '.\\exampleData\\test'
         # projDir = '.\\procData\\PINGMapperTest'
-        humFile = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pascagoula\Field_data\Leaf\20210403_Solix_USM1\Rec00008.DAT'
-        sonPath = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pascagoula\Field_data\Leaf\20210403_Solix_USM1\Rec00008'
-        projDir = r'E:\NAU\Python\PINGMapper\procData\LEA_20210403_USM1_Rec00008_AutoDepEx_Thresh'
+        humFile = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pearl\Field_data\Pearl\20210512_Solix_FWSB1\Rec00004.DAT'
+        sonPath = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pearl\Field_data\Pearl\20210512_Solix_FWSB1\Rec00004'
+        projDir = r'E:\NAU\Python\PINGMapper\procData\PRL_20210512_FWSB1_Rec00004_AutoDepEx_Thresh'
 
         H.append(humFile)
 
@@ -50,11 +50,11 @@ if __name__ == "__main__":
     nchunk = 500 #Number of pings per chunk
     wcp = False #Export tiles with water column present
     src = False #Export Tiles with water column removed/slant range corrected
-    detectDepth = 2 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
+    detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
     ## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
     smthDep = False #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
-    pltBedPick = True
+    pltBedPick = False
 
     rect_wcp = False #Export rectified tiles with water column present
     rect_src = False #Export rectified tiles with water column removed/slant range corrected

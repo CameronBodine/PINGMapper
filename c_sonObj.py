@@ -319,7 +319,7 @@ class sonObj(object):
         """
         Decodes .DAT file from Onix Humminbird models.  Onix has a significantly
         different .DAT file structure compared to other Humminbird models,
-        requiring a specific funtion to decode the file.
+        requiring a specific function to decode the file.
 
         -------
         Returns
