@@ -159,6 +159,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detect
 
     son.metaDir = metaDir #Store metadata directory in sonObj
     outFile = os.path.join(metaDir, 'DAT_meta.csv')
+    pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False)
     son.datMetaFile = outFile #Store metadata file path in sonObj
     print("Done!")
 
