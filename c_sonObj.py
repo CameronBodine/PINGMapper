@@ -1172,43 +1172,6 @@ class sonObj(object):
         imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
 
     # ======================================================================
-    # def _remWater(self,
-    #               detectDepth,
-    #               sonMeta,
-    #               adjDep):
-    #     '''
-    #     Load's appropriate depth data based on detectDepth preference.  Will adjust
-    #     depth measure by number of pixels in adjDep.  Passes depth data to
-    #     self._SRC() to complete water column removal.
-    #
-    #     ----------------------------
-    #     Required Pre-processing step
-    #     ----------------------------
-    #     Called from self._getScansChunk() or self._getScanChunkSingle().
-    #
-    #     -------
-    #     Returns
-    #     -------
-    #     Returns self
-    #
-    #     --------------------
-    #     Next Processing Step
-    #     --------------------
-    #     Passes depth to self._SRC() to complete water column removal.
-    #     '''
-    #     if detectDepth==0:
-    #         bedPick = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-    #     elif detectDepth>0:
-    #         bedPick = round(sonMeta['auto_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-    #
-    #     if adjDep > 0:
-    #         bedPick += adjDep
-    #
-    #     # Slant range correction
-    #     self._SRC(bedPick, 'FlatBottom')
-    #     return
-
-    # ======================================================================
     def _SRC(self,
              sonMeta,
              type = 'FlatBottom'):
