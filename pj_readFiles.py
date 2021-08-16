@@ -418,10 +418,16 @@ def read_master_func(sonFiles,
 
     # If we have too many consecutive zero's, bedbick was likely unsuccesfull.
     ## Replace those depth values with acoustic pick
-    maxConsecZero = 10
+    maxConsecZero = 50
+    zeros = np.where(maxDep==0)[0] # Find zero depths
+    consecZeros = np.split(zeros, np.where(np.diff(zeros) != 1)[0]+1) # Subset consecutive zeros in their own arrays
+    acousticBed = portstarObjs[0].sonMetaDF['inst_dep_m'].values
+    for consecZero in consecZeros: # Iterate consective zero arrays
+        if len(consecZero) > maxConsecZero: # Check how many consecutive zeros
+            for i in consecZero:
+                maxDep[i] = acousticBed[i]
 
-
-    # Set 0's to nan and interpolate over them
+    # Set remaining 0's to nan and interpolate over them
     if np.sum(maxDep) > 0:
         # Remove bedpick==0 and Interpolate
         maxDep[maxDep==0] = np.nan
