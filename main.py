@@ -27,12 +27,9 @@ if __name__ == "__main__":
     while keep_going is True:
 
         # Path to data/output
-        # humFile = '.\\exampleData\\test.DAT'
-        # sonPath = '.\\exampleData\\test'
-        # projDir = '.\\procData\\PINGMapperTest'
-        humFile = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pearl\Field_data\Pearl\20210512_Solix_FWSB1\Rec00004.DAT'
-        sonPath = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pearl\Field_data\Pearl\20210512_Solix_FWSB1\Rec00004'
-        projDir = r'E:\NAU\Python\PINGMapper\procData\PRL_20210512_FWSB1_Rec00004_AutoDepEx_Thresh'
+        humFile = '.\\exampleData\\test.DAT'
+        sonPath = '.\\exampleData\\test'
+        projDir = '.\\procData\\PINGMapperTest'
 
         H.append(humFile)
 
@@ -48,6 +45,7 @@ if __name__ == "__main__":
     # User Parameters
     t = 10 #Temperature in Celsius
     nchunk = 500 #Number of pings per chunk
+    exportUnknown = False #Option to export Unknown sonar record metadata
     wcp = False #Export tiles with water column present
     src = False #Export Tiles with water column removed/slant range corrected
     detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
@@ -66,7 +64,7 @@ if __name__ == "__main__":
     print('***** READING *****')
     for k in range(len(H)):
         print("working on "+P[k])
-        read_master_func(S[k], H[k], P[k], t, nchunk, wcp, src, detectDepth, smthDep, adjDep, pltBedPick)
+        read_master_func(S[k], H[k], P[k], t, nchunk, exportUnknown, wcp, src, detectDepth, smthDep, adjDep, pltBedPick)
 
     #==================================================
     if rect_wcp or rect_src:
