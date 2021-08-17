@@ -1,12 +1,24 @@
 
 
-from common_funcs import *
+from funcs_common import *
 from c_sonObj import sonObj
 from joblib import delayed
 import time
+from scipy.signal import savgol_filter
 
 #===========================================
-def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detectDep, smthDep):
+def read_master_func(sonFiles,
+                     humFile,
+                     projDir,
+                     tempC,
+                     nchunk,
+                     exportUnknown,
+                     wcp,
+                     src,
+                     detectDep,
+                     smthDep,
+                     adjDep,
+                     pltBedPick):
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -254,7 +266,7 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detect
     ## of sonar record attributes.  For known structures, the sonar record
     ## header structure will be stored in the sonObj.
     for son in sonObjs:
-        son._getHeadStruct()
+        son._getHeadStruct(exportUnknown)
 
     # Let's check and make sure the header structure is correct.
     for son in sonObjs:
@@ -273,12 +285,12 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detect
             print("Expected {} at index {}.".format(headValid[1], headValid[2]))
             print("Found {} instead.".format(headValid[3]))
             print("Attempting to decode header structure.....")
-            son._decodeHeadStruct() # Try to automatically decode.
+            son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
         # Header structure is completely unknown.  Try to automatically decode.
         else:
             print("\n#####\nERROR: Wrong Header Structure")
             print("Attempting to decode header structure.....")
-            son._decodeHeadStruct() # Try to automatically decode.
+            son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
 
     # If we had to decode header structure, let's make sure it decoded correctly.
     ## If we are wrong, then we found a completely new Humminbird file format.
@@ -344,13 +356,131 @@ def read_master_func(sonFiles, humFile, projDir, tempC, nchunk, wcp, src, detect
     print("Done!")
 
     ############################################################################
+    # For Automatic Depth Detection                                            #
+    ############################################################################
+
+    #####################################
+    # Determine which sonObj is port/star
+    portstarObjs = []
+    for son in sonObjs:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            portstarObjs.append(son)
+
+    if detectDep == 0 and pltBedPick:
+        print("\nUsing Humminbird's depth estimate and plotting:")
+        Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
+        depFieldIn = 'inst_dep_m'
+    elif detectDep > 0:
+        print("\nAutomatically estimating depth:")
+        depFieldIn = 'dep_m'
+        # Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
+        # portstarObjs[0]._detectDepth(detectDep, pltBedPick)
+    else:
+        print("\nUsing Humminbird's depth estimate:")
+        depFieldIn = 'inst_dep_m'
+
+    # Load sonar metadata.
+    for son in portstarObjs:
+        son._loadSonMeta()
+
+    # Get depth values for both beams
+    dep0 = portstarObjs[0].sonMetaDF[depFieldIn].values
+    dep1 = portstarObjs[1].sonMetaDF[depFieldIn].values
+
+    # # Try removing outliers
+    # dep0 = np.where(abs(dep0 - np.mean(dep0)) < 2 * np.std(dep0), dep0, 0)
+    # dep1 = np.where(abs(dep1 - np.mean(dep1)) < 2 * np.std(dep1), dep1, 0)
+
+    # Determine which beam has more records, and temporarily store beam's depth
+    ## values in maxDep.  We have to do this since zip function (below) truncates
+    ## longest list to shortest list.
+    if len(dep0) > len(dep1):
+        maxDep = dep0
+    else:
+        maxDep = dep1
+
+    # Now enumerate both beam's depth values and store only the largest.
+    for i, val in enumerate(zip(dep0, dep1)):
+        # print(i, val)
+        val = max(val)
+        maxDep[i] = max(val, maxDep[i])
+
+    # Do final outlier removal per chunk ?????
+    i = 0
+    while i <= (len(maxDep)-nchunk):
+        # print('\n\n',maxDep[i:i+nchunk])
+        depSub = maxDep[i:i+nchunk]
+        depSub = np.where(abs(depSub - np.median(depSub)) < 2 * np.std(depSub), depSub, 0)
+        maxDep[i:i+nchunk] = depSub
+        # print(depSub)
+        i+=nchunk
+
+    # If we have too many consecutive zero's, bedbick was likely unsuccesfull.
+    ## Replace those depth values with acoustic pick
+    maxConsecZero = 50
+    zeros = np.where(maxDep==0)[0] # Find zero depths
+    consecZeros = np.split(zeros, np.where(np.diff(zeros) != 1)[0]+1) # Subset consecutive zeros in their own arrays
+    acousticBed = portstarObjs[0].sonMetaDF['inst_dep_m'].values
+    for consecZero in consecZeros: # Iterate consective zero arrays
+        if len(consecZero) > maxConsecZero: # Check how many consecutive zeros
+            for i in consecZero:
+                maxDep[i] = acousticBed[i]
+
+    # Set remaining 0's to nan and interpolate over them
+    if np.sum(maxDep) > 0:
+        # Remove bedpick==0 and Interpolate
+        maxDep[maxDep==0] = np.nan
+        # Interpolate over nan's
+        nans, x = np.isnan(maxDep), lambda z: z.nonzero()[0]
+        maxDep[nans] = np.interp(x(nans), x(~nans), maxDep[~nans])
+
+    # Smooth depth values
+    if smthDep:
+        print("\nSmoothing depth values...")
+        print(maxDep)
+        maxDep = savgol_filter(maxDep, 51, 3)
+        greaterThan0 = (maxDep >= 0)
+        maxDep = maxDep * greaterThan0
+
+    # Adjust depth by user-provided offset
+    if adjDep != 0:
+        adjBy = portstarObjs[0].sonMetaDF['pix_m'][0] * adjDep
+        print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
+        maxDep += adjBy
+
+    # Update df's w/ max depth and save to csv
+    for son in portstarObjs:
+        depCopy = maxDep.copy()
+        lengthDif = len(maxDep) - len(son.sonMetaDF)
+        if lengthDif > 0:
+            depCopy = depCopy[:-(lengthDif)]
+        elif lengthDif < 0:
+            print('Dataframe is longer then Depth vector, need to troubleshoot.\n\
+                   Please Report.')
+        else:
+            pass
+        son.sonMetaDF['dep_m'] = depCopy
+        son.sonMetaDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+
+    # Export final picks
+    if pltBedPick:
+        print('\n\tExporting final bedpicks...')
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._writeFinalBedPick)() for son in portstarObjs)
+
+
+    ############################################################################
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
+    # if wcp:
     if wcp or src:
         print("\nGetting sonar data and exporting tile images:")
         # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, smthDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, adjDep) for son in sonObjs)
+
+
 
     ##############################################
     # Let's pickle sonObj so we can reload later #
