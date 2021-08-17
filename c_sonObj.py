@@ -483,7 +483,8 @@ class sonObj(object):
     ############################################################################
 
     # ======================================================================
-    def _getHeadStruct(self):
+    def _getHeadStruct(self,
+                       exportUnknown = False):
         """
         Determines .SON header structure based on self.headBytes.
 
@@ -602,6 +603,15 @@ class sonObj(object):
         else:
             headStruct = {}
 
+        if not exportUnknown:
+            toDelete = []
+            for key, value in headStruct.items():
+                attributeName = value[3]
+                if 'unknown' in attributeName:
+                    toDelete.append(key)
+            for key in toDelete:
+                del headStruct[key]
+
         self.headStruct = headStruct # Store data in class attribute for later use
         return
 
@@ -658,7 +668,8 @@ class sonObj(object):
         return
 
     # ======================================================================
-    def _decodeHeadStruct(self):
+    def _decodeHeadStruct(self,
+                          exportUnknown = False):
         """
         If sonar return header structure not previously known, attempt to
         automatically decode.  This function will iterate through each byte at
@@ -763,6 +774,15 @@ class sonObj(object):
                 lastPos = file.tell() # Update with current position
 
         file.close() # Close the file
+
+        if not exportUnknown:
+            toDelete = []
+            for key, value in headStruct.items():
+                attributeName = value[3]
+                if 'unknown' in attributeName:
+                    toDelete.append(key)
+            for key in toDelete:
+                del headStruct[key]
 
         self.headStruct = headStruct # Store data in class attribute for later use
         return

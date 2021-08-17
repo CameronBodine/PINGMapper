@@ -12,6 +12,7 @@ def read_master_func(sonFiles,
                      projDir,
                      tempC,
                      nchunk,
+                     exportUnknown,
                      wcp,
                      src,
                      detectDep,
@@ -265,7 +266,7 @@ def read_master_func(sonFiles,
     ## of sonar record attributes.  For known structures, the sonar record
     ## header structure will be stored in the sonObj.
     for son in sonObjs:
-        son._getHeadStruct()
+        son._getHeadStruct(exportUnknown)
 
     # Let's check and make sure the header structure is correct.
     for son in sonObjs:
@@ -284,12 +285,12 @@ def read_master_func(sonFiles,
             print("Expected {} at index {}.".format(headValid[1], headValid[2]))
             print("Found {} instead.".format(headValid[3]))
             print("Attempting to decode header structure.....")
-            son._decodeHeadStruct() # Try to automatically decode.
+            son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
         # Header structure is completely unknown.  Try to automatically decode.
         else:
             print("\n#####\nERROR: Wrong Header Structure")
             print("Attempting to decode header structure.....")
-            son._decodeHeadStruct() # Try to automatically decode.
+            son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
 
     # If we had to decode header structure, let's make sure it decoded correctly.
     ## If we are wrong, then we found a completely new Humminbird file format.
