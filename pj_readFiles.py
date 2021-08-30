@@ -368,18 +368,19 @@ def read_master_func(sonFiles,
             portstarObjs.append(son)
 
     if detectDep == 0 and pltBedPick:
-        print("\nUsing Humminbird's depth estimate and plotting:")
+        print("\nUsing Humminbird's depth estimate and plotting...")
         Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
         depFieldIn = 'inst_dep_m'
     elif detectDep > 0:
-        print("\nAutomatically estimating depth:")
+        print("\nAutomatically estimating depth...")
         depFieldIn = 'dep_m'
         # Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in sonObjs)
         Parallel(n_jobs= np.min([len(portstarObjs), cpu_count()]), verbose=10)(delayed(son._detectDepth)(detectDep, pltBedPick) for son in portstarObjs)
         # portstarObjs[0]._detectDepth(detectDep, pltBedPick)
     else:
-        print("\nUsing Humminbird's depth estimate:")
+        print("\nUsing Humminbird's depth estimate...")
         depFieldIn = 'inst_dep_m'
+    print("Done!")
 
     # Load sonar metadata.
     for son in portstarObjs:
@@ -443,12 +444,14 @@ def read_master_func(sonFiles,
         maxDep = savgol_filter(maxDep, 51, 3)
         greaterThan0 = (maxDep >= 0)
         maxDep = maxDep * greaterThan0
+        print("Done!")
 
     # Adjust depth by user-provided offset
     if adjDep != 0:
         adjBy = portstarObjs[0].sonMetaDF['pix_m'][0] * adjDep
         print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
         maxDep += adjBy
+        print("Done!")
 
     # Update df's w/ max depth and save to csv
     for son in portstarObjs:
@@ -468,6 +471,7 @@ def read_master_func(sonFiles,
     if pltBedPick:
         print('\n\tExporting final bedpicks...')
         Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._writeFinalBedPick)() for son in portstarObjs)
+        print("Done!")
 
 
     ############################################################################
@@ -476,9 +480,10 @@ def read_master_func(sonFiles,
 
     # if wcp:
     if wcp or src:
-        print("\nGetting sonar data and exporting tile images:")
+        print("\nGetting sonar data and exporting tile images...")
         # Export sonar tiles for each beam.
         Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, adjDep) for son in sonObjs)
+        print("Done!")
 
 
 
