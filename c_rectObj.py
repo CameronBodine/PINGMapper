@@ -543,7 +543,7 @@ class rectObj(sonObj):
         return I
 
     #===========================================
-    def _rectSon(self, detectDepth, smthDep, remWater=True, filt=50, adjDep=0, wgs=False):
+    def _rectSon(self, remWater=True, filt=50, adjDep=0, wgs=False):
         if remWater == True:
             imgInPrefix = 'src'
             imgOutPrefix = 'rect_src'
@@ -618,9 +618,10 @@ class rectObj(sonObj):
 
                 projName = os.path.split(self.projDir)[-1]
                 beamName = self.beamName
-                imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png'
+                imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png'
 
-                inImgs[int(chunk)] = os.path.join(self.outDir,imgOutPrefix, imgName)
+                inImgs[int(chunk)] = os.path.join(self.outDir, imgName)
+        print(inImgs)
 
         # test = {}
         # test[chunks[-1]] = inImgs[chunks[-1]]
@@ -636,7 +637,7 @@ class rectObj(sonObj):
             if tileFlag:
                 img = np.asarray(Image.open(imgPath)).copy()
             else:
-                self._getScanChunkSingle(i, remWater, detectDepth, smthDep)
+                self._getScanChunkSingle(i, remWater)
                 img = self.sonDat
             img[0]=0 # To fix extra white on curves
 
