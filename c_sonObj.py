@@ -258,7 +258,6 @@ class sonObj(object):
         file = open(humFile, 'rb') # Open the file
         # Search for humdic items in DAT file
         for key, val in humdic.items():
-            # print(key,":",val)
             if key == 'endianness':
                 pass
             else:
@@ -409,10 +408,6 @@ class sonObj(object):
 
         # Configure re-projection function
         self.trans = pyproj.Proj(self.humDat['epsg'])
-        # try:
-        #     self.trans = pyproj.Proj(init=self.humDat['epsg'])
-        # except:
-        #     self.trans = pyproj.Proj(self.humDat['epsg'].lstrip(), inverse=True)
 
         return
 
@@ -940,7 +935,7 @@ class sonObj(object):
                 byte = struct.unpack('>h', arr('b', self._fread(file, val[2],'b')).tobytes() )[0]
             else:
                 byte = self._fread(file, val[2], 'b')[0]
-            # print(val[-1],":",byte)
+
             sonHead[val[-1]] = byte # Store attribute name and data in sonHead
 
         file.close() # Close .SON file
@@ -1027,7 +1022,6 @@ class sonObj(object):
             S = 1
 
         t = df['t'].to_numpy() # transducer length
-        # f = df['f'].to_numpy()
         f = 455 # Pixel size is not dependent on different frequency settings on the Humminbird
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35) # speed of sound in water
 
@@ -1315,7 +1309,6 @@ class sonObj(object):
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
         i = 0 # Chunk index counter
-        # i = 1
 
         while i <= totalChunk:
             print("\t{}: {} of {}".format(self.beamName, i, int(totalChunk)))
@@ -1497,25 +1490,6 @@ class sonObj(object):
             bed.append(b)
         bed = np.array(bed).astype(np.float32)
 
-        # # Peak removal
-        # # Locate peaks first
-        # i = 0
-        # toRemove = []
-        # while i < len(bed)-window:
-        #     vals = bed[i:i+window]
-        #     mean = np.nanmean(vals)
-        #     std = np.nanstd(vals)
-        #     if std > max_dev:
-        #         difMean = abs(vals - mean)
-        #         outlier = np.argmax(difMean)
-        #         toRemove.append(i+outlier)
-        #     i+=1
-        #
-        # # set peaks to nan
-        # toRemove = np.unique(toRemove)
-        # for val in toRemove:
-        #     bed[val]=np.nan
-
         # Interpolate over nan's
         nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
         bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
@@ -1540,8 +1514,6 @@ class sonObj(object):
         with open(configfile) as f:
             config = json.load(f)
 
-        # for k in config.keys():
-        #     exec(k+'=config["'+k+'"]')
         globals().update(config)
 
         # Initialize the model
@@ -1575,12 +1547,6 @@ class sonObj(object):
             # Find standard deviations for bed and water
             bedStdv = np.nanstd(imgBed)
             watStdv = np.nanstd(imgWat)
-
-            # # Add a standard deviation to 'bed' region
-            # imgBed[imgBed>0] = imgBed[imgBed>0]+(bedStdv)
-            # # Set negative values to 0
-            # imgBed[imgBed<0] = 0
-            # imgBed[imgBed>1] = 1
 
             # Subtract a standard deviation from 'water' region
             imgWat[imgWat>0] = imgWat[imgWat>0]-(watStdv)
@@ -1629,7 +1595,6 @@ class sonObj(object):
                 conf[np.isinf(conf)] = 0
 
                 model_conf = np.sum(conf)/np.prod(conf.shape)
-                # print('Overall model confidence = %f'%(model_conf))
 
                 est_label[est_label<thres] = 0
                 est_label[est_label>thres] = 1
@@ -1735,8 +1700,6 @@ class sonObj(object):
     def _getScanChunkSingle(self,
                             chunk,
                             remWater,
-                            detectDepth,
-                            smthDep,
                             adjDep=0):
         """
         During rectification, if non-rectified tiles have not been exported,
@@ -1775,7 +1738,6 @@ class sonObj(object):
         self._loadSonChunk()
         # Remove water if exporting src imagery
         if remWater:
-            # self._remWater(detectDepth, sonMeta, adjDep)
             self._SRC(sonMeta, 'FlatBottom')
 
         return self
