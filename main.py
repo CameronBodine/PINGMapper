@@ -46,16 +46,16 @@ if __name__ == "__main__":
     # User Parameters
     t = 10 #Temperature in Celsius
     nchunk = 500 #Number of pings per chunk
-    exportUnknown = False #Option to export Unknown sonar record metadata
-    wcp = False #Export tiles with water column present
-    src = False #Export Tiles with water column removed/slant range corrected
-    detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
+    exportUnknown = True #Option to export Unknown sonar record metadata
+    wcp = True #Export tiles with water column present
+    src = True #Export Tiles with water column removed/slant range corrected
+    detectDepth = 3 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
     ## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
-    smthDep = False #Smooth depth before water column removal
+    smthDep = True #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
-    pltBedPick = False #Plot bedpick on sonogram
+    pltBedPick = True #Plot bedpick on sonogram
 
-    rect_wcp = False #Export rectified tiles with water column present
+    rect_wcp = True #Export rectified tiles with water column present
     rect_src = True #Export rectified tiles with water column removed/slant range corrected
 
     #==================================================

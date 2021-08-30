@@ -187,7 +187,7 @@ class rectObj(sonObj):
         self.smthTrk = sDF
 
         self._interpRangeCoords(filt)
-        # return
+        return
 
     #===========================================
     def _interpRangeCoords(self, filt):
@@ -202,8 +202,6 @@ class rectObj(sonObj):
 
         sDF = self.smthTrk
         rDF = sDF.copy()
-        # rDF = rDF.iloc[::filt]
-        # rDF = rDF.append(sDF.iloc[-1], ignore_index=True)
 
         for chunk, chunkDF in rDF.groupby('chunk_id'):
             chunkDF.reset_index(drop=True, inplace=True)
@@ -214,7 +212,6 @@ class rectObj(sonObj):
 
             idx = chunkDF.index.tolist()
             maxIdx = max(idx)
-            # print('\n\n',chunk, maxIdx, idx, '\n', chunkDF)
 
             drop = np.empty((len(chunkDF)), dtype=bool)
             drop[:] = False
@@ -224,7 +221,6 @@ class rectObj(sonObj):
                     break
                 else:
                     cRow = chunkDF.loc[i]
-                    # print('\t',i,drop[i])
                     if drop[i] != True:
                         dropping = self._checkPings(i, chunkDF)
                         if maxIdx in dropping.keys():
@@ -232,7 +228,6 @@ class rectObj(sonObj):
                         if len(dropping) > 0:
                             lastKey = max(dropping)
                             del dropping[lastKey] # Don't remove last element
-                            # drop[i] = True # Potentially remove this
                             for k, v in dropping.items():
                                 drop[k] = True
                                 last = k+1
@@ -262,52 +257,6 @@ class rectObj(sonObj):
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
         rsDF = sDF.set_index('record_num').join(rsDF.set_index('record_num'))
 
-        # ###############
-        # # Add routine to adjust range coords based on appropriate range extent
-        # # Determine bearing between track lat/lon and range lat/lon
-        # # Get range
-        # # Calculate max range for each chunk
-        # chunk = rsDF.groupby('chunk_id')
-        # maxPing = chunk['ping_cnt'].max()
-        # pix_m = chunk['pix_m'].min()
-        # for i in maxPing.index:
-        #     rsDF.loc[rsDF['chunk_id']==i, 'range'] = maxPing[i]*pix_m[i]
-        # d = (rsDF['range']).to_numpy()
-        #
-        # # Prepare longitude coords
-        # lonA = rsDF['trk_lons'].to_numpy()
-        # lonB = rsDF['range_lons'].to_numpy()
-        # diffLong = np.deg2rad(lonB - lonA)
-        # lonA = np.deg2rad(lonA)
-        # lonB = np.deg2rad(lonB)
-        #
-        # # Prepare latitude coords
-        # latA = np.deg2rad(rsDF['trk_lats'].to_numpy())
-        # latB = np.deg2rad(rsDF['range_lats'].to_numpy())
-        #
-        # # Calculate bearing
-        # bearing = np.arctan2(np.sin(diffLong) * np.cos(latB), np.cos(latA) * np.sin(latB) - (np.sin(latA) * np.cos(latB) * np.cos(diffLong)))
-        # db = np.degrees(bearing)
-        # rsDF['db_1'] = db
-        # db = (db + 360) % 360
-        # rsDF['db_2'] = db
-        # bearing = np.deg2rad(db)
-        # rsDF['db_3'] = bearing
-        #
-        # # Calculate range extent lat/lon using bearing and range
-        # # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-        # R = 6371.393*1000 #Radius of the Earth
-        # latR = np.arcsin( np.sin(latA) * np.cos(d/R) +
-        #        np.cos(latA) * np.sin(d/R) * np.cos(bearing))
-        #
-        # lonR = lonA + np.arctan2( np.sin(bearing) * np.sin(d/R) * np.cos(latA),
-        #                           np.cos(d/R) - np.sin(latA) * np.sin(latR))
-        #
-        # # Update range lat/lon
-        # rsDF['range_lons'] = np.degrees(lonR)
-        # rsDF['range_lats'] = np.degrees(latR)
-        # ###############
-
         # Calculate easting/northing for smoothed range extent
         e_smth, n_smth = self.trans(rsDF[rlons].to_numpy(), rsDF[rlats].to_numpy())
         rsDF[res] = e_smth
@@ -320,128 +269,7 @@ class rectObj(sonObj):
         self.rangeExt = rsDF
         return
 
-
-    # #===========================================
-    # def _interpRangeCoords(self, filt):
-    #     rlon = 'range_lon'
-    #     rlons = rlon+'s'
-    #     rlat = 'range_lat'
-    #     rlats = rlat+'s'
-    #     re = 'range_e'
-    #     res = re+'s'
-    #     rn = 'range_n'
-    #     rns = rn+'s'
-    #
-    #     sDF = self.smthTrk
-    #     rDF = sDF.copy()
-    #     rDF = rDF.iloc[::filt]
-    #     rDF = rDF.append(sDF.iloc[-1], ignore_index=True)
-    #
-    #     idx = rDF.index.tolist()
-    #     maxIdx = max(idx)
-    #
-    #     drop = np.empty((len(rDF)), dtype=bool)
-    #     drop[:] = False
-    #
-    #     for i in idx:
-    #         if i == maxIdx:
-    #             break
-    #         else:
-    #             cRow = rDF.loc[i]
-    #             if drop[i] != True:
-    #                 dropping = self._checkPings(i, rDF)
-    #                 if len(dropping) == 1:
-    #                     drop[i] = True
-    #                 elif len(dropping) > 1:
-    #                     lastKey = max(dropping)
-    #                     del dropping[lastKey] # Don't remove last element
-    #                     drop[i] = True # Potentially remove this
-    #                     for k, v in dropping.items():
-    #                         drop[k] = True
-    #                         last = k+1
-    #                 else:
-    #                     pass
-    #             else:
-    #                 pass
-    #     rDF = rDF[~drop]
-    #
-    #     for chunk in pd.unique(rDF['chunk_id']):
-    #         rchunkDF = rDF[rDF['chunk_id']==chunk].copy()
-    #         schunkDF = sDF[sDF['chunk_id']==chunk].copy()
-    #         smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
-    #                                       ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
-    #         if 'rsDF' not in locals():
-    #             rsDF = smthChunk.copy()
-    #         else:
-    #             rsDF = rsDF.append(smthChunk, ignore_index=True)
-    #
-    #     # Join smoothed trackline to smoothed range extent
-    #     sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog']].copy()
-    #     sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
-    #     rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
-    #     rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
-    #     rsDF = sDF.set_index('record_num').join(rsDF.set_index('record_num'))
-    #
-    #     # ###############
-    #     # # Add routine to adjust range coords based on appropriate range extent
-    #     # # Determine bearing between track lat/lon and range lat/lon
-    #     # # Get range
-    #     # # Calculate max range for each chunk
-    #     # chunk = rsDF.groupby('chunk_id')
-    #     # maxPing = chunk['ping_cnt'].max()
-    #     # pix_m = chunk['pix_m'].min()
-    #     # for i in maxPing.index:
-    #     #     rsDF.loc[rsDF['chunk_id']==i, 'range'] = maxPing[i]*pix_m[i]
-    #     # d = (rsDF['range']).to_numpy()
-    #     #
-    #     # # Prepare longitude coords
-    #     # lonA = rsDF['trk_lons'].to_numpy()
-    #     # lonB = rsDF['range_lons'].to_numpy()
-    #     # diffLong = np.deg2rad(lonB - lonA)
-    #     # lonA = np.deg2rad(lonA)
-    #     # lonB = np.deg2rad(lonB)
-    #     #
-    #     # # Prepare latitude coords
-    #     # latA = np.deg2rad(rsDF['trk_lats'].to_numpy())
-    #     # latB = np.deg2rad(rsDF['range_lats'].to_numpy())
-    #     #
-    #     # # Calculate bearing
-    #     # bearing = np.arctan2(np.sin(diffLong) * np.cos(latB), np.cos(latA) * np.sin(latB) - (np.sin(latA) * np.cos(latB) * np.cos(diffLong)))
-    #     # db = np.degrees(bearing)
-    #     # rsDF['db_1'] = db
-    #     # db = (db + 360) % 360
-    #     # rsDF['db_2'] = db
-    #     # bearing = np.deg2rad(db)
-    #     # rsDF['db_3'] = bearing
-    #     #
-    #     # # Calculate range extent lat/lon using bearing and range
-    #     # # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-    #     # R = 6371.393*1000 #Radius of the Earth
-    #     # latR = np.arcsin( np.sin(latA) * np.cos(d/R) +
-    #     #        np.cos(latA) * np.sin(d/R) * np.cos(bearing))
-    #     #
-    #     # lonR = lonA + np.arctan2( np.sin(bearing) * np.sin(d/R) * np.cos(latA),
-    #     #                           np.cos(d/R) - np.sin(latA) * np.sin(latR))
-    #     #
-    #     # # Update range lat/lon
-    #     # rsDF['range_lons'] = np.degrees(lonR)
-    #     # rsDF['range_lats'] = np.degrees(latR)
-    #     # ###############
-    #
-    #     # Calculate easting/northing for smoothed range extent
-    #     e_smth, n_smth = self.trans(rsDF[rlons].to_numpy(), rsDF[rlats].to_numpy())
-    #     rsDF[res] = e_smth
-    #     rsDF[rns] = n_smth
-    #
-    #     # Overwrite Trackline_Smth_son.beamName.csv
-    #     outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
-    #     rsDF.to_csv(outCSV, index=True, float_format='%.14f')
-    #
-    #     self.rangeExt = rsDF
-    #     return
-
-
-    #===========================================
+    #===========================================================================
     def _checkPings(self, i, df):
         range = 'range' # range distance
         x = 'range_e' # range easting extent
@@ -486,12 +314,12 @@ class rectObj(sonObj):
 
         return dropping
 
-    #===========================================
+    #===========================================================================
     def _getDist(self, aX, aY, bX, bY):
         dist = np.sqrt( (bX - aX)**2 + (bY - aY)**2)
         return dist
 
-    #===========================================
+    #===========================================================================
     def _lineIntersect(self, line1, line2, range):
         #https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
         def line(p1, p2):
@@ -542,7 +370,7 @@ class rectObj(sonObj):
             I = False
         return I
 
-    #===========================================
+    #===========================================================================
     def _rectSon(self, remWater=True, filt=50, adjDep=0, wgs=False):
         if remWater == True:
             imgInPrefix = 'src'
@@ -621,13 +449,7 @@ class rectObj(sonObj):
                 imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png'
 
                 inImgs[int(chunk)] = os.path.join(self.outDir, imgName)
-        print(inImgs)
 
-        # test = {}
-        # test[chunks[-1]] = inImgs[chunks[-1]]
-        #
-        # inImgs = test
-        # print("\n\n\n", inImgs)
         # Iterate images and rectify
         for i, imgPath in inImgs.items():
 
