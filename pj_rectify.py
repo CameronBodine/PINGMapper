@@ -162,6 +162,7 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
     # for son in portstar:
     #     son._getRangeCoords(flip)
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
+    # portstar[1]._getRangeCoords(flip, filterRange)
 
     # print("\n\tSmooth and interpolate range extent...")
     # Filter pings and interpolate
@@ -177,7 +178,7 @@ def rectify_master_func(sonFiles, humFile, projDir, nchunk, detectDepth, smthDep
         print('\tRectifying with Water Column...')
         remWater = False
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(detectDepth, smthDep, remWater, filter, adjDep, wgs=False) for son in portstar)
-        # portstar[-1]._rectSon(detectDepth, smthDep, remWater, filter, wgs=False)
+        # portstar[-1]._rectSon(detectDepth, smthDep, remWater, filter, adjDep, wgs=False)
     if rect_src:
         print('\n\tRectifying with Water Column Removed...')
         remWater = True
