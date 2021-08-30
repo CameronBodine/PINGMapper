@@ -15,6 +15,7 @@ from pj_readFiles import read_master_func
 from pj_rectify import rectify_master_func
 
 import time
+import datetime
 start_time = time.time()
 
 #============================================
@@ -52,10 +53,10 @@ if __name__ == "__main__":
     ## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
     smthDep = False #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
-    pltBedPick = False
+    pltBedPick = False #Plot bedpick on sonogram
 
     rect_wcp = False #Export rectified tiles with water column present
-    rect_src = False #Export rectified tiles with water column removed/slant range corrected
+    rect_src = True #Export rectified tiles with water column removed/slant range corrected
 
     #==================================================
     t = float(t)/10
@@ -73,7 +74,7 @@ if __name__ == "__main__":
         print('***** RECTIFYING *****')
         for k in range(len(H)):
             print("working on "+P[k])
-            rectify_master_func(S[k], H[k], P[k], nchunk, detectDepth, smthDep, rect_wcp, rect_src, adjDep)
+            rectify_master_func(S[k], H[k], P[k], nchunk, rect_wcp, rect_src, adjDep)
 
     keep_going = False
-print("Total Processing Time: ",round((time.time() - start_time),ndigits=2))
+print("Total Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
