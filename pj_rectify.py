@@ -35,10 +35,15 @@ def rectify_master_func(sonFiles,
 
     '''
 
+    ############
     # Parameters
     flip = False #Flip port/star
     filter = int(nchunk*0.1)
     filterRange = int(nchunk*0.05)
+
+    ############################################################################
+    # Create rectObj() instance from previously created sonObj() instance      #
+    ############################################################################
 
     ####################################################
     # Check if sonObj pickle exists, append to metaFiles
@@ -52,7 +57,7 @@ def rectify_master_func(sonFiles,
     # Create a rectObj instance from pickle files
     rectObjs = []
     for meta in metaFiles:
-        sonTemp = pickle.load(open(meta, 'rb'))
+        sonTemp = pickle.load(open(meta, 'rb')) # Load class attributes from pickle
 
         # Create rectObj class (child of sonObj)
         son = rectObj()
@@ -70,6 +75,12 @@ def rectify_master_func(sonFiles,
         beam = son.beamName
         if beam == "ss_port" or beam == "ss_star":
             portstar.append(son)
+        else:
+            del son
+
+    ############################################################################
+    # Smooth GPS trackpoint coordinates                                        #
+    ############################################################################
 
     #####################
     #####################

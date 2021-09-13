@@ -7,13 +7,51 @@ from rasterio.transform import from_origin
 from PIL import Image
 
 class rectObj(sonObj):
-    #===========================================
+    '''
+    Python child class of sonObj() to store everything related to georectification
+    of imagery from Humminbird sonar recordings.  Since this is a child class of
+    sonObj(), all attributes and functions provided in sonObj() are available to
+    a rectObj() instance.
+
+    ----------------
+    Class Attributes
+    ----------------
+    * Alphabetical order *
+    self.rangeExt : DataFrame
+        DESCRIPTION - Pandas dataframe to store range extent.
+    self.smthTrk : DataFrame
+        DESCRIPTION - Pandas dataframe to store smoothed trackline.
+    '''
+
+    ############################################################################
+    # Create rectObj() instance from previously created sonObj() instance      #
+    ############################################################################
+
+    #=======================================================================
     def __init__(self):
+        '''
+        Initialize an empty rectObj() class, child of sonObj() class.
+        '''
         sonObj.__init__(self, sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
 
-    #===========================================
-    def _interpTrack(self, df, dfOrig=None, dropDup=True, xlon='lon', ylat='lat', xutm='utm_e',
-                     yutm='utm_n', zU='time_s', filt=0, deg=3):
+        return
+
+    ############################################################################
+    # Smooth GPS trackpoint coordinates                                        #
+    ############################################################################
+
+    #=======================================================================
+    def _interpTrack(self,
+                     df,
+                     dfOrig=None,
+                     dropDup=True,
+                     xlon='lon',
+                     ylat='lat',
+                     xutm='utm_e',
+                     yutm='utm_n',
+                     zU='time_s',
+                     filt=0,
+                     deg=3):
 
         lons = xlon+'s'
         lats = ylat+'s'
