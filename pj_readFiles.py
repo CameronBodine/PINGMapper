@@ -469,7 +469,7 @@ def read_master_func(sonFiles,
 
     # Export final picks
     if pltBedPick:
-        print('\n\tExporting final bedpicks...')
+        print('\nExporting final bedpicks...')
         Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._writeFinalBedPick)() for son in portstarObjs)
         print("Done!")
 

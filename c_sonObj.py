@@ -129,7 +129,7 @@ class sonObj(object):
 
     #=======================================================================
     def _getHumDatStruct(self):
-        """
+        '''
         Determines .DAT file structure for a sonObj instance.
 
         ----------------------------
@@ -144,7 +144,7 @@ class sonObj(object):
         the following format:
 
         self.humDatStruct = {name : [byteIndex, offset, dataLen, data],
-                             ...} where:
+                             .... : ....} where:
             name == Name of attribute;
             byteIndex == Index indicating position of name;
             offset == Byte offset for the actual data;
@@ -155,7 +155,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._getHumDatStruct()
-        """
+        '''
 
         # Set variables equal to data stored in attributes.
         humFile = self.humFile
@@ -229,7 +229,7 @@ class sonObj(object):
 
     #=======================================================================
     def _getHumdat(self):
-        """
+        '''
         Decode .DAT file using known DAT file structure.
 
         ----------------------------
@@ -246,7 +246,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._getEPSG()
-        """
+        '''
         # Get necessary class attributes
         humdic = self.humDatStruct
         humFile = self.humFile
@@ -315,7 +315,7 @@ class sonObj(object):
 
     # ======================================================================
     def _decodeOnix(self):
-        """
+        '''
         Decodes .DAT file from Onix Humminbird models.  Onix has a significantly
         different .DAT file structure compared to other Humminbird models,
         requiring a specific function to decode the file.
@@ -324,7 +324,7 @@ class sonObj(object):
         Returns
         -------
         A dictionary stored in self.humDat containing data from .DAT file.
-        """
+        '''
         fid2 = open(self.humFile, 'rb') # Open file
 
         dumpstr = fid2.read() # Store file contents
@@ -358,16 +358,16 @@ class sonObj(object):
                infile,
                num,
                typ):
-        """
+        '''
         Helper function that reads binary data in a file.
-        """
+        '''
         dat = arr(typ)
         dat.fromfile(infile, num)
         return(list(dat))
 
     # ======================================================================
     def _getEPSG(self):
-        """
+        '''
         Determines appropriate UTM zone based on location (EPSG 3395 Easting/Northing)
         provided in .DAT file.  This is used to project coordinates from
         EPSG 3395 to local UTM zone.
@@ -386,7 +386,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._cntHead()
-        """
+        '''
         # Check if file from Onix
         if self.isOnix == 0:
             utm_e = self.humDat['utm_e'] # Get easting
@@ -417,7 +417,7 @@ class sonObj(object):
 
     # ======================================================================
     def _cntHead(self):
-        """
+        '''
         Determine .SON sonar record header length based on known Humminbird
         .SON file structure.  Humminbird stores sonar records in packets, where
         the first x bytes of the packet contain metadata (record number, northing,
@@ -439,7 +439,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._getHeadStruct()
-        """
+        '''
         file = open(self.sonFile, 'rb')
         i = 0
         foundEnd = False
