@@ -278,8 +278,8 @@ class rectObj(sonObj):
             rchunkDF = chunkDF.copy()
             schunkDF = sDF[sDF['chunk_id']==chunk].copy()
 
-            outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+str(int(chunk))+'_'+self.beamName+".csv")
-            rchunkDF.to_csv(outCSV, index=True, float_format='%.14f')
+            # outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+str(int(chunk))+'_'+self.beamName+".csv")
+            # rchunkDF.to_csv(outCSV, index=True, float_format='%.14f')
 
             smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
                                           ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
@@ -614,7 +614,7 @@ class rectObj(sonObj):
                 transform=transform,
                 compress='lzw'
                 ) as dst:
-                    dst.nodata=0
+                    dst.nodata=np.nan
                     dst.write(out,1)
 
             # i+=1
