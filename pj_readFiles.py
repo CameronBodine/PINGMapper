@@ -316,7 +316,7 @@ def read_master_func(sonFiles,
 
     # Now that we know the sonar record header structure, let's read that data
     ## and save it to .CSV in the meta directory.
-    print("\nGetting SON file header metadata:")
+    print("\nGetting SON file header metadata...")
     # Check to see if metadata is already saved to csv.
     toProcess = []
     for son in sonObjs:

@@ -480,7 +480,7 @@ class sonObj(object):
     # ======================================================================
     def _getHeadStruct(self,
                        exportUnknown = False):
-        """
+        '''
         Determines .SON header structure based on self.headBytes.
 
         ----------------------------
@@ -506,7 +506,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._checkHeadStruct()
-        """
+        '''
 
         headBytes = self.headBytes
 
@@ -612,7 +612,7 @@ class sonObj(object):
 
     # ======================================================================
     def _checkHeadStruct(self):
-        """
+        '''
         Check to make sure sonar record header was structure determined
         appropriately.  The function searches through first sonar record to make
         sure each of the previously identified metadata attributes are located
@@ -636,7 +636,7 @@ class sonObj(object):
             self._decodeHeadStruct
         else:
             self._getSonMeta()
-        """
+        '''
         headStruct = self.headStruct # Load sonar record header structure
         if len(headStruct) > 0:
             file = open(self.sonFile, 'rb') # Open son file
@@ -665,7 +665,7 @@ class sonObj(object):
     # ======================================================================
     def _decodeHeadStruct(self,
                           exportUnknown = False):
-        """
+        '''
         If sonar return header structure not previously known, attempt to
         automatically decode.  This function will iterate through each byte at
         the beginning of the sonar file, decode the byte, determine if it matches
@@ -695,7 +695,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         self._checkHeadStruct()
-        """
+        '''
         headBytes = self.headBytes
         headStruct = {}
         toCheck = {
@@ -788,7 +788,7 @@ class sonObj(object):
 
     # ======================================================================
     def _getSonMeta(self):
-        """
+        '''
         Use .IDX file to find every sonar record in .SON file. If .IDX file is
         not present, automatically determine each sonar record location in bytes.
         Then call _getHeader() to decode sonar return header.
@@ -810,7 +810,7 @@ class sonObj(object):
         No additional processing is necessary if only interested in data exported
         to .CSV.  If export of non-rectified imagery is desired, next step is
         self._getScansChunk().
-        """
+        '''
 
         # Get necessary class attributes
         headStruct = self.headStruct
@@ -897,7 +897,7 @@ class sonObj(object):
     # ======================================================================
     def _getHeader(self,
                    sonIndex):
-        """
+        '''
         Helper function that, given a byte index location, decodes a sonar
         record's metadata according to known sonar record header structure.
 
@@ -915,7 +915,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         Return metadata to self._getSonMeta()
-        """
+        '''
 
         # Get necessary class attributes
         headStruct = self.headStruct
@@ -1044,7 +1044,7 @@ class sonObj(object):
                        detectDepth,
                        smthDep,
                        adjDep=0):
-        """
+        '''
         Main function to read sonar record ping return values.  Stores the
         number of pings per chunk, chunk id, and byte index location in son file,
         then calls self._loadSonChunk() to read the data into memory, then calls
@@ -1064,7 +1064,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         NA
-        """
+        '''
         sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
@@ -1094,7 +1094,7 @@ class sonObj(object):
 
     # ======================================================================
     def _loadSonChunk(self):
-        """
+        '''
         Reads in sonar record ping values based on byte index location in son
         file and number of pings to return.
 
@@ -1112,7 +1112,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         Return numpy array to self._getScansChunk() or self._getScanChunkSingle()
-        """
+        '''
         sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
         # Iterate each sonar record
@@ -1136,7 +1136,7 @@ class sonObj(object):
     def _writeTiles(self,
                     k,
                     imgOutPrefix):
-        """
+        '''
         Using currently saved sonar record ping returns
         in self.sonDAT, saves an unrectified image of the
         sonar echogram.
@@ -1156,7 +1156,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         NA
-        """
+        '''
         data = self.sonDat # Get the sonar data
         nx, ny = np.shape(data) # Determine array shape
         Z, ind = sliding_window(data, (nx, ny)) # Probably don't need this...
@@ -1252,58 +1252,11 @@ class sonObj(object):
     ############################################################################
 
     # ======================================================================
-    def _writeBedPick(self,
-                      k,
-                      acousticBed = None,
-                      bed1 = None,
-                      bed2 = None,
-                      finalBed = None,
-                      imgOutPrefix = 'bedpick'):
-        data = self.sonDat # Get the sonar data
-
-        # File name zero padding
-        if k < 10:
-            addZero = '0000'
-        elif k < 100:
-            addZero = '000'
-        elif k < 1000:
-            addZero = '00'
-        elif k < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
-
-        # Prepare output directory
-        outDir = os.path.join(self.outDir, imgOutPrefix)
-        try:
-            os.mkdir(outDir)
-        except:
-            pass
-
-        channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
-        projName = os.path.split(self.projDir)[-1] #to append project name to filename
-        outFile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png')
-        # imageio.imwrite(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), Z)
-
-        plt.imshow(data, cmap='gray')
-        if acousticBed is not None:
-            plt.plot(acousticBed, 'y-.', lw=1, label='Acoustic Depth')
-        if bed1 is not None:
-            plt.plot(bed1, 'm-.', lw=1, label='Auto Depth 1')
-        if bed2 is not None:
-            plt.plot(bed2, 'r-.', lw=1, label='Auto Depth 2')
-        if finalBed is not None:
-            plt.plot(finalBed, 'b-.', lw=1, label='Auto Depth Final')
-        plt.legend(loc = 'lower right', prop={'size':4})
-        plt.savefig(outFile, dpi=300, bbox_inches='tight')
-        plt.close()
-
-    # ======================================================================
     def _detectDepth(self,
                      detectDepth=1,
                      pltBedPick=False):
         '''
-
+        Main function for depth detection.
         '''
         sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
 
@@ -1671,7 +1624,70 @@ class sonObj(object):
         return bed.astype(int)
 
     # ======================================================================
+    def _writeBedPick(self,
+                      k,
+                      acousticBed = None,
+                      bed1 = None,
+                      bed2 = None,
+                      finalBed = None,
+                      imgOutPrefix = 'bedpick'):
+
+        '''
+        Exports a plot of a bedpick on a non-rectified sonogram.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._detectDepth() or self._writeFinalBedPick()
+
+        -------
+        Returns
+        -------
+        A .png in projDir/*sonar_channel*/bedpick showing bedpick overlain on a
+        sonogram.
+        '''
+        data = self.sonDat # Get the sonar data
+
+        # File name zero padding
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        # Prepare output directory if it doesn't already exist
+        outDir = os.path.join(self.outDir, imgOutPrefix)
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+        outFile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png') #prepare file name
+
+        plt.imshow(data, cmap='gray') # create Matlab plt object
+        if acousticBed is not None: # plot acoustic bedpick in yellow
+            plt.plot(acousticBed, 'y-.', lw=1, label='Acoustic Depth')
+        if bed1 is not None: # plot binary threshold bedpick in magenta
+            plt.plot(bed1, 'm-.', lw=1, label='Auto Depth 1')
+        if bed2 is not None: # plot residual u-net bedpick in red
+            plt.plot(bed2, 'r-.', lw=1, label='Auto Depth 2')
+        if finalBed is not None: # plot final bedpick in blue
+            plt.plot(finalBed, 'b-.', lw=1, label='Auto Depth Final')
+        plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
+        plt.savefig(outFile, dpi=300, bbox_inches='tight') # save the plot
+        plt.close()
+
+    # ======================================================================
     def _writeFinalBedPick(self):
+        '''
+        '''
         sonMetaAll = pd.read_csv(self.sonMetaFile) # Load sonar record metadata
 
         totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
@@ -1701,7 +1717,7 @@ class sonObj(object):
                             chunk,
                             remWater,
                             adjDep=0):
-        """
+        '''
         During rectification, if non-rectified tiles have not been exported,
         this will load the chunk's scan data from the sonar recording.
 
@@ -1722,7 +1738,7 @@ class sonObj(object):
         Next Processing Step
         --------------------
         Return to child class c_rectObj._rectSon() to complete rectification
-        """
+        '''
         # Open sonar metadata file to df
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
@@ -1744,18 +1760,18 @@ class sonObj(object):
 
     # ======================================================================
     def _loadSonMeta(self):
-        """
+        '''
         Load sonar metadata from csv to pandas df
-        """
+        '''
         meta = pd.read_csv(self.sonMetaFile)
         self.sonMetaDF = meta
         return self
 
     # ======================================================================
     def __str__(self):
-        """
-        Generic print function to print contenst of sonObj.
-        """
+        '''
+        Generic print function to print contents of sonObj.
+        '''
         output = "sonObj Contents"
         output += '\n\t'
         output += self.__repr__()
