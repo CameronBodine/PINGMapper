@@ -10,7 +10,7 @@ from rasterio.merge import merge
 def rectify_master_func(sonFiles,
                         humFile,
                         projDir,
-                        nchunk,
+                        nchunk=500,
                         rect_wcp=False,
                         rect_src=False,
                         adjDep=0,
@@ -35,7 +35,36 @@ def rectify_master_func(sonFiles,
                       sonar tiles (sonograms).  Most testing has been on chunk
                       sizes of 500 (recommended).
         EXAMPLE -     nchunk = 500
+    rect_wcp : bool
+        DESCRIPTION - Flag to export georectified sonar tiles w/ water column
+                      present (wcp).
+                      True = export georectified wcp sonar tiles;
+                      False = do not export georectified wcp sonar tiles.
+        EXAMPLE -     rect_wcp = True
+    rect_src : bool
+        DESCRIPTION - Flag to export georectified sonar tiles w/ water column
+                      removed & slant range corrected (src).
+                      True = export georectified src sonar tiles;
+                      False = do not export georectified src sonar tiles.
+        EXAMPLE -     rect_src = True
+    adjDep : int
+        DESCRIPTION - Specify additional depth adjustment (in pixels) for water
+                      column removal.  Does not affect the depth estimate stored
+                      in exported metadata *.CSV files.
+                      Integer > 0 = increase depth estimate by x pixels.
+                      Integer < 0 = decrease depth estimate by x pixels.
+                      0 = use depth estimate with no adjustment.
+        EXAMPLE -     adjDep = 5
+    mosaic : int
+        DESCRIPTION - Mosaic exported georectified sonograms into single image as
+                      specified with the `rect_wcp` and `rect_src` flags.
+                      0 = do not export georectified mosaic(s);
+                      1 = export georectified mosaic(s).
 
+    -------
+    Returns
+    -------
+    Adds exported imagery
     '''
 
     ############

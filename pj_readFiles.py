@@ -61,7 +61,7 @@ def read_master_func(sonFiles,
                       water column removal.
                       0 = use Humminbird depth;
                       1 = auto pick using binary thresholding;
-                      2 = auto pick using machine learning (not implemented).
+                      2 = auto pick using machine learning Residual U-net.
         EXAMPLE -     detectDep = 0
     smthDep : bool
         DESCRIPTION - Apply Savitzky-Golay filter to depth data.  May help smooth
@@ -70,6 +70,20 @@ def read_master_func(sonFiles,
                       True = smooth depth estimate;
                       False = do not smooth depth estimate.
         EXAMPLE -     smthDep = False
+    adjDep : int
+        DESCRIPTION - Specify additional depth adjustment (in pixels) for water
+                      column removal.  Does not affect the depth estimate stored
+                      in exported metadata *.CSV files.
+                      Integer > 0 = increase depth estimate by x pixels.
+                      Integer < 0 = decrease depth estimate by x pixels.
+                      0 = use depth estimate with no adjustment.
+        EXAMPLE -     adjDep = 5
+    pltBedPick : bool
+        DESCRIPTION - Plot bedpick(s) on non-rectified sonogram for visual
+                      inspection.
+                      True = do plot bedpick(s);
+                      False = do not plot bedpick(s).
+        EXAMPLE -     pltBedPick = True
 
     -------
     Returns
