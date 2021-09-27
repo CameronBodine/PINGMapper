@@ -11,6 +11,8 @@ Python interface for reading, processing, and mapping side scan sonar data from 
 
 5. (Optional) Export georectified wcp (spatially inaccurate due to presence of water column) AND/OR scr sonar imagery for use in GIS.
 
+6. (Optional) Mosaic georectified sonar imagery from step 5.
+
 ## Workflows in the Pipeline
 1. Automatic depth detection
 2. Imagery corrections (radiometric, attenuation, etc.)
@@ -59,21 +61,29 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
 - (Single forward slash): `humFile = “C:/Users/dwhealdo/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
-4. Line 46: Update temperature `t=10` with average temperature during scan.
+4. Line 47: Update temperature `t=10` with average temperature during scan.
 
-5. Line 47: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
+5. Line 48: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-6. Line 48-49: Export un-rectified sonar tiles with water column present AND/OR water column removed.  NOTE: in order to rectify sonar imagery, un-rectified sonar tiles must be exported first.
+6. Line 49: Option to export unknown sonar record metadata fields.
 
-7. Line 50: Option to use Humminbird depth (`detectDepth=0`) or to automatically detect depth through thresholding (`detectDepth=1`)
+7. Line 50-51: Export un-rectified sonar tiles with water column present AND/OR water column removed.
 
-8. Line 51: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+8. Line 52: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).
 
-9. Line 54-55: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.  NOTE: in order to rectify sonar imagery, un-rectified sonar tiles must be exported first.
+9. Line 54: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
-12. Save the file.
+10. Line 55: Additional depth adjustment in number of pixels for water column removal.
 
-11. Run PING Mapper:
+11. Line 56: Plot bedick(s) on non-rectified sonogram for visual inspection.
+
+12. Line 58-59: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+
+13. Line 61: Option to mosaic georectified sonar imagery (exported from step 12).
+
+14. Save the file.
+
+15. Run PING Mapper:
 ```
 python main.py
 ```
