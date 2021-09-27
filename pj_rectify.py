@@ -4,6 +4,8 @@ from funcs_common import *
 
 from c_rectObj import rectObj
 
+from rasterio.merge import merge
+
 #===============================================================================
 def rectify_master_func(sonFiles,
                         humFile,
@@ -11,7 +13,8 @@ def rectify_master_func(sonFiles,
                         nchunk,
                         rect_wcp=False,
                         rect_src=False,
-                        adjDep=0):
+                        adjDep=0,
+                        mosaic=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -161,6 +164,8 @@ def rectify_master_func(sonFiles,
 
     ################################################
     print("\nRectifying and exporting GeoTiffs:\n")
+    # rect_src = False
+    # rect_wcp = False
 
     if rect_wcp:
         print('Rectifying with Water Column Present...')
@@ -174,3 +179,52 @@ def rectify_master_func(sonFiles,
         remWater = True
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, adjDep, wgs=False) for son in portstar)
         print("Done!")
+
+    ################################################
+    # rect_src = True
+    # rect_wcp = True
+
+    if mosaic > 0:
+        print("\nMosaicing GeoTiffs:\n")
+        imgDirs = []
+        for son in portstar:
+            imgDirs.append(son.outDir)
+            projDir = son.projDir
+            filePrefix = os.path.split(projDir)[-1]
+        imgsToMosaic = []
+        if rect_wcp:
+            wrcToMosaic = []
+            for path in imgDirs:
+                path = os.path.join(path, 'rect_wcp')
+                imgs = glob(os.path.join(path, '*.tif'))
+                for img in imgs:
+                    wrcToMosaic.append(img)
+            imgsToMosaic.append(wrcToMosaic)
+        if rect_src:
+            srcToMosaic = []
+            for path in imgDirs:
+                path = os.path.join(path, 'rect_src')
+                imgs = glob(os.path.join(path, '*.tif'))
+                for img in imgs:
+                    srcToMosaic.append(img)
+            imgsToMosaic.append(srcToMosaic)
+
+        for imgs in imgsToMosaic:
+            srcFilesToMosaic = []
+            for img in imgs:
+                src = rasterio.open(img)
+                srcFilesToMosaic.append(src)
+            fileSuffix = os.path.split(os.path.dirname(img))[-1] + '_mosaic.tif'
+            outFile = os.path.join(projDir, filePrefix+'_'+fileSuffix)
+            # crs = src.crs
+            outMosaic, outTrans = merge(srcFilesToMosaic)
+            outMeta = src.meta.copy()
+            outMeta.update({'height': outMosaic.shape[1],
+                            'width': outMosaic.shape[2],
+                            'transform': outTrans})
+            with rasterio.open(outFile, 'w', **outMeta) as dest:
+                dest.write(outMosaic)
+
+            # if mosaic == 2:
+            #     geotiff = rasterio.open(outFile)
+            #     print(geotiff)

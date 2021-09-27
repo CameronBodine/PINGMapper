@@ -614,7 +614,7 @@ class rectObj(sonObj):
                 transform=transform,
                 compress='lzw'
                 ) as dst:
-                    dst.nodata=np.nan
+                    dst.nodata=0
                     dst.write(out,1)
 
             # i+=1

@@ -49,7 +49,7 @@ if __name__ == "__main__":
     exportUnknown = True #Option to export Unknown sonar record metadata
     wcp = True #Export tiles with water column present
     src = True #Export Tiles with water column removed/slant range corrected
-    detectDepth = 3 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
+    detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
     ## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
     smthDep = True #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
@@ -57,6 +57,8 @@ if __name__ == "__main__":
 
     rect_wcp = True #Export rectified tiles with water column present
     rect_src = True #Export rectified tiles with water column removed/slant range corrected
+
+    mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic
 
     #==================================================
     t = float(t)/10
@@ -74,7 +76,7 @@ if __name__ == "__main__":
         print('***** RECTIFYING *****')
         for k in range(len(H)):
             print("working on "+P[k])
-            rectify_master_func(S[k], H[k], P[k], nchunk, rect_wcp, rect_src, adjDep)
+            rectify_master_func(S[k], H[k], P[k], nchunk, rect_wcp, rect_src, adjDep, mosaic)
 
     keep_going = False
-print("Total Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
