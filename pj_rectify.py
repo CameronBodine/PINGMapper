@@ -5,6 +5,7 @@ from funcs_common import *
 from c_rectObj import rectObj
 
 from rasterio.merge import merge
+import gdal
 
 #===============================================================================
 def rectify_master_func(sonFiles,
@@ -56,8 +57,10 @@ def rectify_master_func(sonFiles,
                       0 = use depth estimate with no adjustment.
         EXAMPLE -     adjDep = 5
     mosaic : int
-        DESCRIPTION - Mosaic exported georectified sonograms into single image as
-                      specified with the `rect_wcp` and `rect_src` flags.
+        DESCRIPTION - Mosaic exported georectified sonograms to a virtual raster
+                      (vrt) as specified with the `rect_wcp` and `rect_src` flags.
+                      See https://gdal.org/drivers/raster/vrt.html for more info.
+                      Overviews are created by default.
                       0 = do not export georectified mosaic(s);
                       1 = export georectified mosaic(s).
 
@@ -214,7 +217,7 @@ def rectify_master_func(sonFiles,
     # rect_wcp = True
 
     if mosaic > 0:
-        print("\nMosaicing GeoTiffs:\n")
+        print("\nMosaicing GeoTiffs...")
         imgDirs = []
         for son in portstar:
             imgDirs.append(son.outDir)
@@ -243,17 +246,14 @@ def rectify_master_func(sonFiles,
             for img in imgs:
                 src = rasterio.open(img)
                 srcFilesToMosaic.append(src)
-            fileSuffix = os.path.split(os.path.dirname(img))[-1] + '_mosaic.tif'
+
+            fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic.tif'
             outFile = os.path.join(projDir, filePrefix+'_'+fileSuffix)
-            # crs = src.crs
-            outMosaic, outTrans = merge(srcFilesToMosaic)
+
+            outMosaic, outTrans = merge(srcFilesToMosaic, method='max')
             outMeta = src.meta.copy()
             outMeta.update({'height': outMosaic.shape[1],
                             'width': outMosaic.shape[2],
                             'transform': outTrans})
             with rasterio.open(outFile, 'w', **outMeta) as dest:
                 dest.write(outMosaic)
-
-            # if mosaic == 2:
-            #     geotiff = rasterio.open(outFile)
-            #     print(geotiff)
