@@ -79,4 +79,5 @@ if __name__ == "__main__":
             rectify_master_func(S[k], H[k], P[k], nchunk, rect_wcp, rect_src, adjDep, mosaic)
 
     keep_going = False
+gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
