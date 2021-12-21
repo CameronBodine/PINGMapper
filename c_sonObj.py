@@ -1299,6 +1299,12 @@ class sonObj(object):
                 bedPick2 = self._detectDepth_segZoo_ResU_Net(acousticBed, doThresh=True)
                 bedPick = bedPick2
 
+            elif detectDepth==4:
+                acousticBed = None
+                bedPick1 = None
+                bedPick2 = self._detectDepth_segZoo_ResU_Net_Rescale()
+                bedPick = bedPick2
+
             if pltBedPick:
                 self._writeBedPick(i, acousticBed, bedPick1, bedPick2)
 
@@ -1622,6 +1628,88 @@ class sonObj(object):
         bed = np.where(abs(bed - np.median(bed)) < 2 * np.std(bed), bed, 0)
 
         return bed.astype(int)
+
+    # ======================================================================
+    def _detectDepth_segZoo_ResU_Net_Rescale(self):
+        # Trained w/ Segmentation Zoo: https://github.com/dbuscombe-usgs/segmentation_zoo
+        '''
+        '''
+        # Parameters
+        USE_GPU = False
+        weights = r'.\models\bedpick\bedpick_ModelWeights.h5'
+
+        configfile = weights.replace('.h5','.json').replace('weights', 'config')
+
+        with open(configfile) as f:
+            config = json.load(f)
+
+        globals().update(config)
+
+        # Initialize the model
+        model = res_unet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS), BATCH_SIZE, NCLASSES)
+        model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = [mean_iou, dice_coef])
+        model.load_weights(weights)
+
+        # Convert array to tensor
+        image, w, h, bigimage = seg_file2tensor_3band(self.sonDat, TARGET_SIZE, resize=True)
+        if image is None:
+            image = bigimage#/255
+        w = image.shape[0]; h = image.shape[1] #Model target size shape
+        W_orig = bigimage.shape[0]; H_orig = bigimage.shape[1] #Original image shape
+
+        # Standardize
+        image = standardize(image.numpy()).squeeze()
+        bigimage = standardize(bigimage.numpy()).squeeze()
+
+        #################################
+        # Do prediction on rescaled image
+        E = []; W = []
+        E.append(model.predict(tf.expand_dims(image, 0) , batch_size=1).squeeze())
+        W.append(1)
+
+        K.clear_session()
+
+        est_label = np.average(np.dstack(E), axis=-1, weights=np.array(W))
+        est_label /= est_label.max()
+
+        if np.max(est_label)-np.min(est_label) > .5:
+            thres = threshold_otsu(est_label)
+            print("Threshold: %f" % (thres))
+        else:
+            thres = .9
+            print("Default threshold: %f" % (thres))
+
+        var = np.std(np.dstack(E), axis=-1)
+
+        conf = 1-est_label
+        conf[est_label<thres] = est_label[est_label<thres]
+        conf = 1-conf
+
+        conf[np.isnan(conf)] = 0
+        conf[np.isinf(conf)] = 0
+
+        model_conf = np.sum(conf)/np.prod(conf.shape)
+
+        est_label[est_label<thres] = 0
+        est_label[est_label>thres] = 1
+        est_label = remove_small_holes(est_label.astype(bool), 2*w)
+        est_label = remove_small_objects(est_label, 2*w)
+        est_label[est_label<thres] = 0
+        est_label[est_label>thres] = 1
+        est_label = np.squeeze(est_label[:w,:h])
+
+        # Locate the bed
+        bed = []
+        for k in range(H_orig):
+            try:
+                b = np.where(est_label[:,k]==1)[0][0]
+            except:
+                b=0
+            bed.append(b)
+
+        bed = np.array(bed).astype(np.float32)
+
+
 
     # ======================================================================
     def _writeBedPick(self,
