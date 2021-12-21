@@ -3,6 +3,8 @@ __pycache__/*
 oldFiles/*
 testData/*
 main_single.py
+main_batch.py
+main_batchFolder.py
 rectify_test_affine.py
 
 !procData/OutputsHere.txt
