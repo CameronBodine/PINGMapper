@@ -61,7 +61,6 @@ if __name__ == "__main__":
     mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic
 
     #==================================================
-    t = float(t)/10
     print('\n===========================================')
     print('===========================================')
     print('***** READING *****')

@@ -37,8 +37,8 @@ def read_master_func(sonFiles,
         DESCRIPTION - Path to output directory.
         EXAMPLE -     projDir = 'C:/PINGMapper/procData/R00001'
     tempC : float
-        DESCRIPTION - Water temperature (Celcius) during survey divided by 10.
-        EXAMPLE -     tempC = (20/10)
+        DESCRIPTION - Water temperature (Celcius) during survey.
+        EXAMPLE -     tempC = 10
     nchunk : int
         DESCRIPTION - Number of pings per chunk.  Chunk size dictates size of
                       sonar tiles (sonograms).  Most testing has been on chunk
@@ -160,6 +160,7 @@ def read_master_func(sonFiles,
     # Create sonObj to store sonar attributes, access processing functions,
     ## and access sonar data.  We will use the first sonar beam to make an
     ## initial sonar object, then create a copy for each beam.
+    tempC = float(tempC)/10 # Divide temperature by 10
     son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk)
     son.datLen = os.path.getsize(son.humFile) #Length (in bytes) of .DAT
 
