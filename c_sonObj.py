@@ -20,59 +20,91 @@ class sonObj(object):
     Class Attributes
     ----------------
     * Alphabetical order *
+    self.beam : str
+        DESCRIPTION - Beam number B***
+
     self.beamName : str
         DESCRIPTION - Name of sonar beam.
+
     self.datLen : int
         DESCRIPTION - Number of bytes of DAT file.
+
     self.datMetaFile : str
         DESCRIPTION - Path to .DAT metadata file (.csv).
+
     self.headBytes : int
         DESCRIPTION - Number of header bytes for a sonar record.
+
     self.headIdx : list
         DESCRIPTION - List to hold byte index (offset) of each sonar record.
+
     self.headStruct : dict
         DESCRIPTION - Dictionary to store sonar record header structure.
+
     self.headValid : bool
         DESCRIPTION - Flag indicating if SON header structure is correct.
-    self.humDatStruct : dict
-        DESCRIPTION - Dictionary to store .DAT file structure.
+
     self.humDat : dict
         DESCRIPTION - Dictionary to store .DAT file contents.
+
+    self.humDatStruct : dict
+        DESCRIPTION - Dictionary to store .DAT file structure.
+
     self.humFile : str
         DESCRIPTION - Path to .DAT file.
+
     self.isOnix : bool
         DESCRIPTION - Flag indicating if sonar recording from ONIX.
+
     self.metaDir : str
         DESCRIPTION - Path to metadata directory.
+
     self.nchunk : int
-        DESCRIPTION - Number of pings/sonar records per chunk
+        DESCRIPTION - Number of pings/sonar records per chunk.
+
     self.outDir : str
         DESCRIPTION - Path where outputs are saved.
+
     self.pingCnt : int
         DESCRIPTION - Number of ping returns for each sonar record.
+
     self.pingMax : int
         DESCRIPTION - Stores largest pingCnt value (max range) for a currently
                       loaded sonar chunk.
+
     self.projDir : str
         DESCRIPTION - Path (top level) to output directory.
+
+    self.sonDat : arr
+        DESCRIPTION - Array to hold sonar record ping returns for currently
+                      loaded chunk.
+
     self.sonFile : str
         DESCRIPTION - Path to .SON file.
+
     self.sonIdxFile : str
         DESCRIPTION - Path to .IDX file.
+
     self.sonMetaDF : DataFrame
         DESCRIPTION - Pandas dataframe to store .SON metadata for currently
                       loaded sonar chunk.
+
     self.sonMetaFile : str
         DESCRIPTION - Path to .SON metadata file (.csv).
+
     self.sonMetaPickle : str
         DESCRIPTION - Path to .SON metadata pickle file (.meta).
+
     self.src : bool
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
                       removed & slant range corrected (src).
+
     self.tempC : float
         DESCRIPTION - Water temperature (Celcius) during survey divided by 10.
+
     self.trans : non-class function
         DESCRIPTION - Function to convert utm to lat/lon.
+
     self.wcp : bool
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
                       present (wcp).
@@ -1137,9 +1169,8 @@ class sonObj(object):
                     k,
                     imgOutPrefix):
         '''
-        Using currently saved sonar record ping returns
-        in self.sonDAT, saves an unrectified image of the
-        sonar echogram.
+        Using currently saved sonar record ping returns in self.sonDAT, saves an
+        unrectified image of the sonar echogram.
 
         ----------------------------
         Required Pre-processing step
