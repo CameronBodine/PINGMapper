@@ -10,15 +10,15 @@ from scipy.signal import savgol_filter
 def read_master_func(sonFiles,
                      humFile,
                      projDir,
-                     tempC,
-                     nchunk,
-                     exportUnknown,
-                     wcp,
-                     src,
-                     detectDep,
-                     smthDep,
-                     adjDep,
-                     pltBedPick):
+                     tempC=10,
+                     nchunk=500,
+                     exportUnknown=False,
+                     wcp=False,
+                     src=False,
+                     detectDep=0,
+                     smthDep=False,
+                     adjDep=0,
+                     pltBedPick=False):
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -81,7 +81,7 @@ def read_master_func(sonFiles,
     pltBedPick : bool
         DESCRIPTION - Plot bedpick(s) on non-rectified sonogram for visual
                       inspection.
-                      True = do plot bedpick(s);
+                      True = plot bedpick(s);
                       False = do not plot bedpick(s).
         EXAMPLE -     pltBedPick = True
 
@@ -177,16 +177,17 @@ def read_master_func(sonFiles,
     ## lat/lon in DAT, so will determine at a later processing step).
     son._getEPSG()
 
-    # Save DAT metadata to file (csv)
+    # Create 'meta' directory if it doesn't exist
     metaDir = os.path.join(projDir, 'meta')
     try:
         os.mkdir(metaDir)
     except:
         pass
-
     son.metaDir = metaDir #Store metadata directory in sonObj
-    outFile = os.path.join(metaDir, 'DAT_meta.csv')
-    pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False)
+
+    # Save DAT metadata to file (csv)
+    outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name
+    pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
     son.datMetaFile = outFile #Store metadata file path in sonObj
     print("Done!")
 
@@ -201,7 +202,7 @@ def read_master_func(sonFiles,
         chanAvail[beam] = s
 
     # Copy the previously created sonObj instance to make a unique sonObj for
-    ## each beam.  Then update certain sonObj attributes specific to each beam.
+    ## each beam.  Then update sonObj attributes specific to each beam.
     sonObjs = []
     for chan, file in chanAvail.items():
         if chan == 'B000':
@@ -255,20 +256,22 @@ def read_master_func(sonFiles,
     cntSON = len(sonObjs) # Number of sonar files
     gotHeader = False # Flag indicating if length of header is found
     i = 0 # Counter for iterating son files
-    while gotHeader is False:
+    while gotHeader is False: # Iterate each sonObj until header length determined
         try:
-            son = sonObjs[i]
+            son = sonObjs[i] # Get current sonObj
             headbytes = son._cntHead() # Try counting head bytes
-            if headbytes > 0: # See if we determined header length
+            # Determine if header length was determined
+            if headbytes > 0: # Header length found
                 print("Header Length: {}".format(headbytes))
                 gotHeader = True
-            else:
+            else: # Header length not found, iterate i to load next sonObj
                 i+=1
+        # Terminate program if header length not determined
         except:
             sys.exit("\n#####\nERROR: Out of SON files... \n"+
             "Unable to determine header length.")
 
-    # Update sonar objects with header length
+    # Update each sonObj with header length
     if headbytes > 0:
         for son in sonObjs:
             son.headBytes = headbytes
@@ -311,7 +314,7 @@ def read_master_func(sonFiles,
     ## If we are wrong, then we found a completely new Humminbird file format.
     ## Report byte location where mis-match occured (for dubugging purposes),
     ## and terminate the process.  We can't automatically decode this file.
-    ## Report to PING Mapper developers.
+    ## Please report to PING Mapper developers.
     for son in sonObjs:
         if son.headValid[0] is not True:
             son._checkHeadStruct()
@@ -354,15 +357,16 @@ def read_master_func(sonFiles,
     if len(toProcess) > 0:
         Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
 
-    metaDir = sonObjs[0].metaDir
-    sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv')))
-    for i in range(0,len(sonObjs)):
+    metaDir = sonObjs[0].metaDir # Get path to metadata directory
+    sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv'))) # Get path to metadata files
+    for i in range(0,len(sonObjs)): # Iterate each metadata file
         sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
 
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:
         son.wcp = wcp
         son.src = src
+        # Make sonar imagery directory for each beam if it doesn't exist
         try:
             os.mkdir(son.outDir)
         except:
