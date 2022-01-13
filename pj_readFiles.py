@@ -161,7 +161,7 @@ def read_master_func(sonFiles,
     ## and access sonar data.  We will use the first sonar beam to make an
     ## initial sonar object, then create a copy for each beam.
     tempC = float(tempC)/10 # Divide temperature by 10
-    son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk)
+    son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk) # Initialize sonObj instance from first sonar beam
     son.datLen = os.path.getsize(son.humFile) #Length (in bytes) of .DAT
 
     # Determine .DAT (humDat) structure
@@ -188,7 +188,7 @@ def read_master_func(sonFiles,
     # Save DAT metadata to file (csv)
     outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name
     pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
-    son.datMetaFile = outFile #Store metadata file path in sonObj
+    son.datMetaFile = outFile # Store metadata file path in sonObj
     print("Done!")
 
     #######################################################
@@ -346,12 +346,13 @@ def read_master_func(sonFiles,
         else:
             toProcess.append(son)
 
+    # See if .IDX file is available.  If it is, store file path for later use.
     for son in sonObjs:
         idxFile = son.sonFile.replace(".SON", ".IDX")
         if os.path.exists(idxFile):
             son.sonIdxFile = idxFile
         else:
-            son.sonIdxFile = "NA"
+            son.sonIdxFile = False
 
     # Get metadata for each beam in parallel.
     if len(toProcess) > 0:
@@ -500,7 +501,7 @@ def read_master_func(sonFiles,
     if wcp or src:
         print("\nGetting sonar data and exporting tile images...")
         # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScansChunk)(detectDep, adjDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScanChunkALL)(detectDep, adjDep) for son in sonObjs)
         print("Done!")
 
 
