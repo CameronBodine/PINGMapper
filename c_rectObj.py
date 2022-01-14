@@ -19,6 +19,7 @@ class rectObj(sonObj):
     * Alphabetical order *
     self.rangeExt : DataFrame
         DESCRIPTION - Pandas dataframe to store range extent.
+
     self.smthTrk : DataFrame
         DESCRIPTION - Pandas dataframe to store smoothed trackline.
     '''
@@ -28,11 +29,19 @@ class rectObj(sonObj):
     ############################################################################
 
     #=======================================================================
-    def __init__(self):
+    def __init__(self,
+                 metaFile):
         '''
-        Initialize an empty rectObj() class, child of sonObj() class.
+        Initialize an empty rectObj() class, child of sonObj() class.  All sonObj()
+        parameters initialized to `None` so that they can be loaded from a
+        previously created pickle file.
         '''
         sonObj.__init__(self, sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
+
+        metaFile = pickle.load(open(metaFile, 'rb')) # Load sonObj() pickle file into memory
+
+        for attr, value in metaFile.__dict__.items(): # Store sonObj() attributes in self
+            setattr(self, attr, value)
 
         return
 

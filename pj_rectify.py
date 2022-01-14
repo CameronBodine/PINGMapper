@@ -120,16 +120,8 @@ def rectify_master_func(sonFiles,
     # Create a rectObj instance from pickle files
     rectObjs = []
     for meta in metaFiles:
-        sonTemp = pickle.load(open(meta, 'rb')) # Load class attributes from pickle
-
-        # Create rectObj class (child of sonObj)
-        son = rectObj()
-
-        # Populate rectObj attributes from sonTemp
-        for attr, value in sonTemp.__dict__.items():
-            setattr(son, attr, value)
-        rectObjs.append(son)
-        del sonTemp
+        son = rectObj(meta) # Initialize rectObj()
+        rectObjs.append(son) # Store rectObj() in rectObjs[]
 
     #####################################
     # Determine which sonObj is port/star
