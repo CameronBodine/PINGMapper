@@ -67,14 +67,42 @@ def rectify_master_func(sonFiles,
     -------
     Returns
     -------
-    Adds exported imagery
+    Adds exported imagery to the project directory with the following structure
+    and outputs, pending parameter selection:
+
+    |--projDir
+    |
+    |--|meta
+    |  |--Trackline_Smth_ss_port.csv : Smoothed trackline coordinates for portside
+    |  |                               scan (if present)
+    |  |--Trackline_Smth_ss_star.csv : Smoothed trackline coordinates for starboard
+    |  |                               scan (if present)
+    |
+    |--|ss_port (if B002.SON OR B003.SON [tranducer flipped] available)
+    |  |--rect_src [rect_src=True]
+    |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
+    |     |          water column removed & slant range corrected (src)
+    |  |--rect_wcp [wcp=True]
+    |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
+    |     |          water column present (wcp)
+    |
+    |--|ss_star (if B003.SON OR B002.SON [tranducer flipped] available)
+    |  |--rect_src [src=True]
+    |     |--*.tif : Starboard side scan (ss) georectified sonar tiles, w/
+    |     |          water column removed & slant range corrected (src)
+    |  |--rect_wcp [wcp=True]
+    |     |--*.tif : Starboard side scan (ss) georectified sonar tiles, w/
+    |     |          water column present (wcp)
+    |
+    |--*_src_mosaic.tif : SRC mosaic [rect_src=True & mosaic=1]
+    |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
 
     ############
     # Parameters
     flip = False #Flip port/star
-    filter = int(nchunk*0.1)
-    filterRange = int(nchunk*0.05)
+    filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
+    filterRange = int(nchunk*0.05) #Filters range extent coordinates for smoothing
 
     ############################################################################
     # Create rectObj() instance from previously created sonObj() instance      #
@@ -111,7 +139,7 @@ def rectify_master_func(sonFiles,
         if beam == "ss_port" or beam == "ss_star":
             portstar.append(son)
         else:
-            del son
+            del son # Remove non-port/star objects since they can't be rectified
 
     ############################################################################
     # Smooth GPS trackpoint coordinates                                        #
@@ -126,23 +154,24 @@ def rectify_master_func(sonFiles,
     # https://github.com/remisalmon/gpx_interpolate
     print("\nSmoothing trackline...")
 
-    # As side scan beams use same transducer/gps coords,
-    ## we will smooth one beam's trackline and use for both.
-    ## Use the beam with the most records.
-    maxRec = 0
-    maxLen = 0
+    # As side scan beams use same transducer/gps coords, we will smooth one
+    ## beam's trackline and use for both. Use the beam with the most sonar records.
+    maxRec = 0 # Stores index of recording w/ most sonar records.
+    maxLen = 0 # Stores length of sonar record
     for i, son in enumerate(portstar):
-        son._loadSonMeta()
-        sonLen = len(son.sonMetaDF)
+        son._loadSonMeta() # Load sonar record metadata
+        sonLen = len(son.sonMetaDF) # Number of sonar records
         if sonLen > maxLen:
             maxLen = sonLen
             maxRec = i
 
-    # Now we will smooth
+    # Now we will smooth using sonar beam w/ most records.
     son0 = portstar[maxRec]
-    sonDF = son0.sonMetaDF
-    sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3)
+    sonDF = son0.sonMetaDF # Get sonar record metadata
+    sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
 
+    ####################################
+    ####################################
     # To remove gap between sonar tiles:
     # For chunk > 0, use coords from previous chunks last ping
     # and assign as current chunk's first ping coords
@@ -164,24 +193,25 @@ def rectify_master_func(sonFiles,
 
         i+=1
 
-    son0.smthTrk = sDF
+    son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
 
     # Update other channel with smoothed coordinates
+    # Determine which rectObj we need to update
     for i, son in enumerate(portstar):
         if i != maxRec:
-            son1 = son
+            son1 = son # rectObj to update
 
-    sDF = son0.smthTrk.copy()
+    sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
     # Update with correct record_num
-    son1._loadSonMeta()
+    son1._loadSonMeta() # Load sonar record metadata
     df = son1.sonMetaDF
-    sDF['chunk_id'] = df['chunk_id']
-    sDF['record_num'] = df['record_num']
-    son1.smthTrk = sDF
+    sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
+    sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
+    son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
     del sDF
 
-    # Save to file
+    # Save smoothed trackline coordinates to file
     for son in portstar:
         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
@@ -191,19 +221,16 @@ def rectify_master_func(sonFiles,
     # Calculate ping direction
     print("\nCalculating, smoothing, and interpolating range extent...")
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
-    # portstar[1]._getRangeCoords(flip, filterRange)
     print("Done!")
 
     ################################################
+    # Now we can rectify the imagery
     print("\nRectifying and exporting GeoTiffs:\n")
-    # rect_src = False
-    # rect_wcp = False
 
     if rect_wcp:
         print('Rectifying with Water Column Present...')
         remWater = False
         Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, adjDep, wgs=False) for son in portstar)
-        # portstar[-1]._rectSon(remWater, filter, adjDep, wgs=False)
         print("Done!")
 
     if rect_src:
@@ -213,8 +240,6 @@ def rectify_master_func(sonFiles,
         print("Done!")
 
     ################################################
-    # rect_src = True
-    # rect_wcp = True
 
     if mosaic > 0:
         print("\nMosaicing GeoTiffs...")
@@ -223,6 +248,8 @@ def rectify_master_func(sonFiles,
             imgDirs.append(son.outDir)
             projDir = son.projDir
             filePrefix = os.path.split(projDir)[-1]
+            print(filePrefix)
+
         imgsToMosaic = []
         if rect_wcp:
             wrcToMosaic = []
@@ -248,6 +275,7 @@ def rectify_master_func(sonFiles,
                 srcFilesToMosaic.append(src)
 
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic.tif'
+            print(fileSuffix)
             outFile = os.path.join(projDir, filePrefix+'_'+fileSuffix)
 
             outMosaic, outTrans = merge(srcFilesToMosaic, method='max')
