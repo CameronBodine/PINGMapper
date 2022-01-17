@@ -210,8 +210,8 @@ def rectify_master_func(sonFiles,
     print("Done!")
 
     ################################################
-    # Calculate ping direction
-    print("\nCalculating, smoothing, and interpolating range extent...")
+    # Calculate range extent coordinates
+    print("\nCalculating, smoothing, and interpolating range extent coordinates...")
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
 
