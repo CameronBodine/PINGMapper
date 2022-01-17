@@ -35,6 +35,19 @@ class rectObj(sonObj):
         Initialize an empty rectObj() class, child of sonObj() class.  All sonObj()
         parameters initialized to `None` so that they can be loaded from a
         previously created pickle file.
+
+        ----------
+        Parameters
+        ----------
+        metaFile : str
+        DESCRIPTION - Path to pickled sonObj() file containing sonObj() attribute
+                      values.
+        EXAMPLE -     metaFile = './PINGMapperTest/meta/B002_ss_port_meta.meta'
+
+        -------
+        Returns
+        -------
+        rectObj instance with sonObj attributes loaded.
         '''
         sonObj.__init__(self, sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
 
@@ -61,36 +74,88 @@ class rectObj(sonObj):
                      zU='time_s',
                      filt=0,
                      deg=3):
+        '''
+        Smooths 'noisy' sonar record trackpoints by completing the following:
+        1) Removes duplicate geographic coordinates;
+        2) Filter coordinates to reduce point density;
+        3) Fits n-degree spline to filtered coordinates;
+        4) Reinterpolate all input sonar records along the spline.
 
-        lons = xlon+'s'
-        lats = ylat+'s'
-        es = xutm+'s'
-        ns = yutm+'s'
+        Smoothed coordinates are reprojected into utm zone coordinates and course
+        over ground (COG) is calculated.
+
+        ----------
+        Parameters
+        ----------
+        df : DataFrame
+            DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
+                          records.
+        dfOrig : DataFrame
+            DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
+                          records.  If `None`, a copy of `df` will be used.
+        dropDup : bool
+            DESCRIPTION - Flag indicating if coincident coordinates will be dropped.
+        xlon : str
+            DESCRIPTION - DataFrame column name for longitude coordinates.
+        ylat : str
+            DESCRIPTION - DataFrame column name for latitude coordinates.
+        xutm : str
+            DESCRIPTION - DataFrame column name for easting coordinates.
+        yutm : str
+            DESCRIPTION - DataFrame column name for northing coordinates.
+        zU : str
+            DESCRIPTION - DataFrame column name used to reinterpolate coordinates
+                          along spline (i.e. determines spacing between coordinates)
+        filt : int
+            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+        deg : int
+            DESCRIPTION - Indicates n-degree spline that will be fit to filtered
+                          coordinates.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        Smoothed trackpoints in a Pandas DataFrame
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._getRangeCoords()
+        '''
+
+        lons = xlon+'s' # Name of smoothed longitude column in df
+        lats = ylat+'s' # Name of smoothed latitude column in df
+        es = xutm+'s' # Name of smoothed easting column in df
+        ns = yutm+'s' # Name of smoothed northing column in df
 
         # Make copy of df to work on
         if dfOrig is None:
-            dfOrig = df
-            df = dfOrig.copy()
+            dfOrig = df.copy()
 
-        # Drop Duplicates
+        # Drop duplicate coordinates
         if dropDup is True:
             df.drop_duplicates(subset=[xlon, ylat], inplace=True)
 
         # Extract every `filt` record, including last value
         if filt>0:
-            lastRow = df.iloc[-1].to_dict()
+            lastRow = df.iloc[-1].to_dict() # Store last sonar record
             try:
-                dfFilt = df.iloc[::filt].reset_index(drop=False)
+                dfFilt = df.iloc[::filt].reset_index(drop=False) # Get every 'filt' sonar record.  Keep df index column.
             except:
-                dfFilt = df.iloc[::filt].reset_index(drop=True)
-            dfFilt = dfFilt.append(lastRow, ignore_index=True)
+                dfFilt = df.iloc[::filt].reset_index(drop=True) # Get every 'filt' sonar record.  Drop df index column.
+            dfFilt = dfFilt.append(lastRow, ignore_index=True) # Add last sonar record to filtered df
         else:
-            dfFilt = df.reset_index(drop=False)
+            dfFilt = df.reset_index(drop=False) # Don't filter df
 
         # Try smoothing trackline
-        x=dfFilt[xlon].to_numpy()
-        y=dfFilt[ylat].to_numpy()
-        t=dfFilt[zU].to_numpy()
+        x=dfFilt[xlon].to_numpy() # Store longitude coordinates in numpy array
+        y=dfFilt[ylat].to_numpy() # Store latitude coordinates in numpy array
+        t=dfFilt[zU].to_numpy() # Store parameter values in numpy array.  Used to space points along spline.
 
         # Attempt to fix error
         # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
@@ -104,21 +169,21 @@ class rectObj(sonObj):
         if len(x) <= deg:
             return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
 
-        # Interpolate trackline
+        # Fit a spline to filtered coordinates and parameterize with time ellapsed
         try:
             tck, _ = splprep([x,y], u=t, k=deg, s=0)
         except:
             # Time is messed up (negative time offset)
-            # Use record num instead
+            # Parameterize with record num instead
             zU = 'record_num'
             t = dfFilt[zU].to_numpy()
             t = np.r_[t[okay], t[-1]]
             tck, _ = splprep([x,y], u=t, k=deg, s=0)
 
-        u_interp = dfOrig[zU].to_numpy()
-        x_interp = splev(u_interp, tck)
+        u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
+        x_interp = splev(u_interp, tck) # Use u_interp to get smoothed x/y coordinates from spline
 
-        # Store smoothed trackpoints in df
+        # Store smoothed trackpoints in a dictionary
         smooth = {'chunk_id': dfOrig['chunk_id'],
                   'record_num': dfOrig['record_num'],
                   'ping_cnt': dfOrig['ping_cnt'],
@@ -127,51 +192,135 @@ class rectObj(sonObj):
                   lons: x_interp[0],
                   lats: x_interp[1]}
 
-        sDF = pd.DataFrame(smooth)
+        sDF = pd.DataFrame(smooth) # Convert dictionary to Pandas df
 
         # Calculate smoothed easting/northing
         e_smth, n_smth = self.trans(sDF[lons].to_numpy(), sDF[lats].to_numpy())
+        # Store in df
         sDF[es] = e_smth
         sDF[ns] = n_smth
 
-        # Calculate COG from smoothed lat/lon
+        # Calculate COG (course over ground; i.e. heading) from smoothed lat/lon
         brng = self._getBearing(sDF, lons, lats)
+        # self._getBearing() returns n-1 values because last sonar record can't
+        ## have a COG value.  We will duplicate the last COG value and use it for
+        ## the last sonar record.
         last = brng[-1]
         brng = np.append(brng, last)
-        sDF['cog'] = brng
+        sDF['cog'] = brng # Store COG in sDF
 
         return sDF
 
     #===========================================
-    def _getBearing(self, df, lon, lat):
-        lonA = df[lon].to_numpy()
-        latA = df[lat].to_numpy()
-        lonA = lonA[:-1]
-        latA = latA[:-1]
-        pntA = [lonA,latA]
+    def _getBearing(self,
+                    df,
+                    lon = 'lons',
+                    lat = 'lats'):
+        '''
+        Calculates course over ground (COG) from a set of coordinates.  Since the
+        last coordinate pair cannot have a COG value, the length of the returned
+        array is len(n-1) where n == len(df).
 
-        lonB = df[lon].to_numpy()
-        latB = df[lat].to_numpy()
-        lonB = lonB[1:]
-        latB = latB[1:]
-        pntB = [lonB,latB]
+        ----------
+        Parameters
+        ----------
+        df : DataFrame
+            DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
+                          records.
+        lon : str
+            DESCRIPTION - DataFrame column name for longitude coordinates.
+        lat : str
+            DESCRIPTION - DataFrame column name for latitude coordinates.
 
-        lonA, latA = pntA[0], pntA[1]
-        lonB, latB = pntB[0], pntB[1]
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._interpTrack()
 
-        lat1 = np.deg2rad(latA)
-        lat2 = np.deg2rad(latB)
+        -------
+        Returns
+        -------
+        Numpy array of COG values.
 
-        diffLong = np.deg2rad(lonB - lonA)
-        bearing = np.arctan2(np.sin(diffLong) * np.cos(lat2), np.cos(lat1) * np.sin(lat2) - (np.sin(lat1) * np.cos(lat2) * np.cos(diffLong)))
+        --------------------
+        Next Processing Step
+        --------------------
+        Return to self._interpTrack()
+        '''
+        # COG calculation will be calculated on numpy arrays for speed.  Since
+        ## COG is calculated from one point to another (pntA -> pntB), we need
+        ## to store pntA values, beginning with the first value and ending at
+        ## second to last value, in one array and pntB values, beginning at second
+        ## value and ending at last value, in another array.  We can then use
+        ## vector algebra to efficiently calculate COG.
 
-        db = np.degrees(bearing)
-        db = (db + 360) % 360
+        # Prepare pntA values [0:n-1]
+        lonA = df[lon].to_numpy() # Store longitude coordinates in numpy array
+        latA = df[lat].to_numpy() # Store longitude coordinates in numpy array
+        lonA = lonA[:-1] # Omit last coordinate
+        latA = latA[:-1] # Omit last coordinate
+        pntA = [lonA,latA] # Store in array of arrays
+
+        # Prepare pntB values [0+1:n]
+        lonB = df[lon].to_numpy() # Store longitude coordinates in numpy array
+        latB = df[lat].to_numpy() # Store longitude coordinates in numpy array
+        lonB = lonB[1:] # Omit first coordinate
+        latB = latB[1:] # Omit first coordinate
+        pntB = [lonB,latB] # Store in array of arrays
+
+        # Convert latitude values into radians
+        lat1 = np.deg2rad(pntA[1])
+        lat2 = np.deg2rad(pntB[1])
+
+        diffLong = np.deg2rad(pntB[0] - pntA[0]) # Calculate difference in longitude then convert to degrees
+        bearing = np.arctan2(np.sin(diffLong) * np.cos(lat2), np.cos(lat1) * np.sin(lat2) - (np.sin(lat1) * np.cos(lat2) * np.cos(diffLong))) # Calculate bearing in radians
+
+        db = np.degrees(bearing) # Convert radians to degrees
+        db = (db + 360) % 360 # Ensure degrees in range 0-360
 
         return db
 
     #===========================================
-    def _getRangeCoords(self, flip, filt):
+    def _getRangeCoords(self,
+                        flip = False,
+                        filt = 25):
+        '''
+        Humminbird SSS store one set geographic coordinates where each sonar record
+        orriginates from (assuming GPS is located directly above sonar transducer).
+        In order to georectify the sonar imagery, we need to know geographically
+        where each sonar record terminates.  The range (distance, length) of each
+        sonar record is not stored in the Humminbird recording, so we estimate
+        the size of one ping return (estimated previously in self._getPixSize)
+        and multiply by the number of ping returns for each sonar record to
+        estimate the range.  Range coordinates for each sonar record are then
+        estimated using the range of each sonar record, the coordinates where the
+        sonar record originated, and the COG.
+
+        ----------
+        Parameters
+        ----------
+        flip : bool
+            DESCRIPTION - Flip port and starboard sonar channels (if transducer
+                          was facing backwards duing survey).
+        filt : int
+            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._interpTrack()
+
+        -------
+        Returns
+        -------
+        A Pandas DataFrame with range extent coordinates stored in self.rangeExt
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._rectSon()
+        '''
+        # Store necessary dataframe column names in variables
         lons = 'lons'
         lats = 'lats'
         ping_cnt = 'ping_cnt'
@@ -183,20 +332,21 @@ class rectObj(sonObj):
         range = 'range'
         chunk_id = 'chunk_id'
 
-        self._loadSonMeta()
+        self._loadSonMeta() # Load sonar record metadata
         sonMetaDF = self.sonMetaDF
 
         # Get smoothed trackline
         sDF = self.smthTrk
 
-        # Determine ping bearing
+        # Determine ping bearing.  Ping bearings are perpendicular to COG.
         if self.beamName == 'ss_port':
-            rotate = -90
+            rotate = -90  # Rotate COG by 90 degrees to the left
         else:
-            rotate = 90
-        if flip == True:
+            rotate = 90 # Rotate COG by 90 degrees to the right
+        if flip: # Flip rotation factor if True
             rotate *= -1
 
+        # Calculate ping bearing and normalize to range 0-360
         sDF[ping_bearing] = (sDF['cog']+rotate) % 360
 
         # Calculate max range for each chunk
@@ -238,6 +388,18 @@ class rectObj(sonObj):
 
     #===========================================
     def _interpRangeCoords(self, filt):
+        '''
+
+
+        ----------
+        Parameters
+        ----------
+
+        -------
+        Returns
+        -------
+
+        '''
         rlon = 'range_lon'
         rlons = rlon+'s'
         rlat = 'range_lat'
@@ -318,6 +480,18 @@ class rectObj(sonObj):
 
     #===========================================================================
     def _checkPings(self, i, df):
+        '''
+
+
+        ----------
+        Parameters
+        ----------
+
+        -------
+        Returns
+        -------
+
+        '''
         range = 'range' # range distance
         x = 'range_e' # range easting extent
         y = 'range_n' # range northing extent
@@ -363,11 +537,35 @@ class rectObj(sonObj):
 
     #===========================================================================
     def _getDist(self, aX, aY, bX, bY):
+        '''
+
+
+        ----------
+        Parameters
+        ----------
+
+        -------
+        Returns
+        -------
+
+        '''
         dist = np.sqrt( (bX - aX)**2 + (bY - aY)**2)
         return dist
 
     #===========================================================================
     def _lineIntersect(self, line1, line2, range):
+        '''
+
+
+        ----------
+        Parameters
+        ----------
+
+        -------
+        Returns
+        -------
+
+        '''
         #https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
         def line(p1, p2):
             A = (p1[1] - p2[1])
@@ -419,6 +617,18 @@ class rectObj(sonObj):
 
     #===========================================================================
     def _rectSon(self, remWater=True, filt=50, adjDep=0, wgs=False):
+        '''
+
+
+        ----------
+        Parameters
+        ----------
+
+        -------
+        Returns
+        -------
+
+        '''
         if remWater == True:
             imgInPrefix = 'src'
             imgOutPrefix = 'rect_src'
