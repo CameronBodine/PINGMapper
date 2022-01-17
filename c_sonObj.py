@@ -124,7 +124,7 @@ class sonObj(object):
         ----------
         sonFile : str
             DESCRIPTION - Path to .SON file.
-            EXAMPLE -     self.sonFile = 'C:/PINGMapper/SonarRecordings/R00001/B002.SON'
+            EXAMPLE -     sonFile = 'C:/PINGMapper/SonarRecordings/R00001/B002.SON'
         humFile : str
             DESCRIPTION - Path to .DAT file associated w/ .SON directory.
             EXAMPLE -     humFile = 'C:/PINGMapper/SonarRecordings/R00001.DAT'
