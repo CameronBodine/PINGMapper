@@ -296,6 +296,9 @@ class rectObj(sonObj):
         estimated using the range of each sonar record, the coordinates where the
         sonar record originated, and the COG.
 
+        A spline is then fit to filtered range coordinates, the same as the trackpoints,
+        to help ensure no pings overlapm, resulting in higher quality sonar imagery.
+
         ----------
         Parameters
         ----------
@@ -338,6 +341,8 @@ class rectObj(sonObj):
         # Get smoothed trackline
         sDF = self.smthTrk
 
+        ########################
+        # Calculate ping bearing
         # Determine ping bearing.  Ping bearings are perpendicular to COG.
         if self.beamName == 'ss_port':
             rotate = -90  # Rotate COG by 90 degrees to the left
@@ -349,57 +354,92 @@ class rectObj(sonObj):
         # Calculate ping bearing and normalize to range 0-360
         sDF[ping_bearing] = (sDF['cog']+rotate) % 360
 
-        # Calculate max range for each chunk
-        chunk = sDF.groupby(chunk_id)
-        maxPing = chunk[ping_cnt].max()
-        pix_m = chunk['pix_m'].min()
-        for i in maxPing.index:
+        ############################################
+        # Calculate range (in meters) for each chunk
+        # Calculate max range for each chunk to ensure none of the sonar image
+        ## is cut off due to changing the range setting during the survey.
+        chunk = sDF.groupby(chunk_id) # Group dataframe by chunk_id
+        maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
+        pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
+        for i in maxPing.index: # Calculate range (in meters) for each chunk
             sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m[i]
 
-        # Calculate range extent lat/lon using bearing and range
+        ##################################################
+        # Calculate range extent coordinates for each ping
+        # Calculate range extent lat/lon using ping bearing and range
         # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-        R = 6371.393*1000 #Radius of the Earth
-        # R = 6378.1
-        brng = np.deg2rad(sDF[ping_bearing]).to_numpy()
-        d = (sDF[range].to_numpy())
+        R = 6371.393*1000 #Radius of the Earth in meters
+        brng = np.deg2rad(sDF[ping_bearing]).to_numpy() # Convert ping bearing to radians and store in numpy array
+        d = (sDF[range].to_numpy()) # Store range in numpy array
 
+        # Get lat/lon for origin of each ping, convert to numpy array
         lat1 = np.deg2rad(sDF[lats]).to_numpy()
         lon1 = np.deg2rad(sDF[lons]).to_numpy()
 
+        # Calculate latitude of range extent
         lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
                np.cos(lat1) * np.sin(d/R) * np.cos(brng))
 
+        # Calculate longitude of range extent
         lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
                                   np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
+
+        # Convert range extent coordinates into degrees
         lat2 = np.degrees(lat2)
         lon2 = np.degrees(lon2)
 
+        # Store in dataframe
         sDF[rlon] = lon2
         sDF[rlat] = lat2
 
+        # Calculate easting and northing
         e_smth, n_smth = self.trans(sDF[rlon].to_numpy(), sDF[rlat].to_numpy())
+        # Store in dataframe
         sDF[re] = e_smth
         sDF[rn] = n_smth
-        sDF = sDF.dropna()
-        self.smthTrk = sDF
+        sDF = sDF.dropna() # Drop any NA's
+        self.smthTrk = sDF # Store df in class attribute
 
+        ##########################################
+        # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
-        return
+        return self
 
     #===========================================
-    def _interpRangeCoords(self, filt):
+    def _interpRangeCoords(self,
+                           filt = 25):
         '''
-
+        This function fits a spline to the range extent coordinates.  Before fitting
+        the spline, overlapping pings are identified and removed to ensure spline
+        does not have any loops.  A spline is then fit for each individual chunk
+        to avoid undesirable rectification effects caused by changing the range
+        during a survey.  The spline is used to reinterpolate range extent
+        coordinates, ensuring no overlap between pings.
 
         ----------
         Parameters
         ----------
+        filt : int
+            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._interpRangeCoords()
 
         -------
         Returns
         -------
+        A Pandas dataframe stored in self.rangeExt with smoothed trackline and
+        range extent coordinates.  This DataFrame is exported to .csv and overwrites
+        Trackline_Smth_BXXX.csv.
 
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns smoothed coordinates to self._interpRangeCoords().
         '''
+        # Store necessary dataframe column names in variables
         rlon = 'range_lon'
         rlons = rlon+'s'
         rlat = 'range_lat'
@@ -409,32 +449,37 @@ class rectObj(sonObj):
         rn = 'range_n'
         rns = rn+'s'
 
-        sDF = self.smthTrk
-        rDF = sDF.copy()
+        sDF = self.smthTrk # Load smoothed trackline coordinates
+        rDF = sDF.copy() # Make a copy to work on
 
+        # Work on one chunk at a time
         for chunk, chunkDF in rDF.groupby('chunk_id'):
             chunkDF.reset_index(drop=True, inplace=True)
 
+            # Extract every `filt` recording, including last value
             last = chunkDF.iloc[-1].copy()
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = chunkDF.append(last, ignore_index=True)
 
-            idx = chunkDF.index.tolist()
-            maxIdx = max(idx)
+            idx = chunkDF.index.tolist() # Store sonar record index in list
+            maxIdx = max(idx) # Find last record index value
 
-            drop = np.empty((len(chunkDF)), dtype=bool)
-            drop[:] = False
+            drop = np.empty((len(chunkDF)), dtype=bool) # Bool numpy array to flag which sonar records overlap and should be dropped
+            drop[:] = False # Prepopulate array w/ `False` (i.e. False==don't drop)
 
+            #########################################
+            # Find and drop overlapping sonar records
+            # Iterate each sonar record if filtered dataframe
             for i in idx:
-                if i == maxIdx:
+                if i == maxIdx: # Break loop once we reach the last sonar record
                     break
                 else:
-                    cRow = chunkDF.loc[i]
-                    if drop[i] != True:
-                        dropping = self._checkPings(i, chunkDF)
-                        if maxIdx in dropping.keys():
+                    cRow = chunkDF.loc[i] # Get current sonar record
+                    if drop[i] != True: # If current sonar record flagged to drop, don't need to check it
+                        dropping = self._checkPings(i, chunkDF) # Find subsequent sonar records that overlap current record
+                        if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
                             del dropping[maxIdx]
-                        if len(dropping) > 0:
+                        if len(dropping) > 0: # We have overlapping sonar records we need to drop
                             lastKey = max(dropping)
                             del dropping[lastKey] # Don't remove last element
                             for k, v in dropping.items():
