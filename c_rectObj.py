@@ -478,6 +478,7 @@ class rectObj(sonObj):
                         dropping = self._checkPings(i, chunkDF) # Find subsequent sonar records that overlap current record
                         if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
                             del dropping[maxIdx]
+                            dropping[i]=True # Drop current sonar record instead
                         if len(dropping) > 0: # We have overlapping sonar records we need to drop
                             for k, v in dropping.items(): # Flag records to drop
                                 drop[k] = True
