@@ -480,8 +480,6 @@ class rectObj(sonObj):
                         if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
                             del dropping[maxIdx]
                         if len(dropping) > 0: # We have overlapping sonar records we need to drop
-                            lastKey = max(dropping)
-                            del dropping[lastKey] # Don't remove last element
                             for k, v in dropping.items():
                                 drop[k] = True
                                 last = k+1
