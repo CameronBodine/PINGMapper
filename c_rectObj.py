@@ -469,8 +469,7 @@ class rectObj(sonObj):
 
             #########################################
             # Find and drop overlapping sonar records
-            # Iterate each sonar record if filtered dataframe
-            for i in idx:
+            for i in idx: # Iterate each sonar record if filtered dataframe
                 if i == maxIdx: # Break loop once we reach the last sonar record
                     break
                 else:
@@ -480,28 +479,32 @@ class rectObj(sonObj):
                         if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
                             del dropping[maxIdx]
                         if len(dropping) > 0: # We have overlapping sonar records we need to drop
-                            for k, v in dropping.items():
+                            for k, v in dropping.items(): # Flag records to drop
                                 drop[k] = True
-                                last = k+1
                         else:
                             pass
                     else:
                         pass
+
+            ######################################################
+            # Drop all overlapping sonar records for current chunk
             chunkDF = chunkDF[~drop]
 
-            rchunkDF = chunkDF.copy()
-            schunkDF = sDF[sDF['chunk_id']==chunk].copy()
+            rchunkDF = chunkDF.copy() # Make copy of df w/ no overlapping sonar records for current chunk
+            schunkDF = sDF[sDF['chunk_id']==chunk].copy() # Get original df for current chunk
 
-            # outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+str(int(chunk))+'_'+self.beamName+".csv")
-            # rchunkDF.to_csv(outCSV, index=True, float_format='%.14f')
-
+            #################################################
+            # Smooth and interpolate range extent coordinates
             smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
                                           ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
-            if 'rsDF' not in locals():
+
+            # Store smoothed range extent in output df
+            if 'rsDF' not in locals(): # If output df doesn't exist, make it
                 rsDF = smthChunk.copy()
-            else:
+            else: # If output df exists, append results to it
                 rsDF = rsDF.append(smthChunk, ignore_index=True)
 
+        ##################################################
         # Join smoothed trackline to smoothed range extent
         sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
@@ -514,15 +517,18 @@ class rectObj(sonObj):
         rsDF[res] = e_smth
         rsDF[rns] = n_smth
 
+        ###########################################
         # Overwrite Trackline_Smth_son.beamName.csv
         outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
         rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
         self.rangeExt = rsDF
-        return
+        return self
 
     #===========================================================================
-    def _checkPings(self, i, df):
+    def _checkPings(self,
+                    i,
+                    df):
         '''
 
 
@@ -703,7 +709,7 @@ class rectObj(sonObj):
         # Determine what chunks to process
         # chunks = pd.unique(pingMeta['chunk_id'])
         chunks = pd.unique(trkMeta['chunk_id'])
-        # chunks = chunks[11:]
+        chunks = chunks[89:91]
         firstChunk = min(chunks)
 
         if wgs is True:
