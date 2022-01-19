@@ -102,7 +102,7 @@ def rectify_master_func(sonFiles,
     # Parameters
     flip = False #Flip port/star
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
-    filterRange = int(nchunk*0.05) #Filters range extent coordinates for smoothing
+    filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
 
     ############################################################################
     # Create rectObj() instance from previously created sonObj() instance      #
