@@ -904,6 +904,25 @@ class sonObj(object):
                 if j == nchunk:
                     j=0
                     chunk+=1
+
+                # Tried variable chunk size for rectification issues, but didn't
+                ## fix the problem and introduced new problems
+                # if j == 0:
+                #     lastPingCnt = curPingCnt = headerDat['ping_cnt']
+                # else:
+                #     curPingCnt = headerDat['ping_cnt']
+                # i+=8
+                # j+=1
+                # if (j == nchunk) or (lastPingCnt != curPingCnt):
+                #     j=0
+                #     chunk+=1
+                # # else:
+                #     # j+=1
+                # # print('L: ', lastPingCnt, ' C: ', curPingCnt)
+                # idx['chunk_id'].append(chunk) # Store chunk id
+                # head['chunk_id'].append(chunk) # Sonar record chunk id
+                # lastPingCnt = curPingCnt
+
         # If .IDX file is missing
         ## Attempt to automatically decode .SON file
         else:
