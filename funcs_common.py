@@ -18,7 +18,7 @@ import numpy as np
 from array import array as arr
 
 import pyproj
-import imageio # Scikit-image dep; need to update image manip w/ rasterio for consistency
+import imageio
 import rasterio
 from numpy.lib.stride_tricks import as_strided as ast
 
