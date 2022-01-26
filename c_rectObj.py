@@ -4,6 +4,7 @@ from c_sonObj import sonObj
 from scipy.interpolate import splprep, splev
 from skimage.transform import PiecewiseAffineTransform, warp
 from rasterio.transform import from_origin
+from rasterio.enums import Resampling
 from PIL import Image
 
 class rectObj(sonObj):
@@ -280,6 +281,10 @@ class rectObj(sonObj):
 
         return db
 
+    ############################################################################
+    # Calculate range extent coordinates                                       #
+    ############################################################################
+
     #===========================================
     def _getRangeCoords(self,
                         flip = False,
@@ -480,12 +485,13 @@ class rectObj(sonObj):
                 if i == maxIdx: # Break loop once we reach the last sonar record
                     break
                 else:
-                    cRow = chunkDF.loc[i] # Get current sonar record
                     if drop[i] != True: # If current sonar record flagged to drop, don't need to check it
                         dropping = self._checkPings(i, chunkDF) # Find subsequent sonar records that overlap current record
                         if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
                             del dropping[maxIdx]
                             dropping[i]=True # Drop current sonar record instead
+                        else:
+                            pass
                         if len(dropping) > 0: # We have overlapping sonar records we need to drop
                             for k, v in dropping.items(): # Flag records to drop
                                 drop[k] = True
@@ -522,15 +528,15 @@ class rectObj(sonObj):
 
         # Calculate easting/northing for smoothed range extent
         e_smth, n_smth = self.trans(rsDF[rlons].to_numpy(), rsDF[rlats].to_numpy())
-        rsDF[res] = e_smth
-        rsDF[rns] = n_smth
+        rsDF[res] = e_smth # Store smoothed easting range extent in rsDF
+        rsDF[rns] = n_smth # Store smoothed northing range extent in rsDF
 
         ###########################################
         # Overwrite Trackline_Smth_son.beamName.csv
         outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
         rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
-        self.rangeExt = rsDF
+        self.rangeExt = rsDF # Store smoothed range extent in rectObj
         return self
 
     #===========================================================================
@@ -538,121 +544,213 @@ class rectObj(sonObj):
                     i,
                     df):
         '''
-
+        On sinuous survey transects (i.e. river bends), it is possible for range
+        extent coordinates to overlap with each other.  Overlapping sonar records
+        will produce issues during the georectification process and need to be
+        removed.  This function checks subsequent sonar records from the current
+        index i and determines if the sonar records overlap with the current record.
+        If they do, they are flagged for removal.
 
         ----------
         Parameters
         ----------
+        i : int
+            DESCRIPTION - Current index of sonar record which will be compared
+                          against subsequent sonar records.
+        df : Pandas DataFrame
+            DESCRIPTION - DataFrame containing range extent coordinates of sonar
+                          records.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._interpRangeCoords()
 
         -------
         Returns
         -------
+        A dictionary containing dataframe index as key and bool value indicating
+        if dataframe sonar record should be dropped or not.
 
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns dictionary to self._interpRangeCoords()
         '''
         range = 'range' # range distance
-        x = 'range_e' # range easting extent
-        y = 'range_n' # range northing extent
-        dThresh = 'distThresh'
-        tDist = 'track_dist'
-        toCheck = 'toCheck'
-        toDrop = 'toDrop'
+        x = 'range_e' # range easting extent coordinate
+        y = 'range_n' # range northing extent coordinate
+        dThresh = 'distThresh' # max distance to check for overlap
+        tDist = 'track_dist' # straight line distance from sonar record i to subsequent sonar records
+        toCheck = 'toCheck' # Flag indicating subsequent sonar record is close enough to i to check for potential overlap
+        toDrop = 'toDrop' # Flag indicating sonar record overlaps with i
         es = 'utm_es' #Trackline smoothed easting
         ns = 'utm_ns' #Trackline smoothed northing
 
+        ###########
         # Filter df
-        rowI = df.loc[i]
-        df = df.copy()
-        df = df.iloc[df.index > i]
+        rowI = df.loc[i] # Get current df row to compare against
+        df = df.copy() # Make copy of dataframe
+        df = df.iloc[df.index > i] # Filter out first (i.e. current) row
 
+        #########################
         # Calc distance threshold
+        ## We only need to check sonar records which are close enough to the
+        ## current sonar record to potentially overlap.
         df[dThresh] = rowI[range] + df[range]
 
-        # Calc track straight line distance
-        rowIx, rowIy = rowI[x], rowI[y]
-        dfx, dfy = df[x].to_numpy(), df[y].to_numpy()
-        dist = self._getDist(rowIx, rowIy, dfx, dfy)
+        # Calc straight line distance along the track from current sonar record
+        ## to all other sonar records.  It is impossible for overlap to occur for
+        ## subsequent sonar records to overlap current sonar record if they are
+        ## further then the threshold distance.
+        rowIx, rowIy = rowI[x], rowI[y] # Get current sonar record range extent coordinates
+        dfx, dfy = df[x].to_numpy(), df[y].to_numpy() # Get subsequent sonar record range extent coordinates
+        dist = self._getDist(rowIx, rowIy, dfx, dfy) # Calculate distance from current sonar record
 
-        # Check if dist < distThresh
-        df[tDist] = dist
-        df.loc[df[tDist] <= df[dThresh], toCheck] = True
-        df.loc[df[tDist] > df[dThresh], toCheck] = False
-        df[toCheck]=df[toCheck].astype(bool)
+        # Check if dist < distThresh. True==Check for possible overlap; False==No need to check
+        df[tDist] = dist # Store distance calculation
+        df.loc[df[tDist] <= df[dThresh], toCheck] = True # Check for overlap
+        df.loc[df[tDist] > df[dThresh], toCheck] = False # Don't check for overlap
+        df[toCheck]=df[toCheck].astype(bool) # Make sure toCheck column is type bool
 
-        # Check if we need to drop
-        line1 = ((rowI[es],rowI[ns]), (rowI[x], rowI[y]))
-        dfFilt = df[df[toCheck]==True].copy()
-        dropping = {}
-        # line2 = ((df[es].to_numpy(),df[ns].to_numpy()), (df[x].to_numpy(), df[y].to_numpy()))
-        for i, row in dfFilt.iterrows():
-            line2=((row[es], row[ns]), (row[x], row[y]))
-            isIntersect = self._lineIntersect(line1, line2, row[range])
-            dfFilt.loc[i, toDrop] = isIntersect
-            if isIntersect == True:
+        # Determine which sonar records overlap with current sonar record
+        line1 = ((rowI[es],rowI[ns]), (rowI[x], rowI[y])) # Store current sonar record coordinates as tuple
+        dfFilt = df[df[toCheck]==True].copy() # Get sonar records that could overlap with current
+        dropping = {} # Dictionary to store sonar record index to drop
+        for i, row in dfFilt.iterrows(): # Iterate subsequent sonar records
+            line2=((row[es], row[ns]), (row[x], row[y])) # Store sonar record coordinates to check in tuple
+            isIntersect = self._lineIntersect(line1, line2, row[range]) # Determine if line1 intersects line2
+            dfFilt.loc[i, toDrop] = isIntersect # Store bool in dataframe (don't need this but keeping in case)
+            if isIntersect == True: # If line2 intersects line1, flag sonar record for dropping
                 dropping[i]=isIntersect
 
         return dropping
 
     #===========================================================================
-    def _getDist(self, aX, aY, bX, bY):
+    def _getDist(self,
+                 aX,
+                 aY,
+                 bX,
+                 bY):
         '''
-
+        Determine distance between two points `a` and `b`.  `a` and `b` can also
+        be numpy arrays of coordinates.  This function is used to calculate distance
+        between a single point `a` and a series of points `b` stored in numpy arrays.
 
         ----------
         Parameters
         ----------
+        aX : float or numpy array of floats
+            DESCRIPTION - X coordinate of point `a`
+        aY : float or numpy array of floats
+            DESCRIPTION - Y coordinate of point `a`
+        bX : float or numpy array of floats
+            DESCRIPTION - X coordinate of point `b`
+        bY : float or numpy array of floats
+            DESCRIPTION - Y coordinate of point `b`
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._checkPings() or self._lineIntersect()
 
         -------
         Returns
         -------
+        A numpy array with distances calculated
 
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns numpy array to self._checkPings() or self._lineIntersect()
         '''
-        dist = np.sqrt( (bX - aX)**2 + (bY - aY)**2)
+        dist = np.sqrt( (bX - aX)**2 + (bY - aY)**2) # Calculate distance
         return dist
 
     #===========================================================================
-    def _lineIntersect(self, line1, line2, range):
+    def _lineIntersect(self,
+                       line1,
+                       line2,
+                       range):
         '''
+        Determines if two lines intersect.  Helper functions are included in this
+        method to aid in computation:
 
+        self._lineIntersect.line() : function
+            DESCRIPTION - Determines coeficients describing line connecting two
+                          points.
+        self._lineIntersect.intersection() : function
+            DESCRIPTION - Determines if two (infinite) lines intersect and returns
+                          x, y coordinates of the intersection.
+        self._lineIntersect.isBetween() : function
+            DESCRIPTION - Determines if intersecting point falls on the line
+                          segments.
 
         ----------
         Parameters
         ----------
+        line1 : tuple
+            DESCRIPTION - Two sets of points describing a line ((x1, y1), (x2, y2))
+        line2 : tuple
+            DESCRIPTION - Two sets of points describing a line ((x1, y1), (x2, y2))
+        range : float
+            DESCRIPTION - Range (length) of line2
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._checkPings()
 
         -------
         Returns
         -------
+        Bool flag indicating if line2 intersects line1
 
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns flag to self._checkPings()
         '''
+
         #https://stackoverflow.com/questions/20677795/how-do-i-compute-the-intersection-point-of-two-lines
         def line(p1, p2):
+            # Find general equation (normal form) coeficients to describe a line
+            ## connecting two points: Ay + Bx = C
             A = (p1[1] - p2[1])
             B = (p2[0] - p1[0])
             C = (p1[0]*p2[1] - p2[0]*p1[1])
             return A, B, -C
 
         def intersection(L1, L2):
-            D  = L1[0] * L2[1] - L1[1] * L2[0]
-            Dx = L1[2] * L2[1] - L1[1] * L2[2]
-            Dy = L1[0] * L2[2] - L1[2] * L2[0]
-            if D != 0:
+            # Following Cramer's rules
+            D  = L1[0] * L2[1] - L1[1] * L2[0] # Determinant using x, y values
+            Dx = L1[2] * L2[1] - L1[1] * L2[2] # Determinant using x, c values
+            Dy = L1[0] * L2[2] - L1[2] * L2[0] # Determinant using y, c values
+            if D != 0: # Check if divisor == 0
                 x=Dx/D
                 y=Dy/D
-                return x,y
+                return x,y # Coordinate of intersection
             else:
-                return False
+                return False # No intersection found
 
         def isBetween(line1, line2, c):
-            ax, ay = line1[0][0], line1[0][1]
-            bx, by = line1[1][0], line2[1][1]
-            cx, cy = c[0], c[1]
-            xIntersect=yIntersect=False
+            ax, ay = line1[0][0], line1[0][1] # Get x,y for line1
+            bx, by = line1[1][0], line2[1][1] # Get x,y for line2
+            cx, cy = c[0], c[1] # Get x,y for intersection
+            xIntersect=yIntersect=False # Set flags
 
+            # Check if cx,cy falls between either lines coordinates with a small
+            ## buffer of +-5.  If it does, we will need to check distance between
+            ## line2 origin and (cx,cy).
             if (cx >= min(ax,bx)-5) and (cx <= max(ax,bx)+5) and \
                (cy >= min(ay,by)-5) and (cy <= max(ay,by)+5):
                checkDist = True
             else:
                checkDist = isIntersect = False
 
+            # Check distance between line2 origin and (cx,cy). If the distance is
+            ## shorter then the range, then intersecting point falls on line
+            ## segments and the two lines do intersect.
             if checkDist is True:
                 x,y = line2[0][0], line2[0][1]
                 dist = self._getDist(x, y, cx, cy)
@@ -663,17 +761,25 @@ class rectObj(sonObj):
 
             return isIntersect
 
-        L1 = line(line1[0], line1[1])
-        L2 = line(line2[0], line2[1])
-        c = intersection(L1, L2)
-        if c is not False:
-            I = isBetween(line1, line2, c)
+        L1 = line(line1[0], line1[1]) # Get coefficients for line1
+        L2 = line(line2[0], line2[1]) # Get coefficients for line1
+        c = intersection(L1, L2) # Determine if infinite lines could intersect
+        if c is True:
+            I = isBetween(line1, line2, c) # Determine if intersect occurs on line segments
         else:
             I = False
         return I
 
+    ############################################################################
+    # Rectify sonar imagery                                                    #
+    ############################################################################
+
     #===========================================================================
-    def _rectSon(self, remWater=True, filt=50, adjDep=0, wgs=False):
+    def _rectSon(self,
+                 remWater=True,
+                 filt=50,
+                 adjDep=0,
+                 wgs=False):
         '''
 
 
@@ -686,46 +792,49 @@ class rectObj(sonObj):
         -------
 
         '''
+
+        # Prepare initial variables
+        ## Variables for water column removal and slant range corrected imagery
         if remWater == True:
             imgInPrefix = 'src'
             imgOutPrefix = 'rect_src'
             tileFlag = self.src #Indicates if non-rectified src images were exported
+        ## Variables for water column present imagery
         else:
             imgInPrefix = 'wcp'
             imgOutPrefix = 'rect_wcp'
             tileFlag = self.wcp #Indicates if non-rectified wcp images were exported
 
-        # Prepare initial variables
-        outDir = self.outDir
+        # Create output directory if it doesn't exist
+        outDir = self.outDir # Parent directory
         try:
             os.mkdir(outDir)
         except:
             pass
-        outDir = os.path.join(outDir, imgOutPrefix) #Img output/input directory
+        outDir = os.path.join(outDir, imgOutPrefix) # Sub-directory
         try:
             os.mkdir(outDir)
         except:
             pass
 
-        # Locate and open necessary meta files
-        # ssSide = (self.beamName).split('_')[-1] #Port or Star
-        # pingMetaFile = glob(self.metaDir+os.sep+'RangeExtent_'+ssSide+'.csv')[0]
-        # pingMeta = pd.read_csv(pingMetaFile)
+        # Locate and open smoothed trackline/range extent file
         trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
         trkMeta = pd.read_csv(trkMetaFile)
 
         # Determine what chunks to process
-        # chunks = pd.unique(pingMeta['chunk_id'])
-        chunks = pd.unique(trkMeta['chunk_id'])
-        # chunks = chunks[89:91]
-        firstChunk = min(chunks)
+        chunks = pd.unique(trkMeta['chunk_id']) # Store chunk values in list
+        chunks = chunks[0:1] # For troubleshooting and subsetting chunks to process
+        firstChunk = min(chunks) # Find first chunk
 
+        # What coordinates should be used?
+        ## Use WGS 1984 coordinates and set variables as needed
         if wgs is True:
             epsg = self.humDat['wgs']
             xRange = 'range_lons'
             yRange = 'range_lats'
             xTrk = 'trk_lons'
             yTrk = 'trk_lats'
+        ## Use projected coordinates and set variables as needed
         else:
             epsg = self.humDat['epsg']
             xRange = 'range_es'
@@ -733,19 +842,25 @@ class rectObj(sonObj):
             xTrk = 'trk_utm_es'
             yTrk = 'trk_utm_ns'
 
+        # If non-rectified imagery were previously esported, we can rectify those
+        ## images directly without having to reopen .SON/.IDX files
         if tileFlag:
             allImgs = sorted(glob(os.path.join(self.outDir, imgInPrefix,"*"+imgInPrefix+"*"))) #List of imgs to rectify
-            # Make sure destination coordinates are available for each image
-            # If dest coords not available, remove image from inImgs
-            allImgsDict = defaultdict()
+            allImgsDict = defaultdict() # Dictionary to store {chunk: path to output image}
             for img in allImgs:
-                imgName=os.path.basename(img).split('.')[0]
-                chunk=int(imgName.split('_')[-1])
-                allImgsDict[chunk] = img
+                imgName=os.path.basename(img).split('.')[0] # Get image name
+                chunk=int(imgName.split('_')[-1]) # Get chunk id
+                allImgsDict[chunk] = img # Add chunk:path to output image
 
+            # Verify that each exported non-rectified image has associate smoothed
+            ## trackline and range extent coordinates
             inImgs = {c: allImgsDict[c] for c in chunks}
+
+        # Non-rectified images not previously exported so we need to handle creation
+        ## of inImgs differently.
         else:
-            inImgs = defaultdict()
+            inImgs = defaultdict() # Initialize inImgs dictionary
+            # Determine leading zeros to match naming convention
             for chunk in chunks:
                 if chunk < 10:
                     addZero = '0000'
@@ -758,91 +873,105 @@ class rectObj(sonObj):
                 else:
                     addZero = ''
 
-                projName = os.path.split(self.projDir)[-1]
-                beamName = self.beamName
-                imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png'
+                projName = os.path.split(self.projDir)[-1] # Get project name
+                beamName = self.beamName # Determine which sonar beam we are working with
+                imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png' # Create output image name
 
-                inImgs[int(chunk)] = os.path.join(self.outDir, imgName)
+                inImgs[int(chunk)] = os.path.join(self.outDir, imgName) # Store {chunk: path to output image}
 
-        # Iterate images and rectify
+        # Iterate chunk/image path and rectify
         for i, imgPath in inImgs.items():
+            # Following workflow adapted from scikit-image:
+            # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
 
-            ############################
-            # Prepare source coordinates
+            ##################################
+            # Prepare source (src) coordinates
+            ## Src coordinates describe the size of the coordinates in pixel
+            ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
+
             # Open image to rectify
-            if tileFlag:
+            if tileFlag: # Open non-rectified image as numpy array
                 img = np.asarray(Image.open(imgPath)).copy()
-            else:
+            else: # Load ping return values from .SON/.IDX file
                 self._getScanChunkSingle(i, remWater)
                 img = self.sonDat
             img[0]=0 # To fix extra white on curves
 
-            # Prepare src coordinates
-            rows, cols = img.shape[0], img.shape[1]
-            src_cols = np.arange(0, cols)
-            src_rows = np.linspace(0, rows, 2)
-            src_rows, src_cols = np.meshgrid(src_rows, src_cols)
-            srcAll = np.dstack([src_rows.flat, src_cols.flat])[0]
+            # For each sonar record, we need the pixel coordinates where the sonar
+            ## originates on the trackline, and where it terminates based on the
+            ## range of the sonar record.  This results in an array of coordinate
+            ## pairs that describe the edge of the non-rectified image tile.
+            rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
+            src_cols = np.arange(0, cols) # Create array of column indices
+            src_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
+            src_rows, src_cols = np.meshgrid(src_rows, src_cols) # Create grid arrays that we can stack together
+            srcAll = np.dstack([src_rows.flat, src_cols.flat])[0] # Stack arrays to get final map of src pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
 
-            # Create mask for filtering array
-            mask = np.zeros(len(srcAll), dtype=bool)
-            mask[0::filt] = 1
-            mask[1::filt] = 1
-            mask[-2], mask[-1] = 1, 1
+            # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
+            ## more efficient
+            mask = np.zeros(len(srcAll), dtype=bool) # Create mask same size as srcAll
+            mask[0::filt] = 1 # Filter row coordinates
+            mask[1::filt] = 1 # Filter column coordinates
+            mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
 
             # Filter src
             src = srcAll[mask]
 
-            #################################
-            # Prepare destination coordinates
-            # pingMeta = pd.read_csv(pingMetaFile)
-            # pingMeta = pingMeta[pingMeta['chunk_id']==i].reset_index()
-            # pix_m = pingMeta['pix_m'].min()
+            #######################################
+            # Prepare destination (dst) coordinates
+            ## Destination coordinates describe the geographic location in lat/lon
+            ## or easting/northing that directly map to the src coordinates.
 
+            # Open smoothed trackline/range extent file
             trkMeta = pd.read_csv(trkMetaFile)
-            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index(drop=False)
-            pix_m = trkMeta['pix_m'].min()
+            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index(drop=False) # Filter df by chunk_id
+            pix_m = trkMeta['pix_m'].min() # Get pixel size
 
-            # trkMeta = trkMeta.filter(items=[xTrk, yTrk])
-            # pingMeta = pingMeta.join(trkMeta)
-
-            # Get range (outer extent) coordinates
-            # xR, yR = pingMeta[xRange].to_numpy().T, pingMeta[yRange].to_numpy().T
+            # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
             xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
-            xyR = np.vstack((xR, yR)).T
+            xyR = np.vstack((xR, yR)).T # Stack the arrays
 
-            # Get trackline (inner extent) coordinates
-            # xT, yT = pingMeta[xTrk].to_numpy().T, pingMeta[yTrk].to_numpy().T
+            # Get trackline (origin of sonar record) coordinates [xT, yT] to transposed numpy arrays
             xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
-            xyT = np.vstack((xT, yT)).T
+            xyT = np.vstack((xT, yT)).T # Stack the  arrays
 
-            # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...)
-            dstAll = np.empty([len(xyR)+len(xyT), 2])
-            dstAll[0::2] = xyT
-            dstAll[1::2] = xyR
+            # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
+            ## pattern of src coordinates
+            dstAll = np.empty([len(xyR)+len(xyT), 2]) # Initialize appropriately sized np array
+            dstAll[0::2] = xyT # Add trackline coordinates
+            dstAll[1::2] = xyR # Add range extent coordinates
 
-            # Filter dst
+            # Filter dst using previously made mask
             dst = dstAll[mask]
 
-            # Determine min/max for rescaling
-            xMin, xMax = dst[:,0].min(), dst[:,0].max()
-            yMin, yMax = dst[:,1].min(), dst[:,1].max()
+            ##################
+            # Warp sonar image
+            ## Before applying a geographic projection to the image, the image
+            ## must be warped to conform to the shape specified by the geographic
+            ## coordinates.  We don't want to warp the image to real-world dimensions,
+            ## so we will normalize and rescale the dst coordinates to give the
+            ## top-left coordinate a value of (0,0)
 
-            # Determine output shape
-            outShapeM = [xMax-xMin, yMax-yMin]
+            # Determine min/max for rescaling
+            xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
+            yMin, yMax = dst[:,1].min(), dst[:,1].max() # Min/Max of y coordinates
+
+            # Determine output shape dimensions
+            outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
             outShape=[0,0]
+            # Divide by pixel size to arrive at output shape of warped image
             outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
 
             # Rescale destination coordinates
             # X values
             xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
-            xScaled = xStd * (outShape[0] - 0) + 0 # Rescale
-            dst[:,0] = xScaled
+            xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
+            dst[:,0] = xScaled # Store rescaled x coordinates
 
             # Y values
             yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
-            yScaled = yStd * (outShape[1] - 0) + 0 # Rescale
-            dst[:,1] = yScaled
+            yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
+            dst[:,1] = yScaled # Store rescaled y coordinates
 
             ########################
             # Perform transformation
@@ -850,7 +979,7 @@ class rectObj(sonObj):
             tform = PiecewiseAffineTransform()
             tform.estimate(src, dst) # Calculate H matrix
 
-            # Warp image
+            # Warp image from the input shape to output shape
             out = warp(img.T,
                        tform.inverse,
                        output_shape=(outShape[1], outShape[0]),
@@ -865,19 +994,29 @@ class rectObj(sonObj):
 
             ##############
             # Save Geotiff
-            # Determine resolution and calc affine transform matrix
+            ## In order to visualize the warped image in a GIS at the appropriate
+            ## spatial extent, the pixel coordinates of the warped image must be
+            ## mapped to spatial coordinates. This is accomplished by calculating
+            ## the affine transformation matrix using rasterio.transform.from_origin
+
+            # First get the min/max values for x,y geospatial coordinates
             xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
             yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
+            # Calculate x,y resolution of a single pixel
             xres = (xMax - xMin) / outShape[0]
             yres = (yMax - yMin) / outShape[1]
-            # transform = Affine.translation(xMin - xres / 2, yMin - yres / 2) * Affine.scale(xres, yres)
+
+            # Calculate transformation matrix by providing geographic coordinates
+            ## of upper left corner of the image and the pixel size
             transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
-            # gtiff = 'E:\\NAU\\Python\\PINGMapper\\procData\\SFE_20170801_R00014\\sidescan_port\\image-00010-rect-prj.tif'
+            # Prepare output image name
             outImg=os.path.basename(inImgs[i]).replace(imgInPrefix, imgOutPrefix)
             outImg=outImg.replace('png', 'tif')
             gtiff = os.path.join(outDir, outImg)
+
+            # Export georectified image
             with rasterio.open(
                 gtiff,
                 'w',
@@ -892,9 +1031,9 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
-
-            # i+=1
-
-
+                    ## Uncomment below code if overviews should be created for each file
+                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
+                    # dst.update_tags(ns='rio_overview', resampling='nearest')
+                    # dst.close()
 
         pass

@@ -209,14 +209,16 @@ def rectify_master_func(sonFiles,
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
     print("Done!")
 
-    ################################################
-    # Calculate range extent coordinates
+    ############################################################################
+    # Calculate range extent coordinates                                       #
+    ############################################################################
     print("\nCalculating, smoothing, and interpolating range extent coordinates...")
     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
 
-    ################################################
-    # Now we can rectify the imagery
+    ############################################################################
+    # Rectify sonar imagery                                                    #
+    ############################################################################
     print("\nRectifying and exporting GeoTiffs:\n")
 
     if rect_wcp:
