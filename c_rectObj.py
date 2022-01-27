@@ -781,16 +781,52 @@ class rectObj(sonObj):
                  adjDep=0,
                  wgs=False):
         '''
-
+        This function will georectify sonar tiles with water column present
+        (rect_wcp) OR water column removed and slant range corrected (rect_src).
+        The function will use non-rectified images if they were previously exported.
+        If not, the sonar intensity will be loaded directly from the .SON file.
+        Once determined, each chunk will be iterated, sonar intensities loaded
+        into memory and:
+        1) Pixel (pix) coordinates are formated as a numpy array based on shape
+           of sonar chunk.  Coordinates are filtered to aid computation efficiency.
+        2) Geographic, or destination (dst), coordinates for the smoothed trackline
+           and range extent are loaded from the "Trackline_Smth_BXXX.csv" file and
+           formated as a numpy array and filtered as pix.
+        3) A Piecewise Affine Transform is used to map pix coordinates to the shape
+           of the dst coordinates in order to warp (or rectify) the sonar intensities.
+           Warped sonar intensities are stored in a new numpy array.
+        4) The warped array is then mapped to geographic coordinates using a
+           transformation matrix and exported as a geotiff.
 
         ----------
         Parameters
         ----------
+        remWater : bool
+            DESCRIPTION - Flag indicating if wcp [False] or pix [True] imagery.
+        filt : int
+            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+        adjDep : int
+            DESCRIPTION - Number of pixels to increase depth by to help remove
+                          water column pixels and make "cleaner" looking src
+                          imagery.
+        wgs : bool
+            DESCRIPTION - Flag indicating if sonar images should be rectified using
+                          WGS 1984 coordinate system [True] or UTM state plane [False]
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self._getRangeCoords()
 
         -------
         Returns
         -------
+        Georectified geotiffs
 
+        --------------------
+        Next Processing Step
+        --------------------
+        NA
         '''
 
         # Prepare initial variables
@@ -823,7 +859,7 @@ class rectObj(sonObj):
 
         # Determine what chunks to process
         chunks = pd.unique(trkMeta['chunk_id']) # Store chunk values in list
-        chunks = chunks[0:1] # For troubleshooting and subsetting chunks to process
+        # chunks = chunks[0:1] # For troubleshooting and subsetting chunks to process
         firstChunk = min(chunks) # Find first chunk
 
         # What coordinates should be used?
@@ -884,9 +920,9 @@ class rectObj(sonObj):
             # Following workflow adapted from scikit-image:
             # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
 
-            ##################################
-            # Prepare source (src) coordinates
-            ## Src coordinates describe the size of the coordinates in pixel
+            #################################
+            # Prepare pixel (pix) coordinates
+            ## Pix coordinates describe the size of the coordinates in pixel
             ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
             # Open image to rectify
@@ -902,25 +938,25 @@ class rectObj(sonObj):
             ## range of the sonar record.  This results in an array of coordinate
             ## pairs that describe the edge of the non-rectified image tile.
             rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
-            src_cols = np.arange(0, cols) # Create array of column indices
-            src_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
-            src_rows, src_cols = np.meshgrid(src_rows, src_cols) # Create grid arrays that we can stack together
-            srcAll = np.dstack([src_rows.flat, src_cols.flat])[0] # Stack arrays to get final map of src pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
+            pix_cols = np.arange(0, cols) # Create array of column indices
+            pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
+            pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
+            pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
 
             # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
             ## more efficient
-            mask = np.zeros(len(srcAll), dtype=bool) # Create mask same size as srcAll
+            mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
             mask[0::filt] = 1 # Filter row coordinates
             mask[1::filt] = 1 # Filter column coordinates
             mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
 
-            # Filter src
-            src = srcAll[mask]
+            # Filter pix
+            pix = pixAll[mask]
 
             #######################################
             # Prepare destination (dst) coordinates
             ## Destination coordinates describe the geographic location in lat/lon
-            ## or easting/northing that directly map to the src coordinates.
+            ## or easting/northing that directly map to the pix coordinates.
 
             # Open smoothed trackline/range extent file
             trkMeta = pd.read_csv(trkMetaFile)
@@ -936,7 +972,7 @@ class rectObj(sonObj):
             xyT = np.vstack((xT, yT)).T # Stack the  arrays
 
             # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
-            ## pattern of src coordinates
+            ## pattern of pix coordinates
             dstAll = np.empty([len(xyR)+len(xyT), 2]) # Initialize appropriately sized np array
             dstAll[0::2] = xyT # Add trackline coordinates
             dstAll[1::2] = xyR # Add range extent coordinates
@@ -977,7 +1013,7 @@ class rectObj(sonObj):
             # Perform transformation
             # PiecewiseAffineTransform
             tform = PiecewiseAffineTransform()
-            tform.estimate(src, dst) # Calculate H matrix
+            tform.estimate(pix, dst) # Calculate H matrix
 
             # Warp image from the input shape to output shape
             out = warp(img.T,
@@ -997,7 +1033,7 @@ class rectObj(sonObj):
             ## In order to visualize the warped image in a GIS at the appropriate
             ## spatial extent, the pixel coordinates of the warped image must be
             ## mapped to spatial coordinates. This is accomplished by calculating
-            ## the affine transformation matrix using rasterio.transform.from_origin
+            ## the transformation matrix using rasterio.transform.from_origin
 
             # First get the min/max values for x,y geospatial coordinates
             xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
