@@ -501,7 +501,7 @@ def read_master_func(sonFiles,
     if wcp or src:
         print("\nGetting sonar data and exporting tile images...")
         # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScanChunkALL)(detectDep, adjDep) for son in sonObjs)
+        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScanChunkALL)() for son in sonObjs)
         print("Done!")
 
 

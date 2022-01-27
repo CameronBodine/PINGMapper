@@ -395,6 +395,33 @@ class sonObj(object):
                typ):
         '''
         Helper function that reads binary data in a file.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._getHumDat(), self._cntHead(), self._decodeHeadStruct(),
+        self._getSonMeta(), self._loadSonChunk()
+
+        ----------
+        Parameters
+        ----------
+        infile : file
+            DESCRIPTION - A binary file opened in read mode at a pre-specified
+                          location.
+        num : int
+            DESCRIPTION - Number of bytes to read.
+        typ : type
+            DESCRIPTION - Byte type
+
+        -------
+        Returns
+        -------
+        List of decoded binary data
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns list to function it was called from.
         '''
         dat = arr(typ)
         dat.fromfile(infile, num)
@@ -520,6 +547,15 @@ class sonObj(object):
         Determines .SON header structure based on self.headBytes.  The value of
         headBytes indicates the length of the sonar record header, which determines
         the location of each sonar record attribute within the sonar header.
+
+        ----------
+        Parameters
+        ----------
+        exportUnknown : bool
+            DESCRIPTION - Flag indicating if unknown attributes in sonar record
+                          should be exported or not.  If a user of PING Mapper
+                          determines what an unkown attribute actually is, please
+                          report using a github issue.
 
         ----------------------------
         Required Pre-processing step
@@ -712,6 +748,15 @@ class sonObj(object):
         sonar file, decode the byte, determine if it matches any known or unknown
         spacer value (sonar record attribute 'name') and if it does, store the
         byte offset.
+
+        ----------
+        Parameters
+        ----------
+        exportUnknown : bool
+            DESCRIPTION - Flag indicating if unknown attributes in sonar record
+                          should be exported or not.  If a user of PING Mapper
+                          determines what an unkown attribute actually is, please
+                          report using a github issue.
 
         ----------------------------
         Required Pre-processing step
@@ -970,6 +1015,12 @@ class sonObj(object):
         Helper function that, given a byte index location, decodes a sonar
         record's metadata according to known sonar record header structure.
 
+        ----------
+        Parameters
+        ----------
+        sonIndex : int
+            DESCRIPTION - Byte index location of a sonar record in a .SON file.
+
         ----------------------------
         Required Pre-processing step
         ----------------------------
@@ -1060,6 +1111,12 @@ class sonObj(object):
         Helper function that determines pixel size of a sonar return based on
         water type, speed of sound in water, and sonar properties.
 
+        ----------
+        Parameters
+        ----------
+        df : DataFrame
+            DESCRIPTION - Pandas DataFrame of sonar record metadata.
+
         ----------------------------
         Required Pre-processing step
         ----------------------------
@@ -1107,10 +1164,7 @@ class sonObj(object):
     ############################################################################
 
     # ======================================================================
-    def _getScanChunkALL(self,
-                       detectDepth,
-                       smthDep,
-                       adjDep=0):
+    def _getScanChunkALL(self):
         '''
         Main function to read sonar record ping return values.  Stores the
         number of pings per chunk, chunk id, and byte index location in son file,
@@ -1153,7 +1207,7 @@ class sonObj(object):
                 self._writeTiles(i, imgOutPrefix='wcp') # Save image
             # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                self._SRC(sonMeta, 'FlatBottom') # Remove water column and redistribute ping returns based on FlatBottom assumption
+                self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 self._writeTiles(i, imgOutPrefix='src') # Save image
 
             i+=1
@@ -1202,8 +1256,7 @@ class sonObj(object):
 
     # ======================================================================
     def _SRC(self,
-             sonMeta,
-             type = 'FlatBottom'):
+             sonMeta):
         '''
         Slant range correction is the process of relocating sonar returns after
         water column removal by converting slant range distances to the bed into
@@ -1212,6 +1265,12 @@ class sonObj(object):
         the track (Flat bottom assumption).  The pathagorean theorem is used
         to calculate horizontal distance from slant range distance and depth at
         nadir.
+
+        ----------
+        Parameters
+        ----------
+        sonMeta : DataFrame
+            DESCRIPTION - Dataframe containing sonar record metadata.
 
         ----------------------------
         Required Pre-processing step
@@ -1272,6 +1331,14 @@ class sonObj(object):
         '''
         Using currently saved sonar record ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
+
+        ----------
+        Parameters
+        ----------
+        k : int
+            DESCRIPTION - Chunk number
+        imgOutPrefix : str
+            DESCRIPTION - Prefix to add to exported image
 
         ----------------------------
         Required Pre-processing step
@@ -1777,8 +1844,6 @@ class sonObj(object):
 
         bed = np.array(bed).astype(np.float32)
 
-
-
     # ======================================================================
     def _writeBedPick(self,
                       k,
@@ -1872,14 +1937,22 @@ class sonObj(object):
     # ======================================================================
     def _getScanChunkSingle(self,
                             chunk,
-                            remWater,
-                            adjDep=0):
+                            remWater):
         '''
         During rectification, if non-rectified tiles have not been exported,
         this will load the chunk's scan data from the sonar recording.
 
         Stores the number of pings per chunk, chunk id, and byte index location
         in son file, then calls self._loadSonChunk() to read the data.
+
+        ----------
+        Parameters
+        ----------
+        chunk : int
+            DESCRIPTION - Chunk number
+        remWater : bool
+            DESCRIPTION - Flag indicating if water column should be removed and
+                          slant range corrected.
 
         ----------------------------
         Required Pre-processing step
@@ -1899,9 +1972,8 @@ class sonObj(object):
         # Open sonar metadata file to df
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
-        i = chunk #Chunk index
         # Filter df by chunk
-        isChunk = sonMetaAll['chunk_id']==i
+        isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
         self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
@@ -1911,7 +1983,7 @@ class sonObj(object):
         self._loadSonChunk()
         # Remove water if exporting src imagery
         if remWater:
-            self._SRC(sonMeta, 'FlatBottom')
+            self._SRC(sonMeta)
 
         return self
 
