@@ -914,11 +914,11 @@ class rectObj(sonObj):
         ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
         # Open image to rectify
-        if tileFlag: # Open non-rectified image as numpy array
-            img = np.asarray(Image.open(imgPath)).copy()
-        else: # Load ping return values from .SON/.IDX file
-            self._getScanChunkSingle(chunk, remWater)
-            img = self.sonDat
+        # if tileFlag: # Open non-rectified image as numpy array
+        #     img = np.asarray(Image.open(imgPath)).copy()
+        # else: # Load ping return values from .SON/.IDX file
+        self._getScanChunkSingle(chunk, remWater)
+        img = self.sonDat
         img[0]=0 # To fix extra white on curves
 
         # For each sonar record, we need the pixel coordinates where the sonar
