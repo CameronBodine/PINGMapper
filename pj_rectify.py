@@ -224,13 +224,13 @@ def rectify_master_func(sonFiles,
     if rect_wcp:
         print('Rectifying with Water Column Present...')
         remWater = False
-        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, adjDep, wgs=False) for son in portstar)
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
         print("Done!")
 
     if rect_src:
         print('\nRectifying with Water Column Removed...')
         remWater = True
-        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, adjDep, wgs=False) for son in portstar)
+        Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
         print("Done!")
 
     ################################################
