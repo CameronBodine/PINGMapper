@@ -797,17 +797,17 @@ class rectObj(sonObj):
     ############################################################################
 
     #===========================================================================
-    def _rectSon(self,
-                 remWater=True,
-                 filt=50,
-                 wgs=False):
+    def _rectSonParallel(self,
+                         chunk,
+                         remWater=True,
+                         filt=50,
+                         wgs=False):
         '''
         This function will georectify sonar tiles with water column present
         (rect_wcp) OR water column removed and slant range corrected (rect_src).
-        The function will use non-rectified images if they were previously exported.
-        If not, the sonar intensity will be loaded directly from the .SON file.
-        Once determined, each chunk will be iterated, sonar intensities loaded
-        into memory and:
+        Sonar intensity will be loaded directly from the .SON file. Once
+        determined, each chunk will be iterated, sonar intensities loaded into
+        memory and:
         1) Pixel (pix) coordinates are formated as a numpy array based on shape
            of sonar chunk.  Coordinates are filtered to aid computation efficiency.
         2) Geographic, or destination (dst), coordinates for the smoothed trackline
@@ -849,12 +849,10 @@ class rectObj(sonObj):
         # Prepare initial variables
         ## Variables for water column removal and slant range corrected imagery
         if remWater == True:
-            imgInPrefix = 'src'
             imgOutPrefix = 'rect_src'
             tileFlag = self.src #Indicates if non-rectified src images were exported
         ## Variables for water column present imagery
         else:
-            imgInPrefix = 'wcp'
             imgOutPrefix = 'rect_wcp'
             tileFlag = self.wcp #Indicates if non-rectified wcp images were exported
 
@@ -870,14 +868,8 @@ class rectObj(sonObj):
         except:
             pass
 
-        # Locate and open smoothed trackline/range extent file
+        # Get trackline/range extent file path
         trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
-        trkMeta = pd.read_csv(trkMetaFile)
-
-        # Determine what chunks to process
-        chunks = pd.unique(trkMeta['chunk_id']) # Store chunk values in list
-        # chunks = chunks[72:73] # For troubleshooting and subsetting chunks to process
-        firstChunk = min(chunks) # Find first chunk
 
         # What coordinates should be used?
         ## Use WGS 1984 coordinates and set variables as needed
@@ -895,198 +887,468 @@ class rectObj(sonObj):
             xTrk = 'trk_utm_es'
             yTrk = 'trk_utm_ns'
 
-        # If non-rectified imagery were previously exported, we can rectify those
-        ## images directly without having to reopen .SON/.IDX files
-        if tileFlag:
-            allImgs = sorted(glob(os.path.join(self.outDir, imgInPrefix,"*"+imgInPrefix+"*"))) #List of imgs to rectify
-            allImgsDict = defaultdict() # Dictionary to store {chunk: path to output image}
-            for img in allImgs:
-                imgName=os.path.basename(img).split('.')[0] # Get image name
-                chunk=int(imgName.split('_')[-1]) # Get chunk id
-                allImgsDict[chunk] = img # Add chunk:path to output image
-
-            # Verify that each exported non-rectified image has associate smoothed
-            ## trackline and range extent coordinates
-            inImgs = {c: allImgsDict[c] for c in chunks}
-
-        # Non-rectified images not previously exported so we need to handle creation
-        ## of inImgs differently.
+        # Determine leading zeros to match naming convention
+        if chunk < 10:
+            addZero = '0000'
+        elif chunk < 100:
+            addZero = '000'
+        elif chunk < 1000:
+            addZero = '00'
+        elif chunk < 10000:
+            addZero = '0'
         else:
-            inImgs = defaultdict() # Initialize inImgs dictionary
-            # Determine leading zeros to match naming convention
-            for chunk in chunks:
-                if chunk < 10:
-                    addZero = '0000'
-                elif chunk < 100:
-                    addZero = '000'
-                elif chunk < 1000:
-                    addZero = '00'
-                elif chunk < 10000:
-                    addZero = '0'
-                else:
-                    addZero = ''
+            addZero = ''
 
-                projName = os.path.split(self.projDir)[-1] # Get project name
-                beamName = self.beamName # Determine which sonar beam we are working with
-                imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png' # Create output image name
+        projName = os.path.split(self.projDir)[-1] # Get project name
+        beamName = self.beamName # Determine which sonar beam we are working with
+        imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
 
-                inImgs[int(chunk)] = os.path.join(self.outDir, imgName) # Store {chunk: path to output image}
+        gtiff = os.path.join(outDir, imgName) # Output file name
 
-        # Iterate chunk/image path and rectify
-        for i, imgPath in inImgs.items():
-            # Following workflow adapted from scikit-image:
-            # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
+        # Following workflow adapted from scikit-image:
+        # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
 
-            #################################
-            # Prepare pixel (pix) coordinates
-            ## Pix coordinates describe the size of the coordinates in pixel
-            ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
+        #################################
+        # Prepare pixel (pix) coordinates
+        ## Pix coordinates describe the size of the coordinates in pixel
+        ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
-            # Open image to rectify
-            if tileFlag: # Open non-rectified image as numpy array
-                img = np.asarray(Image.open(imgPath)).copy()
-            else: # Load ping return values from .SON/.IDX file
-                self._getScanChunkSingle(i, remWater)
-                img = self.sonDat
-            img[0]=0 # To fix extra white on curves
+        # Open image to rectify
+        # if tileFlag: # Open non-rectified image as numpy array
+        #     img = np.asarray(Image.open(imgPath)).copy()
+        # else: # Load ping return values from .SON/.IDX file
+        self._getScanChunkSingle(chunk, remWater)
+        img = self.sonDat
+        img[0]=0 # To fix extra white on curves
 
-            # For each sonar record, we need the pixel coordinates where the sonar
-            ## originates on the trackline, and where it terminates based on the
-            ## range of the sonar record.  This results in an array of coordinate
-            ## pairs that describe the edge of the non-rectified image tile.
-            rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
-            pix_cols = np.arange(0, cols) # Create array of column indices
-            pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
-            pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
-            pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
+        # For each sonar record, we need the pixel coordinates where the sonar
+        ## originates on the trackline, and where it terminates based on the
+        ## range of the sonar record.  This results in an array of coordinate
+        ## pairs that describe the edge of the non-rectified image tile.
+        rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
+        pix_cols = np.arange(0, cols) # Create array of column indices
+        pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
+        pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
+        pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
 
-            # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
-            ## more efficient
-            mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
-            mask[0::filt] = 1 # Filter row coordinates
-            mask[1::filt] = 1 # Filter column coordinates
-            mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
+        # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
+        ## more efficient
+        mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
+        mask[0::filt] = 1 # Filter row coordinates
+        mask[1::filt] = 1 # Filter column coordinates
+        mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
 
-            # Filter pix
-            pix = pixAll[mask]
+        # Filter pix
+        pix = pixAll[mask]
 
-            #######################################
-            # Prepare destination (dst) coordinates
-            ## Destination coordinates describe the geographic location in lat/lon
-            ## or easting/northing that directly map to the pix coordinates.
+        #######################################
+        # Prepare destination (dst) coordinates
+        ## Destination coordinates describe the geographic location in lat/lon
+        ## or easting/northing that directly map to the pix coordinates.
 
-            # Open smoothed trackline/range extent file
-            trkMeta = pd.read_csv(trkMetaFile)
-            trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index(drop=False) # Filter df by chunk_id
-            pix_m = trkMeta['pix_m'].min() # Get pixel size
+        # Open smoothed trackline/range extent file
+        trkMeta = pd.read_csv(trkMetaFile)
+        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        pix_m = trkMeta['pix_m'].min() # Get pixel size
 
-            # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
-            xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
-            xyR = np.vstack((xR, yR)).T # Stack the arrays
+        # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
+        xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
+        xyR = np.vstack((xR, yR)).T # Stack the arrays
 
-            # Get trackline (origin of sonar record) coordinates [xT, yT] to transposed numpy arrays
-            xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
-            xyT = np.vstack((xT, yT)).T # Stack the  arrays
+        # Get trackline (origin of sonar record) coordinates [xT, yT] to transposed numpy arrays
+        xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
+        xyT = np.vstack((xT, yT)).T # Stack the  arrays
 
-            # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
-            ## pattern of pix coordinates
-            dstAll = np.empty([len(xyR)+len(xyT), 2]) # Initialize appropriately sized np array
-            dstAll[0::2] = xyT # Add trackline coordinates
-            dstAll[1::2] = xyR # Add range extent coordinates
+        # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
+        ## pattern of pix coordinates
+        dstAll = np.empty([len(xyR)+len(xyT), 2]) # Initialize appropriately sized np array
+        dstAll[0::2] = xyT # Add trackline coordinates
+        dstAll[1::2] = xyR # Add range extent coordinates
 
-            # Filter dst using previously made mask
-            dst = dstAll[mask]
+        # Filter dst using previously made mask
+        dst = dstAll[mask]
 
-            ##################
-            # Warp sonar image
-            ## Before applying a geographic projection to the image, the image
-            ## must be warped to conform to the shape specified by the geographic
-            ## coordinates.  We don't want to warp the image to real-world dimensions,
-            ## so we will normalize and rescale the dst coordinates to give the
-            ## top-left coordinate a value of (0,0)
+        ##################
+        # Warp sonar image
+        ## Before applying a geographic projection to the image, the image
+        ## must be warped to conform to the shape specified by the geographic
+        ## coordinates.  We don't want to warp the image to real-world dimensions,
+        ## so we will normalize and rescale the dst coordinates to give the
+        ## top-left coordinate a value of (0,0)
 
-            # Determine min/max for rescaling
-            xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
-            yMin, yMax = dst[:,1].min(), dst[:,1].max() # Min/Max of y coordinates
+        # Determine min/max for rescaling
+        xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
+        yMin, yMax = dst[:,1].min(), dst[:,1].max() # Min/Max of y coordinates
 
-            # Determine output shape dimensions
-            outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
-            outShape=[0,0]
-            # Divide by pixel size to arrive at output shape of warped image
-            outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+        # Determine output shape dimensions
+        outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
+        outShape=[0,0]
+        # Divide by pixel size to arrive at output shape of warped image
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
 
-            # Rescale destination coordinates
-            # X values
-            xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
-            xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
-            dst[:,0] = xScaled # Store rescaled x coordinates
+        # Rescale destination coordinates
+        # X values
+        xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
+        xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
+        dst[:,0] = xScaled # Store rescaled x coordinates
 
-            # Y values
-            yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
-            yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
-            dst[:,1] = yScaled # Store rescaled y coordinates
+        # Y values
+        yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
+        yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
+        dst[:,1] = yScaled # Store rescaled y coordinates
 
-            ########################
-            # Perform transformation
-            # PiecewiseAffineTransform
-            tform = PiecewiseAffineTransform()
-            tform.estimate(pix, dst) # Calculate H matrix
+        ########################
+        # Perform transformation
+        # PiecewiseAffineTransform
+        tform = PiecewiseAffineTransform()
+        tform.estimate(pix, dst) # Calculate H matrix
 
-            # Warp image from the input shape to output shape
-            out = warp(img.T,
-                       tform.inverse,
-                       output_shape=(outShape[1], outShape[0]),
-                       mode='constant',
-                       cval=np.nan,
-                       clip=False,
-                       preserve_range=True)
+        # Warp image from the input shape to output shape
+        out = warp(img.T,
+                   tform.inverse,
+                   output_shape=(outShape[1], outShape[0]),
+                   mode='constant',
+                   cval=np.nan,
+                   clip=False,
+                   preserve_range=True)
 
-            # Rotate 180 and flip
-            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+        # Rotate 180 and flip
+        # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+        out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
 
-            ##############
-            # Save Geotiff
-            ## In order to visualize the warped image in a GIS at the appropriate
-            ## spatial extent, the pixel coordinates of the warped image must be
-            ## mapped to spatial coordinates. This is accomplished by calculating
-            ## the transformation matrix using rasterio.transform.from_origin
+        ##############
+        # Save Geotiff
+        ## In order to visualize the warped image in a GIS at the appropriate
+        ## spatial extent, the pixel coordinates of the warped image must be
+        ## mapped to spatial coordinates. This is accomplished by calculating
+        ## the transformation matrix using rasterio.transform.from_origin
 
-            # First get the min/max values for x,y geospatial coordinates
-            xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
-            yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
+        # First get the min/max values for x,y geospatial coordinates
+        xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
+        yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
-            # Calculate x,y resolution of a single pixel
-            xres = (xMax - xMin) / outShape[0]
-            yres = (yMax - yMin) / outShape[1]
+        # Calculate x,y resolution of a single pixel
+        xres = (xMax - xMin) / outShape[0]
+        yres = (yMax - yMin) / outShape[1]
 
-            # Calculate transformation matrix by providing geographic coordinates
-            ## of upper left corner of the image and the pixel size
-            transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
+        # Calculate transformation matrix by providing geographic coordinates
+        ## of upper left corner of the image and the pixel size
+        transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
-            # Prepare output image name
-            outImg=os.path.basename(inImgs[i]).replace(imgInPrefix, imgOutPrefix)
-            outImg=outImg.replace('png', 'tif')
-            gtiff = os.path.join(outDir, outImg)
-
-            # Export georectified image
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
-                count=1,
-                dtype=out.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw'
-                ) as dst:
-                    dst.nodata=0
-                    dst.write(out,1)
-                    ## Uncomment below code if overviews should be created for each file
-                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
-                    # dst.update_tags(ns='rio_overview', resampling='nearest')
-                    # dst.close()
+        # Export georectified image
+        with rasterio.open(
+            gtiff,
+            'w',
+            driver='GTiff',
+            height=out.shape[0],
+            width=out.shape[1],
+            count=1,
+            dtype=out.dtype,
+            crs=epsg,
+            transform=transform,
+            compress='lzw'
+            ) as dst:
+                dst.nodata=0
+                dst.write(out,1)
+                ## Uncomment below code if overviews should be created for each file
+                # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
+                # dst.update_tags(ns='rio_overview', resampling='nearest')
+                # dst.close()
 
         pass
+
+    #===========================================================================
+    # Deprecated rectSon() workflow
+    # def _rectSon(self,
+    #              remWater=True,
+    #              filt=50,
+    #              wgs=False):
+    #     '''
+    #     This function will georectify sonar tiles with water column present
+    #     (rect_wcp) OR water column removed and slant range corrected (rect_src).
+    #     The function will use non-rectified images if they were previously exported.
+    #     If not, the sonar intensity will be loaded directly from the .SON file.
+    #     Once determined, each chunk will be iterated, sonar intensities loaded
+    #     into memory and:
+    #     1) Pixel (pix) coordinates are formated as a numpy array based on shape
+    #        of sonar chunk.  Coordinates are filtered to aid computation efficiency.
+    #     2) Geographic, or destination (dst), coordinates for the smoothed trackline
+    #        and range extent are loaded from the "Trackline_Smth_BXXX.csv" file and
+    #        formated as a numpy array and filtered as pix.
+    #     3) A Piecewise Affine Transform is used to map pix coordinates to the shape
+    #        of the dst coordinates in order to warp (or rectify) the sonar intensities.
+    #        Warped sonar intensities are stored in a new numpy array.
+    #     4) The warped array is then mapped to geographic coordinates using a
+    #        transformation matrix and exported as a geotiff.
+    #
+    #     ----------
+    #     Parameters
+    #     ----------
+    #     remWater : bool
+    #         DESCRIPTION - Flag indicating if wcp [False] or pix [True] imagery.
+    #     filt : int
+    #         DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+    #     wgs : bool
+    #         DESCRIPTION - Flag indicating if sonar images should be rectified using
+    #                       WGS 1984 coordinate system [True] or UTM state plane [False]
+    #
+    #     ----------------------------
+    #     Required Pre-processing step
+    #     ----------------------------
+    #     self._getRangeCoords()
+    #
+    #     -------
+    #     Returns
+    #     -------
+    #     Georectified geotiffs
+    #
+    #     --------------------
+    #     Next Processing Step
+    #     --------------------
+    #     NA
+    #     '''
+    #
+    #     # Prepare initial variables
+    #     ## Variables for water column removal and slant range corrected imagery
+    #     if remWater == True:
+    #         imgInPrefix = 'src'
+    #         imgOutPrefix = 'rect_src'
+    #         tileFlag = self.src #Indicates if non-rectified src images were exported
+    #     ## Variables for water column present imagery
+    #     else:
+    #         imgInPrefix = 'wcp'
+    #         imgOutPrefix = 'rect_wcp'
+    #         tileFlag = self.wcp #Indicates if non-rectified wcp images were exported
+    #
+    #     # Create output directory if it doesn't exist
+    #     outDir = self.outDir # Parent directory
+    #     try:
+    #         os.mkdir(outDir)
+    #     except:
+    #         pass
+    #     outDir = os.path.join(outDir, imgOutPrefix) # Sub-directory
+    #     try:
+    #         os.mkdir(outDir)
+    #     except:
+    #         pass
+    #
+    #     # Locate and open smoothed trackline/range extent file
+    #     trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+    #     trkMeta = pd.read_csv(trkMetaFile)
+    #
+    #     # Determine what chunks to process
+    #     chunks = pd.unique(trkMeta['chunk_id']) # Store chunk values in list
+    #     # chunks = chunks[72:73] # For troubleshooting and subsetting chunks to process
+    #     firstChunk = min(chunks) # Find first chunk
+    #
+    #     # What coordinates should be used?
+    #     ## Use WGS 1984 coordinates and set variables as needed
+    #     if wgs is True:
+    #         epsg = self.humDat['wgs']
+    #         xRange = 'range_lons'
+    #         yRange = 'range_lats'
+    #         xTrk = 'trk_lons'
+    #         yTrk = 'trk_lats'
+    #     ## Use projected coordinates and set variables as needed
+    #     else:
+    #         epsg = self.humDat['epsg']
+    #         xRange = 'range_es'
+    #         yRange = 'range_ns'
+    #         xTrk = 'trk_utm_es'
+    #         yTrk = 'trk_utm_ns'
+    #
+    #     # If non-rectified imagery were previously exported, we can rectify those
+    #     ## images directly without having to reopen .SON/.IDX files
+    #     if tileFlag:
+    #         allImgs = sorted(glob(os.path.join(self.outDir, imgInPrefix,"*"+imgInPrefix+"*"))) #List of imgs to rectify
+    #         allImgsDict = defaultdict() # Dictionary to store {chunk: path to output image}
+    #         for img in allImgs:
+    #             imgName=os.path.basename(img).split('.')[0] # Get image name
+    #             chunk=int(imgName.split('_')[-1]) # Get chunk id
+    #             allImgsDict[chunk] = img # Add chunk:path to output image
+    #
+    #         # Verify that each exported non-rectified image has associate smoothed
+    #         ## trackline and range extent coordinates
+    #         inImgs = {c: allImgsDict[c] for c in chunks}
+    #
+    #     # Non-rectified images not previously exported so we need to handle creation
+    #     ## of inImgs differently.
+    #     else:
+    #         inImgs = defaultdict() # Initialize inImgs dictionary
+    #         # Determine leading zeros to match naming convention
+    #         for chunk in chunks:
+    #             if chunk < 10:
+    #                 addZero = '0000'
+    #             elif chunk < 100:
+    #                 addZero = '000'
+    #             elif chunk < 1000:
+    #                 addZero = '00'
+    #             elif chunk < 10000:
+    #                 addZero = '0'
+    #             else:
+    #                 addZero = ''
+    #
+    #             projName = os.path.split(self.projDir)[-1] # Get project name
+    #             beamName = self.beamName # Determine which sonar beam we are working with
+    #             imgName = projName+'_'+imgInPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.png' # Create output image name
+    #
+    #             inImgs[int(chunk)] = os.path.join(self.outDir, imgName) # Store {chunk: path to output image}
+    #
+    #     # Iterate chunk/image path and rectify
+    #     for i, imgPath in inImgs.items():
+    #         # Following workflow adapted from scikit-image:
+    #         # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
+    #
+    #         #################################
+    #         # Prepare pixel (pix) coordinates
+    #         ## Pix coordinates describe the size of the coordinates in pixel
+    #         ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
+    #
+    #         # Open image to rectify
+    #         if tileFlag: # Open non-rectified image as numpy array
+    #             img = np.asarray(Image.open(imgPath)).copy()
+    #         else: # Load ping return values from .SON/.IDX file
+    #             self._getScanChunkSingle(i, remWater)
+    #             img = self.sonDat
+    #         img[0]=0 # To fix extra white on curves
+    #
+    #         # For each sonar record, we need the pixel coordinates where the sonar
+    #         ## originates on the trackline, and where it terminates based on the
+    #         ## range of the sonar record.  This results in an array of coordinate
+    #         ## pairs that describe the edge of the non-rectified image tile.
+    #         rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
+    #         pix_cols = np.arange(0, cols) # Create array of column indices
+    #         pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
+    #         pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
+    #         pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
+    #
+    #         # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
+    #         ## more efficient
+    #         mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
+    #         mask[0::filt] = 1 # Filter row coordinates
+    #         mask[1::filt] = 1 # Filter column coordinates
+    #         mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
+    #
+    #         # Filter pix
+    #         pix = pixAll[mask]
+    #
+    #         #######################################
+    #         # Prepare destination (dst) coordinates
+    #         ## Destination coordinates describe the geographic location in lat/lon
+    #         ## or easting/northing that directly map to the pix coordinates.
+    #
+    #         # Open smoothed trackline/range extent file
+    #         trkMeta = pd.read_csv(trkMetaFile)
+    #         trkMeta = trkMeta[trkMeta['chunk_id']==i].reset_index(drop=False) # Filter df by chunk_id
+    #         pix_m = trkMeta['pix_m'].min() # Get pixel size
+    #
+    #         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
+    #         xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
+    #         xyR = np.vstack((xR, yR)).T # Stack the arrays
+    #
+    #         # Get trackline (origin of sonar record) coordinates [xT, yT] to transposed numpy arrays
+    #         xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
+    #         xyT = np.vstack((xT, yT)).T # Stack the  arrays
+    #
+    #         # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
+    #         ## pattern of pix coordinates
+    #         dstAll = np.empty([len(xyR)+len(xyT), 2]) # Initialize appropriately sized np array
+    #         dstAll[0::2] = xyT # Add trackline coordinates
+    #         dstAll[1::2] = xyR # Add range extent coordinates
+    #
+    #         # Filter dst using previously made mask
+    #         dst = dstAll[mask]
+    #
+    #         ##################
+    #         # Warp sonar image
+    #         ## Before applying a geographic projection to the image, the image
+    #         ## must be warped to conform to the shape specified by the geographic
+    #         ## coordinates.  We don't want to warp the image to real-world dimensions,
+    #         ## so we will normalize and rescale the dst coordinates to give the
+    #         ## top-left coordinate a value of (0,0)
+    #
+    #         # Determine min/max for rescaling
+    #         xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
+    #         yMin, yMax = dst[:,1].min(), dst[:,1].max() # Min/Max of y coordinates
+    #
+    #         # Determine output shape dimensions
+    #         outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
+    #         outShape=[0,0]
+    #         # Divide by pixel size to arrive at output shape of warped image
+    #         outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+    #
+    #         # Rescale destination coordinates
+    #         # X values
+    #         xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
+    #         xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
+    #         dst[:,0] = xScaled # Store rescaled x coordinates
+    #
+    #         # Y values
+    #         yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
+    #         yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
+    #         dst[:,1] = yScaled # Store rescaled y coordinates
+    #
+    #         ########################
+    #         # Perform transformation
+    #         # PiecewiseAffineTransform
+    #         tform = PiecewiseAffineTransform()
+    #         tform.estimate(pix, dst) # Calculate H matrix
+    #
+    #         # Warp image from the input shape to output shape
+    #         out = warp(img.T,
+    #                    tform.inverse,
+    #                    output_shape=(outShape[1], outShape[0]),
+    #                    mode='constant',
+    #                    cval=np.nan,
+    #                    clip=False,
+    #                    preserve_range=True)
+    #
+    #         # Rotate 180 and flip
+    #         # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+    #         out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+    #
+    #         ##############
+    #         # Save Geotiff
+    #         ## In order to visualize the warped image in a GIS at the appropriate
+    #         ## spatial extent, the pixel coordinates of the warped image must be
+    #         ## mapped to spatial coordinates. This is accomplished by calculating
+    #         ## the transformation matrix using rasterio.transform.from_origin
+    #
+    #         # First get the min/max values for x,y geospatial coordinates
+    #         xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
+    #         yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
+    #
+    #         # Calculate x,y resolution of a single pixel
+    #         xres = (xMax - xMin) / outShape[0]
+    #         yres = (yMax - yMin) / outShape[1]
+    #
+    #         # Calculate transformation matrix by providing geographic coordinates
+    #         ## of upper left corner of the image and the pixel size
+    #         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
+    #
+    #         # Prepare output image name
+    #         outImg=os.path.basename(inImgs[i]).replace(imgInPrefix, imgOutPrefix)
+    #         outImg=outImg.replace('png', 'tif')
+    #         gtiff = os.path.join(outDir, outImg)
+    #
+    #         # Export georectified image
+    #         with rasterio.open(
+    #             gtiff,
+    #             'w',
+    #             driver='GTiff',
+    #             height=out.shape[0],
+    #             width=out.shape[1],
+    #             count=1,
+    #             dtype=out.dtype,
+    #             crs=epsg,
+    #             transform=transform,
+    #             compress='lzw'
+    #             ) as dst:
+    #                 dst.nodata=0
+    #                 dst.write(out,1)
+    #                 ## Uncomment below code if overviews should be created for each file
+    #                 # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
+    #                 # dst.update_tags(ns='rio_overview', resampling='nearest')
+    #                 # dst.close()
+    #
+    #     pass
