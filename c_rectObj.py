@@ -778,7 +778,6 @@ class rectObj(sonObj):
     def _rectSon(self,
                  remWater=True,
                  filt=50,
-                 adjDep=0,
                  wgs=False):
         '''
         This function will georectify sonar tiles with water column present
@@ -805,10 +804,6 @@ class rectObj(sonObj):
             DESCRIPTION - Flag indicating if wcp [False] or pix [True] imagery.
         filt : int
             DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
-        adjDep : int
-            DESCRIPTION - Number of pixels to increase depth by to help remove
-                          water column pixels and make "cleaner" looking src
-                          imagery.
         wgs : bool
             DESCRIPTION - Flag indicating if sonar images should be rectified using
                           WGS 1984 coordinate system [True] or UTM state plane [False]
