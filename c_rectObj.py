@@ -138,6 +138,16 @@ class rectObj(sonObj):
         if dfOrig is None:
             dfOrig = df.copy()
 
+        # Check for duplicate zU values. If there are duplicate zU values, then
+        ## there will be pings that share smoothed lat/lon coordinates, which will
+        ## result in a COG == 0, messing up rectification.
+        zUvals = dfOrig[zU].to_numpy()
+        u, c = np.unique(zUvals, return_counts=True)
+        if len(u[c > 1]) > 0:
+            dups = True
+        else:
+            dups = False
+
         # Drop duplicate coordinates
         if dropDup is True:
             df.drop_duplicates(subset=[xlon, ylat], inplace=True)
@@ -156,7 +166,13 @@ class rectObj(sonObj):
         # Try smoothing trackline
         x=dfFilt[xlon].to_numpy() # Store longitude coordinates in numpy array
         y=dfFilt[ylat].to_numpy() # Store latitude coordinates in numpy array
-        t=dfFilt[zU].to_numpy() # Store parameter values in numpy array.  Used to space points along spline.
+        if dups is True:
+            # Force unique zU value by multiplying time ellapsed and record number
+            t = dfFilt[zU].to_numpy() * dfFilt['record_num'].to_numpy()
+            u_interp = dfOrig[zU].to_numpy() * dfOrig['record_num'].to_numpy()
+        else:
+            t=dfFilt[zU].to_numpy() # Store parameter values in numpy array.  Used to space points along spline.
+            u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
 
         # Attempt to fix error
         # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
@@ -180,9 +196,15 @@ class rectObj(sonObj):
             t = dfFilt[zU].to_numpy()
             t = np.r_[t[okay], t[-1]]
             tck, _ = splprep([x,y], u=t, k=deg, s=0)
+            u_interp = dfOrig[zU].to_numpy()
 
-        u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
+        # u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
         x_interp = splev(u_interp, tck) # Use u_interp to get smoothed x/y coordinates from spline
+
+        u, indices, c = np.unique(u_interp, return_index= True,return_counts=True)
+        for val in zip(c, u, indices):
+            if val[0] > 1:
+                print(val)
 
         # Store smoothed trackpoints in a dictionary
         smooth = {'chunk_id': dfOrig['chunk_id'],
@@ -854,7 +876,7 @@ class rectObj(sonObj):
 
         # Determine what chunks to process
         chunks = pd.unique(trkMeta['chunk_id']) # Store chunk values in list
-        # chunks = chunks[0:1] # For troubleshooting and subsetting chunks to process
+        # chunks = chunks[72:73] # For troubleshooting and subsetting chunks to process
         firstChunk = min(chunks) # Find first chunk
 
         # What coordinates should be used?
@@ -873,7 +895,7 @@ class rectObj(sonObj):
             xTrk = 'trk_utm_es'
             yTrk = 'trk_utm_ns'
 
-        # If non-rectified imagery were previously esported, we can rectify those
+        # If non-rectified imagery were previously exported, we can rectify those
         ## images directly without having to reopen .SON/.IDX files
         if tileFlag:
             allImgs = sorted(glob(os.path.join(self.outDir, imgInPrefix,"*"+imgInPrefix+"*"))) #List of imgs to rectify
