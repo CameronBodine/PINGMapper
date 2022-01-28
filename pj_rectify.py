@@ -247,21 +247,6 @@ def rectify_master_func(sonFiles,
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
 
-
-    # Below only takes advantage of two threads
-    # if rect_wcp:
-    #     print('Rectifying with Water Column Present...')
-    #     remWater = False
-    #     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
-    #     print("Done!")
-    #
-    # if rect_src:
-    #     print('\nRectifying with Water Column Removed...')
-    #     remWater = True
-    #     Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._rectSon)(remWater, filter, wgs=False) for son in portstar)
-    #     print("Done!")
-
-
     ################################################
 
     if mosaic > 0:
