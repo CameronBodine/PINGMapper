@@ -21,6 +21,12 @@ class rectObj(sonObj):
     self.rangeExt : DataFrame
         DESCRIPTION - Pandas dataframe to store range extent.
 
+    self.rect_src : bool
+        DESCRIPTION - Flag indicating if rectified src data was exported.
+
+    self.rect_wcp : bool
+        DESCRIPTION - Flag indicating if rectified wcp data was exported.
+
     self.smthTrk : DataFrame
         DESCRIPTION - Pandas dataframe to store smoothed trackline.
     '''
@@ -56,6 +62,9 @@ class rectObj(sonObj):
 
         for attr, value in metaFile.__dict__.items(): # Store sonObj() attributes in self
             setattr(self, attr, value)
+
+        self.rect_wcp = False
+        self.rect_src = False
 
         return
 
