@@ -3,10 +3,11 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python
-  - pyproj
-  - scikit-image
-  - joblib
   - pandas
   - rasterio
   - tensorflow
+  - pyproj
+  - scikit-image
+  - python
+  - joblib
+  - gdal
