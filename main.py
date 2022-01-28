@@ -9,7 +9,7 @@ originally developed by Dr. Daniel Buscombe
 https://github.com/dbuscombe-usgs/PyHum
 
 """
- 
+
 from funcs_common import *
 from pj_readFiles import read_master_func
 from pj_rectify import rectify_master_func
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     rect_wcp = True #Export rectified tiles with water column present
     rect_src = True #Export rectified tiles with water column removed/slant range corrected
 
-    mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic
+    mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
     #==================================================
     print('\n===========================================')
