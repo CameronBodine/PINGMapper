@@ -3,9 +3,7 @@ from __future__ import division
 from funcs_common import *
 
 from c_rectObj import rectObj
-
-from rasterio.merge import merge
-import gdal
+from c_portstarObj import portstarObj
 
 #===============================================================================
 def rectify_master_func(sonFiles,
@@ -225,6 +223,7 @@ def rectify_master_func(sonFiles,
         print('Rectifying with Water Column Present...')
         remWater = False
         for son in portstar:
+            son.rect_wcp = True
             # Locate and open smoothed trackline/range extent file
             trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
             trkMeta = pd.read_csv(trkMetaFile)
@@ -238,6 +237,7 @@ def rectify_master_func(sonFiles,
         print('\nRectifying with Water Column Removed...')
         remWater = True
         for son in portstar:
+            son.rect_src = True
             # Locate and open smoothed trackline/range extent file
             trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
             trkMeta = pd.read_csv(trkMetaFile)
@@ -247,4 +247,20 @@ def rectify_master_func(sonFiles,
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
 
-    ################################################
+    if rect_wcp or rect_src:
+        for son in portstar:
+            del son.sonMetaDF
+            del son.smthTrk
+    print("Done!")
+
+    ############################################################################
+    # Mosaic imagery                                                           #
+    ############################################################################
+    for son in portstar:
+        son.rect_wcp = True
+    overview = True
+    if mosaic > 0:
+        print("\nMosaicing GeoTiffs...")
+        psObj = portstarObj(portstar)
+        psObj._createMosaic(mosaic, overview)
+        print("Done!")
