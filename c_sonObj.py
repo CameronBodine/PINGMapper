@@ -1214,9 +1214,6 @@ class sonObj(object):
                 self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 self._writeTiles(i, imgOutPrefix='src') # Save image
 
-            self._correctScan(sonMeta)
-            sys.exit()
-
             i+=1
 
         return self
@@ -2016,70 +2013,3 @@ class sonObj(object):
             output += '\n\t'
             output += "{} : {}".format(item, temp[item])
         return output
-
-    ############################################################################
-    # Corrections                                                              #
-    ############################################################################
-
-    # ======================================================================
-    def _correctScan(self, sonMeta):
-        # Transmission loss due to suspended sediment
-        alpha = 0
-
-        sonDat = self.sonDat
-        range, angle = self._getRangeAngle(sonMeta)
-
-        # Determine attenuation due to water
-        alpha_w = self._calcWaterAtten(range, sonMeta)
-
-        # compute transmission losses
-        TL = (40 * np.log10(range) + alpha_w + (2*alpha)*range/1000)#/255
-        TL[np.isnan(TL)] = 0
-        TL[TL<0] = 0
-        print(TL)
-
-        return self
-
-    # ======================================================================
-    def _getRangeAngle(self, sonMeta):
-        # Get necessary parameters
-        sonMetaDF = sonMeta
-        d = sonMetaDF['dep_m']
-        pix_m = sonMetaDF['pix_m'][0]
-
-        # Number of returns across track
-        extent = self.sonDat.shape[0]
-        yvec = np.linspace(pix_m, extent*pix_m, extent)
-
-        r = np.ones(np.shape(self.sonDat)) # Store range to each pixel
-        a = np.ones(np.shape(self.sonDat)) # Store incidence angle to each pixel
-
-        for k in range(len(d)):
-            r[:,[k]] = np.expand_dims(np.sqrt(yvec**2 - d[k]**2), axis=1)
-            a[:,[k]] = np.expand_dims(d[k]/yvec, axis=1)
-
-        a = np.pi/2 - np.arctan(a)
-
-        r[np.isnan(r)]=0
-        return r, a
-
-    # ======================================================================
-    def _calcWaterAtten(self, H, sonMeta):
-        f = sonMeta['f'][0]
-        c = self.c
-        pH = self.pH
-        T = self.tempC*10
-        S = self.S
-
-        H = np.abs(H)
-        P1 = 1 # cosntant
-        A1 = (8.86/c)*(10**(0.78*pH - 5))
-        f1 = 2.8*(S/35)**0.5 * 10**(4 - 1245/(T + 273))
-        A2 = 21.44*(S/c)*(1 + 0.025*T)
-        A3 = (4.937 *10**-4) - (2.59 * 10**-5)*T + (9.11* 10**-7)*T**2- (1.5 * 10**-8)*T**3
-        f2 = (8.17 * 10**(8 - 1990/(T + 273))) / (1 + 0.0018*(S - 35))
-        P2= 1 - (1.37*10**-4) * H + (6.2 * 10**-9)* H**2
-        P3 = 1 - (3.83 * 10**-5)*H + (4.9 *10**(-10) )* H**2
-        # absorption sound water dB/km
-        alphaw = ( (A1*P1*f1*f**2)/(f**2 + f1**2) ) + ( (A2*P2*f2*f**2)/(f**2 + f2**2) ) + (A3*P3*f**2)
-        return 2*(alphaw/1000)*H # depth(m) * dB/m = dB
