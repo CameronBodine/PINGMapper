@@ -2032,13 +2032,15 @@ class sonObj(object):
         Dan Buscombe implemented in PyHum:
         https://github.com/dbuscombe-usgs/PyHum
         '''
-        im = self.sonDat
+        im = self.sonDat.astype('float64')
+        im = standardize(im, 0, 1)
+        im = im*1e4
 
         # Populate needed parameters
         n = 2
         eps = 2.2204e-16
         rows, cols = np.shape(im)
-        wavelength = cols/4
+        wavelength = cols/2
 
         IM = np.fft.fft2(im)
 
