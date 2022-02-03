@@ -2075,15 +2075,15 @@ class sonObj(object):
         E = np.sqrt(f*f + h1f*h1f + h2f*h2f)
         res = np.sin(ph)*np.log1p(E)
 
+        res = standardize(res, 0, 1)
 
+        # # Try median filter
+        # avg = np.nanmedian(res, axis=0)
+        # res = res-avg + np.nanmean(avg)
+        # res = res + np.abs(np.nanmin(avg))
+        # res = median(res, square(3))
 
-        # Try median filter
-        avg = np.nanmedian(res, axis=0)
-        res = res-avg + np.nanmean(avg)
-        res = res + np.abs(np.nanmin(avg))
-        res = median(res, square(3))
-
-        res = denoise_tv_chambolle(res, weight=0.2, multichannel=False)
+        res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
 
         # Try standardizing and rescaling
         res = standardize(res, 0, 255)
