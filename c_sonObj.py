@@ -115,7 +115,8 @@ class sonObj(object):
                  humFile,
                  projDir,
                  tempC=0.1,
-                 nchunk=500):
+                 nchunk=500,
+                 pH=8.0):
         '''
         Initialize a sonObj instance.
 
@@ -151,6 +152,7 @@ class sonObj(object):
         self.humFile = humFile      # DAT file path
         self.tempC = tempC          # Water temperature
         self.nchunk = nchunk        # Number of sonar records per chunk
+        self.pH = pH
 
         return
 
@@ -340,10 +342,11 @@ class sonObj(object):
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35)
 
         # Calculate time varying gain
-        tvg = ((8.5*10**-5)+(3/76923)+((8.5*10**-5)/4))*c
-        humDat['tvg'] = tvg
-        humDat['nchunk'] = self.nchunk
+        self.tvg = ((8.5*10**-5)+(3/76923)+((8.5*10**-5)/4))*c
+        self.c = c
+        self.S = S
 
+        humDat['nchunk'] = self.nchunk
         self.humDat = humDat # Store data in class attribute for later use
 
         return
@@ -1202,12 +1205,15 @@ class sonObj(object):
             self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
             # Load chunk's sonar data into memory
             self._loadSonChunk()
+            # self._doPPDRC()
             # Export water column present (wcp) image
             if self.wcp:
+                # self._doPPDRC()
                 self._writeTiles(i, imgOutPrefix='wcp') # Save image
             # Export slant range corrected (water column removed) imagery
             if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+                # self._doPPDRC()
                 self._writeTiles(i, imgOutPrefix='src') # Save image
 
             i+=1
@@ -1981,6 +1987,7 @@ class sonObj(object):
         self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
         # Load chunk's sonar data into memory
         self._loadSonChunk()
+        self._doPPDRC()
         # Remove water if exporting src imagery
         if remWater:
             self._SRC(sonMeta)
@@ -2009,3 +2016,80 @@ class sonObj(object):
             output += '\n\t'
             output += "{} : {}".format(item, temp[item])
         return output
+
+    ############################################################################
+    # Corrections                                                              #
+    ############################################################################
+
+    # ======================================================================
+    def _doPPDRC(self):
+        '''
+        Reference:
+        Peter Kovesi, "Phase Preserving Tone Mapping of Non-Photographic High Dynamic
+        Range Images".  Proceedings: Digital Image Computing: Techniques and
+        Applications 2012 (DICTA 2012). Available via IEEE Xplore
+
+        Dan Buscombe translated from matlab code posted on:
+        http://www.csse.uwa.edu.au/~pk/research/matlabfns/PhaseCongruency/
+
+        Dan Buscombe implemented in PyHum:
+        https://github.com/dbuscombe-usgs/PyHum
+        '''
+        im = self.sonDat.astype('float64')
+        im = standardize(im, 0, 1)
+        im = im*1e4
+
+        # Populate needed parameters
+        n = 2
+        eps = 2.2204e-16
+        rows, cols = np.shape(im)
+        wavelength = cols/2
+
+        IM = np.fft.fft2(im)
+
+        # Generate horizontal and vertical frequency grids that vary from
+        # -0.5 to 0.5
+        u1, u2 = np.meshgrid((np.r_[0:cols]-(np.fix(cols/2)+1))/(cols-np.mod(cols,2)),(np.r_[0:rows]-(np.fix(rows/2)+1))/(rows-np.mod(rows,2)))
+
+        u1 = np.fft.ifftshift(u1)   # Quadrant shift to put 0 frequency at the corners
+        u2 = np.fft.ifftshift(u2)
+
+        radius = np.sqrt(u1*u1 + u2*u2)
+        # Matrix values contain frequency values as a radius from centre (but quadrant shifted)
+
+        # Get rid of the 0 radius value in the middle (at top left corner after
+        # fftshifting) so that dividing by the radius, will not cause trouble.
+        radius[1,1] = 1
+
+        H1 = 1j*u1/radius   # The two monogenic filters in the frequency domain
+        H2 = 1j*u2/radius
+        H1[1,1] = 0
+        H2[1,1] = 0
+        radius[1,1] = 0  # undo fudge
+
+        # High pass Butterworth filter
+        H =  1.0 - 1.0 / (1.0 + (radius * wavelength)**(2*n))
+
+        f = np.real(np.fft.ifft2(H*IM))
+        h1f = np.real(np.fft.ifft2(H*H1*IM))
+        h2f = np.real(np.fft.ifft2(H*H2*IM))
+
+        ph = np.arctan(f/np.sqrt(h1f*h1f + h2f*h2f + eps))
+        E = np.sqrt(f*f + h1f*h1f + h2f*h2f)
+        res = np.sin(ph)*np.log1p(E)
+
+        res = standardize(res, 0, 1)
+
+        # # Try median filter
+        # avg = np.nanmedian(res, axis=0)
+        # res = res-avg + np.nanmean(avg)
+        # res = res + np.abs(np.nanmin(avg))
+        # res = median(res, square(3))
+
+        res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
+        
+        # Try standardizing and rescaling
+        res = standardize(res, 0, 255)
+
+        self.sonDat = res
+        return self

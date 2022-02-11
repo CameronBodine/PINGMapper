@@ -15,7 +15,7 @@ import tensorflow.keras.backend as K
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 #===============================================================================
-def standardize(img):
+def standardize(img, mn, mx, stack1d=False):
     '''
     Helper function to standardize an image
     '''
@@ -24,10 +24,10 @@ def standardize(img):
     s = np.maximum(np.std(img), 1.0/np.sqrt(N))
     m = np.mean(img)
     img = (img - m) / s
-    img = rescale(img, 0, 1)
+    img = rescale(img, mn, mx)
     del m, s, N
 
-    if np.ndim(img)!=3:
+    if (np.ndim(img)!=3) & stack1d:
         img = np.dstack((img,img,img))
 
     return img

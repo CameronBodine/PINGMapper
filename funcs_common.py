@@ -29,6 +29,9 @@ from copy import deepcopy
 import pickle
 import shutil
 
+from skimage.filters import median
+from skimage.morphology import square
+
 # =========================================================
 # Keep
 def norm_shape(shap):
