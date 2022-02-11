@@ -31,7 +31,6 @@ import shutil
 
 from skimage.filters import median
 from skimage.morphology import square
-from skimage.restoration import denoise_tv_chambolle
 
 # =========================================================
 # Keep

@@ -2087,7 +2087,7 @@ class sonObj(object):
         # res = median(res, square(3))
 
         res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
-
+        
         # Try standardizing and rescaling
         res = standardize(res, 0, 255)
 
