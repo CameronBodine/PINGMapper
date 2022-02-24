@@ -6,5 +6,7 @@ main_single.py
 main_batch.py
 main_batchFolder.py
 rectify_test_affine.py
+models/bedpick/Old
+models/bedpick/Zheng2021/old
 
 !procData/OutputsHere.txt
