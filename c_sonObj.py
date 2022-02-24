@@ -1987,7 +1987,7 @@ class sonObj(object):
         self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
         # Load chunk's sonar data into memory
         self._loadSonChunk()
-        self._doPPDRC()
+        # self._doPPDRC()
         # Remove water if exporting src imagery
         if remWater:
             self._SRC(sonMeta)
@@ -2085,9 +2085,9 @@ class sonObj(object):
         # res = res-avg + np.nanmean(avg)
         # res = res + np.abs(np.nanmin(avg))
         # res = median(res, square(3))
+        #
+        # res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
 
-        res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
-        
         # Try standardizing and rescaling
         res = standardize(res, 0, 255)
 
