@@ -1,13 +1,13 @@
-name: ping-tf
+name: ping
 channels:
   - defaults
   - conda-forge
 dependencies:
+  - python
   - pandas
   - rasterio
   - tensorflow
   - pyproj
   - scikit-image
-  - python
   - joblib
   - gdal
