@@ -2,6 +2,7 @@
 
 from funcs_common import *
 from c_sonObj import sonObj
+from c_portstarObj import portstarObj
 from joblib import delayed
 import time
 from scipy.signal import savgol_filter
@@ -379,6 +380,55 @@ def read_master_func(sonFiles,
     # For Automatic Depth Detection                                            #
     ############################################################################
 
+    if detectDep > 0:
+        # Determine which sonObj is port/star
+        portstar = []
+        for son in sonObjs:
+            beam = son.beamName
+            if beam == "ss_port" or beam == "ss_star":
+                portstar.append(son)
+
+        # Load one beam's sonar metadata
+        portstar[0]._loadSonMeta()
+        sonMetaDF =portstar[0].sonMetaDF
+
+        # Determine what chunks to process
+        chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
+        print('\n\nAutomatically calculating depth for ', len(chunks), 'chunks:')
+        del sonMetaDF
+
+        # Create portstarObj
+        psObj = portstarObj(portstar)
+
+        # Load model if necessary
+        if detectDep == 1:
+            print('\n\tUsing Zheng et al. 2021 method. Loading model...')
+            psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_crop_Thelio.h5'
+            psObj.configfile = psObj.weights.replace('.h5', '.json')
+            psObj._initModel()
+
+        for chunk in chunks:
+            psObj._detectDepth(detectDep, int(chunk))
+
+        # psObj._detectDepth(detectDep, int(chunks[0]))
+        # print(psObj.portDepDetect)
+
+        # make parallel later.... doesn't work (??)....
+        # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
+
+        # Save detected depth to csv
+        psObj._saveDepth(chunks)
+
+        if pltBedPick:
+            try:
+                Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk)) for chunk in chunks)
+            except:
+                print("\n\nParallel didn't work. Processing each chunk seperately...")
+                for chunk in chunks:
+                    psObj._plotBedPick(chunk)
+
+
+        sys.exit()
 
 
 

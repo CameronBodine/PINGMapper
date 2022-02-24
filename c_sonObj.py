@@ -7,9 +7,9 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 from skimage.measure import label, regionprops
 from skimage.io import imsave
 
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('agg')
+# import matplotlib.pyplot as plt
 
 class sonObj(object):
     '''
@@ -1395,7 +1395,8 @@ class sonObj(object):
     # ======================================================================
     def _getScanChunkSingle(self,
                             chunk,
-                            remWater):
+                            filter = False,
+                            remWater = False):
         '''
         During rectification, if non-rectified tiles have not been exported,
         this will load the chunk's scan data from the sonar recording.
@@ -1439,7 +1440,9 @@ class sonObj(object):
         self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
         # Load chunk's sonar data into memory
         self._loadSonChunk()
-        self._doPPDRC()
+        # Do PPDRC filter
+        if filter:
+            self._doPPDRC()
         # Remove water if exporting src imagery
         if remWater:
             self._SRC(sonMeta)
