@@ -15,7 +15,7 @@ import tensorflow.keras.backend as K
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 #===============================================================================
-def standardize(img, mn, mx, stack1d=False):
+def standardize(img, mn=0, mx=1, stack1d=False):
     '''
     Helper function to standardize an image
     '''
