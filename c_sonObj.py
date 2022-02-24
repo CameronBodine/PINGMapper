@@ -1484,7 +1484,8 @@ class sonObj(object):
         pix_buf = 50 # Buffer size around min/max Humminbird depth
 
         img = self.sonDat # Get sonar intensities
-        img = standardize(img)[:,:,0].squeeze() # Standardize and rescale
+        # img = standardize(img)[:,:,0].squeeze() # Standardize and rescale
+        img = standardize(img)[:,:].squeeze() # Standardize and rescale
         W, H = img.shape[1], img.shape[0] # Determine array dimensions
 
         ##################################
