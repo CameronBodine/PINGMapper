@@ -9,19 +9,19 @@ Python interface for reading, processing, and mapping side scan sonar data from 
 
 4. Smooth and interpolate GPS track points.
 
-5. (Optional) Export georectified wcp (spatially inaccurate due to presence of water column) AND/OR scr sonar imagery for use in GIS.
+5. (Optional) Export georectified WCP (water column present) (spatially inaccurate due to presence of water column) AND/OR SRC (slant range corrected) sonar imagery for use in GIS.
 
 6. (Optional) Mosaic georectified sonar imagery from step 5.
 
 ## Workflows in the Pipeline
-1. Automatic depth detection
+1. Automatic depth detection (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945))
 2. Imagery corrections (radiometric, attenuation, etc.)
 3. Automatic substrate classification
 4. GUI front-end, either as standalone software, or QGIS plugin
 5. So much more...
 
 ## Installation
-1. Install [Anaconda](https://www.anaconda.com) or Miniconda (https://docs.conda.io/en/latest/miniconda.html).
+1. Install [Anaconda](https://www.anaconda.com) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 2. Open Anaconda Prompt and navigate to where you would like to save PING Mapper.
 
@@ -49,7 +49,7 @@ python main.py
 
 2. Open `main.py` in a text editor/IDE (I use [Atom](https://atom.io/)).
 
-3. Update lines 30-32 with path's to your data and your chosen output directory:
+3. Update lines 28-30 with path's to your data and your chosen output directory:
 ```
 humFile = "C:/user/Cam/myHumDat.DAT"
 sonPath = "C:/user/Cam/myHumDat"
@@ -61,25 +61,25 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
 - (Single forward slash): `humFile = “C:/Users/dwhealdo/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
-4. Line 47: Update temperature `t=10` with average temperature during scan.
+4. Line 32: Update temperature `t=10` with average temperature during scan.
 
-5. Line 48: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
+5. Line 33: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-6. Line 49: Option to export unknown sonar record metadata fields.
+6. Line 34: Option to export unknown sonar record metadata fields.
 
-7. Line 50-51: Export un-rectified sonar tiles with water column present AND/OR water column removed.
+7. Line 35-36: Export un-rectified sonar tiles with water column present AND/OR water column removed.
 
-8. Line 52: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).
+8. Line 37: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).  NOTE: this will soon be updated with a new method, stay tuned...
 
-9. Line 54: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+9. Line 39: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
-10. Line 55: Additional depth adjustment in number of pixels for water column removal.
+10. Line 40: Additional depth adjustment in number of pixels for water column removal.
 
-11. Line 56: Plot bedick(s) on non-rectified sonogram for visual inspection.
+11. Line 41: Plot bedick(s) on non-rectified sonogram for visual inspection.
 
-12. Line 58-59: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+12. Line 43-44: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
 
-13. Line 61: Option to mosaic georectified sonar imagery (exported from step 12).
+13. Line 46: Option to mosaic georectified sonar imagery (exported from step 12).
 
 14. Save the file.
 
