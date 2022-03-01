@@ -156,30 +156,6 @@ class portstarObj(object):
         return portBed, starBed
 
     #=======================================================================
-    def _findBed_orig(self, segArr):
-        '''
-        Find bed location in pixels
-        '''
-        # Find center of array
-        H, W = segArr.shape[0], segArr.shape[1] # height (row), width (column)
-        C = int(W/2) # center of array
-
-        # Find bed location
-        portBed = []
-        starBed = []
-        for k in range(H):
-            pB = np.where(segArr[k, 0:C]==1)[0][-1]
-            # pB = np.min(np.where(segArr[k, 0:C]==0)[0])
-            portBed.append(C-pB)
-
-            sB = np.where(segArr[k, C:]==1)[0][0]
-            # sB = np.max(np.where(segArr[k, C:]==0)[0])
-            starBed.append(sB)
-
-        # print(portBed)
-        return portBed, starBed
-
-    #=======================================================================
     def _initModel(self):
         '''
 
