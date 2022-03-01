@@ -403,15 +403,14 @@ def read_master_func(sonFiles,
         # Load model if necessary
         if detectDep == 1:
             print('\n\tUsing Zheng et al. 2021 method. Loading model...')
-            psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_crop_Thelio.h5'
+            psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             psObj._initModel()
 
         for chunk in chunks:
             psObj._detectDepth(detectDep, int(chunk))
 
-        # psObj._detectDepth(detectDep, int(chunks[0]))
-        # print(psObj.portDepDetect)
+        # psObj._detectDepth(detectDep, int(chunks[216]))
 
         # make parallel later.... doesn't work (??)....
         # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
