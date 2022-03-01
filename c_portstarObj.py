@@ -170,7 +170,18 @@ class portstarObj(object):
         '''
 
         '''
-        # Dictionary to store chunk : np.array(depth estimate)
+        SEED=42
+        np.random.seed(SEED)
+        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+        tf.random.set_seed(SEED)
+
+        print("Version: ", tf.__version__)
+        print("Eager mode: ", tf.executing_eagerly())
+        print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
+        print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+
+        #Dictionary to store chunk : np.array(depth estimate)
         self.portDepDetect = {}
         self.starDepDetect = {}
 
@@ -289,6 +300,7 @@ class portstarObj(object):
         N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
         W = TARGET_SIZE[1] # Width of model output prediction
         Wp = np.add(portDepPix, starDepPix) # Width of water column estimate
+        del portDepPix, starDepPix
 
         # Determine amount of WC to crop (Wwc)
         if (W < (np.max(Wp)+np.min(Wp)) ):
@@ -318,6 +330,7 @@ class portstarObj(object):
         ## Concatenate port & star crop
         sonCrop = np.concatenate((portCrop, starCrop), axis = 1)
         sonCrop = sonCrop.astype(np.uint8)
+        del portCrop, starCrop
 
         #######################
         # Segment cropped image
@@ -347,6 +360,7 @@ class portstarObj(object):
         # Store depth detections
         self.portDepDetect[i] = portDepPixCrop
         self.starDepDetect[i] = starDepPixCrop
+        del portDepPixCrop, starDepPixCrop
 
 
         #*#*#*#*#*#*#*#
@@ -362,6 +376,7 @@ class portstarObj(object):
         # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
         # imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
+        del son3bnd, init_label, crop_label, sonCrop
         return self
 
     #=======================================================================
@@ -489,3 +504,8 @@ class portstarObj(object):
         plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
         plt.close()
+
+    #=======================================================================
+    def _cleanup(self):
+        del self.bedpickModel
+        return

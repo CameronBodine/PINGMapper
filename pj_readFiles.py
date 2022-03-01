@@ -417,17 +417,20 @@ def read_master_func(sonFiles,
 
         # Save detected depth to csv
         psObj._saveDepth(chunks)
+        autoBed = True
 
-        if pltBedPick:
-            try:
-                Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk)) for chunk in chunks)
-            except:
-                print("\n\nParallel didn't work. Processing each chunk seperately...")
-                for chunk in chunks:
-                    psObj._plotBedPick(chunk)
+        # Cleanup
+        psObj._cleanup()
+    else:
+        autoBed = False
 
-
-        sys.exit()
+    if pltBedPick:
+        try:
+            Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+        except:
+            print("\n\nParallel didn't work. Processing each chunk seperately...")
+            for chunk in chunks:
+                psObj._plotBedPick(chunk)
 
 
 
