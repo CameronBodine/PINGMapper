@@ -1394,7 +1394,7 @@ class sonObj(object):
     # ======================================================================
     def _getScanChunkSingle(self,
                             chunk,
-                            filter = False,
+                            filterIntensity = False,
                             remWater = False):
         '''
         During rectification, if non-rectified tiles have not been exported,
@@ -1440,7 +1440,7 @@ class sonObj(object):
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
-        if filter:
+        if filterIntensity:
             self._doPPDRC()
         # Remove water if exporting src imagery
         if remWater:
