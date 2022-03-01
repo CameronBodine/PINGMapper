@@ -141,6 +141,33 @@ class portstarObj(object):
         portBed = []
         starBed = []
         for k in range(H):
+            pB = np.where(segArr[k, 0:C]==1)[0]
+            # print(pB)
+            pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
+
+            # print(pB)
+            portBed.append(C-pB)
+
+            sB = np.where(segArr[k, C:]==1)[0]
+            sB = np.split(sB, np.where(np.diff(sB) != 1)[0]+1)[-1][0]
+            starBed.append(sB)
+
+        # print(portBed)
+        return portBed, starBed
+
+    #=======================================================================
+    def _findBed_orig(self, segArr):
+        '''
+        Find bed location in pixels
+        '''
+        # Find center of array
+        H, W = segArr.shape[0], segArr.shape[1] # height (row), width (column)
+        C = int(W/2) # center of array
+
+        # Find bed location
+        portBed = []
+        starBed = []
+        for k in range(H):
             pB = np.where(segArr[k, 0:C]==1)[0][-1]
             # pB = np.min(np.where(segArr[k, 0:C]==0)[0])
             portBed.append(C-pB)
@@ -260,7 +287,7 @@ class portstarObj(object):
 
     #=======================================================================
     def _depthZheng(self, i):
-        doFilt = False
+        doFilt = True
         model = self.bedpickModel
         print("Chunk:",i)
 
@@ -376,9 +403,9 @@ class portstarObj(object):
         # color map
         class_label_colormap = ['#3366CC','#DC3912']
 
-        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
         imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
 
         color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
