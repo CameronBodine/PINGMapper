@@ -270,7 +270,6 @@ class portstarObj(object):
     def _depthZheng(self, i):
         doFilt = True
         model = self.bedpickModel
-        print("Chunk:",i)
 
         self._getPortStarScanChunk(i)
         mergeSon = self.mergeSon
@@ -380,34 +379,45 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _saveDepth(self, chunks):
+    def _saveDepth(self, chunks, detectDep):
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        # Prepare depth detection dictionaries
-        portFinal = []
-        starFinal = []
-        for i in sorted(chunks):
-            portDep = self.portDepDetect[i]
-            starDep = self.starDepDetect[i]
+        if detectDep == 0:
+            portDF['dep_m'] = portDF['inst_dep_m']
+            starDF['dep_m'] = starDF['inst_dep_m']
 
-            portFinal.extend(portDep)
-            starFinal.extend(starDep)
+            portDF['dep_m_Method'] = 'Instrument Depth'
+            starDF['dep_m_Method'] = 'Instrument Depth'
 
-        # Check shapes to ensure they are same length.  If not, slice off extra.
-        if len(portFinal) > portDF.shape[0]:
-            lenDif = portDF.shape[0] - len(portFinal)
-            portFinal = portFinal[:lenDif]
+        elif detectDep == 1:
+            # Prepare depth detection dictionaries
+            portFinal = []
+            starFinal = []
+            for i in sorted(chunks):
+                portDep = self.portDepDetect[i]
+                starDep = self.starDepDetect[i]
 
-        if len(starFinal) > starDF.shape[0]:
-            lenDif = starDF.shape[0] - len(starFinal)
-            starFinal = starFinal[:lenDif]
+                portFinal.extend(portDep)
+                starFinal.extend(starDep)
 
-        portDF['auto_dep_m'] = portFinal * portDF['pix_m']
-        starDF['auto_dep_m'] = starFinal * starDF['pix_m']
+            # Check shapes to ensure they are same length.  If not, slice off extra.
+            if len(portFinal) > portDF.shape[0]:
+                lenDif = portDF.shape[0] - len(portFinal)
+                portFinal = portFinal[:lenDif]
+
+            if len(starFinal) > starDF.shape[0]:
+                lenDif = starDF.shape[0] - len(starFinal)
+                starFinal = starFinal[:lenDif]
+
+            portDF['dep_m'] = portFinal * portDF['pix_m']
+            starDF['dep_m'] = starFinal * starDF['pix_m']
+
+            portDF['dep_m_Method'] = 'Zheng et al. 2021'
+            starDF['dep_m_Method'] = 'Instrument Depth'
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
@@ -428,18 +438,18 @@ class portstarObj(object):
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'auto_dep_m', 'pix_m']]
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'auto_dep_m', 'pix_m']]
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
         # Convert depth in meters to pixels
         portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        portAuto = (portDF['auto_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
         starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        starAuto = (starDF['auto_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
