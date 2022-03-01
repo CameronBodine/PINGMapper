@@ -41,6 +41,24 @@ class portstarObj(object):
         portSon = np.flipud(portSon)
         starSon = np.rot90(self.star.sonDat, k=1, axes=(0,1))
 
+        # Ensure portSon/starSon same length.
+        if (portSon.shape[0] != starSon.shape[0]):
+            pL = portSon.shape[0]
+            sL = starSon.shape[0]
+            # Add rows to shortest array from longest array
+            if (pL > sL):
+                # portSon = portSon[:(sL-pL),:]
+                # starSon = np.append(starSon, portSon[(sL-pL):,:], axis=0)
+                slice = np.fliplr(portSon[(sL-pL):,:])
+                starSon = np.append(starSon, slice, axis=0)
+
+            else:
+                # starSon = starSon[:(pL-sL),:]
+                # portSon = np.append(portSon, starSon[(pL-sL):, :], axis=0)
+                slice = np.fliplr(starSon[(pL-sL):, :])
+                portSon = np.append(portSon, slice, axis=0)
+
+
         # Concatenate arrays column-wise
         mergeSon = np.concatenate((portSon, starSon), axis = 1)
         del self.port.sonDat, self.star.sonDat
@@ -142,10 +160,8 @@ class portstarObj(object):
         starBed = []
         for k in range(H):
             pB = np.where(segArr[k, 0:C]==1)[0]
-            # print(pB)
             pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
 
-            # print(pB)
             portBed.append(C-pB)
 
             sB = np.where(segArr[k, C:]==1)[0]
@@ -377,18 +393,15 @@ class portstarObj(object):
         #*#*#*#*#*#*#*#
         # Plot
         # color map
-        class_label_colormap = ['#3366CC','#DC3912']
-
-        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-
-        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-
-
-
+        # class_label_colormap = ['#3366CC','#DC3912']
+        #
+        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+        #
+        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
         return self
 
@@ -409,6 +422,15 @@ class portstarObj(object):
 
             portFinal.extend(portDep)
             starFinal.extend(starDep)
+
+        # Check shapes to ensure they are same length.  If not, slice off extra.
+        if len(portFinal) > portDF.shape[0]:
+            lenDif = portDF.shape[0] - len(portFinal)
+            portFinal = portFinal[:lenDif]
+
+        if len(starFinal) > starDF.shape[0]:
+            lenDif = starDF.shape[0] - len(starFinal)
+            starFinal = starFinal[:lenDif]
 
         portDF['auto_dep_m'] = portFinal * portDF['pix_m']
         starDF['auto_dep_m'] = starFinal * starDF['pix_m']
@@ -444,6 +466,18 @@ class portstarObj(object):
 
         starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
         starAuto = (starDF['auto_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+
+        # Ensure port/star same length
+        if (portAuto.shape[0] != starAuto.shape[0]):
+            pL = portAuto.shape[0]
+            sL = starAuto.shape[0]
+            # Add rows to shortest array from longest array
+            if (pL > sL):
+                starAuto = np.append(starAuto, portAuto[(sL-pL):])
+                starInst = np.append(starInst, portInst[(sL-pL):])
+            else:
+                portAuto = np.append(portAuto, starAuto[(pL-sL):])
+                portInst = np.append(portInst, starInst[(pL-sL):])
 
         # Relocate depths relative to horizontal center of image
         c = int(mergeSon.shape[1]/2)
