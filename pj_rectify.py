@@ -256,8 +256,6 @@ def rectify_master_func(sonFiles,
     ############################################################################
     # Mosaic imagery                                                           #
     ############################################################################
-    for son in portstar:
-        son.rect_wcp = True
     overview = True
     if mosaic > 0:
         print("\nMosaicing GeoTiffs...")
