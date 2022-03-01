@@ -6,7 +6,7 @@ dependencies:
   - python
   - pandas
   - rasterio
-  - tensorflow
+  - tensorflow-gpu
   - pyproj
   - scikit-image
   - joblib
