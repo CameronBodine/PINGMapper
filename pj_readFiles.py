@@ -377,17 +377,19 @@ def read_master_func(sonFiles,
     print("Done!")
 
     ############################################################################
-    # For Automatic Depth Detection                                            #
+    # For Depth Detection                                                      #
     ############################################################################
+    # Determine which sonObj is port/star
+    portstar = []
+    for son in sonObjs:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            portstar.append(son)
+
+    # Create portstarObj
+    psObj = portstarObj(portstar)
 
     if detectDep > 0:
-        # Determine which sonObj is port/star
-        portstar = []
-        for son in sonObjs:
-            beam = son.beamName
-            if beam == "ss_port" or beam == "ss_star":
-                portstar.append(son)
-
         # Load one beam's sonar metadata
         portstar[0]._loadSonMeta()
         sonMetaDF =portstar[0].sonMetaDF
@@ -396,9 +398,6 @@ def read_master_func(sonFiles,
         chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
         print('\n\nAutomatically calculating depth for ', len(chunks), 'chunks:')
         del sonMetaDF
-
-        # Create portstarObj
-        psObj = portstarObj(portstar)
 
         # Load model if necessary
         if detectDep == 1:
@@ -414,9 +413,6 @@ def read_master_func(sonFiles,
 
         # make parallel later.... doesn't work (??)....
         # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
-
-        # Save detected depth to csv
-        psObj._saveDepth(chunks)
         autoBed = True
 
         # Cleanup
@@ -424,13 +420,14 @@ def read_master_func(sonFiles,
     else:
         autoBed = False
 
+    # Save detected depth to csv
+    psObj._saveDepth(chunks, detectDep)
+
     if pltBedPick:
-        try:
-            Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
-        except:
-            print("\n\nParallel didn't work. Processing each chunk seperately...")
-            for chunk in chunks:
-                psObj._plotBedPick(chunk)
+        print("\n\nExporting bedpick plots...")
+        Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+
+    del psObj
 
 
 
