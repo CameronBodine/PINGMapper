@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from skimage.transform import resize
-from skimage.filters import threshold_otsu
+from skimage.filters import threshold_otsu, gaussian
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, remove_small_objects
 
@@ -361,19 +361,32 @@ def fromhex(n):
     return int(n, base=16)
 
 #=======================================================================
-def standardize(img):
+def standardize(img, mn=0, mx=1, doRescale=False):
     #standardization using adjusted standard deviation
 
     N = np.shape(img)[0] * np.shape(img)[1]
     s = np.maximum(np.std(img), 1.0/np.sqrt(N))
     m = np.mean(img)
     img = (img - m) / s
+    if doRescale:
+        img = rescale(img, mn, mx)
     del m, s, N
     #
     if np.ndim(img)==2:
         img = np.dstack((img,img,img))
 
     return img
+
+#===============================================================================
+def rescale( dat,
+             mn,
+             mx):
+    '''
+    rescales an input dat between mn and mx
+    '''
+    m = min(dat.flatten())
+    M = max(dat.flatten())
+    return (mx-mn)*(dat-m)/(M-m)+mn
 
 #=======================================================================
 def label_to_colors(
