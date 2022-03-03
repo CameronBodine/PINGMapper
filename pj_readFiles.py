@@ -393,10 +393,14 @@ def read_master_func(sonFiles,
 
     # Determine what chunks to process
     chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
-    del sonMetaDF
+    del sonMetaDF, portstar[0].sonMetaDF
 
     if detectDep > 0:
         print('\n\nAutomatically calculating depth for ', len(chunks), 'chunks:')
+
+        #Dictionary to store chunk : np.array(depth estimate)
+        psObj.portDepDetect = {}
+        psObj.starDepDetect = {}
 
         # Load model if necessary
         if detectDep == 1:
@@ -404,18 +408,20 @@ def read_master_func(sonFiles,
             psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             psObj._initModel()
+        if detectDep == 2:
+            print('\n\tUsing binary thresholding...')
 
         for chunk in chunks:
             psObj._detectDepth(detectDep, int(chunk))
 
-        # psObj._detectDepth(detectDep, int(chunks[216]))
+        # psObj._detectDepth(detectDep, int(chunks[0]))
 
         # make parallel later.... doesn't work (??)....
         # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
         autoBed = True
-
         # Cleanup
         psObj._cleanup()
+
     else:
         autoBed = False
 
@@ -426,9 +432,9 @@ def read_master_func(sonFiles,
         print("\n\nExporting bedpick plots...")
         Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
 
+    # Cleanup
+    psObj._cleanup()
     del psObj, chunks
-
-
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -439,8 +445,6 @@ def read_master_func(sonFiles,
         # Export sonar tiles for each beam.
         Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScanChunkALL)() for son in sonObjs)
         print("Done!")
-
-
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

@@ -183,10 +183,6 @@ class portstarObj(object):
         print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
         print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
-        #Dictionary to store chunk : np.array(depth estimate)
-        self.portDepDetect = {}
-        self.starDepDetect = {}
-
         USE_GPU = True
 
         if USE_GPU == True:
@@ -227,14 +223,6 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _detectDepth(self, method, i):
-        '''
-        '''
-
-        if method == 1:
-            self._depthZheng(i)
-
-    #=======================================================================
     def _doPredict(self, model, arr):
         # Read array into a cropped and resized tensor
         ## Compression step from Zheng et al. 2021
@@ -267,6 +255,18 @@ class portstarObj(object):
         est_label = (est_label>thres).astype('uint8')
 
         return est_label
+
+    #=======================================================================
+    def _detectDepth(self, method, i):
+        '''
+        '''
+
+        if method == 1:
+            self._depthZheng(i)
+        elif method == 2:
+            self.port._loadSonMeta()
+            self.star._loadSonMeta()
+            self._depthThreshold(i)
 
     #=======================================================================
     def _depthZheng(self, i):
@@ -381,6 +381,141 @@ class portstarObj(object):
         return self
 
     #=======================================================================
+    def _depthThreshold(self, chunk):
+        # Parameters
+        window = 10 # For peak removal in bed pick: moving window size
+        max_dev = 5 # For peak removal in bed pick: maximum standard deviation
+        pix_buf = 50 # Buffer size around min/max Humminbird depth
+
+        portstar = [self.port, self.star]
+        for son in portstar:
+            # Load sonar intensity, standardize & rescale
+            son._getScanChunkSingle(chunk)
+            img = son.sonDat
+            img = standardize(img, 0, 1, True)[:,:,-1].squeeze()
+            W, H = img.shape[1], img.shape[0]
+
+            # Get chunks sonar metadata and instrument depth
+            isChunk = son.sonMetaDF['chunk_id']==1
+            sonMeta = son.sonMetaDF[isChunk].reset_index()
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+
+            ##################################
+            # Step 1 : Acoustic Bedpick Filter
+            # Use acoustic bed pick to crop image
+            bedMin = max(min(acousticBed)-50, 0)
+            bedMax = max(acousticBed)+pix_buf
+
+            cropMask = np.ones((H, W)).astype(int)
+            cropMask[:bedMin,:] = 0
+            cropMask[bedMax:,:] = 0
+
+            # Mask the image with bed_mask
+            imgMasked = img*cropMask
+
+            ###########################
+            # Step 2 - Threshold Filter
+            # Binary threshold masked image
+            imgMasked = gaussian(imgMasked, 3, preserve_range=True) # Do a gaussian blur
+            imgMasked[imgMasked==0]=np.nan # Set zero's to nan
+
+            imgBinaryMask = np.zeros((H, W)).astype(bool) # Create array to store thresholded sonar img
+            # Iterate over each sonar record
+            for i in range(W):
+                thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i])) # Determine threshold value
+                # stdev = np.nanstd(imgMasked[:,i])
+                imgBinaryMask[:,i] = imgMasked[:,i] > thresh # Keep only intensities greater than threshold
+
+            # Clean up image binary mask
+            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+            ########################################
+            # Step 3 - Non-Contiguous region removal
+            # Make sure we didn't accidently zero out the last row, which should be bed.
+            # If we did, we will fill it back in
+            # Try filtering image_binary_mask through labeling regions
+            labelImage, num = label(imgBinaryMask, return_num=True)
+            allRegions = []
+
+            # Find the lowest/deepest region (this is the bed pixels)
+            max_row = 0
+            finalRegion = 0
+            for region in regionprops(labelImage):
+                allRegions.append(region.label)
+                minr, minc, maxr, maxc = region.bbox
+                # if (maxr > max_row) and (maxc > max_col):
+                if (maxr > max_row):
+                    max_row = maxr
+                    finalRegion = region.label
+
+            # If finalRegion is 0, there is only one region
+            if finalRegion == 0:
+                finalRegion = 1
+
+            # Zero out undesired regions
+            for regionLabel in allRegions:
+                if regionLabel != finalRegion:
+                    labelImage[labelImage==regionLabel] = 0
+
+            imgBinaryMask = labelImage # Update thresholded image
+            imgBinaryMask[imgBinaryMask>0] = 1 # Now set all val's greater than 0 to 1 to create the mask
+
+            # Now fill in above last row filled to make sure no gaps in bed pixels
+            lastRow = bedMax
+            imgBinaryMask[lastRow] = True
+            for i in range(W):
+                if imgBinaryMask[lastRow-1,i] == 0:
+                    gaps = np.where(imgBinaryMask[:lastRow,i]==0)[0]
+                    # Split each gap cluster into it's own array, subset the last one,
+                    ## and take top value
+                    topOfGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
+                    imgBinaryMask[topOfGap:lastRow,i] = 1
+
+            # Clean up image binary mask
+            imgBinaryMask = imgBinaryMask.astype(bool)
+            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+            #############################
+            # Step 4 - Water Below Filter
+            # Iterate each ping and determine if there is water under the bed.
+            # If there is, zero out everything except for the lowest region.
+            # Iterate each sonar record
+            for i in range(W):
+                labelPing, num = label(imgBinaryMask[:,i], return_num=True)
+                if num > 1:
+                    labelPing[labelPing!=num] = 0
+                    labelPing[labelPing>0] = 1
+                imgBinaryMask[:,i] = labelPing
+
+            ###################################################
+            # Step 5 - Final Bedpick: Locate Bed & Remove Peaks
+            # Now relocate bed from image_binary_mask
+            bed = []
+            for k in range(W):
+                try:
+                    b = np.where(imgBinaryMask[:,k]==1)[0][0]
+                except:
+                    b=0
+                bed.append(b)
+            bed = np.array(bed).astype(np.float32)
+
+            # Interpolate over nan's
+            nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
+            bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
+            bed = bed.astype(int)
+
+            if son.beamName == 'ss_port':
+                self.portDepDetect[chunk] = bed
+            elif son.beamName == 'ss_star':
+                self.starDepDetect[chunk] = bed
+
+        return self
+
+    #=======================================================================
     def _saveDepth(self, chunks, detectDep, smthDep, adjDep):
         # Load sonar metadata file
         self.port._loadSonMeta()
@@ -415,7 +550,7 @@ class portstarObj(object):
             portDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
             starDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
 
-        elif detectDep == 1:
+        elif detectDep > 0:
             # Prepare depth detection dictionaries
             portFinal = []
             starFinal = []
@@ -447,8 +582,12 @@ class portstarObj(object):
                 portDF['dep_m'] += adjBy
                 starDF['dep_m'] += adjBy
 
-            portDF['dep_m_Method'] = 'Zheng et al. 2021'
-            starDF['dep_m_Method'] = 'Zheng et al. 2021'
+            if detectDep == 1:
+                portDF['dep_m_Method'] = 'Zheng et al. 2021'
+                starDF['dep_m_Method'] = 'Zheng et al. 2021'
+            elif detectDep == 2:
+                portDF['dep_m_Method'] = 'Threshold'
+                starDF['dep_m_Method'] = 'Threshold'
 
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
@@ -554,5 +693,19 @@ class portstarObj(object):
 
     #=======================================================================
     def _cleanup(self):
-        del self.bedpickModel
-        return
+        try:
+            del self.bedpickModel
+        except:
+            pass
+
+        try:
+            del self.port.sonDat, self.star.sonDat
+        except:
+            pass
+
+        try:
+            del self.port.sonMetaDF, self.star.sonMetaDF
+        except:
+            pass
+            
+        return self
