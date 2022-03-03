@@ -5,7 +5,6 @@ from c_sonObj import sonObj
 from c_portstarObj import portstarObj
 from joblib import delayed
 import time
-from scipy.signal import savgol_filter
 
 #===========================================
 def read_master_func(sonFiles,
@@ -421,7 +420,7 @@ def read_master_func(sonFiles,
         autoBed = False
 
     # Save detected depth to csv
-    psObj._saveDepth(chunks, detectDep)
+    psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
 
     if pltBedPick:
         print("\n\nExporting bedpick plots...")

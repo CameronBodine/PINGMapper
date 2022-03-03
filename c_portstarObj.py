@@ -8,6 +8,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+from scipy.signal import savgol_filter
+
 class portstarObj(object):
     '''
 
@@ -379,7 +381,7 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _saveDepth(self, chunks, detectDep):
+    def _saveDepth(self, chunks, detectDep, smthDep, adjDep):
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
@@ -387,11 +389,31 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         if detectDep == 0:
-            portDF['dep_m'] = portDF['inst_dep_m']
-            starDF['dep_m'] = starDF['inst_dep_m']
+            portInstDepth = portDF['inst_dep_m']
+            starInstDepth = starDF['inst_dep_m']
+
+            if smthDep:
+                # print("\nSmoothing depth values...")
+                portInstDepth = savgol_filter(portInstDepth, 51, 3)
+                starInstDepth = savgol_filter(starInstDepth, 51, 3)
+
+            if adjDep != 0:
+                # print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
+                adjBy = portDF['pix_m'][0]*adjDep
+                portInstDepth += adjBy
+                starInstDepth += adjBy
+
+            portDF['dep_m'] = portInstDepth
+            starDF['dep_m'] = starInstDepth
 
             portDF['dep_m_Method'] = 'Instrument Depth'
             starDF['dep_m_Method'] = 'Instrument Depth'
+
+            portDF['dep_m_smth'] = smthDep
+            starDF['dep_m_smth'] = smthDep
+
+            portDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
 
         elif detectDep == 1:
             # Prepare depth detection dictionaries
@@ -413,11 +435,26 @@ class portstarObj(object):
                 lenDif = starDF.shape[0] - len(starFinal)
                 starFinal = starFinal[:lenDif]
 
+            if smthDep:
+                portFinal = savgol_filter(portFinal, 51, 3)
+                starFinal = savgol_filter(starFinal, 51, 3)
+
             portDF['dep_m'] = portFinal * portDF['pix_m']
             starDF['dep_m'] = starFinal * starDF['pix_m']
 
+            if adjDep != 0:
+                adjBy = portDF['pix_m'][0]*adjDep
+                portDF['dep_m'] += adjBy
+                starDF['dep_m'] += adjBy
+
             portDF['dep_m_Method'] = 'Zheng et al. 2021'
-            starDF['dep_m_Method'] = 'Instrument Depth'
+            starDF['dep_m_Method'] = 'Zheng et al. 2021'
+
+            portDF['dep_m_smth'] = smthDep
+            starDF['dep_m_smth'] = smthDep
+
+            portDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
