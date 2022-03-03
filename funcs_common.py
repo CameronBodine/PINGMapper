@@ -29,8 +29,9 @@ from copy import deepcopy
 import pickle
 import shutil
 
-from skimage.filters import median
-from skimage.morphology import square
+# from skimage.filters import median
+# from skimage.morphology import square
+from skimage.io import imsave
 
 # =========================================================
 # Keep

@@ -854,6 +854,7 @@ class rectObj(sonObj):
         --------------------
         NA
         '''
+        filterIntensity = False
 
         # Prepare initial variables
         ## Variables for water column removal and slant range corrected imagery
@@ -926,7 +927,7 @@ class rectObj(sonObj):
         # if tileFlag: # Open non-rectified image as numpy array
         #     img = np.asarray(Image.open(imgPath)).copy()
         # else: # Load ping return values from .SON/.IDX file
-        self._getScanChunkSingle(chunk, remWater)
+        self._getScanChunkSingle(chunk, filterIntensity, remWater)
         img = self.sonDat
         img[0]=0 # To fix extra white on curves
 
@@ -1064,4 +1065,4 @@ class rectObj(sonObj):
                 # dst.update_tags(ns='rio_overview', resampling='nearest')
                 # dst.close()
 
-        pass
+        return self
