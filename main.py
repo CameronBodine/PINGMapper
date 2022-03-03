@@ -34,8 +34,8 @@ nchunk = 500 #Number of pings per chunk
 exportUnknown = True #Option to export Unknown sonar record metadata
 wcp = True #Export tiles with water column present
 src = True #Export Tiles with water column removed/slant range corrected
-detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
-## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
+detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+## 2==Auto detect depth w/ Thresholding
 smthDep = True #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
@@ -66,7 +66,7 @@ if rect_wcp or rect_src:
     print('===========================================')
     print('***** RECTIFYING *****')
     print("working on "+projDir)
-    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_src, adjDep, mosaic)
+    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_src, mosaic)
 
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

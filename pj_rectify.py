@@ -12,7 +12,6 @@ def rectify_master_func(sonFiles,
                         nchunk=500,
                         rect_wcp=False,
                         rect_src=False,
-                        adjDep=0,
                         mosaic=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
@@ -46,14 +45,6 @@ def rectify_master_func(sonFiles,
                       True = export georectified src sonar tiles;
                       False = do not export georectified src sonar tiles.
         EXAMPLE -     rect_src = True
-    adjDep : int
-        DESCRIPTION - Specify additional depth adjustment (in pixels) for water
-                      column removal.  Does not affect the depth estimate stored
-                      in exported metadata *.CSV files.
-                      Integer > 0 = increase depth estimate by x pixels.
-                      Integer < 0 = decrease depth estimate by x pixels.
-                      0 = use depth estimate with no adjustment.
-        EXAMPLE -     adjDep = 5
     mosaic : int
         DESCRIPTION - Mosaic exported georectified sonograms to a virtual raster
                       (vrt) as specified with the `rect_wcp` and `rect_src` flags.
