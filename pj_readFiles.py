@@ -387,16 +387,16 @@ def read_master_func(sonFiles,
 
     # Create portstarObj
     psObj = portstarObj(portstar)
+    # Load one beam's sonar metadata
+    portstar[0]._loadSonMeta()
+    sonMetaDF =portstar[0].sonMetaDF
+
+    # Determine what chunks to process
+    chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
+    del sonMetaDF
 
     if detectDep > 0:
-        # Load one beam's sonar metadata
-        portstar[0]._loadSonMeta()
-        sonMetaDF =portstar[0].sonMetaDF
-
-        # Determine what chunks to process
-        chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
         print('\n\nAutomatically calculating depth for ', len(chunks), 'chunks:')
-        del sonMetaDF
 
         # Load model if necessary
         if detectDep == 1:
@@ -426,7 +426,7 @@ def read_master_func(sonFiles,
         print("\n\nExporting bedpick plots...")
         Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
 
-    del psObj
+    del psObj, chunks
 
 
 
