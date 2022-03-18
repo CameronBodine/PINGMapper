@@ -77,24 +77,30 @@ class portstarObj(object):
         if self.port.rect_wcp:
             portPath = os.path.join(self.port.outDir, 'rect_wcp')
             port = sorted(glob(os.path.join(portPath, '*.tif')))
-            port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
 
             starPath = os.path.join(self.star.outDir, 'rect_wcp')
             star = sorted(glob(os.path.join(starPath, '*.tif')))
-            star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
 
-            wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+            if len(port) > maxChunk:
+                port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+            else:
+                wcpToMosaic = [port + star]
 
         if self.port.rect_src:
             portPath = os.path.join(self.port.outDir, 'rect_src')
             port = sorted(glob(os.path.join(portPath, '*.tif')))
-            port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
 
             starPath = os.path.join(self.star.outDir, 'rect_src')
             star = sorted(glob(os.path.join(starPath, '*.tif')))
-            star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
 
-            srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+            if len(port) > maxChunk:
+                port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+            else:
+                srcToMosaic = [port + star]
 
         if mosaic == 1:
             if self.port.rect_wcp:
