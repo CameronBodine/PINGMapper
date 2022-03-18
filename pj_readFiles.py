@@ -396,7 +396,7 @@ def read_master_func(sonFiles,
     del sonMetaDF, portstar[0].sonMetaDF
 
     if detectDep > 0:
-        print('\n\nAutomatically calculating depth for ', len(chunks), 'chunks:')
+        print('\n\nAutomatically calculating depth for', len(chunks), 'chunks:')
 
         #Dictionary to store chunk : np.array(depth estimate)
         psObj.portDepDetect = {}

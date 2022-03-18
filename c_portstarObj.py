@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 from scipy.signal import savgol_filter
 
+import itertools
+
 class portstarObj(object):
     '''
 
@@ -69,39 +71,50 @@ class portstarObj(object):
 
     #=======================================================================
     def _createMosaic(self, mosaic, overview):
+        maxChunk = 100
         self.imgsToMosaic = []
-        imgDirs = [self.port.outDir, self.star.outDir]
 
         if self.port.rect_wcp:
-            wrcToMosaic = []
-            for path in imgDirs:
-                path = os.path.join(path, 'rect_wcp')
-                imgs = glob(os.path.join(path, '*.tif'))
-                for img in imgs:
-                    wrcToMosaic.append(img)
-            self.imgsToMosaic.append(wrcToMosaic)
+            portPath = os.path.join(self.port.outDir, 'rect_wcp')
+            port = sorted(glob(os.path.join(portPath, '*.tif')))
+            port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+
+            starPath = os.path.join(self.star.outDir, 'rect_wcp')
+            star = sorted(glob(os.path.join(starPath, '*.tif')))
+            star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+
+            wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
 
         if self.port.rect_src:
-            srcToMosaic = []
-            for path in imgDirs:
-                path = os.path.join(path, 'rect_src')
-                imgs = glob(os.path.join(path, '*.tif'))
-                for img in imgs:
-                    srcToMosaic.append(img)
-            self.imgsToMosaic.append(srcToMosaic)
+            portPath = os.path.join(self.port.outDir, 'rect_src')
+            port = sorted(glob(os.path.join(portPath, '*.tif')))
+            port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+
+            starPath = os.path.join(self.star.outDir, 'rect_src')
+            star = sorted(glob(os.path.join(starPath, '*.tif')))
+            star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+
+            srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
 
         if mosaic == 1:
-            self._mosaicGtiff(overview)
+            if self.port.rect_wcp:
+                self._mosaicGtiff(overview, wcpToMosaic)
+            if self.port.rect_src:
+                self._mosaicGtiff(overview, srcToMosaic)
         elif mosaic == 2:
-            self._mosaicVRT(overview)
+            if self.port.rect_wcp:
+                self._mosaicVRT(overview, wcpToMosaic)
+            if self.port.rect_src:
+                self._mosaicVRT(overview, srcToMosaic)
 
 
     #=======================================================================
-    def _mosaicGtiff(self, overview):
-        for imgs in self.imgsToMosaic:
+    def _mosaicGtiff(self, overview, imgsToMosaic):
+        i = 0
+        for imgs in imgsToMosaic:
 
             filePrefix = os.path.split(self.port.projDir)[-1]
-            fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic.vrt'
+            fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
 
@@ -120,15 +133,17 @@ class portstarObj(object):
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
 
             os.remove(outVRT)
+            i+=1
 
         return self
 
     #=======================================================================
-    def _mosaicVRT(self, overview):
+    def _mosaicVRT(self, overview, imgsToMosaic):
+        i = 0
         for imgs in self.imgsToMosaic:
 
             filePrefix = os.path.split(self.port.projDir)[-1]
-            fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic.vrt'
+            fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             outFile = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
 
             vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
@@ -138,6 +153,7 @@ class portstarObj(object):
                 dest = gdal.Open(outFile)
                 gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
+            i+=1
 
     ############################################################################
     # Bedpicking                                                               #
@@ -367,15 +383,15 @@ class portstarObj(object):
         #*#*#*#*#*#*#*#
         # Plot
         # color map
-        # class_label_colormap = ['#3366CC','#DC3912']
-        #
-        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-        #
-        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        class_label_colormap = ['#3366CC','#DC3912']
+
+        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+
+        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
         del son3bnd, init_label, crop_label, sonCrop
         return self
@@ -707,5 +723,5 @@ class portstarObj(object):
             del self.port.sonMetaDF, self.star.sonMetaDF
         except:
             pass
-            
+
         return self
