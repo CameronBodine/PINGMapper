@@ -146,7 +146,7 @@ class portstarObj(object):
     #=======================================================================
     def _mosaicVRT(self, overview, imgsToMosaic):
         i = 0
-        for imgs in self.imgsToMosaic:
+        for imgs in imgsToMosaic:
 
             filePrefix = os.path.split(self.port.projDir)[-1]
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
