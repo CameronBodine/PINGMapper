@@ -1,6 +1,6 @@
 
 from funcs_common import *
-from c_sonObj import sonObj
+from class_sonObj import sonObj
 from scipy.interpolate import splprep, splev
 from skimage.transform import PiecewiseAffineTransform, warp
 from rasterio.transform import from_origin

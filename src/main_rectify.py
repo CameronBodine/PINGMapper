@@ -2,8 +2,8 @@
 from __future__ import division
 from funcs_common import *
 
-from c_rectObj import rectObj
-from c_portstarObj import portstarObj
+from class_rectObj import rectObj
+from class_portstarObj import portstarObj
 
 #===============================================================================
 def rectify_master_func(sonFiles,

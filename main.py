@@ -10,9 +10,12 @@ https://github.com/dbuscombe-usgs/PyHum
 
 """
 
+import sys
+sys.path.insert(0, 'src')
+
 from funcs_common import *
-from pj_readFiles import read_master_func
-from pj_rectify import rectify_master_func
+from main_readFiles import read_master_func
+from main_rectify import rectify_master_func
 
 import time
 import datetime

@@ -8,5 +8,6 @@ main_batchFolder.py
 rectify_test_affine.py
 models/bedpick/Old
 models/bedpick/Zheng2021/old
+/src/__pycache__/*
 
 !procData/OutputsHere.txt

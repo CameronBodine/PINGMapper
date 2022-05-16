@@ -1,8 +1,8 @@
 
 
 from funcs_common import *
-from c_sonObj import sonObj
-from c_portstarObj import portstarObj
+from class_sonObj import sonObj
+from class_portstarObj import portstarObj
 from joblib import delayed
 import time
 

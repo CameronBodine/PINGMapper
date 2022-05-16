@@ -362,7 +362,7 @@ class portstarObj(object):
         ###################################################
         # Potential filters for removing small artifacts???
         if doFilt:
-            crop_label = remove_small_holes(crop_label, 2*N)#2*self.port.nchunk)
+            crop_label = remove_small_holes(crop_label.astype(bool), 2*N)#2*self.port.nchunk)
             crop_label = remove_small_objects(crop_label, 2*N)#2*self.port.nchunk)
             # # There should be three total regions: port bed, wc, star bed
             # ## These should also be the largest 3 regions
