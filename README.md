@@ -36,6 +36,8 @@ conda env create --file conda/PINGMapper.yml
 conda activate ping
 ```
 
+**NOTE** Installation may take some time, please be patient.
+
 ## Testing PING Mapper
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
