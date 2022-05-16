@@ -163,25 +163,23 @@ class rectObj(sonObj):
 
         # Extract every `filt` record, including last value
         if filt>0:
-            lastRow = df.iloc[-1].to_dict() # Store last sonar record
-            try:
-                dfFilt = df.iloc[::filt].reset_index(drop=False) # Get every 'filt' sonar record.  Keep df index column.
-            except:
-                dfFilt = df.iloc[::filt].reset_index(drop=True) # Get every 'filt' sonar record.  Drop df index column.
-            dfFilt = dfFilt.append(lastRow, ignore_index=True) # Add last sonar record to filtered df
+            lastRow = df.iloc[-1].to_frame().T
+            dfFilt = df.iloc[::filt]
+            dfFilt = pd.concat([dfFilt, lastRow]).reset_index(drop=True)
         else:
-            dfFilt = df.reset_index(drop=False) # Don't filter df
+            dfFilt = df.reset_index(drop=False)
+
 
         # Try smoothing trackline
-        x=dfFilt[xlon].to_numpy() # Store longitude coordinates in numpy array
-        y=dfFilt[ylat].to_numpy() # Store latitude coordinates in numpy array
+        x=dfFilt[xlon].to_numpy(dtype='float64') # Store longitude coordinates in numpy array
+        y=dfFilt[ylat].to_numpy(dtype='float64') # Store latitude coordinates in numpy array
         if dups is True:
             # Force unique zU value by multiplying time ellapsed and record number
-            t = dfFilt[zU].to_numpy() * dfFilt['record_num'].to_numpy()
-            u_interp = dfOrig[zU].to_numpy() * dfOrig['record_num'].to_numpy()
+            t = dfFilt[zU].to_numpy(dtype='float64') * dfFilt['record_num'].to_numpy(dtype='float64')
+            u_interp = dfOrig[zU].to_numpy(dtype='float64') * dfOrig['record_num'].to_numpy(dtype='float64')
         else:
-            t=dfFilt[zU].to_numpy() # Store parameter values in numpy array.  Used to space points along spline.
-            u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
+            t=dfFilt[zU].to_numpy(dtype='float64') # Store parameter values in numpy array.  Used to space points along spline.
+            u_interp = dfOrig[zU].to_numpy(dtype='float64') # Get all time ellapsed OR record number values from unfilterd df
 
         # Attempt to fix error
         # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
@@ -493,7 +491,8 @@ class rectObj(sonObj):
             chunkDF.reset_index(drop=True, inplace=True)
 
             # Extract every `filt` recording, including last value
-            last = chunkDF.iloc[-1].copy()
+            # last = chunkDF.iloc[-1].copy()
+            last = chunkDF.iloc[-1].to_frame().T
             #####
             # Tried to add variable chunk size to fix rectification issues,
             ## but didn't fix and added new issues
@@ -502,7 +501,7 @@ class rectObj(sonObj):
             #     chunkDF = chunkDF.iloc[::filt]
             #####
             chunkDF = chunkDF.iloc[::filt]
-            chunkDF = chunkDF.append(last, ignore_index=True)
+            chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
 
             idx = chunkDF.index.tolist() # Store sonar record index in list
             maxIdx = max(idx) # Find last record index value
@@ -547,7 +546,7 @@ class rectObj(sonObj):
             if 'rsDF' not in locals(): # If output df doesn't exist, make it
                 rsDF = smthChunk.copy()
             else: # If output df exists, append results to it
-                rsDF = rsDF.append(smthChunk, ignore_index=True)
+                rsDF = pd.concat([rsDF, smthChunk], axis=0).reset_index(drop=True)
 
         ##################################################
         # Join smoothed trackline to smoothed range extent
