@@ -220,7 +220,8 @@ class rectObj(sonObj):
                   'time_s': dfOrig['time_s'],
                   'pix_m': dfOrig['pix_m'],
                   lons: x_interp[0],
-                  lats: x_interp[1]}
+                  lats: x_interp[1],
+                  'dep_m': dfOrig['dep_m']}
 
         sDF = pd.DataFrame(smooth) # Convert dictionary to Pandas df
 
@@ -550,7 +551,7 @@ class rectObj(sonObj):
 
         ##################################################
         # Join smoothed trackline to smoothed range extent
-        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog']].copy()
+        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
         rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
