@@ -397,6 +397,10 @@ def read_master_func(sonFiles,
             # Check if data are valid.
             if (attMax != 0) or ("unknown" in att) or (att =="beam"):
                 valid=True
+            elif (att == "inst_dep_m") and (attAvg == 0):
+                valid=False
+                invalid[son.beam+"."+att] = False
+                detectDep=1 # Automatically detect depth if no instrument depth
             else:
                 valid=False
                 invalid[son.beam+"."+att] = False
