@@ -373,7 +373,51 @@ def read_master_func(sonFiles,
         except:
             pass
 
-    print("Done!")
+    ############################################################################
+    # Print Metadata Summary                                                   #
+    ############################################################################
+    # Print a summary of min/max/avg metadata values. At same time, do simple
+    ## check to make sure data are valid.
+    print("\nSummary of Ping Metadata:\n")
+
+    invalid = defaultdict() # store invalid values
+
+    for son in sonObjs:
+        print(son.beam, ":", son.beamName)
+        print("______________________________________________________________________________")
+        print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
+        print("______________________________________________________________________________")
+        son._loadSonMeta()
+        df = son.sonMetaDF
+        for att in df.columns:
+            attMin = np.round(df[att].min(), 3)
+            attMax = np.round(df[att].max(), 3)
+            attAvg = np.round(df[att].mean(), 3)
+
+            # Check if data are valid.
+            if (attMax != 0) or ("unknown" in att) or (att =="beam"):
+                valid=True
+            else:
+                valid=False
+                invalid[son.beam+"."+att] = False
+
+            print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format(att, str(attMin), str(attMax), str(attAvg), str(valid)))
+
+        print("\n")
+
+    if len(invalid) > 0:
+        print("*******************************\n****WARNING: INVALID VALUES****\n*******************************")
+        print("_______________________________")
+        print("{:<15s} | {:<15s}".format("Sonar Channel", "Attribute"))
+        print("_______________________________")
+        for key, val in invalid.items():
+            print("{:<15s} | {:<15s}".format(key.split(".")[0], key.split(".")[1]))
+        print("\n*******************************\n****WARNING: INVALID VALUES****\n*******************************")
+        print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
+
+
+
+    print("\nDone!")
 
     ############################################################################
     # For Depth Detection                                                      #
