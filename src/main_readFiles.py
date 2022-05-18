@@ -367,11 +367,11 @@ def read_master_func(sonFiles,
     for son in sonObjs:
         son.wcp = wcp
         son.src = src
-        # Make sonar imagery directory for each beam if it doesn't exist
-        try:
-            os.mkdir(son.outDir)
-        except:
-            pass
+        # # Make sonar imagery directory for each beam if it doesn't exist
+        # try:
+        #     os.mkdir(son.outDir)
+        # except:
+        #     pass
 
     ############################################################################
     # Print Metadata Summary                                                   #
@@ -489,10 +489,21 @@ def read_master_func(sonFiles,
     ############################################################################
 
     if wcp or src:
-        print("\nGetting sonar data and exporting tile images...")
-        # Export sonar tiles for each beam.
-        Parallel(n_jobs= np.min([len(sonObjs), cpu_count()]), verbose=10)(delayed(son._getScanChunkALL)() for son in sonObjs)
-        print("Done!")
+        print("\nExporting sonogram tiles:\n")
+        for son in sonObjs:
+            son._loadSonMeta()
+            sonMetaDF = son.sonMetaDF
+
+            # Determine what chunks to process
+            chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+            if son.src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+                chunkCnt = len(chunks)*2
+            else:
+                chunkCnt = len(chunks)
+            print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
+
+            Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

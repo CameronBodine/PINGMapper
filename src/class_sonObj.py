@@ -905,7 +905,7 @@ class sonObj(object):
         --------------------
         No additional processing is necessary if only interested in data exported
         to .CSV.  If export of non-rectified imagery is desired, next step is
-        self._getScanChunkALL().
+        self._exportTiles().
         '''
 
         # Get necessary class attributes
@@ -1166,61 +1166,50 @@ class sonObj(object):
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
-    # ======================================================================
-    def _getScanChunkALL(self):
+    # ==========================================================================
+    def _exportTiles(self,
+                     chunk):
         '''
-        Main function to read sonar record ping return values.  Stores the
-        number of pings per chunk, chunk id, and byte index location in son file,
-        then calls self._loadSonChunk() to read the data into memory, then calls
-        self._writeTiles to save an unrectified image.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        self._getSonMeta()
-
-        -------
-        Returns
-        -------
-        *.PNG un-rectified sonar tiles (sonograms)
-
-        --------------------
-        Next Processing Step
-        --------------------
-        NA
         '''
-        self._loadSonMeta() # Load sonar record metadata into memory
-        sonMetaAll = self.sonMetaDF
+        filterIntensity = False
 
+        # Make sonar imagery directory for each beam if it doesn't exist
+        try:
+            os.mkdir(self.outDir)
+        except:
+            pass
 
-        totalChunk = sonMetaAll['chunk_id'].max() #Total chunks to process
-        i = 0 # Chunk index counter
-        while i <= totalChunk:
-            # Filter df by chunk
-            isChunk = sonMetaAll['chunk_id']==i
-            sonMeta = sonMetaAll[isChunk].reset_index()
-            # Update class attributes based on current chunk
-            self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-            self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
-            self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
-            # Load chunk's sonar data into memory
-            self._loadSonChunk()
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        # Update class attributes based on current chunk
+        # Update class attributes based on current chunk
+        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+        # Load chunk's sonar data into memory
+        self._loadSonChunk()
+
+        if filterIntensity:
+            self._doPPDRC()
+
+        # Export water column present (wcp) image
+        if self.wcp:
             # self._doPPDRC()
-            # Export water column present (wcp) image
-            if self.wcp:
-                # self._doPPDRC()
-                self._writeTiles(i, imgOutPrefix='wcp') # Save image
-            # Export slant range corrected (water column removed) imagery
-            if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
-                # self._doPPDRC()
-                self._writeTiles(i, imgOutPrefix='src') # Save image
-
-            i+=1
+            self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
+        # Export slant range corrected (water column removed) imagery
+        if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+            # self._doPPDRC()
+            self._writeTiles(chunk, imgOutPrefix='src') # Save image
 
         return self
 
-    # ======================================================================
+
+
+
+
+    # ==========================================================================
     def _loadSonChunk(self):
         '''
         Reads in sonar record ping values into memory based on byte index location
