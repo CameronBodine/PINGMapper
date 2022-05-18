@@ -12,7 +12,8 @@ def rectify_master_func(sonFiles,
                         nchunk=500,
                         rect_wcp=False,
                         rect_src=False,
-                        mosaic=0):
+                        mosaic=0,
+                        threadCnt=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -86,6 +87,18 @@ def rectify_master_func(sonFiles,
     |--*_src_mosaic.tif : SRC mosaic [rect_src=True & mosaic=1]
     |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
+    if threadCnt==0:
+        threadCnt=cpu_count()
+    elif threadCnt<0:
+        threadCnt=cpu_count()+threadCnt
+        if threadCnt<0:
+            threadCnt=1
+    else:
+        pass
+
+    if threadCnt>cpu_count():
+        threadCnt=cpu_count();
+        print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
     ############
     # Parameters
@@ -202,7 +215,7 @@ def rectify_master_func(sonFiles,
     # Calculate range extent coordinates                                       #
     ############################################################################
     print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-    Parallel(n_jobs= np.min([len(portstar), cpu_count()]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
+    Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
 
     ############################################################################
@@ -222,7 +235,7 @@ def rectify_master_func(sonFiles,
             # Determine what chunks to process
             chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
 
     if rect_src:
         print('\nRectifying with Water Column Removed...')

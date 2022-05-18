@@ -18,7 +18,8 @@ def read_master_func(sonFiles,
                      detectDep=0,
                      smthDep=False,
                      adjDep=0,
-                     pltBedPick=False):
+                     pltBedPick=False,
+                     threadCnt=0):
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -137,6 +138,18 @@ def read_master_func(sonFiles,
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
     '''
+    if threadCnt==0:
+        threadCnt=cpu_count()
+    elif threadCnt<0:
+        threadCnt=cpu_count()+threadCnt
+        if threadCnt<0:
+            threadCnt=1
+    else:
+        pass
+
+    if threadCnt>cpu_count():
+        threadCnt=cpu_count();
+        print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
     ####################################
     # Remove project directory if exists
@@ -356,7 +369,7 @@ def read_master_func(sonFiles,
 
     # Get metadata for each beam in parallel.
     if len(toProcess) > 0:
-        Parallel(n_jobs= np.min([len(toProcess), cpu_count()]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
 
     metaDir = sonObjs[0].metaDir # Get path to metadata directory
     sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv'))) # Get path to metadata files
@@ -478,7 +491,7 @@ def read_master_func(sonFiles,
 
     if pltBedPick:
         print("\n\nExporting bedpick plots...")
-        Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
 
     # Cleanup
     psObj._cleanup()
@@ -502,7 +515,8 @@ def read_master_func(sonFiles,
                 chunkCnt = len(chunks)
             print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
-            Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+            # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
 
 
     ##############################################
