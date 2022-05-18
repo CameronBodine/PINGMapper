@@ -1206,9 +1206,6 @@ class sonObj(object):
         return self
 
 
-
-
-
     # ==========================================================================
     def _loadSonChunk(self):
         '''

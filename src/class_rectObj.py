@@ -805,10 +805,8 @@ class rectObj(sonObj):
     # Rectify sonar imagery                                                    #
     ############################################################################
 
-    #===========================================================================
     def _rectSonParallel(self,
                          chunk,
-                         remWater=True,
                          filt=50,
                          wgs=False):
         '''
@@ -856,23 +854,8 @@ class rectObj(sonObj):
         '''
         filterIntensity = False
 
-        # Prepare initial variables
-        ## Variables for water column removal and slant range corrected imagery
-        if remWater == True:
-            imgOutPrefix = 'rect_src'
-            tileFlag = self.src #Indicates if non-rectified src images were exported
-        ## Variables for water column present imagery
-        else:
-            imgOutPrefix = 'rect_wcp'
-            tileFlag = self.wcp #Indicates if non-rectified wcp images were exported
-
         # Create output directory if it doesn't exist
         outDir = self.outDir # Parent directory
-        try:
-            os.mkdir(outDir)
-        except:
-            pass
-        outDir = os.path.join(outDir, imgOutPrefix) # Sub-directory
         try:
             os.mkdir(outDir)
         except:
@@ -909,25 +892,25 @@ class rectObj(sonObj):
         else:
             addZero = ''
 
-        projName = os.path.split(self.projDir)[-1] # Get project name
-        beamName = self.beamName # Determine which sonar beam we are working with
-        imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
-
-        gtiff = os.path.join(outDir, imgName) # Output file name
-
-        # Following workflow adapted from scikit-image:
-        # # https://scikit-image.org/docs/dev/auto_examples/transform/plot_piecewise_affine.html
-
         #################################
         # Prepare pixel (pix) coordinates
         ## Pix coordinates describe the size of the coordinates in pixel
         ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
+        # Filter sonMetaDF by chunk
+        sonMetaAll = self.sonMetaDF
+        isChunk = sonMetaAll['chunk_id']==chunk
+        sonMeta = sonMetaAll[isChunk].reset_index()
+        # Update class attributes based on current chunk
+        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
+        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+
         # Open image to rectify
-        # if tileFlag: # Open non-rectified image as numpy array
-        #     img = np.asarray(Image.open(imgPath)).copy()
-        # else: # Load ping return values from .SON/.IDX file
-        self._getScanChunkSingle(chunk, filterIntensity, remWater)
+        self._loadSonChunk()
+        if filterIntensity:
+            self._doPPDRC()
+
         img = self.sonDat
         img[0]=0 # To fix extra white on curves
 
@@ -979,7 +962,6 @@ class rectObj(sonObj):
         dst = dstAll[mask]
 
         ##################
-        # Warp sonar image
         ## Before applying a geographic projection to the image, the image
         ## must be warped to conform to the shape specified by the geographic
         ## coordinates.  We don't want to warp the image to real-world dimensions,
@@ -1013,19 +995,6 @@ class rectObj(sonObj):
         tform = PiecewiseAffineTransform()
         tform.estimate(pix, dst) # Calculate H matrix
 
-        # Warp image from the input shape to output shape
-        out = warp(img.T,
-                   tform.inverse,
-                   output_shape=(outShape[1], outShape[0]),
-                   mode='constant',
-                   cval=np.nan,
-                   clip=False,
-                   preserve_range=True)
-
-        # Rotate 180 and flip
-        # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-        out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
-
         ##############
         # Save Geotiff
         ## In order to visualize the warped image in a GIS at the appropriate
@@ -1045,24 +1014,104 @@ class rectObj(sonObj):
         ## of upper left corner of the image and the pixel size
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
-        # Export georectified image
-        with rasterio.open(
-            gtiff,
-            'w',
-            driver='GTiff',
-            height=out.shape[0],
-            width=out.shape[1],
-            count=1,
-            dtype=out.dtype,
-            crs=epsg,
-            transform=transform,
-            compress='lzw'
-            ) as dst:
-                dst.nodata=0
-                dst.write(out,1)
-                ## Uncomment below code if overviews should be created for each file
-                # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
-                # dst.update_tags(ns='rio_overview', resampling='nearest')
-                # dst.close()
+        if self.rect_wcp:
+            imgOutPrefix = 'rect_wcp'
+            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+
+            # Warp image from the input shape to output shape
+            out = warp(img.T,
+                       tform.inverse,
+                       output_shape=(outShape[1], outShape[0]),
+                       mode='constant',
+                       cval=np.nan,
+                       clip=False,
+                       preserve_range=True)
+
+            # Rotate 180 and flip
+            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+
+            projName = os.path.split(self.projDir)[-1] # Get project name
+            beamName = self.beamName # Determine which sonar beam we are working with
+            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
+
+            gtiff = os.path.join(outDir, imgName) # Output file name
+
+            # Export georectified image
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=out.shape[0],
+                width=out.shape[1],
+                count=1,
+                dtype=out.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw'
+                ) as dst:
+                    dst.nodata=0
+                    dst.write(out,1)
+                    ## Uncomment below code if overviews should be created for each file
+                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
+                    # dst.update_tags(ns='rio_overview', resampling='nearest')
+                    # dst.close()
+
+        if self.rect_src:
+            imgOutPrefix = 'rect_src'
+            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+
+            self._SRC(sonMeta)
+            img = self.sonDat
+
+            # Warp image from the input shape to output shape
+            out = warp(img.T,
+                       tform.inverse,
+                       output_shape=(outShape[1], outShape[0]),
+                       mode='constant',
+                       cval=np.nan,
+                       clip=False,
+                       preserve_range=True)
+
+            # Rotate 180 and flip
+            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+
+            projName = os.path.split(self.projDir)[-1] # Get project name
+            beamName = self.beamName # Determine which sonar beam we are working with
+            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
+
+            gtiff = os.path.join(outDir, imgName) # Output file name
+
+
+            # Export georectified image
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=out.shape[0],
+                width=out.shape[1],
+                count=1,
+                dtype=out.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw'
+                ) as dst:
+                    dst.nodata=0
+                    dst.write(out,1)
+                    ## Uncomment below code if overviews should be created for each file
+                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
+                    # dst.update_tags(ns='rio_overview', resampling='nearest')
+                    # dst.close()
 
         return self

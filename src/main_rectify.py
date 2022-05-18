@@ -224,24 +224,15 @@ def rectify_master_func(sonFiles,
     print("\nRectifying and exporting GeoTiffs:\n")
 
     if rect_wcp:
-        print('Rectifying with Water Column Present...')
-        remWater = False
         for son in portstar:
             son.rect_wcp = True
-            # Locate and open smoothed trackline/range extent file
-            trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
-            trkMeta = pd.read_csv(trkMetaFile)
-
-            # Determine what chunks to process
-            chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
-            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
-
     if rect_src:
-        print('\nRectifying with Water Column Removed...')
-        remWater = True
         for son in portstar:
             son.rect_src = True
+
+    if rect_wcp or rect_src:
+        for son in portstar:
+            son._loadSonMeta()
             # Locate and open smoothed trackline/range extent file
             trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
             trkMeta = pd.read_csv(trkMetaFile)
@@ -249,7 +240,7 @@ def rectify_master_func(sonFiles,
             # Determine what chunks to process
             chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._rectSonParallel)(i, remWater, filter, wgs=False) for i in chunks)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
 
     if rect_wcp or rect_src:
         for son in portstar:
