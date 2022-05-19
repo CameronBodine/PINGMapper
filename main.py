@@ -48,6 +48,8 @@ rect_src = True #Export rectified tiles with water column removed/slant range co
 
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
+threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+
 #################
 #################
 
@@ -61,7 +63,7 @@ print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, src, detectDepth, smthDep, adjDep, pltBedPick)
+read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, src, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
 if rect_wcp or rect_src:
@@ -69,7 +71,7 @@ if rect_wcp or rect_src:
     print('===========================================')
     print('***** RECTIFYING *****')
     print("working on "+projDir)
-    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_src, mosaic)
+    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_src, mosaic, threadCnt)
 
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
