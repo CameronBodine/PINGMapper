@@ -67,7 +67,7 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 
 5. Line 33: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-6. Line 34: Option to export unknown sonar record metadata fields.
+6. Line 34: Option to export unknown ping metadata fields.
 
 7. Line 35-36: Export un-rectified sonar tiles with water column present AND/OR water column removed.
 
