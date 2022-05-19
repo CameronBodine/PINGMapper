@@ -1,4 +1,15 @@
 # PING-Mapper
+![GitHub last commit](https://img.shields.io/github/last-commit/CameronBodine/PINGMapper)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/CameronBodine/PINGMapper)
+![GitHub](https://img.shields.io/github/license/CameronBodine/PINGMapper)
+
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Anaconda](https://img.shields.io/badge/conda-342B029.svg?&style=for-the-badge&logo=anaconda&logoColor=white)
+![Numpy](https://img.shields.io/badge/Numpy-791a9d?style=for-the-badge&logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)
+![Tensorflow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=TensorFlow&logoColor=white)
+
+
 Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.  Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
 
 1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onyx).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
