@@ -36,7 +36,7 @@ t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = True #Option to export Unknown sonar record metadata
 wcp = True #Export tiles with water column present
-src = True #Export Tiles with water column removed/slant range corrected
+wcr = True #Export Tiles with water column removed (and slant range corrected)
 detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 smthDep = True #Smooth depth before water column removal
@@ -44,7 +44,7 @@ adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
 rect_wcp = True #Export rectified tiles with water column present
-rect_src = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
@@ -63,15 +63,15 @@ print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, src, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
-if rect_wcp or rect_src:
+if rect_wcp or rect_wcr:
     print('\n===========================================')
     print('===========================================')
     print('***** RECTIFYING *****')
     print("working on "+projDir)
-    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_src, mosaic, threadCnt)
+    rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

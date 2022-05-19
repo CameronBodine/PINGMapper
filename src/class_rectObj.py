@@ -21,8 +21,8 @@ class rectObj(sonObj):
     self.rangeExt : DataFrame
         DESCRIPTION - Pandas dataframe to store range extent.
 
-    self.rect_src : bool
-        DESCRIPTION - Flag indicating if rectified src data was exported.
+    self.rect_wcr : bool
+        DESCRIPTION - Flag indicating if rectified wcr data was exported.
 
     self.rect_wcp : bool
         DESCRIPTION - Flag indicating if rectified wcp data was exported.
@@ -64,7 +64,7 @@ class rectObj(sonObj):
             setattr(self, attr, value)
 
         self.rect_wcp = False
-        self.rect_src = False
+        self.rect_wcr = False
 
         return
 
@@ -811,7 +811,7 @@ class rectObj(sonObj):
                          wgs=False):
         '''
         This function will georectify sonar tiles with water column present
-        (rect_wcp) OR water column removed and slant range corrected (rect_src).
+        (rect_wcp) OR water column removed and slant range corrected (rect_wcr).
         Sonar intensity will be loaded directly from the .SON file. Once
         determined, each chunk will be iterated, sonar intensities loaded into
         memory and:
@@ -1062,8 +1062,8 @@ class rectObj(sonObj):
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
 
-        if self.rect_src:
-            imgOutPrefix = 'rect_src'
+        if self.rect_wcr:
+            imgOutPrefix = 'rect_wcr'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
             try:
@@ -1071,7 +1071,7 @@ class rectObj(sonObj):
             except:
                 pass
 
-            self._SRC(sonMeta)
+            self._WCR(sonMeta)
             img = self.sonDat
 
             # Warp image from the input shape to output shape

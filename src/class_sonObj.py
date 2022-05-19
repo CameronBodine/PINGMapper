@@ -94,9 +94,9 @@ class sonObj(object):
     self.sonMetaPickle : str
         DESCRIPTION - Path to .SON metadata pickle file (.meta).
 
-    self.src : bool
+    self.wcr : bool
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
-                      removed & slant range corrected (src).
+                      removed (wcr) & slant range corrected.
 
     self.tempC : float
         DESCRIPTION - Water temperature (Celcius) during survey divided by 10.
@@ -1198,10 +1198,10 @@ class sonObj(object):
             # self._doPPDRC()
             self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
         # Export slant range corrected (water column removed) imagery
-        if self.src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-            self._SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+        if self.wcr and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            self._WCR(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
             # self._doPPDRC()
-            self._writeTiles(chunk, imgOutPrefix='src') # Save image
+            self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
 
         return self
 
@@ -1247,7 +1247,7 @@ class sonObj(object):
         return self
 
     # ======================================================================
-    def _SRC(self,
+    def _WCR(self,
              sonMeta):
         '''
         Slant range correction is the process of relocating sonar returns after
@@ -1428,9 +1428,9 @@ class sonObj(object):
         # Do PPDRC filter
         if filterIntensity:
             self._doPPDRC()
-        # Remove water if exporting src imagery
+        # Remove water if exporting wcr imagery
         if remWater:
-            self._SRC(sonMeta)
+            self._WCR(sonMeta)
 
         return self
 

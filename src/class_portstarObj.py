@@ -88,11 +88,11 @@ class portstarObj(object):
             else:
                 wcpToMosaic = [port + star]
 
-        if self.port.rect_src:
-            portPath = os.path.join(self.port.outDir, 'rect_src')
+        if self.port.rect_wcr:
+            portPath = os.path.join(self.port.outDir, 'rect_wcr')
             port = sorted(glob(os.path.join(portPath, '*.tif')))
 
-            starPath = os.path.join(self.star.outDir, 'rect_src')
+            starPath = os.path.join(self.star.outDir, 'rect_wcr')
             star = sorted(glob(os.path.join(starPath, '*.tif')))
 
             if len(port) > maxChunk:
@@ -105,12 +105,12 @@ class portstarObj(object):
         if mosaic == 1:
             if self.port.rect_wcp:
                 self._mosaicGtiff(overview, wcpToMosaic)
-            if self.port.rect_src:
+            if self.port.rect_wcr:
                 self._mosaicGtiff(overview, srcToMosaic)
         elif mosaic == 2:
             if self.port.rect_wcp:
                 self._mosaicVRT(overview, wcpToMosaic)
-            if self.port.rect_src:
+            if self.port.rect_wcr:
                 self._mosaicVRT(overview, srcToMosaic)
 
 

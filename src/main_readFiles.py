@@ -14,7 +14,7 @@ def read_master_func(sonFiles,
                      nchunk=500,
                      exportUnknown=False,
                      wcp=False,
-                     src=False,
+                     wcr=False,
                      detectDep=0,
                      smthDep=False,
                      adjDep=0,
@@ -51,12 +51,12 @@ def read_master_func(sonFiles,
                       True = export wcp sonar tiles;
                       False = do not export wcp sonar tiles.
         EXAMPLE -     wcp = True
-    src : bool
+    wcr : bool
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
-                      removed & slant range corrected (src).
-                      True = export src sonar tiles;
-                      False = do not export src sonar tiles.
-        EXAMPLE -     src = True
+                      removed (wcr).
+                      True = export wcr sonar tiles;
+                      False = do not export wcr sonar tiles.
+        EXAMPLE -     wcr = True
     detectDep : int
         DESCRIPTION - Determines if depth will be automatically estimated for
                       water column removal.
@@ -85,6 +85,13 @@ def read_master_func(sonFiles,
                       True = plot bedpick(s);
                       False = do not plot bedpick(s).
         EXAMPLE -     pltBedPick = True
+    threadCnt : int
+        DESCRIPTION - The maximum number of threads to use during multithreaded
+                      processing. More threads==faster data export.
+                      0 = Use all available threads;
+                      <0 = Negative values will be subtracted from total available
+                        threads. i.e., -2 -> Total threads (8) - 2 == 6 threads.
+                      >0 = Number of threads to use, up to total available threads.
 
     -------
     Returns
@@ -123,17 +130,17 @@ def read_master_func(sonFiles,
     |  |--DAT_meta.csv : Sonar recording metadata for *.DAT.
     |
     |--|ss_port (if B002.SON OR B003.SON [tranducer flipped] available)
-    |  |--src [src=True]
+    |  |--wcr [wxr=True]
     |     |--*.PNG : Portside side scan (ss) sonar tiles (non-rectified), w/
-    |     |          water column removed & slant range corrected (src)
+    |     |          water column removed (wcr) & slant range corrected
     |  |--wcp [wcp=True]
     |     |--*.PNG : Portside side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
 
     |--|ss_star (if B003.SON OR B002.SON [tranducer flipped] available)
-    |  |--src [src=True]
+    |  |--wcr [wcr=True]
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
-    |     |          water column removed & slant range corrected (src)
+    |     |          water column removed (wcr) & slant range corrected
     |  |--wcp [wcp=True]
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
@@ -379,7 +386,7 @@ def read_master_func(sonFiles,
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:
         son.wcp = wcp
-        son.src = src
+        son.wcr = wcr
         # # Make sonar imagery directory for each beam if it doesn't exist
         # try:
         #     os.mkdir(son.outDir)
@@ -501,7 +508,7 @@ def read_master_func(sonFiles,
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
-    if wcp or src:
+    if wcp or wcr:
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
             son._loadSonMeta()
@@ -509,7 +516,7 @@ def read_master_func(sonFiles,
 
             # Determine what chunks to process
             chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-            if son.src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+            if son.wcr and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
                 chunkCnt = len(chunks)*2
             else:
                 chunkCnt = len(chunks)

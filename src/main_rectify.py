@@ -11,7 +11,7 @@ def rectify_master_func(sonFiles,
                         projDir,
                         nchunk=500,
                         rect_wcp=False,
-                        rect_src=False,
+                        rect_wcr=False,
                         mosaic=0,
                         threadCnt=0):
     '''
@@ -40,15 +40,15 @@ def rectify_master_func(sonFiles,
                       True = export georectified wcp sonar tiles;
                       False = do not export georectified wcp sonar tiles.
         EXAMPLE -     rect_wcp = True
-    rect_src : bool
+    rect_wcr : bool
         DESCRIPTION - Flag to export georectified sonar tiles w/ water column
-                      removed & slant range corrected (src).
-                      True = export georectified src sonar tiles;
-                      False = do not export georectified src sonar tiles.
-        EXAMPLE -     rect_src = True
+                      removed (wcr) & slant range corrected.
+                      True = export georectified wcr sonar tiles;
+                      False = do not export georectified wcr sonar tiles.
+        EXAMPLE -     rect_wcr = True
     mosaic : int
         DESCRIPTION - Mosaic exported georectified sonograms to a virtual raster
-                      (vrt) as specified with the `rect_wcp` and `rect_src` flags.
+                      (vrt) as specified with the `rect_wcp` and `rect_wcr` flags.
                       See https://gdal.org/drivers/raster/vrt.html for more info.
                       Overviews are created by default.
                       0 = do not export georectified mosaic(s);
@@ -69,22 +69,22 @@ def rectify_master_func(sonFiles,
     |  |                               scan (if present)
     |
     |--|ss_port (if B002.SON OR B003.SON [tranducer flipped] available)
-    |  |--rect_src [rect_src=True]
+    |  |--rect_wcr [rect_wcr=True]
     |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
-    |     |          water column removed & slant range corrected (src)
+    |     |          water column removed (wcr) & slant range corrected
     |  |--rect_wcp [wcp=True]
     |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
     |     |          water column present (wcp)
     |
     |--|ss_star (if B003.SON OR B002.SON [tranducer flipped] available)
-    |  |--rect_src [src=True]
+    |  |--rect_wcr [wcr=True]
     |     |--*.tif : Starboard side scan (ss) georectified sonar tiles, w/
-    |     |          water column removed & slant range corrected (src)
+    |     |          water column removed (wcr) & slant range corrected
     |  |--rect_wcp [wcp=True]
     |     |--*.tif : Starboard side scan (ss) georectified sonar tiles, w/
     |     |          water column present (wcp)
     |
-    |--*_src_mosaic.tif : SRC mosaic [rect_src=True & mosaic=1]
+    |--*_wcr_mosaic.tif : WCR mosaic [rect_wcr=True & mosaic=1]
     |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
     if threadCnt==0:
@@ -226,11 +226,11 @@ def rectify_master_func(sonFiles,
     if rect_wcp:
         for son in portstar:
             son.rect_wcp = True
-    if rect_src:
+    if rect_wcr:
         for son in portstar:
-            son.rect_src = True
+            son.rect_wcr = True
 
-    if rect_wcp or rect_src:
+    if rect_wcp or rect_wcr:
         for son in portstar:
             son._loadSonMeta()
             # Locate and open smoothed trackline/range extent file
@@ -242,7 +242,7 @@ def rectify_master_func(sonFiles,
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
 
-    if rect_wcp or rect_src:
+    if rect_wcp or rect_wcr:
         for son in portstar:
             del son.sonMetaDF
             del son.smthTrk

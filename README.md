@@ -1,15 +1,15 @@
-# PINGMapper
+# PING-Mapper
 Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.  Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
 
 1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onyx).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
 
 2. Export all metadata from .DAT and .SON files to .CSV.
 
-3. (Optional) Export un-rectified sonar tiles with water column present (wcp) AND/OR export un-rectified sonar tiles with water column removed and slant range corrected (wcr/scr) using Humminbird depth estimates.
+3. (Optional) Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonar tiles with water column removed (WCR) using Humminbird depth estimates.
 
 4. Smooth and interpolate GPS track points.
 
-5. (Optional) Export georectified WCP (water column present) (spatially inaccurate due to presence of water column) AND/OR SRC (slant range corrected) sonar imagery for use in GIS.
+5. (Optional) Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS.
 
 6. (Optional) Mosaic georectified sonar imagery from step 5.
 
