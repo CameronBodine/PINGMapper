@@ -158,6 +158,7 @@ def rectify_master_func(sonFiles,
     # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
+    start_time = time.time()
     print("\nSmoothing trackline...")
 
     # As side scan beams use same transducer/gps coords, we will smooth one
@@ -222,17 +223,21 @@ def rectify_master_func(sonFiles,
         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
     print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # Calculate range extent coordinates                                       #
     ############################################################################
+    start_time = time.time()
     print("\nCalculating, smoothing, and interpolating range extent coordinates...")
     Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # Rectify sonar imagery                                                    #
     ############################################################################
+    start_time = time.time()
     print("\nRectifying and exporting GeoTiffs:\n")
 
     if rect_wcp:
@@ -259,13 +264,16 @@ def rectify_master_func(sonFiles,
             del son.sonMetaDF
             del son.smthTrk
     print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # Mosaic imagery                                                           #
     ############################################################################
     overview = True # False will reduce overall file size, but reduce performance in a GIS
     if mosaic > 0:
+        start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
         psObj._createMosaic(mosaic, overview)
         print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))

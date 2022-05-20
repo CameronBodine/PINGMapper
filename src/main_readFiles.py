@@ -183,6 +183,7 @@ def read_master_func(sonFiles,
     # Decode DAT file (varies by model)                                        #
     ############################################################################
 
+    start_time = time.time()
     print("\nGetting DAT Metadata...")
     # Create sonObj to store sonar attributes, access processing functions,
     ## and access sonar data.  We will use the first sonar beam to make an
@@ -217,6 +218,7 @@ def read_master_func(sonFiles,
     pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
     son.datMetaFile = outFile # Store metadata file path in sonObj
     print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     #######################################################
     # Try copying sonObj instance for every sonar channel #
@@ -279,6 +281,7 @@ def read_master_func(sonFiles,
     # Determine ping header length (varies by model)                   #
     ############################################################################
 
+    start_time = time.time()
     print("\nGetting Header Structure...")
     cntSON = len(sonObjs) # Number of sonar files
     gotHeader = False # Flag indicating if length of header is found
@@ -355,10 +358,12 @@ def read_master_func(sonFiles,
                 print("Terminating srcipt.")
                 sys.exit()
 
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
     ########################################
     # Let's get the metadata for each ping #
     ########################################
 
+    start_time = time.time()
     # Now that we know the ping header structure, let's read that data
     ## and save it to .CSV in the meta directory.
     print("\nGetting SON file header metadata...")
@@ -445,10 +450,12 @@ def read_master_func(sonFiles,
 
 
     print("\nDone!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # For Depth Detection                                                      #
     ############################################################################
+    start_time = time.time()
     # Determine which sonObj is port/star
     portstar = []
     for son in sonObjs:
@@ -500,15 +507,23 @@ def read_master_func(sonFiles,
         psObj._cleanup()
 
     else:
+        print('\n\nUsing instrument depth:')
         autoBed = False
 
     # Save detected depth to csv
     psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+    print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     # Plot sonar depth and auto depth estimate (if available) on sonogram
     if pltBedPick:
+        start_time = time.time()
+
         print("\n\nExporting bedpick plots...")
         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     # Cleanup
     psObj._cleanup()
@@ -519,6 +534,7 @@ def read_master_func(sonFiles,
     ############################################################################
 
     if wcp or wcr:
+        start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
             son._loadSonMeta()
@@ -534,6 +550,8 @@ def read_master_func(sonFiles,
 
             # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
 
 
     ##############################################
