@@ -116,12 +116,12 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan MEGA Frequency    | 1,200 kHz         |
 
-Each SON file contains all the pings (sonar return) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  The header and sonar returns will be collectively referred to as a sonar record.  All data stored in SON files are signed integer big endian.
+Each SON file contains all the pings (ping returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  All data stored in SON files are signed integer big endian.
 
-#### 2.2.1) Sonar Record Structure
-The number of bytes for a sonar record varies in two ways.  First, the number of bytes in the sonar record header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of sonar returns for a sonar record vary depending on the range setting on the unit.  The variability in the size of a sonar record across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
+#### 2.2.1) Ping Structure
+The number of bytes for a ping varies in two ways.  First, the number of bytes in the ping header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range setting on the unit.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
 
-Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
+Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
 
 **Header Length by Model**
 
@@ -132,16 +132,16 @@ Each sonar record begins with the same four hexidecimal values: `C0 DE AB 21`.  
 | 152 Bytes     | Solix            |
 
 ##### 2.2.1.1) Header Structure
-The header for a sonar record contains metadata specific to that sonar record.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of sonar record, the data that follows the tag, and the size (in bytes) of the data.
+The header for a ping contains metadata specific to that ping.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of a ping, the data that follows the tag, and the size (in bytes) of the data.
 
 ##### 2.2.1.2) Humminbird&reg; 900 Series
 Header Length (Bytes): **67**
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
-| Header Start      | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Header Start      | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of ping |
 | Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
-| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record ID |
+| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique ping ID |
 | Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
 | **Time Elapsed**  | +10    | 4      | 32    | *Varies*      | *Varies*      | Time elapsed (in milliseconds) |
 | Tag 82            | +14    | 1      | 8     | `82`          | 130           | - |
@@ -174,7 +174,7 @@ Header Length (Bytes): **67**
 | **+- UTM Y (?)**  | +60    | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM Y in centimeters |
 | Tag A0            | +61    | 1      | 8     | `A0`          | 160           | - |
 | **Bytes in Ping** | +62    | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
-| End Header        | +66    | 1      | 8     | `21`          | 33            | End of sonar record header |
+| End Header        | +66    | 1      | 8     | `21`          | 33            | End of ping header |
 
 
 ##### 2.2.1.3) Humminbird&reg; 1100 & Helix Series
@@ -183,9 +183,9 @@ Header Length (Bytes): **72**
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
-| Header Start      | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Header Start      | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of ping |
 | Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
-| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record ID |
+| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique ping ID |
 | Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
 | **Time Elapsed**  | +10    | 4      | 32    | *Varies*      | *Varies*      | Time elapsed (in milliseconds) |
 | Tag 82            | +14    | 1      | 8     | `82`          | 130           | - |
@@ -220,7 +220,7 @@ Header Length (Bytes): **72**
 | **+- UTM Y (?)**  | +65    | 1      | 8     | *Varies*      | *Varies*      | Possibly +- UTM Y in centimeters |
 | Tag A0            | +66    | 1      | 8     | `A0`          | 160           | - |
 | **Bytes in Ping** | +67    | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
-| End Header        | +71    | 1      | 8     | `21`          | 33            | End of sonar record header |
+| End Header        | +71    | 1      | 8     | `21`          | 33            | End of ping header |
 
 
 ##### 2.2.1.4) Humminbird&reg; Solix Series
@@ -229,9 +229,9 @@ Header Length (Bytes): **152**
 
 | Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
 | ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
-| Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of Sonar Record |
+| Head Start        | +0     | 4      | 32    | `A0 DE AB 21` | 3235818273    | Beginning of ping |
 | Tag 80            | +4     | 1      | 8     | `80`          | 128           | - |
-| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique sonar record ID |
+| **Record Number** | +5     | 4      | 32    | *Varies*      | *Varies*      | Unique ping ID |
 | Tag 81            | +9     | 1      | 8     | `81`          | 129           | - |
 | **Time Elapsed**  | +10    | 4      | 32    | *Varies*      | *Varies*      | Time elapsed (in milliseconds) |
 | Tag 82            | +14    | 1      | 8     | `82`          | 130           | - |
@@ -298,7 +298,7 @@ Header Length (Bytes): **152**
 | **Unknown**       | +142   | 4      | 32    | `A1 B2 C3 D4` | 2712847316    | Unknown |
 | Tag A0            | +146   | 1      | 8     | `A0`          | 160           | - |
 | **Bytes in Ping** | +147   | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
-| End Header        | +151   | 1      | 8     | `21`          | 33            | End of sonar record header |
+| End Header        | +151   | 1      | 8     | `21`          | 33            | End of ping header |
 
 
 Example of first and last 4 sonar records from sonar files.  Values displayed are in hexadecimal.

@@ -47,12 +47,22 @@ def rectify_master_func(sonFiles,
                       False = do not export georectified wcr sonar tiles.
         EXAMPLE -     rect_wcr = True
     mosaic : int
-        DESCRIPTION - Mosaic exported georectified sonograms to a virtual raster
-                      (vrt) as specified with the `rect_wcp` and `rect_wcr` flags.
-                      See https://gdal.org/drivers/raster/vrt.html for more info.
+        DESCRIPTION - Mosaic exported georectified sonograms to a geotiff or
+                      virtual raster (vrt) as specified with the `rect_wcp` and
+                      `rect_wcr` flags. See https://gdal.org/drivers/raster/vrt.html
+                      for more info.
                       Overviews are created by default.
                       0 = do not export georectified mosaic(s);
-                      1 = export georectified mosaic(s).
+                      1 = export georectified mosaic(s) as GeoTiffs.
+                      2 = export georectified mosaic(s) as vrt.
+    threadCnt : int : [Default=0]
+        DESCRIPTION - The maximum number of threads to use during multithreaded
+                      processing. More threads==faster data export.
+                      0 = Use all available threads;
+                      <0 = Negative values will be subtracted from total available
+                        threads. i.e., -2 -> Total threads (8) - 2 == 6 threads.
+                      >0 = Number of threads to use, up to total available threads.
+        EXAMPLE -     threadCnt = 0
 
     -------
     Returns
@@ -87,16 +97,18 @@ def rectify_master_func(sonFiles,
     |--*_wcr_mosaic.tif : WCR mosaic [rect_wcr=True & mosaic=1]
     |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
-    if threadCnt==0:
+
+    # Specify multithreaded processing thread count
+    if threadCnt==0: # Use all threads
         threadCnt=cpu_count()
-    elif threadCnt<0:
+    elif threadCnt<0: # Use all threads except threadCnt; i.e., (cpu_count + (-threadCnt))
         threadCnt=cpu_count()+threadCnt
-        if threadCnt<0:
+        if threadCnt<0: # Make sure not negative
             threadCnt=1
-    else:
+    else: # Use specified threadCnt if positive
         pass
 
-    if threadCnt>cpu_count():
+    if threadCnt>cpu_count(): # If more than total avail. threads, make cpu_count()
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
@@ -151,9 +163,9 @@ def rectify_master_func(sonFiles,
     # As side scan beams use same transducer/gps coords, we will smooth one
     ## beam's trackline and use for both. Use the beam with the most sonar records.
     maxRec = 0 # Stores index of recording w/ most sonar records.
-    maxLen = 0 # Stores length of sonar record
+    maxLen = 0 # Stores length of ping
     for i, son in enumerate(portstar):
-        son._loadSonMeta() # Load sonar record metadata
+        son._loadSonMeta() # Load ping metadata
         sonLen = len(son.sonMetaDF) # Number of sonar records
         if sonLen > maxLen:
             maxLen = sonLen
@@ -161,7 +173,7 @@ def rectify_master_func(sonFiles,
 
     # Now we will smooth using sonar beam w/ most records.
     son0 = portstar[maxRec]
-    sonDF = son0.sonMetaDF # Get sonar record metadata
+    sonDF = son0.sonMetaDF # Get ping metadata
     sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
 
     ####################################
@@ -197,7 +209,7 @@ def rectify_master_func(sonFiles,
 
     sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
     # Update with correct record_num
-    son1._loadSonMeta() # Load sonar record metadata
+    son1._loadSonMeta() # Load ping metadata
     df = son1.sonMetaDF
     sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
     sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
@@ -251,7 +263,7 @@ def rectify_master_func(sonFiles,
     ############################################################################
     # Mosaic imagery                                                           #
     ############################################################################
-    overview = True
+    overview = True # False will reduce overall file size, but reduce performance in a GIS
     if mosaic > 0:
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)

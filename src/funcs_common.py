@@ -18,7 +18,6 @@ import numpy as np
 from array import array as arr
 
 import pyproj
-import imageio
 import rasterio
 from numpy.lib.stride_tricks import as_strided as ast
 
@@ -28,6 +27,9 @@ from collections import defaultdict
 from copy import deepcopy
 import pickle
 import shutil
+
+import time
+import datetime
 
 # from skimage.filters import median
 # from skimage.morphology import square

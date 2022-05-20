@@ -85,7 +85,7 @@ class rectObj(sonObj):
                      filt=0,
                      deg=3):
         '''
-        Smooths 'noisy' sonar record trackpoints by completing the following:
+        Smooths 'noisy' ping trackpoints by completing the following:
         1) Removes duplicate geographic coordinates;
         2) Filter coordinates to reduce point density;
         3) Fits n-degree spline to filtered coordinates;
@@ -100,25 +100,25 @@ class rectObj(sonObj):
         df : DataFrame
             DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
                           records.
-        dfOrig : DataFrame
+        dfOrig : DataFrame : [Default=None]
             DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
                           records.  If `None`, a copy of `df` will be used.
-        dropDup : bool
+        dropDup : bool : [Default=True]
             DESCRIPTION - Flag indicating if coincident coordinates will be dropped.
-        xlon : str
+        xlon : str : [Default='lon']
             DESCRIPTION - DataFrame column name for longitude coordinates.
-        ylat : str
+        ylat : str : [Default='lat']
             DESCRIPTION - DataFrame column name for latitude coordinates.
-        xutm : str
+        xutm : str : [Default='utm_e']
             DESCRIPTION - DataFrame column name for easting coordinates.
-        yutm : str
+        yutm : str : [Default='utm_y']
             DESCRIPTION - DataFrame column name for northing coordinates.
-        zU : str
+        zU : str : [Default='time_s']
             DESCRIPTION - DataFrame column name used to reinterpolate coordinates
                           along spline (i.e. determines spacing between coordinates)
-        filt : int
-            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
-        deg : int
+        filt : int : [Default=0]
+            DESCRIPTION - Every `filt` ping will be used to fit a spline.
+        deg : int : [Default=3]
             DESCRIPTION - Indicates n-degree spline that will be fit to filtered
                           coordinates.
 
@@ -233,9 +233,9 @@ class rectObj(sonObj):
 
         # Calculate COG (course over ground; i.e. heading) from smoothed lat/lon
         brng = self._getBearing(sDF, lons, lats)
-        # self._getBearing() returns n-1 values because last sonar record can't
+        # self._getBearing() returns n-1 values because last ping can't
         ## have a COG value.  We will duplicate the last COG value and use it for
-        ## the last sonar record.
+        ## the last ping.
         last = brng[-1]
         brng = np.append(brng, last)
         sDF['cog'] = brng # Store COG in sDF
@@ -258,9 +258,9 @@ class rectObj(sonObj):
         df : DataFrame
             DESCRIPTION - Pandas dataframe with geographic coordinates of sonar
                           records.
-        lon : str
+        lon : str : [Default='lons']
             DESCRIPTION - DataFrame column name for longitude coordinates.
-        lat : str
+        lat : str : [Default='lats']
             DESCRIPTION - DataFrame column name for latitude coordinates.
 
         ----------------------------
@@ -320,16 +320,16 @@ class rectObj(sonObj):
                         flip = False,
                         filt = 25):
         '''
-        Humminbird SSS store one set geographic coordinates where each sonar record
+        Humminbird SSS store one set geographic coordinates where each ping
         orriginates from (assuming GPS is located directly above sonar transducer).
         In order to georectify the sonar imagery, we need to know geographically
-        where each sonar record terminates.  The range (distance, length) of each
-        sonar record is not stored in the Humminbird recording, so we estimate
+        where each ping terminates.  The range (distance, length) of each
+        ping is not stored in the Humminbird recording, so we estimate
         the size of one ping return (estimated previously in self._getPixSize)
-        and multiply by the number of ping returns for each sonar record to
-        estimate the range.  Range coordinates for each sonar record are then
-        estimated using the range of each sonar record, the coordinates where the
-        sonar record originated, and the COG.
+        and multiply by the number of ping returns for each ping to
+        estimate the range.  Range coordinates for each ping are then
+        estimated using the range of each ping, the coordinates where the
+        ping originated, and the COG.
 
         A spline is then fit to filtered range coordinates, the same as the trackpoints,
         to help ensure no pings overlapm, resulting in higher quality sonar imagery.
@@ -337,11 +337,11 @@ class rectObj(sonObj):
         ----------
         Parameters
         ----------
-        flip : bool
+        flip : bool : [Default=False]
             DESCRIPTION - Flip port and starboard sonar channels (if transducer
                           was facing backwards duing survey).
-        filt : int
-            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+        filt : int : [Default=25]
+            DESCRIPTION - Every `filt` ping will be used to fit a spline.
 
         ----------------------------
         Required Pre-processing step
@@ -370,7 +370,7 @@ class rectObj(sonObj):
         range = 'range'
         chunk_id = 'chunk_id'
 
-        self._loadSonMeta() # Load sonar record metadata
+        self._loadSonMeta() # Load ping metadata
         sonMetaDF = self.sonMetaDF
 
         # Get smoothed trackline
@@ -454,8 +454,8 @@ class rectObj(sonObj):
         ----------
         Parameters
         ----------
-        filt : int
-            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+        filt : int : [Default=25]
+            DESCRIPTION - Every `filt` ping will be used to fit a spline.
 
         ----------------------------
         Required Pre-processing step
@@ -504,7 +504,7 @@ class rectObj(sonObj):
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
 
-            idx = chunkDF.index.tolist() # Store sonar record index in list
+            idx = chunkDF.index.tolist() # Store ping index in list
             maxIdx = max(idx) # Find last record index value
 
             drop = np.empty((len(chunkDF)), dtype=bool) # Bool numpy array to flag which sonar records overlap and should be dropped
@@ -512,15 +512,15 @@ class rectObj(sonObj):
 
             #########################################
             # Find and drop overlapping sonar records
-            for i in idx: # Iterate each sonar record if filtered dataframe
-                if i == maxIdx: # Break loop once we reach the last sonar record
+            for i in idx: # Iterate each ping if filtered dataframe
+                if i == maxIdx: # Break loop once we reach the last ping
                     break
                 else:
-                    if drop[i] != True: # If current sonar record flagged to drop, don't need to check it
+                    if drop[i] != True: # If current ping flagged to drop, don't need to check it
                         dropping = self._checkPings(i, chunkDF) # Find subsequent sonar records that overlap current record
-                        if maxIdx in dropping.keys(): # Make sure we don't drop last sonar record in chunk
+                        if maxIdx in dropping.keys(): # Make sure we don't drop last ping in chunk
                             del dropping[maxIdx]
-                            dropping[i]=True # Drop current sonar record instead
+                            dropping[i]=True # Drop current ping instead
                         else:
                             pass
                         if len(dropping) > 0: # We have overlapping sonar records we need to drop
@@ -586,7 +586,7 @@ class rectObj(sonObj):
         Parameters
         ----------
         i : int
-            DESCRIPTION - Current index of sonar record which will be compared
+            DESCRIPTION - Current index of ping which will be compared
                           against subsequent sonar records.
         df : Pandas DataFrame
             DESCRIPTION - DataFrame containing range extent coordinates of sonar
@@ -601,7 +601,7 @@ class rectObj(sonObj):
         Returns
         -------
         A dictionary containing dataframe index as key and bool value indicating
-        if dataframe sonar record should be dropped or not.
+        if dataframe ping should be dropped or not.
 
         --------------------
         Next Processing Step
@@ -612,9 +612,9 @@ class rectObj(sonObj):
         x = 'range_e' # range easting extent coordinate
         y = 'range_n' # range northing extent coordinate
         dThresh = 'distThresh' # max distance to check for overlap
-        tDist = 'track_dist' # straight line distance from sonar record i to subsequent sonar records
-        toCheck = 'toCheck' # Flag indicating subsequent sonar record is close enough to i to check for potential overlap
-        toDrop = 'toDrop' # Flag indicating sonar record overlaps with i
+        tDist = 'track_dist' # straight line distance from ping i to subsequent sonar records
+        toCheck = 'toCheck' # Flag indicating subsequent ping is close enough to i to check for potential overlap
+        toDrop = 'toDrop' # Flag indicating ping overlaps with i
         es = 'utm_es' #Trackline smoothed easting
         ns = 'utm_ns' #Trackline smoothed northing
 
@@ -627,16 +627,16 @@ class rectObj(sonObj):
         #########################
         # Calc distance threshold
         ## We only need to check sonar records which are close enough to the
-        ## current sonar record to potentially overlap.
+        ## current ping to potentially overlap.
         df[dThresh] = rowI[range] + df[range]
 
-        # Calc straight line distance along the track from current sonar record
+        # Calc straight line distance along the track from current ping
         ## to all other sonar records.  It is impossible for overlap to occur for
-        ## subsequent sonar records to overlap current sonar record if they are
+        ## subsequent sonar records to overlap current ping if they are
         ## further then the threshold distance.
-        rowIx, rowIy = rowI[x], rowI[y] # Get current sonar record range extent coordinates
-        dfx, dfy = df[x].to_numpy(), df[y].to_numpy() # Get subsequent sonar record range extent coordinates
-        dist = self._getDist(rowIx, rowIy, dfx, dfy) # Calculate distance from current sonar record
+        rowIx, rowIy = rowI[x], rowI[y] # Get current ping range extent coordinates
+        dfx, dfy = df[x].to_numpy(), df[y].to_numpy() # Get subsequent ping range extent coordinates
+        dist = self._getDist(rowIx, rowIy, dfx, dfy) # Calculate distance from current ping
 
         # Check if dist < distThresh. True==Check for possible overlap; False==No need to check
         df[tDist] = dist # Store distance calculation
@@ -644,15 +644,15 @@ class rectObj(sonObj):
         df.loc[df[tDist] > df[dThresh], toCheck] = False # Don't check for overlap
         df[toCheck]=df[toCheck].astype(bool) # Make sure toCheck column is type bool
 
-        # Determine which sonar records overlap with current sonar record
-        line1 = ((rowI[es],rowI[ns]), (rowI[x], rowI[y])) # Store current sonar record coordinates as tuple
+        # Determine which sonar records overlap with current ping
+        line1 = ((rowI[es],rowI[ns]), (rowI[x], rowI[y])) # Store current ping coordinates as tuple
         dfFilt = df[df[toCheck]==True].copy() # Get sonar records that could overlap with current
-        dropping = {} # Dictionary to store sonar record index to drop
+        dropping = {} # Dictionary to store ping index to drop
         for i, row in dfFilt.iterrows(): # Iterate subsequent sonar records
-            line2=((row[es], row[ns]), (row[x], row[y])) # Store sonar record coordinates to check in tuple
+            line2=((row[es], row[ns]), (row[x], row[y])) # Store ping coordinates to check in tuple
             isIntersect = self._lineIntersect(line1, line2, row[range]) # Determine if line1 intersects line2
             dfFilt.loc[i, toDrop] = isIntersect # Store bool in dataframe (don't need this but keeping in case)
-            if isIntersect == True: # If line2 intersects line1, flag sonar record for dropping
+            if isIntersect == True: # If line2 intersects line1, flag ping for dropping
                 dropping[i]=isIntersect
 
         return dropping
@@ -832,7 +832,7 @@ class rectObj(sonObj):
         remWater : bool
             DESCRIPTION - Flag indicating if wcp [False] or pix [True] imagery.
         filt : int
-            DESCRIPTION - Every `filt` sonar record will be used to fit a spline.
+            DESCRIPTION - Every `filt` ping will be used to fit a spline.
         wgs : bool
             DESCRIPTION - Flag indicating if sonar images should be rectified using
                           WGS 1984 coordinate system [True] or UTM state plane [False]
@@ -903,8 +903,8 @@ class rectObj(sonObj):
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
         self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per sonar record
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per sonar record
+        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
 
         # Open image to rectify
         self._loadSonChunk()
@@ -914,13 +914,13 @@ class rectObj(sonObj):
         img = self.sonDat
         img[0]=0 # To fix extra white on curves
 
-        # For each sonar record, we need the pixel coordinates where the sonar
+        # For each ping, we need the pixel coordinates where the sonar
         ## originates on the trackline, and where it terminates based on the
-        ## range of the sonar record.  This results in an array of coordinate
+        ## range of the ping.  This results in an array of coordinate
         ## pairs that describe the edge of the non-rectified image tile.
         rows, cols = img.shape[0], img.shape[1] # Determine number rows/cols
         pix_cols = np.arange(0, cols) # Create array of column indices
-        pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at sonar record origin, `rows` for max range)
+        pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at ping origin, `rows` for max range)
         pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
         pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
 
@@ -948,7 +948,7 @@ class rectObj(sonObj):
         xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
         xyR = np.vstack((xR, yR)).T # Stack the arrays
 
-        # Get trackline (origin of sonar record) coordinates [xT, yT] to transposed numpy arrays
+        # Get trackline (origin of ping) coordinates [xT, yT] to transposed numpy arrays
         xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
         xyT = np.vstack((xT, yT)).T # Stack the  arrays
 

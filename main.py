@@ -17,8 +17,6 @@ from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
 
-import time
-import datetime
 start_time = time.time()
 
 #============================================
@@ -34,7 +32,7 @@ projDir = '.\\procData\\PINGMapperTest'
 
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-exportUnknown = True #Option to export Unknown sonar record metadata
+exportUnknown = True #Option to export Unknown ping metadata
 wcp = True #Export tiles with water column present
 wcr = True #Export Tiles with water column removed (and slant range corrected)
 detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;

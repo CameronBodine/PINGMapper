@@ -1,24 +1,62 @@
 from funcs_common import *
 from funcs_bedpick import *
-# from rasterio.merge import merge
-# from rasterio.enums import Resampling
-import gdal
-
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-
-from scipy.signal import savgol_filter
-
-import itertools
 
 class portstarObj(object):
     '''
+    Python class to store port and starboard objects (sonObj() or rectObj()) in
+    a single object to facilitate functions which operate on both objects at the
+    same time.
+
+    ----------------
+    Class Attributes
+    ----------------
+    * Alphabetical order *
+    self.bedpickModel : tf model
+        DESCRIPTION - Stores compiled model used for automated depth detection.
+
+    self.configfile : str
+        DESCRIPTION - Stores path to depth detection model configuration file.
+
+    self.mergeSon : Numpy array
+        DESCRIPTION - Stores a chunk's portside and starboard sonar intensities,
+                      flipped and rotated in single array.
+
+    self.port : Object
+        DESCRIPTION - Stores either sonObj() or rectObj() instance for portside.
+
+    self.portDepDetect : dictionary
+        DESCRIPTION - Dictionary to store automated depth estimates for portside.
+                      chunk : np.array(depth estimate)
+
+    self.star : Object
+        DESCRIPTION - Stores either sonObj() or rectObj() instance for starboard.
+
+    self.starDepDetect : dictionary
+        DESCRIPTION - Dictionary to store automated depth estimates for starboard.
+                      chunk : np.array(depth estimate)
+
+    self.weights : str
+        DESCRIPTION - Store path to depth detection model weights file.
+
 
     '''
     #=======================================================================
     def __init__(self, objs):
         '''
+        Initialize a portstarObj instance.
+
+        ----------
+        Parameters
+        ----------
+        objs : list
+            DESCRIPTION - Portside and starboard sonObj or rectObj instances stored
+                          in a list.
+            EXAMPLE -     objs = [portSonObj, starSonObj]
+
+        -------
+        Returns
+        -------
+        portstarObj instance.
         '''
         for obj in objs:
             if obj.beamName == 'ss_port':
@@ -34,7 +72,35 @@ class portstarObj(object):
     ############################################################################
 
     #=======================================================================
-    def _getPortStarScanChunk(self, i):
+    def _getPortStarScanChunk(self,
+                              i):
+        '''
+        Reads ping returns for each side scan channel into arrays. Arrays are
+        rotated and flipped as necessary to concatenate side scan arrays into a
+        merged array.
+
+        ----------
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION - The chunk index to load into memory.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        self.mergeSon, a Numpy array with concatenated portside and starboard
+        ping returns.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        None
+        '''
         # Load sonar intensity into memory
         self.port._getScanChunkSingle(i)
         self.star._getScanChunkSingle(i)
@@ -70,17 +136,54 @@ class portstarObj(object):
     ############################################################################
 
     #=======================================================================
-    def _createMosaic(self, mosaic, overview):
-        maxChunk = 100
-        self.imgsToMosaic = []
+    def _createMosaic(self,
+                      mosaic=1,
+                      overview=True):
+        '''
+        Main function to mosaic exported rectified sonograms into a mosaic. If
+        overview=True, overviews of the mosaic will be built, enhancing view
+        performance in a GIS. Generating overviews will increase mosaic file size.
 
-        if self.port.rect_wcp:
+        ----------
+        Parameters
+        ----------
+        mosaic : int : [Default=1]
+            DESCRIPTION - Type of mosaic to create.
+                          1 = GeoTiff;
+                          2 = VRT (Virtual raster table), an xml that references
+                            each individual rectified sonogram chunk and mosaics
+                            on the fly.
+        overview : bool : [Default=True]
+            DESCRIPTION - Flag indicating if mosaic overviews should be generated.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        rectObj._rectSonParallel()
+
+        -------
+        Returns
+        -------
+        Exports mosaics of rectified sonograms.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Calls self._mosaicGtiff() or self._mosaicVRT() to generate mosaics.
+        '''
+        maxChunk = 100 # Max chunks per mosaic. Limits each mosaic file size.
+        self.imgsToMosaic = [] # List to store files to mosaic.
+
+        if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
+            # Locate port files
             portPath = os.path.join(self.port.outDir, 'rect_wcp')
             port = sorted(glob(os.path.join(portPath, '*.tif')))
 
+            # Locate starboard files
             starPath = os.path.join(self.star.outDir, 'rect_wcp')
             star = sorted(glob(os.path.join(starPath, '*.tif')))
 
+            # Make multiple mosaics if number of input sonograms is greater than maxChunk
             if len(port) > maxChunk:
                 port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
                 star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
@@ -88,13 +191,16 @@ class portstarObj(object):
             else:
                 wcpToMosaic = [port + star]
 
-        if self.port.rect_wcr:
+        if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
+            # Locate port files
             portPath = os.path.join(self.port.outDir, 'rect_wcr')
             port = sorted(glob(os.path.join(portPath, '*.tif')))
 
+            # Locate starboard files
             starPath = os.path.join(self.star.outDir, 'rect_wcr')
             star = sorted(glob(os.path.join(starPath, '*.tif')))
 
+            # Make multiple mosaics if number of input sonograms is greater than maxChunk
             if len(port) > maxChunk:
                 port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
                 star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
@@ -102,89 +208,198 @@ class portstarObj(object):
             else:
                 srcToMosaic = [port + star]
 
+        # Create geotiff
         if mosaic == 1:
             if self.port.rect_wcp:
-                self._mosaicGtiff(overview, wcpToMosaic)
+                self._mosaicGtiff(wcpToMosaic, overview)
             if self.port.rect_wcr:
-                self._mosaicGtiff(overview, srcToMosaic)
+                self._mosaicGtiff(srcToMosaic, overview)
+        # Create vrt
         elif mosaic == 2:
             if self.port.rect_wcp:
-                self._mosaicVRT(overview, wcpToMosaic)
+                self._mosaicVRT(wcpToMosaic, overview)
             if self.port.rect_wcr:
-                self._mosaicVRT(overview, srcToMosaic)
+                self._mosaicVRT(srcToMosaic, overview)
+        return self
 
 
     #=======================================================================
-    def _mosaicGtiff(self, overview, imgsToMosaic):
-        i = 0
+    def _mosaicGtiff(self,
+                     imgsToMosaic,
+                     overview=True):
+        '''
+        Function to mosaic sonograms into a GeoTiff.
+
+        ----------
+        Parameters
+        ----------
+        imgsToMosaic : list of lists
+            DESCRIPTION - A list of lists containing file paths of sonograms to
+                          mosaic.
+
+        overview : bool : [Default=True]
+            DESCRIPTION - Flag indicating if mosaic overviews should be generated.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._createMosaic()
+
+        -------
+        Returns
+        -------
+        Exports mosaics of rectified sonograms.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        None
+        '''
+        i = 0 # Mosaic number
+        # Iterate each sublist of images
         for imgs in imgsToMosaic:
 
+            # Set output file names
             filePrefix = os.path.split(self.port.projDir)[-1]
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
 
+            # First built a vrt
             vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
+            # Create GeoTiff from vrt
             ds = gdal.Open(outVRT)
 
             kwargs = {'format': 'GTiff',
                       'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW']
                       }
             gdal.Translate(outTIF, ds, **kwargs)
+
+            # Generate overviews
             if overview:
                 dest = gdal.Open(outTIF, 1)
                 gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
 
-            os.remove(outVRT)
-            i+=1
+            os.remove(outVRT) # Remove vrt
+            i+=1 # Iterate mosaic number
 
         return self
 
     #=======================================================================
-    def _mosaicVRT(self, overview, imgsToMosaic):
-        i = 0
+    def _mosaicVRT(self,
+                   imgsToMosaic,
+                   overview=True):
+        '''
+        Function to mosaic sonograms into a VRT (virtual raster table, see
+        https://gdal.org/drivers/raster/vrt.html for more information).
+
+        ----------
+        Parameters
+        ----------
+        imgsToMosaic : list of lists
+            DESCRIPTION - A list of lists containing file paths of sonograms to
+                          mosaic.
+
+        overview : bool : [Default=True]
+            DESCRIPTION - Flag indicating if mosaic overviews should be generated.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._createMosaic()
+
+        -------
+        Returns
+        -------
+        Exports mosaics of rectified sonograms.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        None
+        '''
+        i = 0 # Mosaic number
+        # Iterate each sublist of images
         for imgs in imgsToMosaic:
 
+            # Set output file names
             filePrefix = os.path.split(self.port.projDir)[-1]
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             outFile = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
 
+            # Build VRT
             vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
             gdal.BuildVRT(outFile, imgs, options=vrt_options)
 
+            # Generate overviews
             if overview:
                 dest = gdal.Open(outFile)
                 gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
             i+=1
+        return self
 
     ############################################################################
     # Bedpicking                                                               #
     ############################################################################
 
     #=======================================================================
-    def _findBed(self, segArr):
+    def _findBed(self,
+                 segArr):
         '''
-        Find bed location in pixels
+        This function locates the transition from water column to bed in an array
+        of one-hot encoded array where water column pixels are coded as 1 and all
+        other pixels are 0. The pixel index for each ping is stored in lists for
+        the portside and starboard scans.
+
+        ----------
+        Parameters
+        ----------
+        segArr : Numpy array
+            DESCRIPTION - 2D array storing one-hot encoded values indicating water
+                          column and non-water column pixels. Array is concatenated
+                          port and star pixels.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._depthZheng()
+
+        -------
+        Returns
+        -------
+        Lists for portside and starboard storing pixel index of water / bed
+        transition.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns bed location to self._depthZheng()
         '''
         # Find center of array
         H, W = segArr.shape[0], segArr.shape[1] # height (row), width (column)
         C = int(W/2) # center of array
 
         # Find bed location
-        portBed = []
-        starBed = []
+        portBed = [] # Store portside bed location
+        starBed = [] # Store starboard bed location
+        # Iterate each ping
         for k in range(H):
+
+            # Find portside bed location (left half of sonogram)
             pB = np.where(segArr[k, 0:C]==1)[0]
             pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
 
+            # Adjust by subtracting from the center of sonogram, and store in list
             portBed.append(C-pB)
 
+            # Find starboard bed location (right half of sonogram)
             sB = np.where(segArr[k, C:]==1)[0]
             sB = np.split(sB, np.where(np.diff(sB) != 1)[0]+1)[-1][0]
+            # Store in list
             starBed.append(sB)
 
         return portBed, starBed
@@ -192,7 +407,28 @@ class portstarObj(object):
     #=======================================================================
     def _initModel(self):
         '''
+        Compiles a Tensorflow model for bedpicking. Developed following:
+        https://github.com/Doodleverse/segmentation_gym
 
+        ----------
+        Parameters
+        ----------
+        None
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        self.bedpickModel containing compiled model.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._detectDepth()
         '''
         SEED=42
         np.random.seed(SEED)
@@ -245,9 +481,38 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _doPredict(self, model, arr):
+    def _doPredict(self,
+                   model,
+                   arr):
+        '''
+        Predict the bed location from an input array of sonogram pixels. Workflow
+        follows prediction routine from https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        model : Tensorflow model object
+            DESCRIPTION - Pre-trained and compiled Tensorflow model to predict
+                          bed location.
+        arr : Numpy array
+            DESCRIPTION - Numpy array of sonar intensities.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._depthZheng()
+
+        -------
+        Returns
+        -------
+        2D array of water / bed prediction
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns prediction to self._depthZheng()
+        '''
         # Read array into a cropped and resized tensor
-        ## Compression step from Zheng et al. 2021
         if N_DATA_BANDS<=3:
             image, w, h, bigimage = seg_file2tensor_3band(arr, TARGET_SIZE)
 
@@ -258,8 +523,9 @@ class portstarObj(object):
         est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
 
         # Up-sample / rescale to original dimensions
-        ## Store prediction for water and bed classes after resize
-        E0 = []; E1 = [];
+        ## Store liklihood for water and bed classes after resize
+        E0 = [] # Water liklihood
+        E1 = [] # Bed liklihood
 
         E0.append(resize(est_label[:,:,0],(w,h), preserve_range=True, clip=True))
         E1.append(resize(est_label[:,:,1],(w,h), preserve_range=True, clip=True))
@@ -269,6 +535,7 @@ class portstarObj(object):
         e1 = np.average(np.dstack(E1), axis=-1)
         del E0, E1
 
+        # Final classification
         est_label = (e1+(1-e0))/2
         del e0, e1
 
@@ -279,8 +546,36 @@ class portstarObj(object):
         return est_label
 
     #=======================================================================
-    def _detectDepth(self, method, i):
+    def _detectDepth(self,
+                     method,
+                     i):
         '''
+        Main function to automatically calculate depth (i.e. bedpick).
+
+        ----------
+        Parameters
+        ----------
+        method : int
+            DESCRIPTION - Flag indicating bedpicking method:
+                          1 = Zheng et al. 2021 (self._depthZheng);
+                          2 = Binary thresholding (self._depthThreshold).
+        i : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from main_readFiles.py
+
+        -------
+        Returns
+        -------
+        None
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._depthZheng() or self._depthThreshold()
         '''
 
         if method == 1:
@@ -291,7 +586,36 @@ class portstarObj(object):
             self._depthThreshold(i)
 
     #=======================================================================
-    def _depthZheng(self, i):
+    def _depthZheng(self,
+                    i):
+        '''
+        Automatically estimate the depth following method of Zheng et al. 2021:
+        https://doi.org/10.3390/rs13101945. The only difference between this
+        implementation and Zheng et al. 2021 is that model architecture and main
+        prediction workflow follow: https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self.detectDep()
+
+        -------
+        Returns
+        -------
+        Estimated depths for each ping store in self.portDepDetect and
+        self.starDepDetect.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._saveDepth()
+        '''
         doFilt = True
         model = self.bedpickModel
 
@@ -389,21 +713,47 @@ class portstarObj(object):
         #*#*#*#*#*#*#*#
         # Plot
         # color map
-        class_label_colormap = ['#3366CC','#DC3912']
-
-        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-
-        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        # class_label_colormap = ['#3366CC','#DC3912']
+        #
+        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+        #
+        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
         del son3bnd, init_label, crop_label, sonCrop
         return self
 
     #=======================================================================
     def _depthThreshold(self, chunk):
+        '''
+        PING-Mapper's rules-based automated depth detection using pixel intensity
+        thresholding.
+
+        ----------
+        Parameters
+        ----------
+        chunk : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._detectDepth()
+
+        -------
+        Returns
+        -------
+        Estimated depths for each ping store in self.portDepDetect and
+        self.starDepDetect.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._saveDepth()
+        '''
         # Parameters
         window = 10 # For peak removal in bed pick: moving window size
         max_dev = 5 # For peak removal in bed pick: maximum standard deviation
@@ -442,7 +792,7 @@ class portstarObj(object):
             imgMasked[imgMasked==0]=np.nan # Set zero's to nan
 
             imgBinaryMask = np.zeros((H, W)).astype(bool) # Create array to store thresholded sonar img
-            # Iterate over each sonar record
+            # Iterate over each ping
             for i in range(W):
                 thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i])) # Determine threshold value
                 # stdev = np.nanstd(imgMasked[:,i])
@@ -505,7 +855,7 @@ class portstarObj(object):
             # Step 4 - Water Below Filter
             # Iterate each ping and determine if there is water under the bed.
             # If there is, zero out everything except for the lowest region.
-            # Iterate each sonar record
+            # Iterate each ping
             for i in range(W):
                 labelPing, num = label(imgBinaryMask[:,i], return_num=True)
                 if num > 1:
@@ -538,7 +888,42 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _saveDepth(self, chunks, detectDep, smthDep, adjDep):
+    def _saveDepth(self,
+                   chunks,
+                   detectDep=0,
+                   smthDep=False,
+                   adjDep=False):
+        '''
+        Converts bedpick location (in pixels) to a depth in meters and additionally
+        smooth and adjust depth estimate.
+
+        ----------
+        Parameters
+        ----------
+        chunks : list
+            DESCRIPTION - List storing chunk indexes.
+
+        detectDep : int : [Default=0]
+            DESCRIPTION - Flag indicating bedpicking method:
+                          0 = Instrument depth
+                          1 = Zheng et al. 2021 (self._depthZheng);
+                          2 = Binary thresholding (self._depthThreshold).
+
+        smthDep : bool : [Default=False]
+            DESCRIPTION - Apply Savitzky-Golay filter to depth data.  May help smooth
+                          noisy depth estimations.  Recommended if using Humminbird
+                          depth to remove water column (detectDep=0).
+                          True = smooth depth estimate;
+                          False = do not smooth depth estimate.
+
+        adjDep : bool : [Default=False]
+            DESCRIPTION - Specify additional depth adjustment (in pixels) for water
+                          column removal.  Does not affect the depth estimate stored
+                          in exported metadata *.CSV files.
+                          Integer > 0 = increase depth estimate by x pixels.
+                          Integer < 0 = decrease depth estimate by x pixels.
+                          0 = use depth estimate with no adjustment.
+        '''
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
@@ -625,7 +1010,41 @@ class portstarObj(object):
         return self
 
     #=======================================================================
-    def _plotBedPick(self, i, acousticBed = True, autoBed = True):
+    def _plotBedPick(self,
+                     i,
+                     acousticBed=True,
+                     autoBed = True):
+
+        '''
+        Export a plot of bedpicks on sonogram for a given chunk.
+
+        ----------
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION - Chunk index.
+
+        acousticBed : bool : [Default=True]
+            DESCRIPTION - Plot the instrument's acoustic bedpick on sonogram.
+
+        autoBed : bool : [Default=True]
+            DESCRIPTION - Plot the automated bedpick on sonogram.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        None
+
+        -------
+        Returns
+        -------
+        Plot of bedpicks overlaying sonogram.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        None
+        '''
 
         # Load sonar intensity into memory
         self._getPortStarScanChunk(i)
@@ -715,6 +1134,9 @@ class portstarObj(object):
 
     #=======================================================================
     def _cleanup(self):
+        '''
+        Clean up any unneeded variables.
+        '''
         try:
             del self.bedpickModel
         except:

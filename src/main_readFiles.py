@@ -3,8 +3,6 @@
 from funcs_common import *
 from class_sonObj import sonObj
 from class_portstarObj import portstarObj
-from joblib import delayed
-import time
 
 #===========================================
 def read_master_func(sonFiles,
@@ -37,41 +35,47 @@ def read_master_func(sonFiles,
     projDir : str
         DESCRIPTION - Path to output directory.
         EXAMPLE -     projDir = 'C:/PINGMapper/procData/R00001'
-    tempC : float
+    tempC : float : [Default=10]
         DESCRIPTION - Water temperature (Celcius) during survey.
         EXAMPLE -     tempC = 10
-    nchunk : int
+    nchunk : int : [Default=500]
         DESCRIPTION - Number of pings per chunk.  Chunk size dictates size of
                       sonar tiles (sonograms).  Most testing has been on chunk
                       sizes of 500 (recommended).
         EXAMPLE -     nchunk = 500
-    wcp : bool
+    exportUnknown : bool [Default=False]
+        DESCRIPTION - Flag indicating if unknown attributes in ping
+                      should be exported or not.  If a user of PING Mapper
+                      determines what an unkown attribute actually is, please
+                      report using a github issue.
+        EXAMPLE -     exportUnknown = False
+    wcp : bool : [Default=False]
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
                       present (wcp).
                       True = export wcp sonar tiles;
                       False = do not export wcp sonar tiles.
         EXAMPLE -     wcp = True
-    wcr : bool
+    wcr : bool : [Default=False]
         DESCRIPTION - Flag to export non-rectified sonar tiles w/ water column
                       removed (wcr).
                       True = export wcr sonar tiles;
                       False = do not export wcr sonar tiles.
         EXAMPLE -     wcr = True
-    detectDep : int
+    detectDep : int : [Default=0]
         DESCRIPTION - Determines if depth will be automatically estimated for
                       water column removal.
                       0 = use Humminbird depth;
-                      1 = auto pick using binary thresholding;
-                      2 = auto pick using machine learning Residual U-net.
+                      1 = auto pick using Zheng et al. 2021;
+                      2 = auto pick using binary thresholding.
         EXAMPLE -     detectDep = 0
-    smthDep : bool
+    smthDep : bool : [Default=False]
         DESCRIPTION - Apply Savitzky-Golay filter to depth data.  May help smooth
                       noisy depth estimations.  Recommended if using Humminbird
                       depth to remove water column (detectDep=0).
                       True = smooth depth estimate;
                       False = do not smooth depth estimate.
         EXAMPLE -     smthDep = False
-    adjDep : int
+    adjDep : int : [Default=0]
         DESCRIPTION - Specify additional depth adjustment (in pixels) for water
                       column removal.  Does not affect the depth estimate stored
                       in exported metadata *.CSV files.
@@ -79,19 +83,20 @@ def read_master_func(sonFiles,
                       Integer < 0 = decrease depth estimate by x pixels.
                       0 = use depth estimate with no adjustment.
         EXAMPLE -     adjDep = 5
-    pltBedPick : bool
+    pltBedPick : bool : [Default=False]
         DESCRIPTION - Plot bedpick(s) on non-rectified sonogram for visual
                       inspection.
                       True = plot bedpick(s);
                       False = do not plot bedpick(s).
         EXAMPLE -     pltBedPick = True
-    threadCnt : int
+    threadCnt : int : [Default=0]
         DESCRIPTION - The maximum number of threads to use during multithreaded
                       processing. More threads==faster data export.
                       0 = Use all available threads;
                       <0 = Negative values will be subtracted from total available
                         threads. i.e., -2 -> Total threads (8) - 2 == 6 threads.
                       >0 = Number of threads to use, up to total available threads.
+        EXAMPLE -     threadCnt = 0
 
     -------
     Returns
@@ -117,15 +122,15 @@ def read_master_func(sonFiles,
     |     |          w/ water column present
     |
     |--|meta
-    |  |--B000_ds_lowfreq_meta.csv : Sonar record metadata for B000.SON (if present)
+    |  |--B000_ds_lowfreq_meta.csv : ping metadata for B000.SON (if present)
     |  |--B000_ds_lowfreq_meta.meta : Pickled sonObj instance for B000.SON (if present)
-    |  |--B001_ds_highfreq_meta.csv : Sonar record metadata for B001.SON (if present)
+    |  |--B001_ds_highfreq_meta.csv : ping metadata for B001.SON (if present)
     |  |--B001_ds_highfreq_meta.meta : Pickled sonObj instance for B001.SON (if present)
-    |  |--B002_ss_port_meta.csv : Sonar record metadata for B002.SON (if present)
+    |  |--B002_ss_port_meta.csv : ping metadata for B002.SON (if present)
     |  |--B002_ss_port_meta.meta : Pickled sonObj instance for B002.SON (if present)
-    |  |--B003_ss_star_meta.csv : Sonar record metadata for B003.SON (if present)
+    |  |--B003_ss_star_meta.csv : ping metadata for B003.SON (if present)
     |  |--B003_ss_star_meta.meta : Pickled sonObj instance for B003.SON (if present)
-    |  |--B004_ds_vhighfreq.csv : Sonar record metadata for B004.SON (if present)
+    |  |--B004_ds_vhighfreq.csv : ping metadata for B004.SON (if present)
     |  |--B004_ds_vhighfreq.meta : Pickled sonObj instance for B004.SON (if present)
     |  |--DAT_meta.csv : Sonar recording metadata for *.DAT.
     |
@@ -145,16 +150,18 @@ def read_master_func(sonFiles,
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
     '''
-    if threadCnt==0:
+
+    # Specify multithreaded processing thread count
+    if threadCnt==0: # Use all threads
         threadCnt=cpu_count()
-    elif threadCnt<0:
+    elif threadCnt<0: # Use all threads except threadCnt; i.e., (cpu_count + (-threadCnt))
         threadCnt=cpu_count()+threadCnt
-        if threadCnt<0:
+        if threadCnt<0: # Make sure not negative
             threadCnt=1
-    else:
+    else: # Use specified threadCnt if positive
         pass
 
-    if threadCnt>cpu_count():
+    if threadCnt>cpu_count(): # If more than total avail. threads, make cpu_count()
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
@@ -269,7 +276,7 @@ def read_master_func(sonFiles,
             pass
 
     ############################################################################
-    # Determine sonar record header length (varies by model)                   #
+    # Determine ping header length (varies by model)                   #
     ############################################################################
 
     print("\nGetting Header Structure...")
@@ -300,8 +307,8 @@ def read_master_func(sonFiles,
     # Get the SON header structure and attributes                              #
     ############################################################################
 
-    # The number of sonar record header bytes indicates the structure and order
-    ## of sonar record attributes.  For known structures, the sonar record
+    # The number of ping header bytes indicates the structure and order
+    ## of ping attributes.  For known structures, the ping
     ## header structure will be stored in the sonObj.
     for son in sonObjs:
         son._getHeadStruct(exportUnknown)
@@ -312,11 +319,11 @@ def read_master_func(sonFiles,
 
     for son in sonObjs:
         headValid = son.headValid # Flag indicating if sonar header structure is known.
-        # Sonar record header structure is known!
+        # ping header structure is known!
         if headValid[0] is True:
             print(son.beamName, ":", "Done!")
         # Header byte length is of a known length, but we found an inconsistency
-        ## in the sonar record header structure.  Report byte location where
+        ## in the ping header structure.  Report byte location where
         ## mis-match occured (for debugging purposes), then try to decode automatically.
         elif headValid[0] is False:
             print("\n#####\nERROR: Wrong Header Structure")
@@ -352,7 +359,7 @@ def read_master_func(sonFiles,
     # Let's get the metadata for each ping #
     ########################################
 
-    # Now that we know the sonar record header structure, let's read that data
+    # Now that we know the ping header structure, let's read that data
     ## and save it to .CSV in the meta directory.
     print("\nGetting SON file header metadata...")
     # Check to see if metadata is already saved to csv.
@@ -387,11 +394,7 @@ def read_master_func(sonFiles,
     for son in sonObjs:
         son.wcp = wcp
         son.wcr = wcr
-        # # Make sonar imagery directory for each beam if it doesn't exist
-        # try:
-        #     os.mkdir(son.outDir)
-        # except:
-        #     pass
+
 
     ############################################################################
     # Print Metadata Summary                                                   #
@@ -402,14 +405,14 @@ def read_master_func(sonFiles,
 
     invalid = defaultdict() # store invalid values
 
-    for son in sonObjs:
+    for son in sonObjs: # Iterate each sonar object
         print(son.beam, ":", son.beamName)
         print("______________________________________________________________________________")
         print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
         print("______________________________________________________________________________")
         son._loadSonMeta()
         df = son.sonMetaDF
-        for att in df.columns:
+        for att in df.columns: # Find min/max/avg of each column
             attMin = np.round(df[att].min(), 3)
             attMax = np.round(df[att].max(), 3)
             attAvg = np.round(df[att].mean(), 3)
@@ -417,10 +420,10 @@ def read_master_func(sonFiles,
             # Check if data are valid.
             if (attMax != 0) or ("unknown" in att) or (att =="beam"):
                 valid=True
-            elif (att == "inst_dep_m") and (attAvg == 0):
+            elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
                 valid=False
                 invalid[son.beam+"."+att] = False
-                detectDep=1 # Automatically detect depth if no instrument depth
+                detectDep=1
             else:
                 valid=False
                 invalid[son.beam+"."+att] = False
@@ -455,37 +458,43 @@ def read_master_func(sonFiles,
 
     # Create portstarObj
     psObj = portstarObj(portstar)
+
     # Load one beam's sonar metadata
     portstar[0]._loadSonMeta()
-    sonMetaDF =portstar[0].sonMetaDF
+    sonMetaDF = portstar[0].sonMetaDF
 
     # Determine what chunks to process
     chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
     del sonMetaDF, portstar[0].sonMetaDF
 
+    # Automatically estimate depth
     if detectDep > 0:
-        print('\n\nAutomatically calculating depth for', len(chunks), 'chunks:')
+        print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
 
         #Dictionary to store chunk : np.array(depth estimate)
         psObj.portDepDetect = {}
         psObj.starDepDetect = {}
 
-        # Load model if necessary
+        # Estimate depth using:
+        # Zheng et al. 2021
         if detectDep == 1:
             print('\n\tUsing Zheng et al. 2021 method. Loading model...')
             psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             psObj._initModel()
-        if detectDep == 2:
+
+        # With binary thresholding
+        elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
 
+        # Estimate depth for each chunk using appropriate method
         for chunk in chunks:
             psObj._detectDepth(detectDep, int(chunk))
 
-        # psObj._detectDepth(detectDep, int(chunks[0]))
-
         # make parallel later.... doesn't work (??)....
         # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
+
+        # Flag indicating depth autmatically estimated
         autoBed = True
         # Cleanup
         psObj._cleanup()
@@ -496,6 +505,7 @@ def read_master_func(sonFiles,
     # Save detected depth to csv
     psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
 
+    # Plot sonar depth and auto depth estimate (if available) on sonogram
     if pltBedPick:
         print("\n\nExporting bedpick plots...")
         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)

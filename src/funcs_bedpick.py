@@ -9,11 +9,19 @@ from skimage.filters import threshold_otsu, gaussian
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, remove_small_objects
 
-# SEED=42
-# np.random.seed(SEED)
-# AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-#
-# tf.random.set_seed(SEED)
+import gdal
+
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
+from scipy.signal import savgol_filter
+
+from skimage.filters import threshold_otsu, gaussian
+from skimage.measure import label, regionprops
+from skimage.morphology import remove_small_holes, remove_small_objects
+
+import itertools
 
 ################################################################################
 # model_imports.py from segmentation_gym                                       #
