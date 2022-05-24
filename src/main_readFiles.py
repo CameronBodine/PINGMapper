@@ -486,7 +486,7 @@ def read_master_func(sonFiles,
         # Zheng et al. 2021
         if detectDep == 1:
             print('\n\tUsing Zheng et al. 2021 method. Loading model...')
-            psObj.weights = r'.\models\bedpick\Zheng2021\bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             psObj._initModel()
 

@@ -26,16 +26,16 @@ start_time = time.time()
 #################
 
 # Path to data/output
-humFile = '.\\exampleData\\test.DAT'
-sonPath = '.\\exampleData\\test'
-projDir = '.\\procData\\PINGMapperTest'
+humFile = r'./exampleData/test.DAT'
+sonPath = r'./exampleData/test'
+projDir = r'./procData/PINGMapperTest'
 
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = True #Option to export Unknown ping metadata
 wcp = True #Export tiles with water column present
 wcr = True #Export Tiles with water column removed (and slant range corrected)
-detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDepth = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 smthDep = True #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
