@@ -61,10 +61,12 @@ conda activate ping
 ## Testing PING Mapper
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
-2. Enter the following into the prompt and press enter.  Outputs are found in `.\\PINGMapper\\procData\\PINGMapperTest`.
+2. Enter the following into the prompt:  
 ```
 python main.py
 ```
+
+Outputs are found in `.\\PINGMapper\\procData\\PINGMapperTest`.
 
 ## Running PING Mapper on your own data
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
@@ -73,15 +75,15 @@ python main.py
 
 3. Update lines 28-30 with path's to your data and your chosen output directory:
 ```
-humFile = "C:/user/Cam/myHumDat.DAT"
-sonPath = "C:/user/Cam/myHumDat"
-projDir = "C:/user/Cam/myHumAnswerBox/myHumDat"
+humFile = "C:/user/cam/myHumDat.DAT"
+sonPath = "C:/user/cam/myHumDat"
+projDir = "C:/user/cam/myHumAnswerBox/myHumDat"
 ```
 
 Windows users: Make sure your filepaths are structured in one of the three following file formats:
 - (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
-- (Single forward slash): `humFile = “C:/Users/dwhealdo/Documents/Programs/PINGMapper/Rec00012.DAT”`
+- (Single forward slash): `humFile = “C:/Users/cam/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
 4. Line 32: Update temperature `t=10` with average temperature during scan.
 
