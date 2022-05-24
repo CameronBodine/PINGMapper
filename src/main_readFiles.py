@@ -150,6 +150,7 @@ def read_master_func(sonFiles,
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
     '''
+    USE_GPU = False
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -488,7 +489,7 @@ def read_master_func(sonFiles,
             print('\n\tUsing Zheng et al. 2021 method. Loading model...')
             psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
-            psObj._initModel()
+            psObj._initModel(USE_GPU)
 
         # With binary thresholding
         elif detectDep == 2:

@@ -56,9 +56,10 @@ conda env create --file conda/PINGMapper.yml
 conda activate ping
 ```
 
-**NOTE** Installation may take some time, please be patient.
+**NOTE:** *Installation may take some time, please be patient.*
 
-## Testing PING Mapper
+## Testing PING Mapper (small dataset)
+A quick test can be made to ensure PING-Mapper is working properly.
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
 2. Enter the following into the prompt:  
@@ -66,7 +67,18 @@ conda activate ping
 python main.py
 ```
 
-Outputs are found in `.\\PINGMapper\\procData\\PINGMapperTest`.
+Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Small-DS`.
+
+## Testing PING Mapper (large dataset)
+A test on a large (~0.5 GB; 1:00:06 duration) dataset can also be made.
+1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
+
+2. Enter the following into the prompt:  
+```
+python main_test_large_ds.py
+```
+
+Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
 
 ## Running PING Mapper on your own data
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
