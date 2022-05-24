@@ -1,4 +1,3 @@
-# PING-Mapper
 ![GitHub last commit](https://img.shields.io/github/last-commit/CameronBodine/PINGMapper)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/CameronBodine/PINGMapper)
 ![GitHub](https://img.shields.io/github/license/CameronBodine/PINGMapper)
@@ -8,6 +7,8 @@
 ![Numpy](https://img.shields.io/badge/Numpy-791a9d?style=for-the-badge&logo=numpy&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)
 ![Tensorflow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=TensorFlow&logoColor=white)
+
+![PING-Mapper](./docs/attach/PINGMapper_Logo.png)
 
 
 Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.  Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
