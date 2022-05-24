@@ -78,7 +78,7 @@ def rectify_master_func(sonFiles,
     |  |--Trackline_Smth_ss_star.csv : Smoothed trackline coordinates for starboard
     |  |                               scan (if present)
     |
-    |--|ss_port (if B002.SON OR B003.SON [tranducer flipped] available)
+    |--|ss_port (if B002.SON OR B003.SON [transducer flipped] available)
     |  |--rect_wcr [rect_wcr=True]
     |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
     |     |          water column removed (wcr) & slant range corrected
@@ -86,7 +86,7 @@ def rectify_master_func(sonFiles,
     |     |--*.tif : Portside side scan (ss) georectified sonar tiles, w/
     |     |          water column present (wcp)
     |
-    |--|ss_star (if B003.SON OR B002.SON [tranducer flipped] available)
+    |--|ss_star (if B003.SON OR B002.SON [transducer flipped] available)
     |  |--rect_wcr [wcr=True]
     |     |--*.tif : Starboard side scan (ss) georectified sonar tiles, w/
     |     |          water column removed (wcr) & slant range corrected

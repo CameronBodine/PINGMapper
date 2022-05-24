@@ -405,7 +405,8 @@ class portstarObj(object):
         return portBed, starBed
 
     #=======================================================================
-    def _initModel(self):
+    def _initModel(self,
+                   USE_GPU=False):
         '''
         Compiles a Tensorflow model for bedpicking. Developed following:
         https://github.com/Doodleverse/segmentation_gym
@@ -438,17 +439,17 @@ class portstarObj(object):
 
         print("Version: ", tf.__version__)
         print("Eager mode: ", tf.executing_eagerly())
-        print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
-        print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
-        USE_GPU = True
 
         if USE_GPU == True:
-           ##use the first available GPU
-           os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
+            print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
+            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+            ##use the first available GPU
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
         else:
-           ## to use the CPU (not recommended):
-           os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+            ## to use the CPU (not recommended):
+            print("Using CPU")
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
         #suppress tensorflow warnings
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
