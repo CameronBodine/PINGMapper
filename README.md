@@ -10,21 +10,15 @@
 
 ![PING-Mapper](./docs/attach/PINGMapper_Logo.png)
 
-```
-{Python interface for reading, processing, and mapping side scan sonar data from Humminbird sonar systems.}
-```
+`{Python interface for reading, processing, and mapping side scan sonar data from Humminbird sonar systems.}`
 ##
-```
-Transform sonar recordings...
-```
+`Transform sonar recordings...`
 
 <img src="../main/docs/attach/Suwa_Son.gif" width="800"/>
 
 *Video made with [HumViewer](https://humviewer.cm-johansen.dk/)* 
 
-```
-...into scientific datasets!
-```
+`...into scientific datasets!`
 
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
