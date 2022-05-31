@@ -10,10 +10,28 @@
 
 ![PING-Mapper](./docs/attach/PINGMapper_Logo.png)
 
+```
+{Python interface for reading, processing, and mapping side scan sonar data from Humminbird sonar systems.}
+```
+##
+```
+Transform sonar recordings...
+```
 
-Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.  Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
+<img src="../main/docs/attach/Suwa_Son.gif" width="800"/>
 
-1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onyx).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
+*Video made with [HumViewer](https://humviewer.cm-johansen.dk/)* 
+
+```
+...into scientific datasets!
+```
+
+<img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
+
+## Overview
+Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
+
+1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onix).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
 
 2. Export all metadata from .DAT and .SON files to .CSV.
 
