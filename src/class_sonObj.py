@@ -381,6 +381,7 @@ class sonObj(object):
         humdat['SourceDeviceModelId2D'] = int(tmp.split('SourceDeviceModelId2D=')[1].split('>')[0])
         humdat['SourceDeviceModelIdSI'] = int(tmp.split('SourceDeviceModelIdSI=')[1].split('>')[0])
         humdat['SourceDeviceModelIdDI'] = int(tmp.split('SourceDeviceModelIdDI=')[1].split('>')[0])
+        humdat['water_type'] = 'fresh' #'shallow salt' #'deep salt'
         self.humDat = humdat # Store data in class attribute for later use
         return
 
@@ -424,7 +425,7 @@ class sonObj(object):
         return(list(dat))
 
     # ======================================================================
-    def _getEPSG(self):
+    def _getEPSG(self, utm_e=None, utm_n=None):
         '''
         Determines appropriate UTM zone based on location (EPSG 3395 Easting/Northing)
         provided in .DAT file.  This is used to project coordinates from
@@ -1058,6 +1059,12 @@ class sonObj(object):
             sonHead[val[-1]] = byte # Store attribute name and data in sonHead
 
         file.close() # Close .SON file
+
+        if self.isOnix and not hasattr(self, 'trans'):
+            # print('\n\n\n\n\n\nONIX\n\n')
+            self._getEPSG(sonHead['utm_e'], sonHead['utm_n'])
+            # print(self.trans)
+            # sys.exit()
 
         # Make necessary conversions
         # Convert eastings/northings to latitude/longitude

@@ -199,12 +199,16 @@ def read_master_func(sonFiles,
     # Read in the humdat data
     if son.isOnix == 0:
         son._getHumdat()
+
+        # Determine epsg code and transformation (if we can, ONIX doesn't have
+        ## lat/lon in DAT, so will determine at a later processing step).
+        son._getEPSG()
     else:
         son._decodeOnix()
 
-    # Determine epsg code and transformation (if we can, ONIX doesn't have
-    ## lat/lon in DAT, so will determine at a later processing step).
-    son._getEPSG()
+    # # Determine epsg code and transformation (if we can, ONIX doesn't have
+    # ## lat/lon in DAT, so will determine at a later processing step).
+    # son._getEPSG()
 
     # Create 'meta' directory if it doesn't exist
     metaDir = os.path.join(projDir, 'meta')
@@ -400,6 +404,14 @@ def read_master_func(sonFiles,
     for son in sonObjs:
         son.wcp = wcp
         son.wcr = wcr
+
+    # If Onix, need to store self._trans in object
+    if sonObjs[0].isOnix:
+        for son in sonObjs:
+            son._loadSonMeta()
+            utm_e=son.sonMetaDF.iloc[0]['utm_e']
+            utm_n=son.sonMetaDF.iloc[0]['utm_n']
+            son._getEPSG(utm_e, utm_n)
 
 
     ############################################################################
