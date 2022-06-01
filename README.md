@@ -152,3 +152,25 @@ https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f
 ```
 python main.py
 ```
+
+## Batch process multiple sonar recordings
+
+PING-Mapper includes a script which will find all sonar recordings in a directory (even subdirectories!) and batch process them. This is useful if you have spent a day on the water collecting multiple sonar recordings. Just point this script at the top-most folder, provide an output directory for processed files, and PING-Mapper will do the rest!
+
+1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
+
+2. Open `main_batchDirectory.py` in a text editor/IDE (I use [Atom](https://atom.io/)).
+
+3. Enter paths to input and output directory:
+
+https://github.com/CameronBodine/PINGMapper/blob/ab77cdf0a5a4fc06d3833700e638777a0b1ec7fa/main_batchDirectory.py#L39-L40
+
+4. Edit parameters as necessary (Note: supplied parameters will be applied to all sonar recordings):
+
+https://github.com/CameronBodine/PINGMapper/blob/dd74f508e689ace132bdf304e28e8561cb0e100f/main_batchDirectory.py#L42-L58
+
+5. Run the program by entering the following in the command prompt:
+```
+python main_batchDirectory.py
+```
+
