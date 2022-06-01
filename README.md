@@ -6,7 +6,7 @@
 [![Anaconda](https://img.shields.io/badge/conda-342B029.svg?&style=for-the-badge&logo=anaconda&logoColor=white)](https://www.anaconda.com/)
 [![Numpy](https://img.shields.io/badge/Numpy-791a9d?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
 [![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
-[![Tensorflow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=TensorFlow&logoColor=white)](https://www.tensorflow.org/)
+<!-- [![Tensorflow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=TensorFlow&logoColor=white)](https://www.tensorflow.org/) -->
 
 ![PING-Mapper](./docs/attach/PINGMapper_Logo.png)
 
@@ -16,7 +16,7 @@
 
 <img src="../main/docs/attach/Suwa_Son.gif" width="800"/>
 
-*Video made with [HumViewer](https://humviewer.cm-johansen.dk/)* 
+*Video made with [HumViewer](https://humviewer.cm-johansen.dk/)*
 
 `...into scientific datasets!`
 
@@ -117,21 +117,21 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 
 7. Line 35-36: Export un-rectified sonar tiles with water column present AND/OR water column removed.
 
-8. Line 37: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).  NOTE: this will soon be updated with a new method, stay tuned...
+<!-- 8. Line 37: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).  NOTE: this will soon be updated with a new method, stay tuned... -->
 
-9. Line 39: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+8. Line 39: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
-10. Line 40: Additional depth adjustment in number of pixels for water column removal.
+9. Line 40: Additional depth adjustment in number of pixels for water column removal.
 
-11. Line 41: Plot bedick(s) on non-rectified sonogram for visual inspection.
+10. Line 41: Plot bedick(s) on non-rectified sonogram for visual inspection.
 
-12. Line 43-44: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+11. Line 43-44: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
 
-13. Line 46: Option to mosaic georectified sonar imagery (exported from step 12).
+12. Line 46: Option to mosaic georectified sonar imagery (exported from step 12).
 
-14. Save the file.
+13. Save the file.
 
-15. Run PING Mapper:
+14. Run PING Mapper:
 ```
 python main.py
 ```

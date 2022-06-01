@@ -35,8 +35,6 @@ nchunk = 500 #Number of pings per chunk
 exportUnknown = True #Option to export Unknown ping metadata
 wcp = True #Export tiles with water column present
 wcr = True #Export Tiles with water column removed (and slant range corrected)
-detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
-## 2==Auto detect depth w/ Thresholding
 smthDep = True #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
@@ -61,7 +59,7 @@ print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, 0, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
 if rect_wcp or rect_wcr:

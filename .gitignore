@@ -2,12 +2,13 @@ procData/*
 __pycache__/*
 oldFiles/*
 testData/*
+/src/__pycache__/*
+models/*
 models/bedpick/Old
 models/bedpick/Zheng2021/old
-/src/__pycache__/*
 
 main_batch.py
 main_batchFolder.py
-rectify_test_affine.py
+/src/funcs_bedpick.py
 
 !procData/OutputsHere.txt
