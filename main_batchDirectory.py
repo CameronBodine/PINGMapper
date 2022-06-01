@@ -43,19 +43,19 @@ outDir = r'./procData'
 # User Parameters
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-exportUnknown = True #Option to export Unknown sonar record metadata
+exportUnknown = True #Option to export Unknown ping metadata
 wcp = True #Export tiles with water column present
-wcr = True #Export Tiles with water column removed/slant range corrected
-detectDepth = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ binary threshold;
-## 2==Auto detect depth w/ Res U-Net; 3==Both auto picks
+wcr = True #Export Tiles with water column removed (and slant range corrected)
 smthDep = True #Smooth depth before water column removal
-adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
-pltBedPick = False #Plot bedpick on sonogram
+adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
+pltBedPick = True #Plot bedpick on sonogram
 
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic
+mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+
+threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 # Find all DAT and SON files in all subdirectories of inDir
 inFiles=[]
