@@ -97,41 +97,58 @@ Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
 
 2. Open `main.py` in a text editor/IDE (I use [Atom](https://atom.io/)).
 
-3. Update lines 28-30 with path's to your data and your chosen output directory:
-```
-humFile = "C:/user/cam/myHumDat.DAT"
-sonPath = "C:/user/cam/myHumDat"
-projDir = "C:/user/cam/myHumAnswerBox/myHumDat"
-```
+3. Enter paths to DAT, SON, and output directory:
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L45-L48
 
 Windows users: Make sure your filepaths are structured in one of the three following file formats:
 - (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
 - (Single forward slash): `humFile = “C:/Users/cam/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
-4. Line 32: Update temperature `t=10` with average temperature during scan.
+4. Update temperature `t=10` with average temperature during scan.
 
-5. Line 33: Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L50
 
-6. Line 34: Option to export unknown ping metadata fields.
+5. Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-7. Line 35-36: Export un-rectified sonar tiles with water column present AND/OR water column removed.
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L51
+
+6. Option to export unknown ping metadata fields.
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L52
+
+7. Export un-rectified sonar tiles with water column present AND/OR water column removed.
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L53-L54
 
 <!-- 8. Line 37: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).  NOTE: this will soon be updated with a new method, stay tuned... -->
 
-8. Line 39: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+8. Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
-9. Line 40: Additional depth adjustment in number of pixels for water column removal.
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L55
 
-10. Line 41: Plot bedick(s) on non-rectified sonogram for visual inspection.
+9. Additional depth adjustment in number of pixels for water column removal.
 
-11. Line 43-44: Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L56
 
-12. Line 46: Option to mosaic georectified sonar imagery (exported from step 12).
+10. Plot bedick(s) on non-rectified sonogram for visual inspection.
 
-13. Save the file.
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L57
 
-14. Run PING Mapper:
+11. Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L59-L60
+
+12. Option to mosaic georectified sonar imagery (exported from step 12).
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L62
+
+13. Number of compute threads to use for processing in parallel.
+
+https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L64
+
+14. Run the program by entering the following in the command prompt:
 ```
 python main.py
 ```
