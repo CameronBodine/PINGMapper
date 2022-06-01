@@ -4,6 +4,7 @@ oldFiles/*
 testData/*
 /src/__pycache__/*
 models/*
+exampleData/Test-Large-DS*
 
 main_batch.py
 main_batchFolder.py

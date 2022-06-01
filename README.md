@@ -76,7 +76,7 @@ A quick test can be made to ensure PING-Mapper is working properly.
 
 2. Enter the following into the prompt:  
 ```
-python main.py
+python test_PINGMapper.py 1
 ```
 
 Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Small-DS`.
@@ -87,7 +87,7 @@ A test on a large (~0.5 GB; 1:00:06 duration) dataset can also be made.
 
 2. Enter the following into the prompt:  
 ```
-python main_test_large_ds.py
+python test_PINGMapper.py 2
 ```
 
 Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
