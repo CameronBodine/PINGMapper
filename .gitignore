@@ -4,8 +4,6 @@ oldFiles/*
 testData/*
 /src/__pycache__/*
 models/*
-models/bedpick/Old
-models/bedpick/Zheng2021/old
 
 main_batch.py
 main_batchFolder.py
