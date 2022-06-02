@@ -1,3 +1,6 @@
+# PING-Mapper
+{PING-Mapper is a Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.}
+
 [![GitHub last commit](https://img.shields.io/github/last-commit/CameronBodine/PINGMapper)](https://github.com/CameronBodine/PINGMapper/commits)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/CameronBodine/PINGMapper)](https://github.com/CameronBodine/PINGMapper/commits)
 [![GitHub](https://img.shields.io/github/license/CameronBodine/PINGMapper)](https://github.com/CameronBodine/PINGMapper/blob/main/LICENSE)
@@ -8,9 +11,9 @@
 [![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 <!-- [![Tensorflow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=TensorFlow&logoColor=white)](https://www.tensorflow.org/) -->
 
+
 ![PING-Mapper](./docs/attach/PINGMapper_Logo.png)
 
-`{Python interface for reading, processing, and mapping side scan sonar data from Humminbird sonar systems.}`
 ##
 `Transform sonar recordings...`
 
@@ -22,7 +25,17 @@
 
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
-## Overview
+## Documentation
+### Website 
+None yet, but you can check out some [preliminary documentation](../main/docs/BinaryStructure.md)
+
+### Paper
+Forthcoming...
+
+### Code that made the paper
+[![DOI](https://zenodo.org/badge/339433489.svg)](https://zenodo.org/badge/latestdoi/339433489)
+
+### Overview
 Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
 
 1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onix).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
@@ -37,7 +50,7 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 6. (Optional) Mosaic georectified sonar imagery from step 5.
 
-## Workflows in the Pipeline
+### Workflows in the Pipeline
 1. Automatic depth detection (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945))
 2. Imagery corrections (radiometric, attenuation, etc.)
 3. Automatic substrate classification
