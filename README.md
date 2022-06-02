@@ -33,7 +33,7 @@ None yet, but you can check out some [preliminary documentation](../main/docs/Bi
 Forthcoming...
 
 ### Code that made the paper
-[![DOI](https://zenodo.org/badge/339433489.svg)](https://zenodo.org/badge/latestdoi/339433489)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
 ### Overview
 Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
