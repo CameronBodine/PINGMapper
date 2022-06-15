@@ -30,7 +30,9 @@
 None yet, but you can check out some [preliminary documentation](../main/docs/BinaryStructure.md)
 
 ### Paper
-Forthcoming...
+[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+
+Peer Reviewed: Forthcoming...
 
 ### Code that made the paper
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
