@@ -3,11 +3,10 @@ __pycache__/*
 oldFiles/*
 testData/*
 /src/__pycache__/*
-models/*
+models/bedpick/Old*
 exampleData/Test-Large-DS*
 
 main_batch.py
 main_batchFolder.py
-/src/funcs_bedpick.py
 
 !procData/OutputsHere.txt

@@ -88,15 +88,13 @@ def read_master_func(sonFiles,
                       True = export wcr sonar tiles;
                       False = do not export wcr sonar tiles.
         EXAMPLE -     wcr = True
-    # DISABLED:Auto depth detection disabled for now. Functionality will return
-    # in near future.
-    # detectDep : int : [Default=0]
-    #     DESCRIPTION - Determines if depth will be automatically estimated for
-    #                   water column removal.
-    #                   0 = use Humminbird depth;
-    #                   1 = auto pick using Zheng et al. 2021;
-    #                   2 = auto pick using binary thresholding.
-    #    EXAMPLE -     detectDep = 0
+    detectDep : int : [Default=0]
+        DESCRIPTION - Determines if depth will be automatically estimated for
+                      water column removal.
+                      0 = use Humminbird depth;
+                      1 = auto pick using Zheng et al. 2021;
+                      2 = auto pick using binary thresholding.
+       EXAMPLE -     detectDep = 0
     smthDep : bool : [Default=False]
         DESCRIPTION - Apply Savitzky-Golay filter to depth data.  May help smooth
                       noisy depth estimations.  Recommended if using Humminbird
@@ -234,10 +232,6 @@ def read_master_func(sonFiles,
         son._getEPSG()
     else:
         son._decodeOnix()
-
-    # # Determine epsg code and transformation (if we can, ONIX doesn't have
-    # ## lat/lon in DAT, so will determine at a later processing step).
-    # son._getEPSG()
 
     # Create 'meta' directory if it doesn't exist
     metaDir = os.path.join(projDir, 'meta')
@@ -521,41 +515,39 @@ def read_master_func(sonFiles,
 
     # # Automatically estimate depth
     if detectDep > 0:
-    #     print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
-    #
-    #     #Dictionary to store chunk : np.array(depth estimate)
-    #     psObj.portDepDetect = {}
-    #     psObj.starDepDetect = {}
-    #
-    #     # Estimate depth using:
-    #     # Zheng et al. 2021
-    #     if detectDep == 1:
-    #         print('\n\tUsing Zheng et al. 2021 method. Loading model...')
-    #         psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20210217_ExtraCrop_Thelio.h5'
-    #         psObj.configfile = psObj.weights.replace('.h5', '.json')
-    #         psObj._initModel(USE_GPU)
-    #
-    #     # With binary thresholding
-    #     elif detectDep == 2:
-    #         print('\n\tUsing binary thresholding...')
-    #
-    #     # Estimate depth for each chunk using appropriate method
-    #     for chunk in chunks:
-    #         psObj._detectDepth(detectDep, int(chunk))
-    #
-    #     # make parallel later.... doesn't work (??)....
-    #     # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
-    #
-    #     # Flag indicating depth autmatically estimated
-    #     autoBed = True
-    #     # Cleanup
-    #     psObj._cleanup()
-        pass
+        print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
+
+        #Dictionary to store chunk : np.array(depth estimate)
+        psObj.portDepDetect = {}
+        psObj.starDepDetect = {}
+
+        # Estimate depth using:
+        # Zheng et al. 2021
+        if detectDep == 1:
+            print('\n\tUsing Zheng et al. 2021 method. Loading model...')
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220609.h5'
+            psObj.configfile = psObj.weights.replace('.h5', '.json')
+            psObj._initModel(USE_GPU)
+
+        # With binary thresholding
+        elif detectDep == 2:
+            print('\n\tUsing binary thresholding...')
+
+        # Estimate depth for each chunk using appropriate method
+        for chunk in chunks:
+            psObj._detectDepth(detectDep, int(chunk))
+
+        # make parallel later.... doesn't work (??)....
+        # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
+
+        # Flag indicating depth autmatically estimated
+        autoBed = True
+        # Cleanup
+        psObj._cleanup()
 
     else:
         print('\n\nUsing instrument depth:')
         autoBed = False
-    autoBed=False
 
     # Save detected depth to csv
     psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
