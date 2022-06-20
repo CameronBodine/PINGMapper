@@ -527,18 +527,24 @@ def read_master_func(sonFiles,
             print('\n\tUsing Zheng et al. 2021 method. Loading model...')
             psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220609.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
-            psObj._initModel(USE_GPU)
+            # psObj._initModel(USE_GPU)
 
         # With binary thresholding
         elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
 
-        # Estimate depth for each chunk using appropriate method
-        for chunk in chunks:
-            psObj._detectDepth(detectDep, int(chunk))
+        # # Estimate depth for each chunk using appropriate method
+        # for chunk in chunks:
+        #     psObj._detectDepth(detectDep, int(chunk))
 
         # make parallel later.... doesn't work (??)....
-        # Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk)) for chunk in chunks)
+        # psObj.portDepDetect[i], psObj.starDepDetect[i], i = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
+        r = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
+        # psObj.portDepDetect[i], psObj.starDepDetect[i], i = zip(*r)
+        for ret in r:
+            # print(ret, '\n\n')
+            psObj.portDepDetect[ret[2]] = ret[0]
+            psObj.starDepDetect[ret[2]] = ret[1]
 
         # Flag indicating depth autmatically estimated
         autoBed = True
@@ -576,19 +582,20 @@ def read_master_func(sonFiles,
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
-            son._loadSonMeta()
-            sonMetaDF = son.sonMetaDF
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                son._loadSonMeta()
+                sonMetaDF = son.sonMetaDF
 
-            # Determine what chunks to process
-            chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-            if son.wcr and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
-                chunkCnt = len(chunks)*2
-            else:
-                chunkCnt = len(chunks)
-            print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
+                # Determine what chunks to process
+                chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+                if son.wcr and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+                    chunkCnt = len(chunks)*2
+                else:
+                    chunkCnt = len(chunks)
+                print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
-            # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+                # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
 

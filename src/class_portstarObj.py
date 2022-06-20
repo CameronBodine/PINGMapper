@@ -385,7 +385,8 @@ class portstarObj(object):
     #=======================================================================
     def _detectDepth(self,
                      method,
-                     i):
+                     i,
+                     USE_GPU):
         '''
         Main function to automatically calculate depth (i.e. bedpick).
 
@@ -416,11 +417,15 @@ class portstarObj(object):
         '''
 
         if method == 1:
-            self._depthZheng(i)
+            if not hasattr(self, 'bedpickModel'):
+                self._initModel(USE_GPU)
+            portDepPixCrop, starDepPixCrop, i = self._depthZheng(i)
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
-            self._depthThreshold(i)
+            portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i)
+
+        return portDepPixCrop, starDepPixCrop, i
 
     #=======================================================================
     def _saveDepth(self,
@@ -1038,8 +1043,6 @@ class portstarObj(object):
             Ws = int( (N/2) - (Wwc/2) - W )
             Ws = max(Ws, 0)
 
-        print(np.max(Wp), np.min(Wp), Wwc, W, '\n', Ws, '\n\n\n')
-
         # Crop the original sonogram
         C = int(N/2) # Center of sonogram
 
@@ -1084,28 +1087,29 @@ class portstarObj(object):
         portDepPixCrop = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
         starDepPixCrop = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
 
-        ########################
-        # Store depth detections
-        self.portDepDetect[i] = portDepPixCrop
-        self.starDepDetect[i] = starDepPixCrop
-        del portDepPixCrop, starDepPixCrop
+        # ########################
+        # # Store depth detections
+        # self.portDepDetect[i] = portDepPixCrop
+        # self.starDepDetect[i] = starDepPixCrop
+        # del portDepPixCrop, starDepPixCrop
 
 
-        #*#*#*#*#*#*#*#
-        # Plot
-        # color map
-        class_label_colormap = ['#3366CC','#DC3912']
-
-        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_initSon_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-
-        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        # #*#*#*#*#*#*#*#
+        # # Plot
+        # # color map
+        # class_label_colormap = ['#3366CC','#DC3912']
+        #
+        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"_initSon_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+        #
+        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
         del son3bnd, init_label, crop_label, sonCrop
-        return self
+        # return self
+        return portDepPixCrop, starDepPixCrop, i
 
     #=======================================================================
     def _depthThreshold(self, chunk):
@@ -1262,8 +1266,11 @@ class portstarObj(object):
             bed = bed.astype(int)
 
             if son.beamName == 'ss_port':
-                self.portDepDetect[chunk] = bed
+                # self.portDepDetect[chunk] = bed
+                portDepPixCrop = bed
             elif son.beamName == 'ss_star':
-                self.starDepDetect[chunk] = bed
+                # self.starDepDetect[chunk] = bed
+                starDepPixCrop = bed
 
-        return self
+        # return self
+        return portDepPixCrop, starDepPixCrop, chunk
