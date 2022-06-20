@@ -540,9 +540,9 @@ def read_master_func(sonFiles,
         # make parallel later.... doesn't work (??)....
         # psObj.portDepDetect[i], psObj.starDepDetect[i], i = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
         r = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
-        # psObj.portDepDetect[i], psObj.starDepDetect[i], i = zip(*r)
+
+        # store the depth predictions in the class
         for ret in r:
-            # print(ret, '\n\n')
             psObj.portDepDetect[ret[2]] = ret[0]
             psObj.starDepDetect[ret[2]] = ret[1]
 

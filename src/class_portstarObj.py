@@ -810,18 +810,18 @@ class portstarObj(object):
 
         tf.random.set_seed(SEED)
 
-        print("Version: ", tf.__version__)
-        print("Eager mode: ", tf.executing_eagerly())
+        # print("Version: ", tf.__version__)
+        # print("Eager mode: ", tf.executing_eagerly())
 
 
         if USE_GPU == True:
-            print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
-            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+            # print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
+            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
             ##use the first available GPU
             os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
         else:
             ## to use the CPU (not recommended):
-            print("Using CPU")
+            # print("Using CPU")
             os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
         #suppress tensorflow warnings

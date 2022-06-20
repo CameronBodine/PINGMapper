@@ -43,6 +43,8 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 
 import itertools
 
+tf.get_logger().setLevel('ERROR')
+
 ################################################################################
 # model_imports.py from segmentation_gym                                       #
 ################################################################################
