@@ -908,11 +908,49 @@ class portstarObj(object):
         est_label = (e1+(1-e0))/2
         del e0, e1
 
+        # for p in range(w):
+        #     thres = threshold_otsu(est_label[p,:])
+        #
+        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
+
         thres = threshold_otsu(est_label)
 
         est_label = (est_label>thres).astype('uint8')
 
         return est_label
+
+    #=======================================================================
+    def _filtPredict(self,
+                     lab,
+                     N):
+
+        lab = remove_small_holes(lab.astype(bool), 2*N)#2*self.port.nchunk)
+        lab = remove_small_objects(lab, 2*N).astype('int')+1#2*self.port.nchunk)
+
+        # Iterate each row, identify port (farthest left) and
+        ## starboard bed (farthest right), keep those regions and zero out
+        ## the rest.
+        for row in range(lab.shape[0]):
+            regions, num = label(lab[row,:], return_num=True)
+
+            # Get region ID for bed on port/star
+            pID = regions[0]
+            sID = regions[-1]
+
+            # Get port & star bed regions seperately
+            pReg = (regions == pID).astype('int')
+            sReg = (regions == sID).astype('int')
+
+            # Add together, bed==1, water==0
+            psReg = pReg+sReg
+
+            # Get bool arrray where the water==True
+            regions = (psReg == 0)
+
+            # Update crop_label
+            lab[row,:] = regions
+
+        return lab
 
     #=======================================================================
     def _depthZheng(self,
@@ -959,9 +997,17 @@ class portstarObj(object):
         son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
         del b1, b2, b3
 
+        N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
+        W = TARGET_SIZE[1] # Width of model output prediction
+
         ##########################################
         # Do initial prediction on entire sonogram
         init_label = self._doPredict(model, son3bnd)
+
+        ###################################################
+        # Potential filters for removing small artifacts???
+        if doFilt:
+            init_label = self._filtPredict(init_label, N)
 
         ############################
         # Find pixel location of bed
@@ -973,22 +1019,26 @@ class portstarObj(object):
         ## Once cropped, sonogram is closer in size to model TARGET_SIZE, so
         ## any errors introduced after rescaling prediction will be minimized.
 
-        N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
-        W = TARGET_SIZE[1] # Width of model output prediction
         Wp = np.add(portDepPix, starDepPix) # Width of water column estimate
         del portDepPix, starDepPix
 
         # Determine amount of WC to crop (Wwc)
-        if (W < (np.max(Wp)+np.min(Wp)) ):
-            Wwc = int( (np.max(Wp)+np.min(Wp)-W) / 2 )
+        if W < (np.max(Wp)+np.min(Wp)):
+            Wwc = np.min(Wp) - 50 # Set crop to min depth, then subtract a buffer
+            Wwc = max(Wwc, 0) # Set crop to zero if buffer too large
         else:
             Wwc = 0
 
         # Determine amount of bed to crop (Ws)
-        if (W > (np.max(Wp)-np.min(Wp)) ):
-            Ws = int( (N/2) - (np.max(Wp)+np.min(Wp)+W)/2 )
+        if (W >= (np.max(Wp)-np.min(Wp)) ):
+            # Ws = int( (N/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
+            Ws = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
+            Ws = max(Ws, 0)
         else:
-            Ws = 0
+            Ws = int( (N/2) - (Wwc/2) - W )
+            Ws = max(Ws, 0)
+
+        print(np.max(Wp), np.min(Wp), Wwc, W, '\n', Ws, '\n\n\n')
 
         # Crop the original sonogram
         C = int(N/2) # Center of sonogram
@@ -1008,6 +1058,15 @@ class portstarObj(object):
         sonCrop = sonCrop.astype(np.uint8)
         del portCrop, starCrop
 
+        # Add 10 center pixels back in (??)
+        ## The depth model was trained using cropped sonograms that always had
+        ## the line dividing port from star present. The cropping step in this
+        ## implementation can crop that out, which messes up the prediction on
+        ## the cropped image. So we will add center line back into cropped image.
+        if Wwc > 0:
+            c = int(sonCrop.shape[1]/2)
+            sonCrop[:, (c-5):(c+5), :] = son3bnd[:, (C-5):(C+5), :]
+
         #######################
         # Segment cropped image
         crop_label = self._doPredict(model, sonCrop)
@@ -1015,31 +1074,7 @@ class portstarObj(object):
         ###################################################
         # Potential filters for removing small artifacts???
         if doFilt:
-            crop_label = remove_small_holes(crop_label.astype(bool), 2*N)#2*self.port.nchunk)
-            crop_label = remove_small_objects(crop_label, 2*N).astype('int')+1#2*self.port.nchunk)
-
-            # Iterate each row, identify port (farthest left) and
-            ## starboard bed (farthest right), keep those regions and zero out
-            ## the rest.
-            for row in range(crop_label.shape[0]):
-                regions, num = label(crop_label[row,:], return_num=True)
-
-                # Get region ID for bed on port/star
-                pID = regions[0]
-                sID = regions[-1]
-
-                # Get port & star bed regions seperately
-                pReg = (regions == pID).astype('int')
-                sReg = (regions == sID).astype('int')
-
-                # Add together, bed==1, water==0
-                psReg = pReg+sReg
-
-                # Get bool arrray where the water==True
-                regions = (psReg == 0)
-
-                # Update crop_label
-                crop_label[row,:] = regions
+            crop_label = self._filtPredict(crop_label, N)
 
         #########
         # Recover
@@ -1056,18 +1091,18 @@ class portstarObj(object):
         del portDepPixCrop, starDepPixCrop
 
 
-        # #*#*#*#*#*#*#*#
-        # # Plot
-        # # color map
-        # class_label_colormap = ['#3366CC','#DC3912']
-        #
-        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"son3bnd_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-        #
-        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        #*#*#*#*#*#*#*#
+        # Plot
+        # color map
+        class_label_colormap = ['#3366CC','#DC3912']
+
+        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_initSon_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+
+        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
 
         del son3bnd, init_label, crop_label, sonCrop
         return self
