@@ -43,9 +43,13 @@ start_time = time.time()
 #################
 
 # Path to data/output
-humFile = r'./exampleData/Test-Small-DS.DAT'
-sonPath = r'./exampleData/Test-Small-DS'
-projDir = r'./procData/PINGMapper-Test-Small-DS'
+# humFile = r'./exampleData/Test-Small-DS.DAT'
+# sonPath = r'./exampleData/Test-Small-DS'
+# projDir = r'./procData/PINGMapper-Test-Small-DS'
+
+humFile = r'E:\NAU\GulfSturgeonProject\SSS_Data\Pascagoula\Field_data\Leaf\20210506_Solix_USM1\Rec00002.DAT'
+sonPath = humFile.split('.')[0]
+projDir = r'./procData/bedpick'
 
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk

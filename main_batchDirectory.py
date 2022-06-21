@@ -36,45 +36,65 @@ from main_rectify import rectify_master_func
 import time
 import datetime
 
-inDir = r'./exampleData'
-outDir = r'./procData'
+inDir = r'E:\NAU\GulfSturgeonProject\SSS_Data'
+outDir = r'E:\NAU\GulfSturgeonProject\SSS_Data_BedpickTest_FixImplement'
 
 #################
 # User Parameters
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-exportUnknown = True #Option to export Unknown ping metadata
-wcp = True #Export tiles with water column present
-wcr = True #Export Tiles with water column removed (and slant range corrected)
-smthDep = True #Smooth depth before water column removal
+exportUnknown = False #Option to export Unknown ping metadata
+wcp = False #Export tiles with water column present
+wcr = False #Export Tiles with water column removed (and slant range corrected)
+detectDepth = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+## 2==Auto detect depth w/ Thresholding
+smthDep = False #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
-rect_wcp = True #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcp = False #Export rectified tiles with water column present
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 # Find all DAT and SON files in all subdirectories of inDir
+# inFiles=[]
+# for root, dirs, files in os.walk(inDir):
+#     for file in files:
+#         if file.endswith('.DAT'):
+#             inFiles.append(os.path.join(root, file))
+
 inFiles=[]
 for root, dirs, files in os.walk(inDir):
     for file in files:
-        if file.endswith('.DAT'):
+        if file.endswith('.DAT') and ('EggSites' not in root):
             inFiles.append(os.path.join(root, file))
 
 for datFile in inFiles:
     try:
         start_time = time.time()
 
-        inPath = os.path.dirname(datFile)
+        # inPath = os.path.dirname(datFile)
+        # humFile = datFile
+        # recName = os.path.basename(humFile).split('.')[0]
+        # sonPath = os.path.join(inDir, recName)
+        # sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+        #
+        # projDir = os.path.join(outDir, recName)
+
         humFile = datFile
-        recName = os.path.basename(humFile).split('.')[0]
-        sonPath = os.path.join(inDir, recName)
+        sonPath = datFile.split('.')[0]
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-        projDir = os.path.join(outDir, recName)
+        recName = os.path.basename(humFile).split('.')[0]
+        dateBoat = os.path.dirname(humFile).split(os.sep)[-1]
+        river = os.path.dirname(humFile).split(os.sep)[-2]
+        projName = river+'_'+dateBoat+'_'+recName
+
+        projDir = os.path.join(outDir, projName)
+
 
         print('sonPath',sonPath)
         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
