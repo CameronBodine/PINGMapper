@@ -1,6 +1,10 @@
 # 🔥 CAUTION 🔥
 *This is a development branch. Scripts may not perform as expected, or may error out. Use at your own peril!!! :-)*
-###  🔥THAT IS ALL🔥
+
+In Development:
+- Automatic depth detection using deep learning models.
+
+#  🔥THAT IS ALL🔥
   
   
 
