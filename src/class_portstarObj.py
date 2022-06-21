@@ -428,6 +428,620 @@ class portstarObj(object):
         return portDepPixCrop, starDepPixCrop, i
 
     #=======================================================================
+    def _findBed(self,
+                 segArr):
+        '''
+        This function locates the transition from water column to bed in an array
+        of one-hot encoded array where water column pixels are coded as 1 and all
+        other pixels are 0. The pixel index for each ping is stored in lists for
+        the portside and starboard scans.
+
+        ----------
+        Parameters
+        ----------
+        segArr : Numpy array
+            DESCRIPTION - 2D array storing one-hot encoded values indicating water
+                          column and non-water column pixels. Array is concatenated
+                          port and star pixels.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._depthZheng()
+
+        -------
+        Returns
+        -------
+        Lists for portside and starboard storing pixel index of water / bed
+        transition.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns bed location to self._depthZheng()
+        '''
+        # Find center of array
+        H, W = segArr.shape[0], segArr.shape[1] # height (row), width (column)
+        C = int(W/2) # center of array
+
+        # Find bed location
+        portBed = [] # Store portside bed location
+        starBed = [] # Store starboard bed location
+        # Iterate each ping
+        for k in range(H):
+            # Find portside bed location (left half of sonogram)
+            pB = np.where(segArr[k, 0:C]!=1)[0]
+            pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
+
+            # Adjust by subtracting from the center of sonogram, and store in list
+            portBed.append(C-pB)
+
+            # Find starboard bed location (right half of sonogram)
+            sB = np.where(segArr[k, C:]!=1)[0]
+            sB = np.split(sB, np.where(np.diff(sB) != 1)[0]+1)[-1][0]
+            # Store in list
+            starBed.append(sB)
+
+        return portBed, starBed
+
+    #=======================================================================
+    def _initModel(self,
+                   USE_GPU=False):
+        '''
+        Compiles a Tensorflow model for bedpicking. Developed following:
+        https://github.com/Doodleverse/segmentation_gym
+
+        ----------
+        Parameters
+        ----------
+        None
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        self.bedpickModel containing compiled model.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._detectDepth()
+        '''
+        SEED=42
+        np.random.seed(SEED)
+        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+        tf.random.set_seed(SEED)
+
+        # print("Version: ", tf.__version__)
+        # print("Eager mode: ", tf.executing_eagerly())
+
+
+        if USE_GPU == True:
+            # print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
+            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+            ##use the first available GPU
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
+        else:
+            ## to use the CPU (not recommended):
+            # print("Using CPU")
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+        #suppress tensorflow warnings
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+        # Open model configuration file
+        with open(self.configfile) as f:
+            config = json.load(f)
+
+        globals().update(config)
+
+        # for k in config.keys():
+        #     exec(k+'=config["'+k+'"]')
+
+        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
+                        FILTERS,
+                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
+                        kernel_size=(KERNEL,KERNEL),
+                        strides=STRIDE,
+                        dropout=DROPOUT,#0.1,
+                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
+                        dropout_type=DROPOUT_TYPE,#"standard",
+                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
+                        )
+
+        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+        model.load_weights(self.weights)
+
+        self.bedpickModel = model
+
+        # # Trying for multithreaded prediction
+        # self.bedpickModel._make_predict_function()
+
+        return self
+
+    #=======================================================================
+    def _doPredict(self,
+                   model,
+                   arr):
+        '''
+        Predict the bed location from an input array of sonogram pixels. Workflow
+        follows prediction routine from https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        model : Tensorflow model object
+            DESCRIPTION - Pre-trained and compiled Tensorflow model to predict
+                          bed location.
+        arr : Numpy array
+            DESCRIPTION - Numpy array of sonar intensities.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._depthZheng()
+
+        -------
+        Returns
+        -------
+        2D array of water / bed prediction
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns prediction to self._depthZheng()
+        '''
+        # Read array into a cropped and resized tensor
+        if N_DATA_BANDS<=3:
+            image, w, h, bigimage = seg_file2tensor_3band(arr, TARGET_SIZE)
+
+        # Standardize
+        image = standardize(image.numpy()).squeeze()
+
+        # Do segmentation on compressed sonogram
+        est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
+
+        # Up-sample / rescale to original dimensions
+        ## Store liklihood for water and bed classes after resize
+        E0 = [] # Water liklihood
+        E1 = [] # Bed liklihood
+
+        E0.append(resize(est_label[:,:,0],(w,h), preserve_range=True, clip=True))
+        E1.append(resize(est_label[:,:,1],(w,h), preserve_range=True, clip=True))
+        del est_label
+
+        e0 = np.average(np.dstack(E0), axis=-1)
+        e1 = np.average(np.dstack(E1), axis=-1)
+        del E0, E1
+
+        # Final classification
+        est_label = (e1+(1-e0))/2
+        del e0, e1
+
+        # for p in range(w):
+        #     thres = threshold_otsu(est_label[p,:])
+        #
+        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
+
+        thres = threshold_otsu(est_label)
+
+        est_label = (est_label>thres).astype('uint8')
+
+        return est_label
+
+    #=======================================================================
+    def _filtPredict(self,
+                     lab,
+                     N):
+
+        lab = remove_small_holes(lab.astype(bool), 2*N)#2*self.port.nchunk)
+        lab = remove_small_objects(lab, 2*N).astype('int')+1#2*self.port.nchunk)
+
+        # Iterate each row, identify port (farthest left) and
+        ## starboard bed (farthest right), keep those regions and zero out
+        ## the rest.
+        for row in range(lab.shape[0]):
+            regions, num = label(lab[row,:], return_num=True)
+
+            # Get region ID for bed on port/star
+            pID = regions[0]
+            sID = regions[-1]
+
+            # Get port & star bed regions seperately
+            pReg = (regions == pID).astype('int')
+            sReg = (regions == sID).astype('int')
+
+            # Add together, bed==1, water==0
+            psReg = pReg+sReg
+
+            # Get bool arrray where the water==True
+            regions = (psReg == 0)
+
+            # Update crop_label
+            lab[row,:] = regions
+
+        return lab
+
+    #=======================================================================
+    def _depthZheng(self,
+                    i):
+        '''
+        Automatically estimate the depth following method of Zheng et al. 2021:
+        https://doi.org/10.3390/rs13101945. The only difference between this
+        implementation and Zheng et al. 2021 is that model architecture and main
+        prediction workflow follow: https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self.detectDep()
+
+        -------
+        Returns
+        -------
+        Estimated depths for each ping store in self.portDepDetect and
+        self.starDepDetect.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._saveDepth()
+        '''
+        doFilt = True
+        model = self.bedpickModel
+
+        self._getPortStarScanChunk(i)
+        mergeSon = self.mergeSon
+        # Make 3-band array
+        b1 = mergeSon.copy()
+        b2 = np.fliplr(b1.copy())
+        b3 = np.mean([b1,b2], axis=0)
+        del mergeSon
+
+        son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
+        del b1, b2, b3
+
+        N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
+        W = TARGET_SIZE[1] # Width of model output prediction
+
+        ##########################################
+        # Do initial prediction on entire sonogram
+        init_label = self._doPredict(model, son3bnd)
+
+        ###################################################
+        # Potential filters for removing small artifacts???
+        if doFilt:
+            init_label = self._filtPredict(init_label, N)
+
+        ############################
+        # Find pixel location of bed
+        portDepPix, starDepPix = self._findBed(init_label)
+
+        ##################################
+        # Crop image using initial bedpick
+        ## Zheng et al. 2021 method
+        ## Once cropped, sonogram is closer in size to model TARGET_SIZE, so
+        ## any errors introduced after rescaling prediction will be minimized.
+
+        Wp = np.add(portDepPix, starDepPix) # Width of water column estimate
+        del portDepPix, starDepPix
+
+        # 1
+        # # Determine amount of WC to crop (Wwc)
+        # if W < (np.max(Wp)+np.min(Wp)):
+        #     Wwc = np.min(Wp) - 50 # Set crop to min depth, then subtract a buffer
+        #     Wwc = max(Wwc, 0) # Set crop to zero if buffer too large
+        # else:
+        #     Wwc = 0
+        #
+        # # print('\n\n\n', i)
+        # # Determine amount of bed to crop (Ws)
+        # if (W >= (np.max(Wp)-np.min(Wp)) ):
+        #     # print('1')
+        #     # Ws = int( (N/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
+        #     # Ws1 can be an aggressive crop, so we will compare to Ws2 and take
+        #     # the min to
+        #     Ws1 = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
+        #     Ws2 = int( (N/2) - (Wwc/2) - np.max(Wp) )
+        #     Ws = min(Ws1, Ws2)
+        # else:
+        #     # print('2')
+        #     Ws = int( (N/2) - (Wwc/2) - np.max(Wp) )
+        #     Ws = max(Ws, 0)
+
+
+
+        # 2
+        # # Determine amount of WC to crop (Wwc)
+        # Wwc = np.min(Wp) - 50
+        # Wwc = max(Wwc, 0)
+        #
+        # # Determine amount of bed to crop (Ws)
+        # # Ws1 can be an aggressive crop, so we will compare to Ws2 and take
+        # # the min to
+        # Ws1 = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
+        # Ws2 = int( (N/2) - (Wwc/2) - np.max(Wp) )
+        # Ws = min(Ws1, Ws2)
+
+
+
+        # 3
+        # Determine amount of WC to crop (Wwc)
+        if W < (np.max(Wp) + np.min(Wp)):
+            Wwc = int( (np.max(Wp) + np.min(Wp) - W) / 2 )
+        else:
+            Wwc = 0
+
+        # My check to make sure we didn't crop too much
+        if Wwc > np.min(Wp):
+            Wwc =  max( (np.min(Wp) - 50), 0 )
+
+        # Determine amount of bed to crop (Ws)
+        if W > (np.max(Wp) - np.min(Wp)):
+            Ws = int( (N/2) - ( np.max(Wp) + np.min(Wp) + W ) / 4 )
+        else:
+            # Ws = 0
+            Ws = int( (N/2) - (Wwc/2) - np.max(Wp) )
+
+        # # My check to make sure we didn't crop too much
+        # if (Ws - Wwc) > W:
+        #     Ws1 = Ws
+        #     Ws2 = int( (N/2) - (Wwc/2) - np.max(Wp) )
+        #     Ws = min(Ws1, Ws2)
+        #     if Ws1 == 0:
+        #         Ws = max(Ws1, Ws2)
+        #     else:
+        #         Ws = min(Ws1, Ws2)
+
+        # print('\n\n\n', Wwc, Ws, W, '\n')
+
+
+        # Crop the original sonogram
+        C = int(N/2) # Center of sonogram
+
+        ## Port crop
+        lC = Ws # Left side crop
+        rC = int(C - (Wwc/2)) # Right side crop
+        portCrop = son3bnd[:, lC:rC,:]
+
+        ## Starboard crop
+        lC = int(C + (Wwc/2)) # Left side crop
+        rC = int(N-Ws) # Right side crop
+        starCrop = son3bnd[:, lC:rC, :]
+
+        ## Concatenate port & star crop
+        sonCrop = np.concatenate((portCrop, starCrop), axis = 1)
+        sonCrop = sonCrop.astype(np.uint8)
+        del portCrop, starCrop
+
+        # Add 10 center pixels back in (??)
+        ## The depth model was trained using cropped sonograms that always had
+        ## the line dividing port from star present. The cropping step in this
+        ## implementation can crop that out, which messes up the prediction on
+        ## the cropped image. So we will add center line back into cropped image.
+        if Wwc > 0:
+            c = int(sonCrop.shape[1]/2)
+            # sonCrop[:, (c-5):(c+5), :] = son3bnd[:, (C-5):(C+5), :]
+            # sonCrop[:, (c-2):(c+2), :] = son3bnd[:, (C-2):(C+2), :]
+            sonCrop[:, (c-1):(c+1), :] = 1
+
+        #######################
+        # Segment cropped image
+        crop_label = self._doPredict(model, sonCrop)
+
+        ###################################################
+        # Potential filters for removing small artifacts???
+        if doFilt:
+            crop_label = self._filtPredict(crop_label, N)
+
+        #########
+        # Recover
+        portDepPixCrop, starDepPixCrop = self._findBed(crop_label) # get pixel location of bed
+
+        # add Wwc/2 to get final estimate at original sonogram dimensions
+        portDepPixCrop = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
+        starDepPixCrop = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
+
+        # ########################
+        # # Store depth detections
+        # self.portDepDetect[i] = portDepPixCrop
+        # self.starDepDetect[i] = starDepPixCrop
+        # del portDepPixCrop, starDepPixCrop
+
+
+        #*#*#*#*#*#*#*#
+        # Plot
+        # color map
+        class_label_colormap = ['#3366CC','#DC3912']
+
+        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_initSon_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+
+        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+
+        del son3bnd, init_label, crop_label, sonCrop
+        # return self
+        return portDepPixCrop, starDepPixCrop, i
+
+    #=======================================================================
+    def _depthThreshold(self, chunk):
+        '''
+        PING-Mapper's rules-based automated depth detection using pixel intensity
+        thresholding.
+
+        ----------
+        Parameters
+        ----------
+        chunk : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._detectDepth()
+
+        -------
+        Returns
+        -------
+        Estimated depths for each ping store in self.portDepDetect and
+        self.starDepDetect.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._saveDepth()
+        '''
+        # Parameters
+        window = 10 # For peak removal in bed pick: moving window size
+        max_dev = 5 # For peak removal in bed pick: maximum standard deviation
+        pix_buf = 50 # Buffer size around min/max Humminbird depth
+
+        portstar = [self.port, self.star]
+        for son in portstar:
+            # Load sonar intensity, standardize & rescale
+            son._getScanChunkSingle(chunk)
+            img = son.sonDat
+            img = standardize(img, 0, 1, True)[:,:,-1].squeeze()
+            W, H = img.shape[1], img.shape[0]
+
+            # Get chunks sonar metadata and instrument depth
+            isChunk = son.sonMetaDF['chunk_id']==1
+            sonMeta = son.sonMetaDF[isChunk].reset_index()
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+
+            ##################################
+            # Step 1 : Acoustic Bedpick Filter
+            # Use acoustic bed pick to crop image
+            bedMin = max(min(acousticBed)-50, 0)
+            bedMax = max(acousticBed)+pix_buf
+
+            cropMask = np.ones((H, W)).astype(int)
+            cropMask[:bedMin,:] = 0
+            cropMask[bedMax:,:] = 0
+
+            # Mask the image with bed_mask
+            imgMasked = img*cropMask
+
+            ###########################
+            # Step 2 - Threshold Filter
+            # Binary threshold masked image
+            imgMasked = gaussian(imgMasked, 3, preserve_range=True) # Do a gaussian blur
+            imgMasked[imgMasked==0]=np.nan # Set zero's to nan
+
+            imgBinaryMask = np.zeros((H, W)).astype(bool) # Create array to store thresholded sonar img
+            # Iterate over each ping
+            for i in range(W):
+                thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i])) # Determine threshold value
+                # stdev = np.nanstd(imgMasked[:,i])
+                imgBinaryMask[:,i] = imgMasked[:,i] > thresh # Keep only intensities greater than threshold
+
+            # Clean up image binary mask
+            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+            ########################################
+            # Step 3 - Non-Contiguous region removal
+            # Make sure we didn't accidently zero out the last row, which should be bed.
+            # If we did, we will fill it back in
+            # Try filtering image_binary_mask through labeling regions
+            labelImage, num = label(imgBinaryMask, return_num=True)
+            allRegions = []
+
+            # Find the lowest/deepest region (this is the bed pixels)
+            max_row = 0
+            finalRegion = 0
+            for region in regionprops(labelImage):
+                allRegions.append(region.label)
+                minr, minc, maxr, maxc = region.bbox
+                # if (maxr > max_row) and (maxc > max_col):
+                if (maxr > max_row):
+                    max_row = maxr
+                    finalRegion = region.label
+
+            # If finalRegion is 0, there is only one region
+            if finalRegion == 0:
+                finalRegion = 1
+
+            # Zero out undesired regions
+            for regionLabel in allRegions:
+                if regionLabel != finalRegion:
+                    labelImage[labelImage==regionLabel] = 0
+
+            imgBinaryMask = labelImage # Update thresholded image
+            imgBinaryMask[imgBinaryMask>0] = 1 # Now set all val's greater than 0 to 1 to create the mask
+
+            # Now fill in above last row filled to make sure no gaps in bed pixels
+            lastRow = bedMax
+            imgBinaryMask[lastRow] = True
+            for i in range(W):
+                if imgBinaryMask[lastRow-1,i] == 0:
+                    gaps = np.where(imgBinaryMask[:lastRow,i]==0)[0]
+                    # Split each gap cluster into it's own array, subset the last one,
+                    ## and take top value
+                    topOfGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
+                    imgBinaryMask[topOfGap:lastRow,i] = 1
+
+            # Clean up image binary mask
+            imgBinaryMask = imgBinaryMask.astype(bool)
+            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
+            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
+            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
+
+            #############################
+            # Step 4 - Water Below Filter
+            # Iterate each ping and determine if there is water under the bed.
+            # If there is, zero out everything except for the lowest region.
+            # Iterate each ping
+            for i in range(W):
+                labelPing, num = label(imgBinaryMask[:,i], return_num=True)
+                if num > 1:
+                    labelPing[labelPing!=num] = 0
+                    labelPing[labelPing>0] = 1
+                imgBinaryMask[:,i] = labelPing
+
+            ###################################################
+            # Step 5 - Final Bedpick: Locate Bed & Remove Peaks
+            # Now relocate bed from image_binary_mask
+            bed = []
+            for k in range(W):
+                try:
+                    b = np.where(imgBinaryMask[:,k]==1)[0][0]
+                except:
+                    b=0
+                bed.append(b)
+            bed = np.array(bed).astype(np.float32)
+
+            # Interpolate over nan's
+            nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
+            bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
+            bed = bed.astype(int)
+
+            if son.beamName == 'ss_port':
+                # self.portDepDetect[chunk] = bed
+                portDepPixCrop = bed
+            elif son.beamName == 'ss_star':
+                # self.starDepDetect[chunk] = bed
+                starDepPixCrop = bed
+
+        # return self
+        return portDepPixCrop, starDepPixCrop, chunk
+
+    #=======================================================================
     def _saveDepth(self,
                    chunks,
                    detectDep=0,
@@ -718,559 +1332,3 @@ class portstarObj(object):
             pass
 
         return self
-
-
-    #=======================================================================
-    def _findBed(self,
-                 segArr):
-        '''
-        This function locates the transition from water column to bed in an array
-        of one-hot encoded array where water column pixels are coded as 1 and all
-        other pixels are 0. The pixel index for each ping is stored in lists for
-        the portside and starboard scans.
-
-        ----------
-        Parameters
-        ----------
-        segArr : Numpy array
-            DESCRIPTION - 2D array storing one-hot encoded values indicating water
-                          column and non-water column pixels. Array is concatenated
-                          port and star pixels.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self._depthZheng()
-
-        -------
-        Returns
-        -------
-        Lists for portside and starboard storing pixel index of water / bed
-        transition.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        Returns bed location to self._depthZheng()
-        '''
-        # Find center of array
-        H, W = segArr.shape[0], segArr.shape[1] # height (row), width (column)
-        C = int(W/2) # center of array
-
-        # Find bed location
-        portBed = [] # Store portside bed location
-        starBed = [] # Store starboard bed location
-        # Iterate each ping
-        for k in range(H):
-            # Find portside bed location (left half of sonogram)
-            pB = np.where(segArr[k, 0:C]!=1)[0]
-            pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
-
-            # Adjust by subtracting from the center of sonogram, and store in list
-            portBed.append(C-pB)
-
-            # Find starboard bed location (right half of sonogram)
-            sB = np.where(segArr[k, C:]!=1)[0]
-            sB = np.split(sB, np.where(np.diff(sB) != 1)[0]+1)[-1][0]
-            # Store in list
-            starBed.append(sB)
-
-        return portBed, starBed
-
-    #=======================================================================
-    def _initModel(self,
-                   USE_GPU=False):
-        '''
-        Compiles a Tensorflow model for bedpicking. Developed following:
-        https://github.com/Doodleverse/segmentation_gym
-
-        ----------
-        Parameters
-        ----------
-        None
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        self.__init__()
-
-        -------
-        Returns
-        -------
-        self.bedpickModel containing compiled model.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        self._detectDepth()
-        '''
-        SEED=42
-        np.random.seed(SEED)
-        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-
-        tf.random.set_seed(SEED)
-
-        # print("Version: ", tf.__version__)
-        # print("Eager mode: ", tf.executing_eagerly())
-
-
-        if USE_GPU == True:
-            # print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
-            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-            ##use the first available GPU
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
-        else:
-            ## to use the CPU (not recommended):
-            # print("Using CPU")
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-        # Open model configuration file
-        with open(self.configfile) as f:
-            config = json.load(f)
-
-        globals().update(config)
-
-        # for k in config.keys():
-        #     exec(k+'=config["'+k+'"]')
-
-        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
-                        FILTERS,
-                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
-                        kernel_size=(KERNEL,KERNEL),
-                        strides=STRIDE,
-                        dropout=DROPOUT,#0.1,
-                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
-                        dropout_type=DROPOUT_TYPE,#"standard",
-                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
-                        )
-
-        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
-        model.load_weights(self.weights)
-
-        self.bedpickModel = model
-
-        return self
-
-    #=======================================================================
-    def _doPredict(self,
-                   model,
-                   arr):
-        '''
-        Predict the bed location from an input array of sonogram pixels. Workflow
-        follows prediction routine from https://github.com/Doodleverse/segmentation_gym.
-
-        ----------
-        Parameters
-        ----------
-        model : Tensorflow model object
-            DESCRIPTION - Pre-trained and compiled Tensorflow model to predict
-                          bed location.
-        arr : Numpy array
-            DESCRIPTION - Numpy array of sonar intensities.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self._depthZheng()
-
-        -------
-        Returns
-        -------
-        2D array of water / bed prediction
-
-        --------------------
-        Next Processing Step
-        --------------------
-        Returns prediction to self._depthZheng()
-        '''
-        # Read array into a cropped and resized tensor
-        if N_DATA_BANDS<=3:
-            image, w, h, bigimage = seg_file2tensor_3band(arr, TARGET_SIZE)
-
-        # Standardize
-        image = standardize(image.numpy()).squeeze()
-
-        # Do segmentation on compressed sonogram
-        est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
-
-        # Up-sample / rescale to original dimensions
-        ## Store liklihood for water and bed classes after resize
-        E0 = [] # Water liklihood
-        E1 = [] # Bed liklihood
-
-        E0.append(resize(est_label[:,:,0],(w,h), preserve_range=True, clip=True))
-        E1.append(resize(est_label[:,:,1],(w,h), preserve_range=True, clip=True))
-        del est_label
-
-        e0 = np.average(np.dstack(E0), axis=-1)
-        e1 = np.average(np.dstack(E1), axis=-1)
-        del E0, E1
-
-        # Final classification
-        est_label = (e1+(1-e0))/2
-        del e0, e1
-
-        # for p in range(w):
-        #     thres = threshold_otsu(est_label[p,:])
-        #
-        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
-
-        thres = threshold_otsu(est_label)
-
-        est_label = (est_label>thres).astype('uint8')
-
-        return est_label
-
-    #=======================================================================
-    def _filtPredict(self,
-                     lab,
-                     N):
-
-        lab = remove_small_holes(lab.astype(bool), 2*N)#2*self.port.nchunk)
-        lab = remove_small_objects(lab, 2*N).astype('int')+1#2*self.port.nchunk)
-
-        # Iterate each row, identify port (farthest left) and
-        ## starboard bed (farthest right), keep those regions and zero out
-        ## the rest.
-        for row in range(lab.shape[0]):
-            regions, num = label(lab[row,:], return_num=True)
-
-            # Get region ID for bed on port/star
-            pID = regions[0]
-            sID = regions[-1]
-
-            # Get port & star bed regions seperately
-            pReg = (regions == pID).astype('int')
-            sReg = (regions == sID).astype('int')
-
-            # Add together, bed==1, water==0
-            psReg = pReg+sReg
-
-            # Get bool arrray where the water==True
-            regions = (psReg == 0)
-
-            # Update crop_label
-            lab[row,:] = regions
-
-        return lab
-
-    #=======================================================================
-    def _depthZheng(self,
-                    i):
-        '''
-        Automatically estimate the depth following method of Zheng et al. 2021:
-        https://doi.org/10.3390/rs13101945. The only difference between this
-        implementation and Zheng et al. 2021 is that model architecture and main
-        prediction workflow follow: https://github.com/Doodleverse/segmentation_gym.
-
-        ----------
-        Parameters
-        ----------
-        i : int
-            DESCRIPTION - Chunk index.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self.detectDep()
-
-        -------
-        Returns
-        -------
-        Estimated depths for each ping store in self.portDepDetect and
-        self.starDepDetect.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        self._saveDepth()
-        '''
-        doFilt = True
-        model = self.bedpickModel
-
-        self._getPortStarScanChunk(i)
-        mergeSon = self.mergeSon
-        # Make 3-band array
-        b1 = mergeSon.copy()
-        b2 = np.fliplr(b1.copy())
-        b3 = np.mean([b1,b2], axis=0)
-        del mergeSon
-
-        son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
-        del b1, b2, b3
-
-        N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
-        W = TARGET_SIZE[1] # Width of model output prediction
-
-        ##########################################
-        # Do initial prediction on entire sonogram
-        init_label = self._doPredict(model, son3bnd)
-
-        ###################################################
-        # Potential filters for removing small artifacts???
-        if doFilt:
-            init_label = self._filtPredict(init_label, N)
-
-        ############################
-        # Find pixel location of bed
-        portDepPix, starDepPix = self._findBed(init_label)
-
-        ##################################
-        # Crop image using initial bedpick
-        ## Zheng et al. 2021 method
-        ## Once cropped, sonogram is closer in size to model TARGET_SIZE, so
-        ## any errors introduced after rescaling prediction will be minimized.
-
-        Wp = np.add(portDepPix, starDepPix) # Width of water column estimate
-        del portDepPix, starDepPix
-
-        # Determine amount of WC to crop (Wwc)
-        if W < (np.max(Wp)+np.min(Wp)):
-            Wwc = np.min(Wp) - 50 # Set crop to min depth, then subtract a buffer
-            Wwc = max(Wwc, 0) # Set crop to zero if buffer too large
-        else:
-            Wwc = 0
-
-        # Determine amount of bed to crop (Ws)
-        if (W >= (np.max(Wp)-np.min(Wp)) ):
-            # Ws = int( (N/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
-            Ws = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
-            Ws = max(Ws, 0)
-        else:
-            Ws = int( (N/2) - (Wwc/2) - W )
-            Ws = max(Ws, 0)
-
-        # Crop the original sonogram
-        C = int(N/2) # Center of sonogram
-
-        ## Port crop
-        lC = Ws # Left side crop
-        rC = int(C - (Wwc/2)) # Right side crop
-        portCrop = son3bnd[:, lC:rC,:]
-
-        ## Starboard crop
-        lC = int(C + (Wwc/2)) # Left side crop
-        rC = int(N-Ws) # Right side crop
-        starCrop = son3bnd[:, lC:rC, :]
-
-        ## Concatenate port & star crop
-        sonCrop = np.concatenate((portCrop, starCrop), axis = 1)
-        sonCrop = sonCrop.astype(np.uint8)
-        del portCrop, starCrop
-
-        # Add 10 center pixels back in (??)
-        ## The depth model was trained using cropped sonograms that always had
-        ## the line dividing port from star present. The cropping step in this
-        ## implementation can crop that out, which messes up the prediction on
-        ## the cropped image. So we will add center line back into cropped image.
-        if Wwc > 0:
-            c = int(sonCrop.shape[1]/2)
-            sonCrop[:, (c-5):(c+5), :] = son3bnd[:, (C-5):(C+5), :]
-
-        #######################
-        # Segment cropped image
-        crop_label = self._doPredict(model, sonCrop)
-
-        ###################################################
-        # Potential filters for removing small artifacts???
-        if doFilt:
-            crop_label = self._filtPredict(crop_label, N)
-
-        #########
-        # Recover
-        portDepPixCrop, starDepPixCrop = self._findBed(crop_label) # get pixel location of bed
-
-        # add Wwc/2 to get final estimate at original sonogram dimensions
-        portDepPixCrop = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
-        starDepPixCrop = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
-
-        # ########################
-        # # Store depth detections
-        # self.portDepDetect[i] = portDepPixCrop
-        # self.starDepDetect[i] = starDepPixCrop
-        # del portDepPixCrop, starDepPixCrop
-
-
-        # #*#*#*#*#*#*#*#
-        # # Plot
-        # # color map
-        # class_label_colormap = ['#3366CC','#DC3912']
-        #
-        # color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"_initSon_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
-        #
-        # color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        # imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-
-        del son3bnd, init_label, crop_label, sonCrop
-        # return self
-        return portDepPixCrop, starDepPixCrop, i
-
-    #=======================================================================
-    def _depthThreshold(self, chunk):
-        '''
-        PING-Mapper's rules-based automated depth detection using pixel intensity
-        thresholding.
-
-        ----------
-        Parameters
-        ----------
-        chunk : int
-            DESCRIPTION - Chunk index.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self._detectDepth()
-
-        -------
-        Returns
-        -------
-        Estimated depths for each ping store in self.portDepDetect and
-        self.starDepDetect.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        self._saveDepth()
-        '''
-        # Parameters
-        window = 10 # For peak removal in bed pick: moving window size
-        max_dev = 5 # For peak removal in bed pick: maximum standard deviation
-        pix_buf = 50 # Buffer size around min/max Humminbird depth
-
-        portstar = [self.port, self.star]
-        for son in portstar:
-            # Load sonar intensity, standardize & rescale
-            son._getScanChunkSingle(chunk)
-            img = son.sonDat
-            img = standardize(img, 0, 1, True)[:,:,-1].squeeze()
-            W, H = img.shape[1], img.shape[0]
-
-            # Get chunks sonar metadata and instrument depth
-            isChunk = son.sonMetaDF['chunk_id']==1
-            sonMeta = son.sonMetaDF[isChunk].reset_index()
-            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-
-            ##################################
-            # Step 1 : Acoustic Bedpick Filter
-            # Use acoustic bed pick to crop image
-            bedMin = max(min(acousticBed)-50, 0)
-            bedMax = max(acousticBed)+pix_buf
-
-            cropMask = np.ones((H, W)).astype(int)
-            cropMask[:bedMin,:] = 0
-            cropMask[bedMax:,:] = 0
-
-            # Mask the image with bed_mask
-            imgMasked = img*cropMask
-
-            ###########################
-            # Step 2 - Threshold Filter
-            # Binary threshold masked image
-            imgMasked = gaussian(imgMasked, 3, preserve_range=True) # Do a gaussian blur
-            imgMasked[imgMasked==0]=np.nan # Set zero's to nan
-
-            imgBinaryMask = np.zeros((H, W)).astype(bool) # Create array to store thresholded sonar img
-            # Iterate over each ping
-            for i in range(W):
-                thresh = max(np.nanmedian(imgMasked[:,i]), np.nanmean(imgMasked[:,i])) # Determine threshold value
-                # stdev = np.nanstd(imgMasked[:,i])
-                imgBinaryMask[:,i] = imgMasked[:,i] > thresh # Keep only intensities greater than threshold
-
-            # Clean up image binary mask
-            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
-            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
-            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
-
-            ########################################
-            # Step 3 - Non-Contiguous region removal
-            # Make sure we didn't accidently zero out the last row, which should be bed.
-            # If we did, we will fill it back in
-            # Try filtering image_binary_mask through labeling regions
-            labelImage, num = label(imgBinaryMask, return_num=True)
-            allRegions = []
-
-            # Find the lowest/deepest region (this is the bed pixels)
-            max_row = 0
-            finalRegion = 0
-            for region in regionprops(labelImage):
-                allRegions.append(region.label)
-                minr, minc, maxr, maxc = region.bbox
-                # if (maxr > max_row) and (maxc > max_col):
-                if (maxr > max_row):
-                    max_row = maxr
-                    finalRegion = region.label
-
-            # If finalRegion is 0, there is only one region
-            if finalRegion == 0:
-                finalRegion = 1
-
-            # Zero out undesired regions
-            for regionLabel in allRegions:
-                if regionLabel != finalRegion:
-                    labelImage[labelImage==regionLabel] = 0
-
-            imgBinaryMask = labelImage # Update thresholded image
-            imgBinaryMask[imgBinaryMask>0] = 1 # Now set all val's greater than 0 to 1 to create the mask
-
-            # Now fill in above last row filled to make sure no gaps in bed pixels
-            lastRow = bedMax
-            imgBinaryMask[lastRow] = True
-            for i in range(W):
-                if imgBinaryMask[lastRow-1,i] == 0:
-                    gaps = np.where(imgBinaryMask[:lastRow,i]==0)[0]
-                    # Split each gap cluster into it's own array, subset the last one,
-                    ## and take top value
-                    topOfGap = np.split(gaps, np.where(np.diff(gaps) != 1)[0]+1)[-1][0]
-                    imgBinaryMask[topOfGap:lastRow,i] = 1
-
-            # Clean up image binary mask
-            imgBinaryMask = imgBinaryMask.astype(bool)
-            imgBinaryMask = remove_small_objects(imgBinaryMask, 2*H)
-            imgBinaryMask = remove_small_holes(imgBinaryMask, 2*H)
-            imgBinaryMask = np.squeeze(imgBinaryMask[:H,:W])
-
-            #############################
-            # Step 4 - Water Below Filter
-            # Iterate each ping and determine if there is water under the bed.
-            # If there is, zero out everything except for the lowest region.
-            # Iterate each ping
-            for i in range(W):
-                labelPing, num = label(imgBinaryMask[:,i], return_num=True)
-                if num > 1:
-                    labelPing[labelPing!=num] = 0
-                    labelPing[labelPing>0] = 1
-                imgBinaryMask[:,i] = labelPing
-
-            ###################################################
-            # Step 5 - Final Bedpick: Locate Bed & Remove Peaks
-            # Now relocate bed from image_binary_mask
-            bed = []
-            for k in range(W):
-                try:
-                    b = np.where(imgBinaryMask[:,k]==1)[0][0]
-                except:
-                    b=0
-                bed.append(b)
-            bed = np.array(bed).astype(np.float32)
-
-            # Interpolate over nan's
-            nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
-            bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
-            bed = bed.astype(int)
-
-            if son.beamName == 'ss_port':
-                # self.portDepDetect[chunk] = bed
-                portDepPixCrop = bed
-            elif son.beamName == 'ss_star':
-                # self.starDepDetect[chunk] = bed
-                starDepPixCrop = bed
-
-        # return self
-        return portDepPixCrop, starDepPixCrop, chunk

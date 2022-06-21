@@ -533,12 +533,14 @@ def read_master_func(sonFiles,
         elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
 
-        # # Estimate depth for each chunk using appropriate method
+        # Sequential estimate depth for each chunk using appropriate method
+        # chunks = [chunks[46]]
         # for chunk in chunks:
-        #     psObj._detectDepth(detectDep, int(chunk))
+        #     r = psObj._detectDepth(detectDep, int(chunk), USE_GPU)
+        #     psObj.portDepDetect[r[2]] = r[0]
+        #     psObj.starDepDetect[r[2]] = r[1]
 
-        # make parallel later.... doesn't work (??)....
-        # psObj.portDepDetect[i], psObj.starDepDetect[i], i = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
+        # Parallel estimate depth for each chunk using appropriate method
         r = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
 
         # store the depth predictions in the class

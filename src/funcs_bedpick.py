@@ -43,7 +43,11 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 
 import itertools
 
+# Fixes depth detection warning
 tf.get_logger().setLevel('ERROR')
+
+# from tensorflow import keras
+# from tensorflow.keras import layers
 
 ################################################################################
 # model_imports.py from segmentation_gym                                       #
@@ -140,6 +144,10 @@ def custom_resunet(sz,
 
     #model creation
     model = tf.keras.models.Model(inputs=[inputs], outputs=[outputs])
+
+    # Trying for multithreaded prediction
+    # model = keras.Model(inputs=[inputs], outputs=[outputs])
+    # model.make_predict_function()
     return model
 
 ### Model subfunctions ###
