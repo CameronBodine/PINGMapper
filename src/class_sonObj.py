@@ -1284,7 +1284,8 @@ class sonObj(object):
             file.seek(pingIdx) # Move to that location
             k = 0
             # Decode each sonar return and store in array
-            while k < pingCnt:
+            # while k < pingCnt:
+            while k < min(pingCnt, self.pingMax):
                 byte = self._fread(file, 1, 'B')[0]
                 sonDat[k,i] = byte
                 k+=1
@@ -1467,7 +1468,15 @@ class sonObj(object):
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+
+        # set pingMax to most representative range, i.e. range with largest count
+        # print(np.unique(sonMeta['ping_cnt'], return_counts=True))
+        rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
+        pingMaxi = np.argmax(rangeCnt[1])
+        self.pingMax = int(rangeCnt[0][pingMaxi])
+        # print(self.pingMax)
+
         self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
         # Load chunk's sonar data into memory
