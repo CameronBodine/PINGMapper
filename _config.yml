@@ -2,5 +2,5 @@ theme: jekyll-theme-minimal
 title: PING-Mapper
 description: Interface for reading, processing, and mapping side scan sonar data 
 logo: /assets/PINGMapper_Logo.png
-show_downloads: True
+show_downloads: False
 
