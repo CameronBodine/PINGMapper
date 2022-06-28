@@ -36,8 +36,8 @@ from main_rectify import rectify_master_func
 import time
 import datetime
 
-inDir = r'E:\NAU\GulfSturgeonProject\SSS_Data'
-outDir = r'E:\NAU\GulfSturgeonProject\SSS_Data_BedpickTest_FixImplement_Final'
+inDir = r'/media/cbodine/Drive_A/GulfSturgeonProject/SSS_Data'
+outDir = r'/media/cbodine/Drive_B/Modeling/Bedpick/06_TestModel'
 
 #################
 # User Parameters
@@ -57,7 +57,7 @@ rect_wcr = False #Export rectified tiles with water column removed/slant range c
 
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
-threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+threadCnt = -4 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 # Find all DAT and SON files in all subdirectories of inDir
 # inFiles=[]
