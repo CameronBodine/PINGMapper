@@ -37,7 +37,7 @@ import time
 import datetime
 
 inDir = r'E:\NAU\GulfSturgeonProject\SSS_Data'
-outDir = r'E:\NAU\GulfSturgeonProject\SSS_Data_BedpickTest_FixImplement'
+outDir = r'E:\NAU\GulfSturgeonProject\SSS_Data_BedpickTest_FixImplement_Final'
 
 #################
 # User Parameters
@@ -72,6 +72,13 @@ for root, dirs, files in os.walk(inDir):
         if file.endswith('.DAT') and ('EggSites' not in root):
             inFiles.append(os.path.join(root, file))
 
+inFiles = sorted(inFiles)
+
+for i, f in enumerate(inFiles):
+    print(i, ":", f)
+
+# inFiles = [inFiles[4]]
+# inFiles = inFiles[4:]
 for datFile in inFiles:
     try:
         start_time = time.time()

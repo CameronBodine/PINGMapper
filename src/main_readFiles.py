@@ -524,21 +524,23 @@ def read_master_func(sonFiles,
         # Estimate depth using:
         # Zheng et al. 2021
         if detectDep == 1:
-            print('\n\tUsing Zheng et al. 2021 method. Loading model...')
-            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220621.h5'
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220624.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
+            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
             # psObj._initModel(USE_GPU)
 
         # With binary thresholding
         elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
 
-        # Sequential estimate depth for each chunk using appropriate method
-        # chunks = [chunks[46]]
+        # # Sequential estimate depth for each chunk using appropriate method
+        # chunks = [chunks[217]]
+        # # chunks = chunks[38:39]
         # for chunk in chunks:
         #     r = psObj._detectDepth(detectDep, int(chunk), USE_GPU)
         #     psObj.portDepDetect[r[2]] = r[0]
         #     psObj.starDepDetect[r[2]] = r[1]
+        # sys.exit()
 
         # Parallel estimate depth for each chunk using appropriate method
         r = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
