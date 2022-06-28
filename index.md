@@ -1,12 +1,28 @@
 
 # PING-Mapper
 
-`PING-Mapper` is an open-source and freely available software for reading and processing recreation-grade Humminbird&reg; side imaging recordings. `PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. Functionality includes:
+`PING-Mapper` is an open-source and freely available software for reading and processing recreation-grade Humminbird&reg; side imaging recordings. `PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
+
+## Current Features
 
 - Decode Humminbird&reg; side imaging sonar recordings from any model;
 - Export ping attributes (depth, latitude, longitude, vessel speed & heading, etc.) from every sonar channel;
 - Water column removal using the sonar depth;
 - Export of sonogram tiles and georectified mosaics.
+
+## Examples
+
+`PING-Mapper` is designed to decode sonar recordings from a Humminbird&reg; like this:
+
+<img src="../main/docs/attach/Suwa_Son.gif" width="800"/>
+
+*Video made with [HumViewer](https://humviewer.cm-johansen.dk/)*
+
+Export ping attributes from each sonar channel including sonar depth, latitude, longitude, vessel speed & heading, etc., to file:
+
+
+
+## Future Features
 
 `PING-Mapper` is actively maintained, with new functionality currently in development. New functionality in the pipeline includes:
 
@@ -23,7 +39,11 @@ There are several ways you can find out more about `PING-Mapper`. The first of w
 ### Paper
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
-Peer Reviewed: Forthcoming...
+*Peer Reviewed: Forthcoming...*
+
+If you use `PING-Mapper` for your work, please cite the paper:
+
+
 
 ### Code that made the paper
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
