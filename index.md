@@ -12,15 +12,19 @@
 
 ## Examples
 
-`PING-Mapper` is designed to decode sonar recordings from a Humminbird&reg; like this:
+`PING-Mapper` is designed to **decode sonar recordings** from a Humminbird&reg; like this:
 
-<img src="../main/docs/attach/Suwa_Son.gif" width="800"/>
+<img src="./assets/Suwa_Son.gif" width="800"/>
 
 *Video made with [HumViewer](https://humviewer.cm-johansen.dk/)*
 
-Export ping attributes from each sonar channel including sonar depth, latitude, longitude, vessel speed & heading, etc., to file:
+Export **ping attributes** from each sonar channel including sonar depth, latitude, longitude, vessel speed & heading, etc., to file for further analysis:
 
+<img src="./assets/PingAttribute.png" width="800"/>
 
+And create georectified mosaics of the sonar imagery:
+
+<img src="./assets/GeorectifiedSon.PNG" width="800"/>
 
 ## Future Features
 
