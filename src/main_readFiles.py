@@ -524,7 +524,7 @@ def read_master_func(sonFiles,
         # Estimate depth using:
         # Zheng et al. 2021
         if detectDep == 1:
-            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220624.h5'
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220627.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
             # psObj._initModel(USE_GPU)
