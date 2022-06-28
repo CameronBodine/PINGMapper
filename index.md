@@ -40,6 +40,11 @@ And create georectified mosaics of the sonar imagery:
 
 There are several ways you can find out more about `PING-Mapper`. The first of which is this [website](#website-contents)! You can also check out the [scientific manuscripts](#paper) and the [code that made the paper](#code-that-made-the-paper).
 
+### Website Contents
+[Installation]()
+[Sonar File Structure](https://cameronbodine.github.io/PINGMapper/docs/BinaryStructure)
+[Processing & Data Export](https://cameronbodine.github.io/PINGMapper/docs/Processing&DataExport)
+
 ### Paper
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
@@ -47,12 +52,14 @@ There are several ways you can find out more about `PING-Mapper`. The first of w
 
 If you use `PING-Mapper` for your work, please cite the paper:
 
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., Kaeser, A. J. (2022). *PING-Mapper: open-source software for automated benthic imaging and mapping using recreation-grade sonar.* Manuscript submitted to *Earth and Space Science*.
+
 
 
 ### Code that made the paper
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
-### Website Contents
+
 
 
 
