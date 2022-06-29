@@ -2,10 +2,10 @@
 # Humminbird&reg; File Structure
 By Cameron S. Bodine
 
-## 1) Introduction
+## 1 Introduction
 `PING-Mapper` is a new and optimized version of `PyHum` [[1]](#1) [[2]](#2). Since the release of `PyHum`, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird&reg; recording file structure.  This report documents new findings on the file structure of Humminbird&reg; sonar recordings, essential for processing and exporting raw sonar data.
 
-## 2) SD Card Files
+## 2 SD Card Files
 
 Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure:
 
@@ -33,12 +33,15 @@ Rec00002.DAT
 ....
 ```
 
-## 3) DAT File Structure
-The `DAT` file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the `DAT` file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the `DAT` file and description of the data.
+## 3 DAT File Structure
+The `DAT` file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the `DAT` file varies by Humminbird&reg; model (and potentially firmware).  The following sections indicate the offset from start of the `DAT` file and description of the data for each model.
 
 
-### 3.1) 9xx/11xx/Helix/Solix Series
+### 3.1 9xx/11xx/Helix/Solix Series
 
+The `DAT` file structure is the same for the 9xx, 11xx, Helix, and Solix series models.
+
+**DAT Structure**
 
 | Name              | Offset (9xx, 11xx, Helix) | Offset (Solix) | Description |
 | ----------------- | ------------------------- | -------------- | ----------- |
@@ -59,8 +62,8 @@ The `DAT` file contains metadata that applies to the sonar recording.  It includ
 
 
 
-### 3.2) ONIX Series
-The ONIX series has a different structure from other Humminbird&reg; models.  The first 24 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.
+### 3.2 Onix Series
+The Onix series has a different structure from other Humminbird&reg; models.  The first 24 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.
 
 **Binary Header**
 
@@ -97,10 +100,10 @@ The ONIX series has a different structure from other Humminbird&reg; models.  Th
 | Source Device Model ID DI | < SourceDeviceModelIdDI=1001 > |
 
 
-## 4) IDX & SON File Structure
+## 4 IDX & SON File Structure
 A `SON` file contains every sonar ping for a specific sonar channel (see table below) while the `IDX` file stores the byte offset and time ellapsed for each sonar ping. The `IDX` file allows quick navigation to locate pings in the `SON` file but can become corrupt due to power failure during the survey. Decoding the `SON` file without the `IDX` file requires additional information, outlined in the sections below.
 
-File names correspond to the following sonar channels:
+**Sonar Channel File Names**
 
 | File Name | Description                 | Frequency         |
 | --------- | --------------------------- | ----------------- |
@@ -112,7 +115,7 @@ File names correspond to the following sonar channels:
 
 Each `SON` file contains all the pings (ping header and returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#411-Header-Structure) below).  The header is followed by 8-bit (0-255 Integer) values representing the returns for that ping.  All data stored in `SON` files are signed integer big endian.
 
-### 4.1) Ping Structure
+### 4.1 Ping Structure
 The number of bytes for a ping varies in two ways.  First, the number of bytes corresponding to ping attributes vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range set while recording the sonar.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
 
 Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
@@ -125,21 +128,33 @@ Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This seq
 | 72 Bytes      | 11xx, Helix, Onix|
 | 152 Bytes     | Solix            |
 
-##### 4.1.1) Header Structure
-The header for a ping contains attributes specific to that ping.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The attribute is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, the attribute that follows the tag, and byte offset for the attribute.
+#### 4.1.1 Header Structure
+The header for a ping contains attributes specific to that ping.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The attribute is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, the attribute that follows the tag, and byte offset for the attribute by model.
 
-| Name              | Description               | Hex Tag | 9xx     | 11xx, Helix, Onix Offset | Solix Offset |
-| ----------------- | ------------------------- | ------- | ------- | ------------------------ | ------------ |
-| Ping #1           | Beginning of ping         | `C0`    | +0      | +0                       | +0           |
-| Header Start      | Beginning of ping header  | `21`    | +3      | +3                       | +3           |
-| Record Number     | Unique ping ID            | `80`    | +5      | +5                       | +5           |
-| Time Elapsed      | Time Elapsed (msec)       | `81`    | +10     | +10                      | +10          |
-| UTM X             | EPSG 3395 easting coord.  | `82`    | +15     | +15                      | +15          |
-| UTM Y             | EPSG 3395 northing coord. | `83`    | +20     | +20                      | +20          |
-| Heading Quality   | Quality Flag[^a]          | `84`    | +25     | +25                      | +25          |
+**Ping Header Structure**
+
+| Name              | Description               | Hex Tag | 9xx     | 11xx, Helix, Onix | Solix |
+| ----------------- | ------------------------- | ------- | ------- | ----------------- | ----- |
+| Ping #1           | Beginning of ping         | `C0`    | +0      | +0                | +0    |
+| Header Start      | Beginning of ping header  | `21`    | +3      | +3                | +3    |
+| Record Number     | Unique ping ID            | `80`    | +5      | +5                | +5    |
+| Time Elapsed      | Time elapsed (msec)       | `81`    | +10     | +10               | +10   |
+| UTM X             | EPSG 3395 easting coord.  | `82`    | +15     | +15               | +15   |
+| UTM Y             | EPSG 3395 northing coord. | `83`    | +20     | +20               | +20   |
+| Heading Quality   | Quality flag[^a]          | `84`    | +25     | +25               | +25   |
+| Heading           | Vessel heading (1/10 deg) | -       | +27     | +27               | +27   |
+| Speed Quality     | Quality flag[^a]          | `85`    | +30     | +30               | +30   |
+| Speed             | Vessel speed (cm/sec)     | -       | +32     | +32               | +32   |
+| *NA*              | Unknown data contents     | `86`    | -       | +35               | +35   |
+| Depth             | Sonar depth (cm)          | `87`    | +35     | +40               | +40   |
+| *NA*              | Unknown data contents     | -       | -       | -                 | +44-83 |
+| Sonar Beam        | Sonar beam ID[^b]         | `50`    | +40     | +45               | +85   |
+| Voltage Scale     | Voltage scale (1/10 volt) | `51`    | +42     | +47               | +87   |
+| Frequency         | Sonar beam frequency
 
 
 [^a]: 0=bad; 1=good.
+[^b]: See [table](#4-idx-&-son-file-structure) for frequency values.
 
 
 ##### 2.2.1.2) Humminbird&reg; 900 Series
