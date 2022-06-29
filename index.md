@@ -42,7 +42,9 @@ There are several ways you can find out more about `PING-Mapper`. The first of w
 
 ### Website Contents
 [Installation]()
+
 [Sonar File Structure](https://cameronbodine.github.io/PINGMapper/docs/BinaryStructure)
+
 [Processing & Data Export](https://cameronbodine.github.io/PINGMapper/docs/Processing&DataExport)
 
 ### Paper
