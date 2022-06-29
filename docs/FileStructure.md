@@ -37,7 +37,7 @@ Rec00002.DAT
 The `DAT` file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the `DAT` file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the `DAT` file and description of the data.
 
 
-### 3.1) 900/1100/Helix/Solix Series
+### 3.1) 9xx/11xx/Helix/Solix Series
 
 
 | Name              | Offset (9xx, 11xx, Helix) | Offset (Solix) | Description |
@@ -98,7 +98,7 @@ The ONIX series has a different structure from other Humminbird&reg; models.  Th
 
 
 ## 4) IDX & SON File Structure
-A `SON` file contains every sonar ping for a specific sonar channel while the `IDX` file stores the byte offset and time ellapsed for each sonar ping. The `IDX` file allows quick navigation to locate pings in the `SON` file but can become corrupt due to power failure during the survey. Decoding the `SON` file without the `IDX` file requires additional information, outlined in the sections below.
+A `SON` file contains every sonar ping for a specific sonar channel (see table below) while the `IDX` file stores the byte offset and time ellapsed for each sonar ping. The `IDX` file allows quick navigation to locate pings in the `SON` file but can become corrupt due to power failure during the survey. Decoding the `SON` file without the `IDX` file requires additional information, outlined in the sections below.
 
 File names correspond to the following sonar channels:
 
@@ -110,10 +110,10 @@ File names correspond to the following sonar channels:
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan MEGA Frequency    | 1,200 kHz         |
 
-Each SON file contains all the pings (ping returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  All data stored in SON files are signed integer big endian.
+Each `SON` file contains all the pings (ping header and returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#411-Header-Structure) below).  The header is followed by 8-bit (0-255 Integer) values representing the returns for that ping.  All data stored in `SON` files are signed integer big endian.
 
 ### 4.1) Ping Structure
-The number of bytes for a ping varies in two ways.  First, the number of bytes in the ping header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range setting on the unit.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
+The number of bytes for a ping varies in two ways.  First, the number of bytes corresponding to ping attributes vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range set while recording the sonar.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
 
 Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
 
@@ -125,8 +125,22 @@ Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This seq
 | 72 Bytes      | 11xx, Helix, Onix|
 | 152 Bytes     | Solix            |
 
-##### 2.2.1.1) Header Structure
-The header for a ping contains metadata specific to that ping.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The data is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, offset from start of a ping, the data that follows the tag, and the size (in bytes) of the data.
+##### 4.1.1) Header Structure
+The header for a ping contains attributes specific to that ping.  Information about the ping location, time elapsed since beginning of the recording, heading, speed, depth, etc. are contained in this structure.  The attribute is preceded by a hexidecimal value that is unique for the data that follows, referred to as a tag.  For example, `Depth` is tagged by a hexidecimal value of `87`.  While the variety of information stored in the header varies by Humminbird&reg; model, tags consistently identify the type of information that follows.  The following sections indicate the tags, the attribute that follows the tag, and byte offset for the attribute.
+
+| Name              | Description               | Hex Tag | 9xx     | 11xx, Helix, Onix Offset | Solix Offset |
+| ----------------- | ------------------------- | ------- | ------- | ------------------------ | ------------ |
+| Ping #1           | Beginning of ping         | `C0`    | +0      | +0                       | +0           |
+| Header Start      | Beginning of ping header  | `21`    | +3      | +3                       | +3           |
+| Record Number     | Unique ping ID            | `80`    | +5      | +5                       | +5           |
+| Time Elapsed      | Time Elapsed (msec)       | `81`    | +10     | +10                      | +10          |
+| UTM X             | EPSG 3395 easting coord.  | `82`    | +15     | +15                      | +15          |
+| UTM Y             | EPSG 3395 northing coord. | `83`    | +20     | +20                      | +20          |
+| Heading Quality   | Quality Flag[^a]          | `84`    | +25     | +25                      | +25          |
+
+
+[^a]: 0=bad; 1=good.
+
 
 ##### 2.2.1.2) Humminbird&reg; 900 Series
 Header Length (Bytes): **67**
