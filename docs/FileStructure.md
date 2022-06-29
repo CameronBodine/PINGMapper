@@ -100,7 +100,7 @@ The Onix series has a different structure from other Humminbird&reg; models.  Th
 | Source Device Model ID DI | < SourceDeviceModelIdDI=1001 > |
 
 
-## IDX & SON File Structure
+## IDX and SON File Structure
 A `SON` file contains every sonar ping for a specific sonar channel (see table below) while the `IDX` file stores the byte offset and time ellapsed for each sonar ping. The `IDX` file allows quick navigation to locate pings in the `SON` file but can become corrupt due to power failure during the survey. Decoding the `SON` file without the `IDX` file requires additional information, outlined in the sections below.
 
 **Sonar Channel File Names**
@@ -154,7 +154,7 @@ The header for a ping contains attributes specific to that ping.  Information ab
 
 
 [^a]: 0=bad; 1=good.
-[^b]: See [table](#idx-&-son-file-structure) for frequency values.
+[^b]: See [table](#idx-and-son-file-structure) for frequency values.
 
 
 
