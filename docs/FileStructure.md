@@ -113,7 +113,7 @@ A `SON` file contains every sonar ping for a specific sonar channel (see table b
 | B003.SON  | Side Scan Starboard         | 455/800/1,200 kHz |
 | B004.SON  | Down Scan MEGA Frequency    | 1,200 kHz         |
 
-Each `SON` file contains all the pings (ping header and returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#Header-Structure) below).  The header is followed by 8-bit (0-255 Integer) values representing the returns for that ping.  All data stored in `SON` files are signed integer big endian.
+Each `SON` file contains all the pings (ping header and returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#header-structure) below).  The header is followed by 8-bit (0-255 Integer) values representing the returns for that ping.  All data stored in `SON` files are signed integer big endian.
 
 ### 4.1 Ping Structure
 The number of bytes for a ping varies in two ways.  First, the number of bytes corresponding to ping attributes vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range set while recording the sonar.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
@@ -154,7 +154,7 @@ The header for a ping contains attributes specific to that ping.  Information ab
 
 
 [^a]: 0=bad; 1=good.
-[^b]: See [table](#IDX-&-SON-File-Structure) for frequency values.
+[^b]: See [table](#idx-&-son-file-structure) for frequency values.
 
 
 
