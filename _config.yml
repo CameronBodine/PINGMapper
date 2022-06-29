@@ -5,3 +5,20 @@ description: Interface for reading, processing, and mapping side scan sonar data
 logo: /assets/PINGMapper_Logo.png
 show_downloads: False
 markdown: kramdown
+
+# Aux links for the upper right navigation
+aux_links:
+  "PING-Mapper on GitHub":
+    - "//github.com/CameronBodine/PINGMapper"
+
+# Makes Aux links open in a new tab. Default is false
+aux_links_new_tab: true
+
+# Footer content
+# appears at the bottom of every page's main content
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+footer_content: "Copyright &copy; 2022 Cameron Bodine. Distributed by an <a href=\"https://github.com/CameronBodine/PINGMapper/blob/main/LICENSE\">MIT license.</a>
