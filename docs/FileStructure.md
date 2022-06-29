@@ -150,21 +150,20 @@ The header for a ping contains attributes specific to that ping.  Information ab
 | *NA*              | Unknown data contents     | -       | -       | -                 | +44-83 |
 | Sonar Beam        | Sonar beam ID[^b]         | `50`    | +40     | +45               | +85   |
 | Voltage Scale     | Voltage scale (1/10 volt) | `51`    | +42     | +47               | +87   |
-| Frequency         | Sonar beam frequency
+| Frequency         | Sonar beam frequency (Hz) | `92`    | +44     | +49               | +89   |
+| *NA*              | Unknown data contents     | -       | +48-60  | +53-65            | +89-145 |
+| Return Count      | Number ping returns (*n*) | `A0`    | +62     | +67               | +147  |
+| Header End        | End of ping header        | `21`    | +66     | +72               | +152  |
+| Ping Returns      | Sonar intensity [0-255]   | `21`    | +67     | +73               | +152  |
+| Ping #2           | Beginning of ping         | `C0`    | +67+*n*+1 | +73+*n*+1       | +152+*n*+1 |
+| ...[^c]           | ...                       | ...     | ...     | ...               | ...   |
 
 
 [^a]: 0=bad; 1=good.
-[^b]: See [table](#idx-and-son-file-structure) for frequency values.
+[^b]: See [Sonar Channel File Names](#idx-and-son-file-structure) table for frequency values.
+[^c]: Pattern repeats for duration of sonar recording.
 
 
-
-Example of first and last 4 sonar records from sonar files.  Values displayed are in hexadecimal.
-
-**1199**
-![Img of 1199 Son Header](./attach/1199SonHead.PNG)
-
-**Helix**
-![Img of Helix Son Header](./attach/HelixSonHead.PNG)
 
 ## 3) References
 
@@ -341,3 +340,11 @@ Header Length (Bytes): **152**
 | Tag A0            | +146   | 1      | 8     | `A0`          | 160           | - |
 | **Bytes in Ping** | +147   | 4      | 32    | *Varies*      | *Varies*      | Number of bytes in ping returns |
 | End Header        | +151   | 1      | 8     | `21`          | 33            | End of ping header | -->
+
+<!-- Example of first and last 4 sonar records from sonar files.  Values displayed are in hexadecimal.
+
+**1199**
+![Img of 1199 Son Header](./attach/1199SonHead.PNG)
+
+**Helix**
+![Img of Helix Son Header](./attach/HelixSonHead.PNG) -->
