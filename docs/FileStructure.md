@@ -1,40 +1,63 @@
 
-# Humminbird&reg; Recording: DAT & SON Binary Structure
+# Humminbird&reg; File Structure
 By Cameron S. Bodine
 
 ## 1) Introduction
-PyHum [[1]](#1) [[2]](#2) is an open-source python framework for reading and processing recordings from a low-cost Humminbird&reg; sidescan sonar system.  Developed for Python 2, it decodes Humminbird&reg; DAT and SON files, exports the data, processes radiometric corrections, classifies bed texture, and produces maps.  Since its release, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird&reg; Recording binary structure.  This report documents new findings on the binary structure of Humminbird&reg; sonar recordings, essential for processing and exporting raw sonar data (see [Humminbird&reg; Recording: DAT/SON Processing & Raw Data Export](../docs/Processing&RawDataExport.md) for more information).
+`PING-Mapper` is a new and optimized version of `PyHum` [[1]](#1) [[2]](#2). Since the release of `PyHum`, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird&reg; recording file structure.  This report documents new findings on the file structure of Humminbird&reg; sonar recordings, essential for processing and exporting raw sonar data.
 
-## 2) DAT and SON Binary Structure
-The initial release of PyHum documented the [binary structure](https://github.com/dbuscombe-usgs/PyHum/blob/master/docs/data_formats.rst) of Humminbird&reg; sonar files.  Using this as a guide, DAT and SON files were investigated using a program called [Hexinator](https://hexinator.com/).  Hexinator interface displays binary data in hexidecimal format.  Binary files are then annotated with known structures and elements, known as a grammer.  The grammer can be applied to any binary file which aides in identifying differences in the binary structure.  In the screenshot below, the left window shows the color coded hexidecimal characters on the left side with the binary ASCII values on the right.  The right window shows the grammer for the file, indicating Position, Offset, Length, Index, Name, and integer value of the hexidecimal character.
+## 2) SD Card Files
 
-![Img of Hexinator Program](./attach/Hexinator.PNG)
+Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure:
 
-### 2.1) DAT File Structure
-The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the DAT file, length (number of hexidecimal characters), and description of the data.
+```
+Rec00001.DAT
+├── Rec00001
+│   ├── B001.IDX
+│   ├── B001.SON
+│   ├── B002.IDX
+│   ├── B002.SON
+│   ├── B003.IDX
+│   ├── B003.SON
+│   ├── B004.IDX
+│   └── B004.IDX
+Rec00002.DAT
+├── Rec00002
+│   ├── B001.IDX
+│   ├── B001.SON
+│   ├── B002.IDX
+│   ├── B002.SON
+│   ├── B003.IDX
+│   ├── B003.SON
+│   ├── B004.IDX
+│   └── B004.IDX
+....
+```
 
-#### 2.1.1) Humminbird&reg; 900/1100/Helix Series
+### 2) DAT File Structure
+The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the DAT file and description of the data.
 
-| Name              | Offset | Length | Bytes | Hex Value     | Integer Value | Description |
-| ----------------- | ------ | ------ | ----- | ------------- | ------------- | ----------- |
-| DAT Beginning     | +0     | 1      | 8     | `C1`          | 193           | Beginning of DAT File |
-| Water Type        | +1     | 1      | 8     | *Varies*      | *Varies*      | 0='fresh' (freshwater); 1='deep salt'; 2='shallow salt'; otherwise='unknown' |
-| Unknown           | +2     | 1      | 8     | *Varies*      | *Varies*      | Unknown     |
-| Unknown           | +3     | 1      | 8     | `01`          | 1             | Unknown     |
-| Firmware Version (?) | +4  | 4      | 32    | *Varies*      | *Varies*      | Installed firmware version (?) |
-| Unknown           | +8     | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
-| Unknown           | +12    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
-| Unknown           | +16    | 4      | 32    | *Varies*      | *Varies*      | Unknown     |
-| Unix Date/Time    | +20    | 4      | 32    | *Varies*      | *Varies*      | Recording start date and time |
-| UTM X             | +24    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Easting |
-| UTM Y             | +28    | 4      | 32    | *Varies*      | *Varies*      | EPSG 3395 Northing |
-| Recording Name    | +32    | 4      | 32    | *Varies*      | *Varies*      | Recording name |
-| Unknown           | +42    | 2      | 16    | *Varies*      | *Varies*      | Unknown     |
-| Number of Records | +44    | 4      | 32    | *Varies*      | *Varies*      | Number of sonar records/pings |
-| Length            | +48    | 4      | 32    | *Varies*      | *Varies*      | Length (in milliseconds) of sonar recording |
-| Unknown           | +52    | 2      | 32    | *Varies*      | *Varies*      | Unknown     |
-| Unknown           | +56    | 4      | 32    | `00 00 00 00` | 0             | Unknown     |
-| DAT End           | +60    | 1      | 32    | *Varies*      | *Varies*      | End of DAT File |
+
+#### 2.1) 900/1100/Helix Series
+
+
+| Name              | Offset | Description |
+| ----------------- | ------ | ----------- |
+| DAT Beginning     | +0     | Beginning of DAT File |
+| Water Type        | +1     | 0='fresh' (freshwater); 1='deep salt'; 2='shallow salt'; otherwise='unknown' |
+| -                 | +2-3   | -           |
+| Firmware Version (?) | +4  | Installed firmware version (?) |
+| -                 | +8-19  | -           |
+| Unix Date/Time    | +20    | Recording start date and time |
+| UTM X             | +24    | EPSG 3395 Easting |
+| UTM Y             | +28    | EPSG 3395 Northing |
+| Recording Name    | +32    | Recording name |
+| -                 | +42-43 | Unknown     |
+| Number of Records | +44    | Number of pings |
+| Length            | +48    | Length (in milliseconds) of sonar recording |
+| -                 | +52-59 | -           |
+| DAT End           | +60    | End of DAT File |
+
+
 
 #### 2.1.2) Humminbird&reg; ONIX Series
 The ONIX series has a different structure from other Humminbird&reg; models.  The first 48 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.  See tables below for more information.
