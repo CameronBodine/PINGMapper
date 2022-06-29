@@ -33,11 +33,11 @@ Rec00002.DAT
 ....
 ```
 
-## 2) DAT File Structure
-The DAT file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the DAT file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the DAT file and description of the data.
+## 3) DAT File Structure
+The `DAT` file contains metadata that applies to the sonar recording.  It includes information related water type specified on the sonar unit, the Unix date and time when the sonar recording began, geographic location where the recording began, name of the recording, number of sonar records, and length of the recording.  The size (in bytes) of the `DAT` file varies by Humminbird&reg; model (and potentially firmware).  The following section indicate the offset from start of the `DAT` file and description of the data.
 
 
-### 2.1) 900/1100/Helix/Solix Series
+### 3.1) 900/1100/Helix/Solix Series
 
 
 | Name              | Offset (9xx, 11xx, Helix) | Offset (Solix) | Description |
@@ -59,8 +59,8 @@ The DAT file contains metadata that applies to the sonar recording.  It includes
 
 
 
-### 2.2) Humminbird&reg; ONIX Series
-The ONIX series has a different structure from other Humminbird&reg; models.  The first 48 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.
+### 3.2) ONIX Series
+The ONIX series has a different structure from other Humminbird&reg; models.  The first 24 bytes are in binary containing information about water type, number of pings in the recording, total time of recording, and ping size in bytes.  Following the binary header are ascii strings (human readable) containing additional information, with each piece of information encapsulated with `<attribute=value>`.
 
 **Binary Header**
 
@@ -97,8 +97,10 @@ The ONIX series has a different structure from other Humminbird&reg; models.  Th
 | Source Device Model ID DI | < SourceDeviceModelIdDI=1001 > |
 
 
-## 3) SON File Structure
-A SON file contains every sonar ping for a specific sonar channel.  File names correspond to the following sonar channels:
+## 4) IDX & SON File Structure
+A `SON` file contains every sonar ping for a specific sonar channel while the `IDX` file stores the byte offset and time ellapsed for each sonar ping. The `IDX` file allows quick navigation to locate pings in the `SON` file but can become corrupt due to power failure during the survey. Decoding the `SON` file without the `IDX` file requires additional information, outlined in the sections below.
+
+File names correspond to the following sonar channels:
 
 | File Name | Description                 | Frequency         |
 | --------- | --------------------------- | ----------------- |
@@ -110,7 +112,7 @@ A SON file contains every sonar ping for a specific sonar channel.  File names c
 
 Each SON file contains all the pings (ping returns) that were recorded.  Each ping begins with a header, containing metadata specific to that ping (see [Header Structure](#2211-Header-Structure) below).  The header is followed by 8-byte (0-255 Integer) values representing the returns for that ping.  All data stored in SON files are signed integer big endian.
 
-### 3.1) Ping Structure
+### 4.1) Ping Structure
 The number of bytes for a ping varies in two ways.  First, the number of bytes in the ping header vary by model (and potentially firmware version), resulting in varying header length.  Second, the number of ping returns vary depending on the range setting on the unit.  The variability in the size of a ping across recordings and Humminbird&reg; models make automatic decoding of the file a non-trivial task.  Consistent structure between recordings and Humminbird&reg; models, however, has been identified.  
 
 Each ping begins with the same four hexidecimal values: `C0 DE AB 21`.  This sequence is common to all sonar recordings encountered to date.  The header then terminates with the following hexidecimal sequence: `A0 ** ** ** ** 21` where the `** ** ** **` is a 32-byte unsigned integer indicating the number of sonar returns that are recorded immediately after `21`.  By counting the number of bytes beginning at `C0` and terminating at `21`, the correct header length can be determined.  Three different header lengths have been identified:
