@@ -154,7 +154,7 @@ The header for a ping contains attributes specific to that ping.  Information ab
 
 
 [^a]: 0=bad; 1=good.
-[^b]: See [table](#4-idx-&-son-file-structure) for frequency values.
+[^b]: See [table](#4-IDX-&-SON-File-Structure) for frequency values.
 
 
 ##### 2.2.1.2) Humminbird&reg; 900 Series
