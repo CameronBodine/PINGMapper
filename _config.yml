@@ -2,13 +2,14 @@
 remote_theme: just-the-docs/just-the-docs
 title: PING-Mapper
 description: Interface for reading, processing, and mapping side scan sonar data
+baseurl: "/PINGMapper"
+url: "https://cameronbodine.github.io"
 logo: /assets/PINGMapper_Logo.png
-show_downloads: False
 
 # Aux links for the upper right navigation
 aux_links:
   "PING-Mapper on GitHub":
-    - "//github.com/CameronBodine/PINGMapper"
+    - "https://github.com/CameronBodine/PINGMapper"
 
 # Makes Aux links open in a new tab. Default is false
 aux_links_new_tab: true
@@ -21,3 +22,11 @@ back_to_top: true
 back_to_top_text: "Back to top"
 
 footer_content: "Copyright &copy; 2022 Cameron Bodine. Distributed by an <a href=\"https://github.com/CameronBodine/PINGMapper/blob/main/LICENSE\">MIT license.</a>
+
+plugins:
+  - jekyll-seo-tag
+
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
