@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Sonar Humminbird&reg; File Structure
+title: Humminbird File Structure
 nav_order: 1
 parent: Advanced Topics
 
