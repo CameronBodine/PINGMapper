@@ -2,12 +2,31 @@
 layout: default
 title: Home
 nav_order: 1
+description: "PING-Mapper is an open-source software for recreationg-grade sonar"
 ---
 
+# PING-Mapper.
+{: .fs-9 }
 
-# PING-Mapper
+PING-Mapper is an open-source software for reading and processing recreation-grade side scan sonar recordings
+{: .fs-6 .fw-300 }
 
-`PING-Mapper` is an open-source and freely available software for reading and processing recreation-grade Humminbird&reg; side imaging recordings. `PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
+[Get started now](/gettingstarted/gettingstarte.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
+
+---
+
+`PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
+
+## Compatible Sonar Systems
+
+`PING-Mapper` is currently compatible with Humminbird&reg; side imaging sonar systems. The software has been designed to work with any model, but has been specifically tested with the following models:
+
+- 998
+- 1198
+- 1199
+- Helix
+- Solix
+- Onix
 
 ## Current Features
 
@@ -44,27 +63,22 @@ And create georectified mosaics of the sonar imagery:
 
 ## Find out more!
 
-There are several ways you can find out more about `PING-Mapper`. The first of which is this [website](#website-contents)! You can also check out the [scientific manuscripts](#paper) and the [code that made the paper](#code-that-made-the-paper).
+There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the [scientific paper](#paper) and the [code that made the paper](#code-that-made-the-paper).
 
-### Website Contents
-[Installation]()
 
-[Sonar File Structure](https://cameronbodine.github.io/PINGMapper/docs/FileStructure)
-
-[Processing & Data Export](https://cameronbodine.github.io/PINGMapper/docs/Processing&DataExport)
-
-### Paper
+## Paper
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
 *Peer Reviewed: Forthcoming...*
 
+### Citation
 If you use `PING-Mapper` for your work, please cite the paper:
 
 Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., Kaeser, A. J. (2022). *PING-Mapper: open-source software for automated benthic imaging and mapping using recreation-grade sonar.* Manuscript submitted to *Earth and Space Science*.
 
 
 
-### Code that made the paper
+## Code that made the paper
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
 
