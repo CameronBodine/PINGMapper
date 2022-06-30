@@ -18,7 +18,7 @@ aux_links_new_tab: false
 back_to_top: true
 back_to_top_text: "Back to top"
 
-footer_content: "Copyright &copy; 2017-2020 Patrick Marsceill. Distributed by an <a href=\"https://github.com/just-the-docs/just-the-docs/tree/main/LICENSE.txt\">MIT license.</a> <a href=\"https://www.netlify.com/\">This site is powered by Netlify.</a>"
+footer_content: "This study was made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Restoration Area Trustee Implementation Group of the Deepwater Horizon Trustee Council as part of their Final Restoration Plan 1 for birds and sturgeon. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University. Thanks to Channing St. Aubin (USFWS), Mike Andres (USM), Eric Haffey (USM), Kasea Price (USM), and Katherine Wright (USM) for data collection and planning, and to Daniel Haught (USGS) for testing. Copyright &copy; 2022 Cameron Bodine."
 
 # Footer last edited timestamp
 last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter
