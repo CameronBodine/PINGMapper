@@ -1,3 +1,9 @@
+---
+layout: default
+title: Sonar Recording Processing & Raw Data Export
+nav_order: 3
+---
+
 # Sonar Recording Processing & Raw Data Export
 
 ## 1) Introduction
