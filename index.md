@@ -8,7 +8,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 # PING-Mapper.
 {: .fs-9 }
 
-PING-Mapper is an open-source software for reading and processing recreation-grade side scan sonar recordings
+`PING-Mapper` is an open-source software for reading and processing recreation-grade side scan sonar recordings
 {: .fs-6 .fw-300 }
 
 [Get started now](/gettingstarted/gettingstarte.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
