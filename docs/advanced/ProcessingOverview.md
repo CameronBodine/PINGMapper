@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Sonar Processing Overview
-nav_order: 1
+nav_order: 2
 parent: Advanced Topics
 
 nav_exclude: false
