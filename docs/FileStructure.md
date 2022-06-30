@@ -2,6 +2,8 @@
 layout: default
 title: Sonar File Structure
 nav_order: 2
+
+nav_exclude: true
 ---
 
 
