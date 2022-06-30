@@ -5,7 +5,7 @@ nav_order: 1
 description: "PING-Mapper is an open-source software for recreationg-grade sonar"
 ---
 
-# PING-Mapper.
+# PING-Mapper
 {: .fs-9 }
 
 `PING-Mapper` is an open-source software for reading and processing recreation-grade side scan sonar recordings
