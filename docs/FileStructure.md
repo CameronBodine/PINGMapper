@@ -1,3 +1,9 @@
+---
+layout: default
+title: Sonar File Structure
+nav_order: 2
+---
+
 
 # Humminbird&reg; File Structure
 By Cameron S. Bodine
