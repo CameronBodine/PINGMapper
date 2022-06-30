@@ -2,6 +2,9 @@
 layout: default
 title: Sonar Recording Processing & Raw Data Export
 nav_order: 3
+
+nav_exclude: true
+
 ---
 
 # Sonar Recording Processing & Raw Data Export
