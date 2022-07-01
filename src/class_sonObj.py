@@ -1245,10 +1245,18 @@ class sonObj(object):
             # self._doPPDRC()
             self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
         # Export slant range corrected (water column removed) imagery
-        if self.wcr and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-            self._WCR(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+        if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
             # self._doPPDRC()
             self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
+
+        try:
+            # Export water column removed and cropped imagery
+            if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                self._WCR_crop(sonMeta, chunk)
+                self._writeTiles(chunk, imgOutPrefix='wcr_crop')
+        except:
+            pass
 
         return self
 
@@ -1295,7 +1303,7 @@ class sonObj(object):
         return self
 
     # ======================================================================
-    def _WCR(self,
+    def _WCR_SRC(self,
              sonMeta):
         '''
         Slant range correction is the process of relocating sonar returns after
@@ -1362,6 +1370,27 @@ class sonObj(object):
             srcDat[:,j] = np.around(pingDat, 0).astype(int)
 
         self.sonDat = srcDat # Store in class attribute for later use
+        return self
+
+    # ======================================================================
+    def _WCR_crop(self,
+                  sonMeta,
+                  i):
+        # Load depth (in real units) and convert to pixels
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        minDep = min(bedPick)
+
+        sonDat = self.sonDat
+
+        # Zero out water column
+        for j in range(self.sonDat.shape[1]):
+            depth = bedPick[j]
+            sonDat[:depth, j] = 0
+
+        # Crop to minimum depth
+        sonDat = sonDat[minDep:,]
+
+        self.sonDat = sonDat
         return self
 
     # ======================================================================

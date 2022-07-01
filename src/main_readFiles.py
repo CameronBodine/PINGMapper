@@ -426,7 +426,7 @@ def read_master_func(sonFiles,
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:
         son.wcp = wcp
-        son.wcr = wcr
+        son.wcr_src = wcr
 
     # If Onix, need to store self._trans in object
     if sonObjs[0].isOnix:
@@ -594,7 +594,7 @@ def read_master_func(sonFiles,
 
                 # Determine what chunks to process
                 chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-                if son.wcr and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+                if son.wcr_src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
                     chunkCnt = len(chunks)*2
                 else:
                     chunkCnt = len(chunks)
@@ -602,6 +602,33 @@ def read_master_func(sonFiles,
 
                 # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+
+    ############################################################################
+    # Export water column removed and cropped tiles for substrate train set    #
+    ############################################################################
+    wcr_crop = True
+    if wcr_crop:
+        start_time = time.time()
+        print("\n\n\nWARNING: Exporting substrate training tiles:\n")
+        for son in sonObjs:
+            son.wcr_crop = wcr_crop
+            son.wcr_src = False
+            son.wcp = False
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                son._loadSonMeta()
+                sonMetaDF = son.sonMetaDF
+
+                # Determine what chunks to process
+                chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+
+                son.wcr_src = True
+                son.wcp = True
+
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
 
