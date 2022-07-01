@@ -1,9 +1,10 @@
 ---
 layout: default
-title: Sonar Recording Processing & Raw Data Export
-nav_order: 3
+title: Sonar Processing Overview
+nav_order: 2
+parent: Advanced Topics
 
-nav_exclude: true
+nav_exclude: false
 
 ---
 

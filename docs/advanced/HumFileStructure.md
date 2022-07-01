@@ -1,14 +1,14 @@
 ---
 layout: default
-title: Sonar File Structure
-nav_order: 2
+title: Humminbird&reg; File Structure
+nav_order: 1
+parent: Advanced Topics
 
-nav_exclude: true
+nav_exclude: false
 ---
 
 
 # Humminbird&reg; File Structure
-By Cameron S. Bodine
 
 ## Introduction
 `PING-Mapper` is a new and optimized version of `PyHum` [[1]](#1) [[2]](#2). Since the release of `PyHum`, additional and enhanced functionality has been identified by the software authors and end-users, including Python 3 compatibility.  This can only be achieved with a complete understanding of the Humminbird&reg; recording file structure.  This report documents new findings on the file structure of Humminbird&reg; sonar recordings, essential for processing and exporting raw sonar data.

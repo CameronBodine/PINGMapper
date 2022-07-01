@@ -1,6 +1,28 @@
-theme: jekyll-theme-minimal
+# theme: jekyll-theme-minimal
+remote_theme: just-the-docs/just-the-docs
 title: PING-Mapper
-description: Interface for reading, processing, and mapping side scan sonar data 
-logo: /assets/PINGMapper_Logo.png
-show_downloads: False
+description: Interface for reading, processing, and mapping side scan sonar data
 
+logo: /assets/PINGMapper_Logo.png
+
+# Aux links for the upper right navigation
+aux_links:
+  "PING-Mapper on GitHub":
+    - "https://github.com/CameronBodine/PINGMapper"
+
+# Makes Aux links open in a new tab. Default is false
+aux_links_new_tab: false
+
+
+# Back to top link
+back_to_top: true
+back_to_top_text: "Back to top"
+
+footer_content: "This study was made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Restoration Area Trustee Implementation Group of the Deepwater Horizon Trustee Council as part of their Final Restoration Plan 1 for birds and sturgeon. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University. Thanks to Channing St. Aubin (USFWS), Mike Andres (USM), Eric Haffey (USM), Kasea Price (USM), and Katherine Wright (USM) for data collection and planning, and to Daniel Haught (USGS) for testing. Copyright &copy; 2022 Cameron Bodine."
+
+# Footer last edited timestamp
+last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter
+last_edit_time_format: "%b %e %Y at %I:%M %p" # uses ruby's time format: https://ruby-doc.org/stdlib-2.7.0/libdoc/time/rdoc/Time.html
+
+plugins:
+  - jekyll-seo-tag
