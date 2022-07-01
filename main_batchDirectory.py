@@ -86,13 +86,13 @@ for datFile in inFiles:
         print('\n===========================================')
         print('===========================================')
         print('***** READING *****')
-        read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick)
+        read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
         if rect_wcp or rect_wcr:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')
-            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, adjDep, mosaic)
+            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, adjDep, mosaic, threadCnt)
 
     except:
         print('Could not process:', datFile)
