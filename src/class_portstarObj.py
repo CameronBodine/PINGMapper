@@ -946,7 +946,7 @@ class portstarObj(object):
         self._saveDepth()
         '''
         doFilt = True
-        plotInitPicks = True
+        plotInitPicks = False
 
         # Get the model
         model = self.bedpickModel
