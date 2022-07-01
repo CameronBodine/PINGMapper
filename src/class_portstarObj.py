@@ -473,13 +473,21 @@ class portstarObj(object):
             pB = np.where(segArr[k, 0:C]!=1)[0]
             pB = np.split(pB, np.where(np.diff(pB) != 1)[0]+1)[0][-1]
 
-            # Adjust by subtracting from the center of sonogram, and store in list
-            portBed.append(C-pB)
+            pDep = C-pB-1 # Subtract from center to get depth
+
+            # If depth is zero, store nan
+            if pDep == 0:
+                pDep = np.nan
+
+            portBed.append(pDep)
 
             # Find starboard bed location (right half of sonogram)
             sB = np.where(segArr[k, C:]!=1)[0]
             sB = np.split(sB, np.where(np.diff(sB) != 1)[0]+1)[-1][0]
-            # Store in list
+
+            # If depth is zero, store nan
+            if sB == 0:
+                sB = np.nan
             starBed.append(sB)
 
         return portBed, starBed
@@ -517,19 +525,11 @@ class portstarObj(object):
 
         tf.random.set_seed(SEED)
 
-        # print("Version: ", tf.__version__)
-        # print("Eager mode: ", tf.executing_eagerly())
-
-
         if USE_GPU == True:
-            # print('GPU name: ', tf.config.experimental.list_physical_devices('GPU'))
-            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-            ##use the first available GPU
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0' #'1'
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
         else:
-            ## to use the CPU (not recommended):
-            # print("Using CPU")
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
 
         #suppress tensorflow warnings
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -539,9 +539,6 @@ class portstarObj(object):
             config = json.load(f)
 
         globals().update(config)
-
-        # for k in config.keys():
-        #     exec(k+'=config["'+k+'"]')
 
         model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
                         FILTERS,
@@ -558,9 +555,6 @@ class portstarObj(object):
         model.load_weights(self.weights)
 
         self.bedpickModel = model
-
-        # # Trying for multithreaded prediction
-        # self.bedpickModel._make_predict_function()
 
         return self
 
@@ -623,11 +617,12 @@ class portstarObj(object):
         est_label = (e1+(1-e0))/2
         del e0, e1
 
+        # Ping by ping thresholding
         # for p in range(w):
         #     thres = threshold_otsu(est_label[p,:])
-        #
         #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
 
+        # Threshold entire label
         thres = threshold_otsu(est_label)
 
         est_prob = est_label.copy()
@@ -643,22 +638,23 @@ class portstarObj(object):
         lab = remove_small_holes(lab.astype(bool), 2*N)#2*self.port.nchunk)
         lab = remove_small_objects(lab, 2*N).astype('int')+1#2*self.port.nchunk)
 
-        # Iterate each row, identify port (farthest left) and
-        ## starboard bed (farthest right), keep those regions and zero out
-        ## the rest.
+        C = int(lab.shape[1]/2) # Center of img width
+
         for row in range(lab.shape[0]):
-            regions, num = label(lab[row,:], return_num=True)
+            # Label port/star regions seperately
+            pReg = label(lab[row,:C])
+            sReg = label(lab[row,C:])
 
             # Get region ID for bed on port/star
-            pID = regions[0]
-            sID = regions[-1]
+            pID = pReg[0]
+            sID = sReg[-1]
 
             # Get port & star bed regions seperately
-            pReg = (regions == pID).astype('int')
-            sReg = (regions == sID).astype('int')
+            pReg = (pReg == pID).astype('int')
+            sReg = (sReg == sID).astype('int')
 
-            # Add together, bed==1, water==0
-            psReg = pReg+sReg
+            # Concatenate
+            psReg = np.concatenate((pReg, sReg))
 
             # Get bool arrray where the water==True
             regions = (psReg == 0)
@@ -669,8 +665,8 @@ class portstarObj(object):
         return lab
 
     #=======================================================================
-    def _depthZheng(self,
-                    i):
+    # Really really good, but maybe do better????
+    def _depthZheng_OrthodoxCrop(self,i):
         '''
         Automatically estimate the depth following method of Zheng et al. 2021:
         https://doi.org/10.3390/rs13101945. The only difference between this
@@ -700,42 +696,41 @@ class portstarObj(object):
         self._saveDepth()
         '''
         doFilt = True
-        # avgPred = True
+        plotInitPicks = True
 
+        # Get the model
         model = self.bedpickModel
 
+        # Load port/star ping returns and merge them
         self._getPortStarScanChunk(i)
         mergeSon = self.mergeSon
 
-        # Try fixing nodata issues
-        mergeSon = np.where(mergeSon == 0, 1, mergeSon)
-
+        ###################
         # Make 3-band array
-        b1 = mergeSon.copy()
-        b2 = np.fliplr(b1.copy())
-        b3 = np.mean([b1,b2], axis=0)
+        b1 = mergeSon.copy() # Band 1: no change
+        b2 = np.fliplr(b1.copy()) # Band 2: flip port and star
+        b3 = np.mean([b1,b2], axis=0) # Band 3: mean of band 1 and 2
         del mergeSon
 
+        # Stack the bands
         son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
         del b1, b2, b3
 
         N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
         W = TARGET_SIZE[1] # Width of model output prediction
-
         C = int(N/2) # Center of sonogram
 
         ##########################################
         # Do initial prediction on entire sonogram
-        # init_label = self._doPredict(model, son3bnd)
         init_label, init_prob = self._doPredict(model, son3bnd)
 
-        ###################################################
-        # Potential filters for removing small artifacts???
+        ######################################
+        # Filters for removing small artifacts
         if doFilt:
             init_label = self._filtPredict(init_label, N)
 
-        ############################
-        # Find pixel location of bed
+        ############################################
+        # Find pixel location of bed from prediction
         portDepPix, starDepPix = self._findBed(init_label)
 
         ##################################
@@ -744,140 +739,62 @@ class portstarObj(object):
         ## Once cropped, sonogram is closer in size to model TARGET_SIZE, so
         ## any errors introduced after rescaling prediction will be minimized.
 
-        Wp = np.add(portDepPix, starDepPix) # Width of water column estimate
+        # Find ping-wise max, min, and avg depth from port and star
+        maxDepths = np.fmax(portDepPix, starDepPix)
+        minDepths = np.fmin(portDepPix, starDepPix)
+        avgDepths = np.mean([minDepths, maxDepths], axis=0)
 
-        # maxDep = np.max(Wp)
-        # minDep = np.min(Wp)
+        # Find global min and max depth, ignoring nan's
+        maxDep = max(np.nanmax(portDepPix), np.nanmax(starDepPix))
+        minDep = min(np.nanmin(portDepPix), np.nanmin(starDepPix))
 
-        maxDep = max(np.max(portDepPix), np.max(starDepPix)) * 2
-        minDep = min(np.min(portDepPix), np.min(starDepPix)) * 2
+        # If initial pick failed, store 0 for min and max
+        if np.isnan(minDep):
+            minDep = 0
+        if np.isnan(maxDep):
+            maxDep = 0
 
-        del portDepPix, starDepPix
+        # # Find ping-wise water column width from avg depth prediction
+        # Wp = avgDepths*2
 
-        # 1
-        # # Determine amount of WC to crop (Wwc)
-        # if W < (np.max(Wp)+np.min(Wp)):
-        #     Wwc = np.min(Wp) - 50 # Set crop to min depth, then subtract a buffer
-        #     Wwc = max(Wwc, 0) # Set crop to zero if buffer too large
-        # else:
-        #     Wwc = 0
-        #
-        # # print('\n\n\n', i)
-        # # Determine amount of bed to crop (Ws)
-        # if (W >= (np.max(Wp)-np.min(Wp)) ):
-        #     # print('1')
-        #     # Ws = int( (N/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
-        #     # Ws1 can be an aggressive crop, so we will compare to Ws2 and take
-        #     # the min to
-        #     Ws1 = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
-        #     Ws2 = int( (N/2) - (Wwc/2) - np.max(Wp) )
-        #     Ws = min(Ws1, Ws2)
-        # else:
-        #     # print('2')
-        #     Ws = int( (N/2) - (Wwc/2) - np.max(Wp) )
-        #     Ws = max(Ws, 0)
+        # Find ping-wise water column width from min and max depth prediction
+        Wp = maxDepths+minDepths
 
-        # 2
-        # # Determine amount of WC to crop (Wwc)
-        # Wwc = np.min(Wp) - 50
-        # Wwc = max(Wwc, 0)
-        #
-        # # Determine amount of bed to crop (Ws)
-        # # Ws1 can be an aggressive crop, so we will compare to Ws2 and take
-        # # the min to
-        # Ws1 = int( (N/2) - (Wwc/2) - (np.max(Wp)+np.min(Wp)+W)/4 )
-        # Ws2 = int( (N/2) - (Wwc/2) - np.max(Wp) )
-        # Ws = min(Ws1, Ws2)
-
-        # # 3
-        # # Determine amount of WC to crop (Wwc)
-        # if W < (np.max(Wp) + np.min(Wp)):
-        #     Wwc = int( (np.max(Wp) + np.min(Wp) - W) / 2 )
-        # else:
-        #     Wwc = 0
-        #
-        # # My check to make sure we didn't crop too much
-        # if Wwc > np.min(Wp):
-        #     Wwc =  max( (np.min(Wp) - 50), 0 )
-        #
-        # # Determine amount of bed to crop (Ws)
-        # if W > (np.max(Wp) - np.min(Wp)):
-        #     Ws = int( C - ( np.max(Wp) + np.min(Wp) + W ) / 4 )
-        # else:
-        #     # Ws = 0
-        #     Ws = int( C - (Wwc/2) - np.max(Wp) )
-        #
-        # # My check to make sure we didn't crop too much
-        # if (C-Ws) < (C - (Wwc/2) - (maxDep-(Wwc/2))):
-        #     Ws = int( C - (Wwc/2) - np.max(Wp) - 50)
-        #
-        #
-        # # Crop the original sonogram
-        # ## Port crop
-        # lC = Ws # Left side crop
-        # rC = int(C - (Wwc/2)) # Right side crop
-        # portCrop = son3bnd[:, lC:rC,:]
-        #
-        # ## Starboard crop
-        # lC = int(C + (Wwc/2)) # Left side crop
-        # rC = int(N-Ws) # Right side crop
-        # starCrop = son3bnd[:, lC:rC, :]
-
-        # # 4 Below goes with best model so far::
-        # ## bedpick_ZhengApproach_20220622.h5
-        # WwcCrop = True
-        # WwcBuf = 50 # Larger numbers == less water column cropping
-        # WsBuf = 50
-        #
-        # # Determine amount of WC to crop (Wwc)
-        # if WwcCrop:
-        #     Wwc = max( (minDep - WwcBuf), 0)
-        # else:
-        #     Wwc = 0
-        #
-        # # Determine amount of bed to crop (Ws)
-        # Ws1 = int( C - (Wwc/2) - (maxDep/2) - WsBuf)
-        # Ws2 = int( C - (Wwc/2) - (maxDep/2) - (W/2) )
-        # Ws = min(Ws1, Ws2)
-        # # print('Chunk:', i, 'Wwc:', Wwc, 'Ws1:', Ws1, 'Ws2:', Ws2, 'Ws:', Ws)
-
-        # 5 Try cropping so WC ~1/3 of target size area
+        # Try cropping so water column ~1/3 of target size area
         WCProp = 1/3
+
+        # Buffers so we don't crop too much
         WwcBuf = 150
         WsBuf = 150
-        # a) Sum Wp to determine area of WC
-        WpArea = np.sum(Wp)
-        # print(i,'| WpArea:', WpArea)
 
-        # b) Determine area of target image
+        # Sum Wp to determine area of water column
+        WpArea = np.nansum(Wp)
+
+        # Determine area of target image
         TArea = TARGET_SIZE[0] * TARGET_SIZE[1]
-        # print(i,'| TArea:', TArea)
 
-        # c) Determine area of WC to keep
+        # Determine area of WC to keep as proportion of target area
         WpTarget = int( WCProp * TArea)
-        # print(i,'| WpTarget:', WpTarget)
 
-        # d) Determine size of crop
+        # Determine width of water column to remove
         Wwc = int( (WpArea - WpTarget) / TARGET_SIZE[1] )
-        # print(i,'| Wwc:', Wwc)
-        # print(i, '| minDep:', minDep, '| maxDep:', maxDep)
 
+        # Subtract a buffer from crop and set to zero if Wwc-50<0
         Wwc = max( (Wwc - 50), 0)
 
         # Make sure we didn't crop past min depth
         if Wwc > minDep:
-            Wwc = max( (minDep - WwcBuf), 0)
+            # Wwc = max( (minDep - WwcBuf), 0)
+            Wwc = max(minDep, 0)
 
         # Determine amount of bed to crop (Ws)
         # Ws = int( C - (Wwc/2) - (maxDep/2) - WsBuf)
-        Ws = int( C - (maxDep/2) - WsBuf)
+        Ws = int( C - maxDep - WsBuf)
 
         # Make sure we didn't crop too much, especially if initial bedpick was
         ## not good.
         if Ws > (C-(Wwc/2)):
             Ws = int( C - (Wwc/2) - (W/2) - WsBuf)
-
-
 
         # Crop the original sonogram
         ## Port Crop
@@ -901,98 +818,351 @@ class portstarObj(object):
         ## the line dividing port from star present. The cropping step in this
         ## implementation can crop that out, which messes up the prediction on
         ## the cropped image. So we will add center line back into cropped image.
+        c = int(sonCrop.shape[1]/2)
         if Wwc > 0:
-            c = int(sonCrop.shape[1]/2)
             sonCrop[:, (c-1):(c+1), :] = 1
+
 
         #######################
         # Segment cropped image
         # crop_label = self._doPredict(model, sonCrop)
         crop_label, crop_prob = self._doPredict(model, sonCrop)
 
-        ###################################################
-        # Potential filters for removing small artifacts???
+        ######################################
+        # Filters for removing small artifacts
         if doFilt:
             crop_label = self._filtPredict(crop_label, N)
 
         #########
         # Recover
+        # Calculate depth from prediction
         portDepPixCrop, starDepPixCrop = self._findBed(crop_label) # get pixel location of bed
 
         # add Wwc/2 to get final estimate at original sonogram dimensions
-        portDepPixCrop = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
-        starDepPixCrop = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
+        portDepPixFinal = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
+        starDepPixFinal = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
 
-        # ########################
-        # # Store depth detections
-        # self.portDepDetect[i] = portDepPixCrop
-        # self.starDepDetect[i] = starDepPixCrop
-        # del portDepPixCrop, starDepPixCrop
+        #############
+        # Final Check
 
-        # if avgPred:
-        #     ####################################################################
-        #     # TEST
-        #     # Try averaging init_prob and crop_prob
-        #
-        #     # Crop init_prob to crop_prob
-        #     # print(crop_label.shape, init_prob.shape, '\n\n\n')
-        #     lC = Ws # left side crop
-        #     rC = int(C - (Wwc/2)) # right side crop
-        #     portCrop = init_prob[:, lC:rC]
-        #
-        #     lC = int(C + (Wwc/2)) # left side crop
-        #     rC = int(N - Ws) # right side crop
-        #     starCrop = init_prob[:, lC:rC]
-        #
-        #     init_prob = np.concatenate((portCrop, starCrop), axis = 1)
-        #     # print('Init Prob:', np.max(init_prob), np.min(init_prob))
-        #
-        #     # Average predictions
-        #     avg_label = (crop_prob + init_prob) / 2
-        #
-        #     # Threshold to get label
-        #     thres = threshold_otsu(avg_label)
-        #     avg_label = (avg_label>thres).astype('uint8')
-        #
-        #     if doFilt:
-        #         avg_label = self._filtPredict(avg_label, N)
-        #     # print('Avg Prob:', np.unique(avg_label, return_counts=True))
-        #
-        #     #########
-        #     # Recover
-        #     portDepPixCrop, starDepPixCrop = self._findBed(avg_label) # get pixel location of bed
-        #
-        #     # add Wwc/2 to get final estimate at original sonogram dimensions
-        #     portDepPixCrop = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
-        #     starDepPixCrop = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
-        #
-        #     ####################################################################
+        # Check to make sure final bedpick has valid values (ie not nan's).
+        ## If final pick is nan, replace with initial pick if not nan.
+        ## If initial pick also nan, set bedpick to 0.
+        check = True
+        if check:
+            portDepPix = np.flip( np.asarray(portDepPix) )
+            starDepPix = np.flip( np.asarray(starDepPix) )
+            # Port
+            port = []
+            for pdi, pdc in zip(portDepPix, portDepPixFinal):
+                if np.isnan(pdc): # Final pick is nan
+                    if np.isnan(pdc): # Initial pick is nan
+                        port.append(0) # set to 0
+                    else: # Initial pick not nan
+                        port.append(pdi) # Use initial pick
+
+                else: # Final pick is ok
+                    port.append(pdc)
+
+            # Star
+            star = []
+            for sdi, sdc in zip(starDepPix, starDepPixFinal):
+                if np.isnan(sdc): # Final pick is nan
+                    if np.isnan(sdi): # Initial pick is nan
+                        star.append(0) # set to 0
+                    else: # Initial pick not nan
+                        star.append(sdi) # Use initial pick
+
+                else: # Final pick ok
+                    star.append(sdc)
 
 
-        #*#*#*#*#*#*#*#
-        # Plot
-        # color map
-        class_label_colormap = ['#3366CC','#DC3912']
+            # # Interpolation????
+            # bed = np.array(bed).astype(np.float32)
+            #
+            # # Interpolate over nan's
+            # nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
+            # bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
+            # bed = bed.astype(int)
 
-        # Initial
-        color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+            portDepPixFinal = port
+            starDepPixFinal = star
 
-        # Cropped
-        color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+        # For debug purposes
+        if plotInitPicks:
+            # Show centerline on labels for debug
+            init_label[:, (C-1):(C+1)] = 2
+            crop_label[:, (c-1):(c+1)] = 2
 
-        # # Avg of initial and cropped
-        # if avgPred:
-        #     color_label = label_to_colors(avg_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-        #     imsave(os.path.join(self.port.projDir, str(i)+"_avgLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-        #     imsave(os.path.join(self.port.projDir, str(i)+"_avgImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+            #*#*#*#*#*#*#*#
+            # Plot
+            # color map
+            class_label_colormap = ['#3366CC','#DC3912', '#000000']
+
+            # Initial
+            color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+
+            # Cropped
+            color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+
 
         del son3bnd, init_label, crop_label, sonCrop
         # return self
-        return portDepPixCrop, starDepPixCrop, i
+        return portDepPixFinal, starDepPixFinal, i
+
+
+    # Really really good, but maybe do better????
+    def _depthZheng(self,i):
+        '''
+        Automatically estimate the depth following method of Zheng et al. 2021:
+        https://doi.org/10.3390/rs13101945. The only difference between this
+        implementation and Zheng et al. 2021 is that model architecture and main
+        prediction workflow follow: https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        i : int
+            DESCRIPTION - Chunk index.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self.detectDep()
+
+        -------
+        Returns
+        -------
+        Estimated depths for each ping store in self.portDepDetect and
+        self.starDepDetect.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._saveDepth()
+        '''
+        doFilt = True
+        plotInitPicks = True
+
+        # Get the model
+        model = self.bedpickModel
+
+        # Load port/star ping returns and merge them
+        self._getPortStarScanChunk(i)
+        mergeSon = self.mergeSon
+
+        ###################
+        # Make 3-band array
+        b1 = mergeSon.copy() # Band 1: no change
+        b2 = np.fliplr(b1.copy()) # Band 2: flip port and star
+        b3 = np.mean([b1,b2], axis=0) # Band 3: mean of band 1 and 2
+        del mergeSon
+
+        # Stack the bands
+        son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
+        del b1, b2, b3
+
+        N = son3bnd.shape[1] # Number of samples per ping (width of non-resized sonogram)
+        W = TARGET_SIZE[1] # Width of model output prediction
+        C = int(N/2) # Center of sonogram
+
+        ##########################################
+        # Do initial prediction on entire sonogram
+        init_label, init_prob = self._doPredict(model, son3bnd)
+
+        ######################################
+        # Filters for removing small artifacts
+        if doFilt:
+            init_label = self._filtPredict(init_label, N)
+
+        ############################################
+        # Find pixel location of bed from prediction
+        portDepPix, starDepPix = self._findBed(init_label)
+
+        ##################################
+        # Crop image using initial bedpick
+        ## Modified from Zheng et al. 2021 method
+        ## Once cropped, sonogram is closer in size to model TARGET_SIZE, so
+        ## any errors introduced after rescaling prediction will be minimized.
+
+        # Find ping-wise max, min, and avg depth from port and star
+        maxDepths = np.fmax(portDepPix, starDepPix)
+        minDepths = np.fmin(portDepPix, starDepPix)
+        avgDepths = np.mean([minDepths, maxDepths], axis=0)
+
+        # Find global min and max depth, ignoring nan's
+        maxDep = max(np.nanmax(portDepPix), np.nanmax(starDepPix))
+        minDep = min(np.nanmin(portDepPix), np.nanmin(starDepPix))
+
+        # If initial pick failed, store 0 for min and max
+        if np.isnan(minDep):
+            minDep = 0
+        if np.isnan(maxDep):
+            maxDep = 0
+
+        # # Find ping-wise water column width from avg depth prediction
+        # Wp = avgDepths*2
+
+        # Find ping-wise water column width from min and max depth prediction
+        Wp = maxDepths+minDepths
+
+        # Try cropping so water column ~1/3 of target size area
+        WCProp = 1/3
+
+        # Buffers so we don't crop too much
+        WwcBuf = 150
+        WsBuf = 150
+
+        # Sum Wp to determine area of water column
+        WpArea = np.nansum(Wp)
+
+        # Determine area of target image
+        TArea = TARGET_SIZE[0] * TARGET_SIZE[1]
+
+        # Determine area of WC to keep as proportion of target area
+        WpTarget = int( WCProp * TArea)
+
+        # Determine width of water column to remove
+        Wwc = int( (WpArea - WpTarget) / TARGET_SIZE[1] )
+
+        # Subtract a buffer from crop and set to zero if Wwc-50<0
+        Wwc = max( (Wwc - 50), 0)
+
+        # Make sure we didn't crop past min depth
+        if Wwc > minDep:
+            # Wwc = max( (minDep - WwcBuf), 0)
+            Wwc = max(minDep, 0)
+
+        # Determine amount of bed to crop (Ws)
+        # Ws = int( C - (Wwc/2) - maxDep - WsBuf)
+        Ws = int( C - maxDep - WsBuf)
+
+        # Make sure we didn't crop too much, especially if initial bedpick was
+        ## not good.
+        if Ws > (C-(Wwc/2)):
+            Ws = int( C - (Wwc/2) - (W/2) - WsBuf)
+
+        # Crop the original sonogram
+        ## Port Crop
+        lC = Ws # left side crop
+        rC = int(C - (Wwc/2)) # right side crop
+        portCrop = son3bnd[:, lC:rC,:]
+
+        ## Star Crop
+        lC = int(C + (Wwc/2)) # left side crop
+        rC = int(N - Ws) # right side crop
+        starCrop = son3bnd[:, lC:rC, :]
+
+
+        ## Concatenate port & star crop
+        sonCrop = np.concatenate((portCrop, starCrop), axis = 1)
+        sonCrop = sonCrop.astype(np.uint8)
+        del portCrop, starCrop
+
+        # Add center pixels back in
+        ## The depth model was trained using cropped sonograms that always had
+        ## the line dividing port from star present. The cropping step in this
+        ## implementation can crop that out, which messes up the prediction on
+        ## the cropped image. So we will add center line back into cropped image.
+        c = int(sonCrop.shape[1]/2)
+        if Wwc > 0:
+            sonCrop[:, (c-1):(c+1), :] = 1
+
+
+        #######################
+        # Segment cropped image
+        # crop_label = self._doPredict(model, sonCrop)
+        crop_label, crop_prob = self._doPredict(model, sonCrop)
+
+        ######################################
+        # Filters for removing small artifacts
+        if doFilt:
+            crop_label = self._filtPredict(crop_label, N)
+
+        #########
+        # Recover
+        # Calculate depth from prediction
+        portDepPixCrop, starDepPixCrop = self._findBed(crop_label) # get pixel location of bed
+
+        # add Wwc/2 to get final estimate at original sonogram dimensions
+        portDepPixFinal = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
+        starDepPixFinal = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
+
+        #############
+        # Final Check
+
+        # Check to make sure final bedpick has valid values (ie not nan's).
+        ## If final pick is nan, replace with initial pick if not nan.
+        ## If initial pick also nan, set bedpick to 0.
+        check = True
+        if check:
+            portDepPix = np.flip( np.asarray(portDepPix) )
+            starDepPix = np.flip( np.asarray(starDepPix) )
+            # Port
+            port = []
+            for pdi, pdc in zip(portDepPix, portDepPixFinal):
+                if np.isnan(pdc): # Final pick is nan
+                    if np.isnan(pdc): # Initial pick is nan
+                        port.append(0) # set to 0
+                    else: # Initial pick not nan
+                        port.append(pdi) # Use initial pick
+
+                else: # Final pick is ok
+                    port.append(pdc)
+
+            # Star
+            star = []
+            for sdi, sdc in zip(starDepPix, starDepPixFinal):
+                if np.isnan(sdc): # Final pick is nan
+                    if np.isnan(sdi): # Initial pick is nan
+                        star.append(0) # set to 0
+                    else: # Initial pick not nan
+                        star.append(sdi) # Use initial pick
+
+                else: # Final pick ok
+                    star.append(sdc)
+
+
+            # # Interpolation????
+            # bed = np.array(bed).astype(np.float32)
+            #
+            # # Interpolate over nan's
+            # nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
+            # bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
+            # bed = bed.astype(int)
+
+            portDepPixFinal = port
+            starDepPixFinal = star
+
+        # For debug purposes
+        if plotInitPicks:
+            # Show centerline on labels for debug
+            init_label[:, (C-1):(C+1)] = 2
+            crop_label[:, (c-1):(c+1)] = 2
+
+            #*#*#*#*#*#*#*#
+            # Plot
+            # color map
+            class_label_colormap = ['#3366CC','#DC3912', '#000000']
+
+            # Initial
+            color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+
+            # Cropped
+            color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+
+
+        del son3bnd, init_label, crop_label, sonCrop
+        # return self
+        return portDepPixFinal, starDepPixFinal, i
 
     #=======================================================================
     def _depthThreshold(self, chunk):
@@ -1248,29 +1418,29 @@ class portstarObj(object):
                 lenDif = starDF.shape[0] - len(starFinal)
                 starFinal = starFinal[:lenDif]
 
-            # Check for bad picks (i.e. depth==0) for each sonar channel. If one
-            ## channel is 0 and other is non-zero, use non-zero estimate for both.
-            for i, ps in enumerate(zip(portFinal, starFinal)):
-                pValid = False
-                sValid = False
-                if ps[0] > 0:
-                    pValid = True
-                if ps[1] > 0:
-                    sValid = True
-
-                # Both > 0
-                if pValid and sValid:
-                    pass
-                # Both <= 0
-                elif not pValid and not sValid:
-                    portFinal[i]=np.nan
-                    starFinal[i]=np.nan
-                # Port > 0, update star
-                elif pValid:
-                    starFinal[i] = portFinal[i]
-                # Star > 0, update port
-                else:
-                    portFinal[i] = starFinal[i]
+            # # Check for bad picks (i.e. depth==0) for each sonar channel. If one
+            # ## channel is 0 and other is non-zero, use non-zero estimate for both.
+            # for i, ps in enumerate(zip(portFinal, starFinal)):
+            #     pValid = False
+            #     sValid = False
+            #     if ps[0] > 0:
+            #         pValid = True
+            #     if ps[1] > 0:
+            #         sValid = True
+            #
+            #     # Both > 0
+            #     if pValid and sValid:
+            #         pass
+            #     # Both <= 0
+            #     elif not pValid and not sValid:
+            #         portFinal[i]=np.nan
+            #         starFinal[i]=np.nan
+            #     # Port > 0, update star
+            #     elif pValid:
+            #         starFinal[i] = portFinal[i]
+            #     # Star > 0, update port
+            #     else:
+            #         portFinal[i] = starFinal[i]
 
 
             if smthDep:
