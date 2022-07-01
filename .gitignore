@@ -1,0 +1,14 @@
+procData/*
+__pycache__/*
+oldFiles/*
+testData/*
+/src/__pycache__/*
+models/bedpick/Old*
+exampleData/Test-Large-DS*
+
+main_batch.py
+main_batchFolder.py
+main_batchDirectory_csb.py
+main_csb.py
+
+!procData/OutputsHere.txt
