@@ -36,40 +36,33 @@ from main_rectify import rectify_master_func
 import time
 import datetime
 
-inDir = r'/media/cbodine/Drive_A/GulfSturgeonProject/SSS_Data'
-outDir = r'/media/cbodine/Drive_B/Modeling/Bedpick/06_TestModel'
+
+inDir = r'./exampleData'
+outDir = r'./procData'
 
 #################
 # User Parameters
 t = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-exportUnknown = False #Option to export Unknown ping metadata
-wcp = False #Export tiles with water column present
-wcr = False #Export Tiles with water column removed (and slant range corrected)
-detectDepth = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
-## 2==Auto detect depth w/ Thresholding
-smthDep = False #Smooth depth before water column removal
+exportUnknown = True #Option to export Unknown ping metadata
+wcp = True #Export tiles with water column present
+wcr = True #Export Tiles with water column removed (and slant range corrected)
+smthDep = True #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
-rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
+rect_wcp = True #Export rectified tiles with water column present
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
-threadCnt = -4 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
-# Find all DAT and SON files in all subdirectories of inDir
-# inFiles=[]
-# for root, dirs, files in os.walk(inDir):
-#     for file in files:
-#         if file.endswith('.DAT'):
-#             inFiles.append(os.path.join(root, file))
-
+Find all DAT and SON files in all subdirectories of inDir
 inFiles=[]
 for root, dirs, files in os.walk(inDir):
     for file in files:
-        if file.endswith('.DAT') and ('EggSites' not in root):
+        if file.endswith('.DAT'):
             inFiles.append(os.path.join(root, file))
 
 inFiles = sorted(inFiles)
@@ -77,31 +70,17 @@ inFiles = sorted(inFiles)
 for i, f in enumerate(inFiles):
     print(i, ":", f)
 
-# inFiles = [inFiles[4]]
-# inFiles = inFiles[4:]
 for datFile in inFiles:
     try:
         start_time = time.time()
 
-        # inPath = os.path.dirname(datFile)
-        # humFile = datFile
-        # recName = os.path.basename(humFile).split('.')[0]
-        # sonPath = os.path.join(inDir, recName)
-        # sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-        #
-        # projDir = os.path.join(outDir, recName)
-
+        inPath = os.path.dirname(datFile)
         humFile = datFile
-        sonPath = datFile.split('.')[0]
+        recName = os.path.basename(humFile).split('.')[0]
+        sonPath = os.path.join(inDir, recName)
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-        recName = os.path.basename(humFile).split('.')[0]
-        dateBoat = os.path.dirname(humFile).split(os.sep)[-1]
-        river = os.path.dirname(humFile).split(os.sep)[-2]
-        projName = river+'_'+dateBoat+'_'+recName
-
-        projDir = os.path.join(outDir, projName)
-
+        projDir = os.path.join(outDir, recName)
 
         print('sonPath',sonPath)
         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
@@ -113,13 +92,13 @@ for datFile in inFiles:
         print('\n===========================================')
         print('===========================================')
         print('***** READING *****')
-        read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick)
+        read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
         if rect_wcp or rect_wcr:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')
-            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, adjDep, mosaic)
+            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, adjDep, mosaic, threadCnt)
 
     except:
         print('Could not process:', datFile)
