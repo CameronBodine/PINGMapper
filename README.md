@@ -5,8 +5,8 @@ In Development:
 - Automatic depth detection using deep learning models.
 
 #  🔥THAT IS ALL🔥
-  
-  
+
+
 
 # PING-Mapper
 {PING-Mapper is a Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.}
@@ -36,7 +36,7 @@ In Development:
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
 ## Documentation
-### Website 
+### Website
 None yet, but you can check out some [preliminary documentation](../main/docs/BinaryStructure.md)
 
 ### Paper
@@ -198,4 +198,3 @@ https://github.com/CameronBodine/PINGMapper/blob/dd74f508e689ace132bdf304e28e856
 ```
 python main_batchDirectory.py
 ```
-
