@@ -609,10 +609,10 @@ def read_master_func(sonFiles,
     ############################################################################
     # Export water column removed and cropped tiles for substrate train set    #
     ############################################################################
-    wcr_crop = True
+    wcr_crop = False
     if wcr_crop:
         start_time = time.time()
-        print("\n\n\nWARNING: Exporting substrate training tiles:\n")
+        print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 615):\n")
         for son in sonObjs:
             son.wcr_crop = wcr_crop
             son.wcr_src = False
@@ -626,8 +626,8 @@ def read_master_func(sonFiles,
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
 
-                son.wcr_src = True
-                son.wcp = True
+                son.wcr_src = wcr
+                son.wcp = wcp
 
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))

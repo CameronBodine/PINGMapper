@@ -174,7 +174,8 @@ class portstarObj(object):
     #=======================================================================
     def _createMosaic(self,
                       mosaic=1,
-                      overview=True):
+                      overview=True,
+                      threadCnt=cpu_count()):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -207,7 +208,7 @@ class portstarObj(object):
         --------------------
         Calls self._mosaicGtiff() or self._mosaicVRT() to generate mosaics.
         '''
-        maxChunk = 100 # Max chunks per mosaic. Limits each mosaic file size.
+        maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
         if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
@@ -247,22 +248,32 @@ class portstarObj(object):
         # Create geotiff
         if mosaic == 1:
             if self.port.rect_wcp:
-                self._mosaicGtiff(wcpToMosaic, overview)
+                # self._mosaicGtiff(wcpToMosaic, overview)
+                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
-                self._mosaicGtiff(srcToMosaic, overview)
+                # self._mosaicGtiff(srcToMosaic, overview)
+                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
         # Create vrt
         elif mosaic == 2:
             if self.port.rect_wcp:
-                self._mosaicVRT(wcpToMosaic, overview)
+                # self._mosaicVRT(wcpToMosaic, overview)
+                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
-                self._mosaicVRT(srcToMosaic, overview)
+                # self._mosaicVRT(srcToMosaic, overview)
+                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
+
+        # elif mosaic == 3:
+        #     if self.port.rect_wcr:
+        #         outTIF = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(srcToMosaic))
+        #         self._mosaicVRT([outTIF], False)
         return self
 
 
     #=======================================================================
     def _mosaicGtiff(self,
                      imgsToMosaic,
-                     overview=True):
+                     overview=True,
+                     i=0):
         '''
         Function to mosaic sonograms into a GeoTiff.
 
@@ -291,8 +302,9 @@ class portstarObj(object):
         --------------------
         None
         '''
-        i = 0 # Mosaic number
+        # i = 0 # Mosaic number
         # Iterate each sublist of images
+        outMosaic = []
         for imgs in imgsToMosaic:
 
             # Set output file names
@@ -321,13 +333,15 @@ class portstarObj(object):
 
             os.remove(outVRT) # Remove vrt
             i+=1 # Iterate mosaic number
+            outMosaic.append(outTIF)
 
-        return self
+        return outTIF
 
     #=======================================================================
     def _mosaicVRT(self,
                    imgsToMosaic,
-                   overview=True):
+                   overview=True,
+                   i=0):
         '''
         Function to mosaic sonograms into a VRT (virtual raster table, see
         https://gdal.org/drivers/raster/vrt.html for more information).
@@ -357,8 +371,9 @@ class portstarObj(object):
         --------------------
         None
         '''
-        i = 0 # Mosaic number
+        # i = 0 # Mosaic number
         # Iterate each sublist of images
+        outMosaic = []
         for imgs in imgsToMosaic:
 
             # Set output file names
@@ -376,7 +391,8 @@ class portstarObj(object):
                 gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
             i+=1
-        return self
+            outMosaic.append(outFile)
+        return outMosaic
 
     ############################################################################
     # Bedpicking                                                               #

@@ -1099,7 +1099,7 @@ class rectObj(sonObj):
             except:
                 pass
 
-            self._WCR(sonMeta)
+            self._WCR_SRC(sonMeta)
             img = self.sonDat
 
             # Warp image from the input shape to output shape

@@ -302,6 +302,6 @@ def rectify_master_func(sonFiles,
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        psObj._createMosaic(mosaic, overview)
+        psObj._createMosaic(mosaic, overview, threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
