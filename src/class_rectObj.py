@@ -940,7 +940,6 @@ class rectObj(sonObj):
             self._doPPDRC()
 
         img = self.sonDat
-        img[0]=0 # To fix extra white on curves
 
         # For each ping, we need the pixel coordinates where the sonar
         ## originates on the trackline, and where it terminates based on the
@@ -1051,6 +1050,8 @@ class rectObj(sonObj):
             except:
                 pass
 
+            img[0]=0 # To fix extra white on curves
+
             # Warp image from the input shape to output shape
             out = warp(img.T,
                        tform.inverse,
@@ -1101,6 +1102,8 @@ class rectObj(sonObj):
 
             self._WCR(sonMeta)
             img = self.sonDat
+
+            img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
             out = warp(img.T,
