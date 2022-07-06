@@ -426,8 +426,8 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         if detectDep == 0:
-            portInstDepth = portDF['inst_dep_m']
-            starInstDepth = starDF['inst_dep_m']
+            portInstDepth = portDF['inst_dep_m'].copy()
+            starInstDepth = starDF['inst_dep_m'].copy()
 
             if smthDep:
                 # print("\nSmoothing depth values...")
