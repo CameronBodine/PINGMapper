@@ -101,7 +101,7 @@ for datFile in inFiles:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')
-            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, adjDep, mosaic, threadCnt)
+            rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
     except:
         print('Could not process:', datFile)
