@@ -363,7 +363,7 @@ def dice_coef_loss(y_true, y_pred):
 ################################################################################
 
 #=======================================================================
-def seg_file2tensor_3band(bigimage, TARGET_SIZE):#, resize):
+def seg_file2tensor(bigimage, TARGET_SIZE):#, resize):
     """
     "seg_file2tensor(f)"
     This function reads a jpeg image from file into a cropped and resized tensor,
@@ -410,8 +410,8 @@ def standardize(img, mn=0, mx=1, doRescale=False):
         img = rescale(img, mn, mx)
     del m, s, N
     #
-    if np.ndim(img)==2:
-        img = np.dstack((img,img,img))
+    # if np.ndim(img)==2:
+    #     img = np.dstack((img,img,img))
 
     return img
 

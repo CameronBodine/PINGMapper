@@ -578,7 +578,38 @@ def read_master_func(sonFiles,
 
     # Cleanup
     psObj._cleanup()
-    del psObj, chunks
+    # del psObj
+
+    ############################################################################
+    # For river bank picking (i.e. shadows caused by bank)                     #
+    ############################################################################
+    doBankpick = True
+
+    if doBankpick:
+        start_time = time.time()
+        print('\n\nAutomatically detecting bank location for', len(chunks), 'chunks:')
+
+        #Dictionary to store chunk : np.array(depth estimate)
+        psObj.portBankDetect = {}
+        psObj.starBankDetect = {}
+
+        # Store model weights and config
+        psObj.weights = r'./models/bankpick/bankpick_20220705.h5'
+        psObj.configfile = psObj.weights.replace('.h5', '.json')
+
+        # Parallel estimate depth for each chunk using appropriate method
+        r = Parallel(n_jobs=np.min([len(chunks), cpu_count()]), verbose=10)(delayed(psObj._detectBank)(int(chunk), USE_GPU) for chunk in chunks)
+
+        # store the depth predictions in the class
+        for ret in r:
+            psObj.portBankDetect[ret[2]] = ret[0]
+            psObj.starBankDetect[ret[2]] = ret[1]
+
+        # Save detected depth to csv
+        psObj._saveBank(chunks)
+
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -602,6 +633,7 @@ def read_master_func(sonFiles,
 
                 # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+            gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
 
@@ -628,7 +660,7 @@ def read_master_func(sonFiles,
 
                 son.wcr_src = wcr
                 son.wcp = wcp
-
+            gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
 
@@ -642,3 +674,4 @@ def read_master_func(sonFiles,
         son.sonMetaPickle = outFile
         with open(outFile, 'wb') as sonFile:
             pickle.dump(son, sonFile)
+    gc.collect()

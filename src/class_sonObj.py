@@ -1258,6 +1258,7 @@ class sonObj(object):
         except:
             pass
 
+        gc.collect()
         return self
 
 

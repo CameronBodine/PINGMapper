@@ -466,6 +466,7 @@ class rectObj(sonObj):
         ##########################################
         # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
+        gc.collect()
         return self
 
     #===========================================
@@ -1145,4 +1146,5 @@ class rectObj(sonObj):
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
 
+        gc.collect()
         return self

@@ -253,6 +253,8 @@ def rectify_master_func(sonFiles,
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
+    gc.collect()
+
     ############################################################################
     # Calculate range extent coordinates                                       #
     ############################################################################
@@ -286,6 +288,7 @@ def rectify_master_func(sonFiles,
             chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            gc.collect()
 
     if rect_wcp or rect_wcr:
         for son in portstar:

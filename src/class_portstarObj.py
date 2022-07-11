@@ -335,6 +335,7 @@ class portstarObj(object):
             i+=1 # Iterate mosaic number
             outMosaic.append(outTIF)
 
+        gc.collect()
         return outTIF
 
     #=======================================================================
@@ -392,7 +393,154 @@ class portstarObj(object):
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
             i+=1
             outMosaic.append(outFile)
+
+        gc.collect()
         return outMosaic
+
+    ############################################################################
+    # General Model Functions                                                  #
+    ############################################################################
+
+    #=======================================================================
+    def _initModel(self,
+                   USE_GPU=False):
+        '''
+        Compiles a Tensorflow model for bedpicking. Developed following:
+        https://github.com/Doodleverse/segmentation_gym
+
+        ----------
+        Parameters
+        ----------
+        None
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        self.__init__()
+
+        -------
+        Returns
+        -------
+        self.bedpickModel containing compiled model.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        self._detectDepth()
+        '''
+        SEED=42
+        np.random.seed(SEED)
+        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+        tf.random.set_seed(SEED)
+
+        if USE_GPU == True:
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+        else:
+
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+
+        #suppress tensorflow warnings
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+        # Open model configuration file
+        with open(self.configfile) as f:
+            config = json.load(f)
+
+        globals().update(config)
+
+        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
+                        FILTERS,
+                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
+                        kernel_size=(KERNEL,KERNEL),
+                        strides=STRIDE,
+                        dropout=DROPOUT,#0.1,
+                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
+                        dropout_type=DROPOUT_TYPE,#"standard",
+                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
+                        )
+
+        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+        model.load_weights(self.weights)
+
+        # self.bedpickModel = model
+        #
+        # return self
+
+        return model
+
+    #=======================================================================
+    def _doPredict(self,
+                   model,
+                   arr):
+        '''
+        Predict the bed location or bankpick from an input array of sonogram
+        pixels. Workflow follows prediction routine from
+        https://github.com/Doodleverse/segmentation_gym.
+
+        ----------
+        Parameters
+        ----------
+        model : Tensorflow model object
+            DESCRIPTION - Pre-trained and compiled Tensorflow model to predict
+                          bed location.
+        arr : Numpy array
+            DESCRIPTION - Numpy array of sonar intensities.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._depthZheng()
+
+        -------
+        Returns
+        -------
+        2D array of water / bed prediction
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Returns prediction to self._depthZheng()
+        '''
+        # Read array into a cropped and resized tensor
+        if N_DATA_BANDS<=3:
+            image, w, h, bigimage = seg_file2tensor(arr, TARGET_SIZE)
+
+        # Standardize
+        image = standardize(image.numpy()).squeeze()
+
+        # Do segmentation on compressed sonogram
+        est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
+
+        # Up-sample / rescale to original dimensions
+        ## Store liklihood for water and bed classes after resize
+        E0 = [] # Water liklihood
+        E1 = [] # Bed liklihood
+
+        E0.append(resize(est_label[:,:,0],(w,h), preserve_range=True, clip=True))
+        E1.append(resize(est_label[:,:,1],(w,h), preserve_range=True, clip=True))
+        del est_label
+
+        e0 = np.average(np.dstack(E0), axis=-1)
+        e1 = np.average(np.dstack(E1), axis=-1)
+        del E0, E1
+
+        # Final classification
+        est_label = (e1+(1-e0))/2
+        del e0, e1
+
+        # Ping by ping thresholding
+        # for p in range(w):
+        #     thres = threshold_otsu(est_label[p,:])
+        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
+
+        # Threshold entire label
+        thres = threshold_otsu(est_label)
+
+        est_prob = est_label.copy()
+        est_label = (est_label>thres).astype('uint8')
+
+        return est_label, est_prob
 
     ############################################################################
     # Bedpicking                                                               #
@@ -434,13 +582,15 @@ class portstarObj(object):
 
         if method == 1:
             if not hasattr(self, 'bedpickModel'):
-                self._initModel(USE_GPU)
+                model = self._initModel(USE_GPU)
+                self.bedpickModel = model
             portDepPixCrop, starDepPixCrop, i = self._depthZheng(i)
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
             portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i)
 
+        gc.collect()
         return portDepPixCrop, starDepPixCrop, i
 
     #=======================================================================
@@ -509,145 +659,7 @@ class portstarObj(object):
         return portBed, starBed
 
     #=======================================================================
-    def _initModel(self,
-                   USE_GPU=False):
-        '''
-        Compiles a Tensorflow model for bedpicking. Developed following:
-        https://github.com/Doodleverse/segmentation_gym
-
-        ----------
-        Parameters
-        ----------
-        None
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        self.__init__()
-
-        -------
-        Returns
-        -------
-        self.bedpickModel containing compiled model.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        self._detectDepth()
-        '''
-        SEED=42
-        np.random.seed(SEED)
-        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-
-        tf.random.set_seed(SEED)
-
-        if USE_GPU == True:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
-        else:
-
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-        # Open model configuration file
-        with open(self.configfile) as f:
-            config = json.load(f)
-
-        globals().update(config)
-
-        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
-                        FILTERS,
-                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
-                        kernel_size=(KERNEL,KERNEL),
-                        strides=STRIDE,
-                        dropout=DROPOUT,#0.1,
-                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
-                        dropout_type=DROPOUT_TYPE,#"standard",
-                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
-                        )
-
-        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
-        model.load_weights(self.weights)
-
-        self.bedpickModel = model
-
-        return self
-
-    #=======================================================================
-    def _doPredict(self,
-                   model,
-                   arr):
-        '''
-        Predict the bed location from an input array of sonogram pixels. Workflow
-        follows prediction routine from https://github.com/Doodleverse/segmentation_gym.
-
-        ----------
-        Parameters
-        ----------
-        model : Tensorflow model object
-            DESCRIPTION - Pre-trained and compiled Tensorflow model to predict
-                          bed location.
-        arr : Numpy array
-            DESCRIPTION - Numpy array of sonar intensities.
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        Called from self._depthZheng()
-
-        -------
-        Returns
-        -------
-        2D array of water / bed prediction
-
-        --------------------
-        Next Processing Step
-        --------------------
-        Returns prediction to self._depthZheng()
-        '''
-        # Read array into a cropped and resized tensor
-        if N_DATA_BANDS<=3:
-            image, w, h, bigimage = seg_file2tensor_3band(arr, TARGET_SIZE)
-
-        # Standardize
-        image = standardize(image.numpy()).squeeze()
-
-        # Do segmentation on compressed sonogram
-        est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
-
-        # Up-sample / rescale to original dimensions
-        ## Store liklihood for water and bed classes after resize
-        E0 = [] # Water liklihood
-        E1 = [] # Bed liklihood
-
-        E0.append(resize(est_label[:,:,0],(w,h), preserve_range=True, clip=True))
-        E1.append(resize(est_label[:,:,1],(w,h), preserve_range=True, clip=True))
-        del est_label
-
-        e0 = np.average(np.dstack(E0), axis=-1)
-        e1 = np.average(np.dstack(E1), axis=-1)
-        del E0, E1
-
-        # Final classification
-        est_label = (e1+(1-e0))/2
-        del e0, e1
-
-        # Ping by ping thresholding
-        # for p in range(w):
-        #     thres = threshold_otsu(est_label[p,:])
-        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
-
-        # Threshold entire label
-        thres = threshold_otsu(est_label)
-
-        est_prob = est_label.copy()
-        est_label = (est_label>thres).astype('uint8')
-
-        return est_label, est_prob
-
-    #=======================================================================
-    def _filtPredict(self,
+    def _filtPredictDepth(self,
                      lab,
                      N):
 
@@ -679,7 +691,6 @@ class portstarObj(object):
             lab[row,:] = regions
 
         return lab
-
 
     #=======================================================================
     def _depthZheng(self,i):
@@ -743,7 +754,7 @@ class portstarObj(object):
         ######################################
         # Filters for removing small artifacts
         if doFilt:
-            init_label = self._filtPredict(init_label, N)
+            init_label = self._filtPredictDepth(init_label, N)
 
         ############################################
         # Find pixel location of bed from prediction
@@ -1239,13 +1250,15 @@ class portstarObj(object):
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
 
         del portDF, starDF
+        gc.collect()
         return self
 
     #=======================================================================
     def _plotBedPick(self,
                      i,
-                     acousticBed=True,
-                     autoBed = True):
+                     acousticBed = True,
+                     autoBed = True,
+                     autoBank = False):
 
         '''
         Export a plot of bedpicks on sonogram for a given chunk.
@@ -1366,6 +1379,105 @@ class portstarObj(object):
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
         plt.close()
 
+        gc.collect()
+        return self
+
+    ############################################################################
+    # Bankpicking                                                              #
+    ############################################################################
+
+    #=======================================================================
+    def _detectBank(self,
+                    i,
+                    USE_GPU):
+        '''
+
+        '''
+        if not hasattr(self, 'bankpickModel'):
+            model = self._initModel(USE_GPU)
+            self.bankpickModel = model
+
+        # Get the model
+        model = self.bankpickModel
+
+        # Load port/star ping returns
+        self.port._loadSonMeta()
+        self.star._loadSonMeta()
+
+        portstar = [self.port, self.star]
+        for son in portstar:
+            # Load sonar intensity, standardize & rescale
+            son._getScanChunkSingle(i)
+            img = son.sonDat
+
+            init_label, init_prob = self._doPredict(model, img)
+
+            bank = self._findBank(init_label)
+
+            if son.beamName == "ss_port":
+                portBank = bank
+            else:
+                starBank = bank
+
+        return portBank, starBank, i
+
+    #=======================================================================
+    def _findBank(self, lab):
+        R = lab.shape[0] # max range
+        P = lab.shape[1] # number of pings
+
+        lab = remove_small_holes(lab.astype(bool), 2*R)#2*self.port.nchunk)
+        lab = remove_small_objects(lab, 2*R).astype('int')+1#2*self.port.nchunk)
+
+        bank = []
+        for c in range(P):
+            bed = np.where(lab[:,c]!=1)[0]
+            bed = np.split(bed, np.where(np.diff(bed) != 1)[0])[0][-1]
+            bank.append(bed)
+
+        return bank
+
+    #=======================================================================
+    def _saveBank(self, chunks):
+        # Load sonar metadata file
+        self.port._loadSonMeta()
+        portDF = self.port.sonMetaDF
+        self.star._loadSonMeta()
+        starDF = self.star.sonMetaDF
+
+        # Prepare bank detection dictionaries
+        portFinal = []
+        starFinal = []
+        for i in sorted(chunks):
+            portDep = self.portBankDetect[i]
+            starDep = self.starBankDetect[i]
+
+            portFinal.extend(portDep)
+            starFinal.extend(starDep)
+
+        # Check shapes to ensure they are same length.  If not, slice off extra.
+        if len(portFinal) > portDF.shape[0]:
+            lenDif = portDF.shape[0] - len(portFinal)
+            portFinal = portFinal[:lenDif]
+
+        if len(starFinal) > starDF.shape[0]:
+            lenDif = starDF.shape[0] - len(starFinal)
+            starFinal = starFinal[:lenDif]
+
+        portDF['bank_m'] = portFinal * portDF['pix_m']
+        starDF['bank_m'] = starFinal * starDF['pix_m']
+
+        # Export to csv
+        portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
+        starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
+
+        del portDF, starDF
+        return self
+
+    # #=======================================================================
+    # def _plotBank(self, i):
+
+
     #=======================================================================
     def _cleanup(self):
         '''
@@ -1386,4 +1498,5 @@ class portstarObj(object):
         except:
             pass
 
+        gc.collect()
         return self
