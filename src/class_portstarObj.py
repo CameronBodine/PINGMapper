@@ -858,7 +858,7 @@ class portstarObj(object):
         ######################################
         # Filters for removing small artifacts
         if doFilt:
-            crop_label = self._filtPredict(crop_label, N)
+            crop_label = self._filtPredictDepth(crop_label, N)
 
         #########
         # Recover
@@ -1300,11 +1300,16 @@ class portstarObj(object):
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+
+        if autoBank:
+            portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
+            starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
+        else:
+            portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+            starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
         # Convert depth in meters to pixels
         portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
@@ -1312,6 +1317,10 @@ class portstarObj(object):
 
         starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
         starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+
+        if autoBank:
+            portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+            starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
@@ -1321,9 +1330,13 @@ class portstarObj(object):
             if (pL > sL):
                 starAuto = np.append(starAuto, portAuto[(sL-pL):])
                 starInst = np.append(starInst, portInst[(sL-pL):])
+                if autoBank:
+                    starBank = np.append(starBank, portBank[(sL-pL):])
             else:
                 portAuto = np.append(portAuto, starAuto[(pL-sL):])
                 portInst = np.append(portInst, starInst[(pL-sL):])
+                if autoBank:
+                    portBank = np.append(portBank, starBank[(pL-sL):])
 
         # Relocate depths relative to horizontal center of image
         c = int(mergeSon.shape[1]/2)
@@ -1340,6 +1353,13 @@ class portstarObj(object):
 
         starInst = np.flip(starInst)
         starAuto = np.flip(starAuto)
+
+        if autoBank:
+            portBank = c - portBank
+            starBank = c + starBank
+
+            portBank = np.flip(portBank)
+            starBank = np.flip(starBank)
 
         #############
         # Export Plot
@@ -1371,13 +1391,21 @@ class portstarObj(object):
         if acousticBed:
             plt.plot(portInst, y, 'y-.', lw=1, label='Acoustic Depth')
             plt.plot(starInst, y, 'y-.', lw=1)
+            del portInst, starInst
         if autoBed:
             plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
             plt.plot(starAuto, y, 'b-.', lw=1)
+            del portAuto, starAuto
+        if autoBank:
+            plt.plot(portBank, y, 'g-.', lw=1, label='Bank Pick')
+            plt.plot(starBank, y, 'g-.', lw=1)
+            del portBank, starBank
 
         plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
         plt.close()
+
+        del self.mergeSon, self.port.sonMetaDF, self.star.sonMetaDF, y
 
         gc.collect()
         return self
@@ -1419,6 +1447,19 @@ class portstarObj(object):
             else:
                 starBank = bank
 
+
+            # #*#*#*#*#*#*#*#
+            # # Plot
+            # # color map
+            # class_label_colormap = ['#3366CC','#DC3912', '#000000']
+            #
+            # # Initial
+            # color_label = label_to_colors(init_label, img[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            # imsave(os.path.join(son.projDir, str(i)+"_initLabel_"+son.beamName+'_'+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
+            # imsave(os.path.join(son.projDir, str(i)+"_initImg_"+son.beamName+'_'+str(i)+".png"), (img).astype(np.uint8), check_contrast=False)
+
+
+        gc.collect()
         return portBank, starBank, i
 
     #=======================================================================
@@ -1467,6 +1508,35 @@ class portstarObj(object):
         portDF['bank_m'] = portFinal * portDF['pix_m']
         starDF['bank_m'] = starFinal * starDF['pix_m']
 
+        ####################################
+        # Determine if bankpick < depth pick
+        ## If it is, replace with nans then interpolate
+        # Port
+        portFinal = portDF['bank_m'].to_numpy(copy=True)
+        portDep = portDF['dep_m'].to_numpy(copy=True)
+
+        portFinal = np.where(portFinal <= portDep, np.nan, portFinal)
+
+        # Interpolate over nan's
+        nans, x = np.isnan(portFinal), lambda z: z.nonzero()[0]
+        portFinal[nans] = np.interp(x(nans), x(~nans), portFinal[~nans])
+        portFinal = portFinal
+
+        # Star
+        starFinal = starDF['bank_m'].to_numpy(copy=True)
+        starDep = starDF['dep_m'].to_numpy(copy=True)
+
+        starFinal = np.where(starFinal <= starDep, np.nan, starFinal)
+
+        # Interpolate over nan's
+        nans, x = np.isnan(starFinal), lambda z: z.nonzero()[0]
+        starFinal[nans] = np.interp(x(nans), x(~nans), starFinal[~nans])
+        starFinal = starFinal
+
+        portDF['bank_m'] = portFinal
+        starDF['bank_m'] = starFinal
+
+        ###############
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
@@ -1500,3 +1570,17 @@ class portstarObj(object):
 
         gc.collect()
         return self
+
+    # ======================================================================
+    def __str__(self):
+        '''
+        Generic print function to print contents of sonObj.
+        '''
+        output = "portstarObj Contents"
+        output += '\n\t'
+        output += self.__repr__()
+        temp = vars(self)
+        for item in temp:
+            output += '\n\t'
+            output += "{} : {}".format(item, temp[item])
+        return output

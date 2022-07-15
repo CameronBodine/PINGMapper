@@ -1377,19 +1377,29 @@ class sonObj(object):
     def _WCR_crop(self,
                   sonMeta,
                   i):
+
         # Load depth (in real units) and convert to pixels
         bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
         minDep = min(bedPick)
 
         sonDat = self.sonDat
-
         # Zero out water column
-        for j in range(self.sonDat.shape[1]):
-            depth = bedPick[j]
-            sonDat[:depth, j] = 0
+        for j, d in enumerate(bedPick):
+            sonDat[:d, j] = 0
 
-        # Crop to minimum depth
-        sonDat = sonDat[minDep:,]
+        # Bank crop
+        if 'bank_m' in sonMeta.columns:
+            bankPick = round(sonMeta['bank_m'] / sonMeta['pix_m'], 0).astype(int)
+            maxRange = max(bankPick)
+
+            for j, b in enumerate(bankPick):
+                sonDat[b:, j] = 0
+
+            sonDat = sonDat[minDep:maxRange,]
+
+        else:
+            # Crop to minimum depth
+            sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
         return self
