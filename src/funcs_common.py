@@ -30,6 +30,11 @@ import os, sys, struct, gc
 from joblib import Parallel, delayed, cpu_count
 from glob import glob
 
+################################################################################
+import warnings
+warnings.simplefilter("ignore")
+################################################################################
+
 import numpy as np
 from array import array as arr
 
