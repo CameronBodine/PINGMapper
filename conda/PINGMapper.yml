@@ -1,7 +1,7 @@
 name: ping
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python
   - pandas
@@ -12,3 +12,4 @@ dependencies:
   - joblib
   - gdal
   - matplotlib
+  - pydensecrf

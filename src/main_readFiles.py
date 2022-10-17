@@ -580,38 +580,74 @@ def read_master_func(sonFiles,
     # psObj._cleanup()
     # # del psObj
 
-    ############################################################################
-    # For river bank picking (i.e. shadows caused by bank)                     #
-    ############################################################################
-    doBankpick = False
+    # ############################################################################
+    # # For river bank picking (i.e. shadows caused by bank)                     #
+    # ############################################################################
+    # doBankpick = False
+    #
+    # if doBankpick:
+        # start_time = time.time()
+        # print('\n\nAutomatically detecting bank location for', len(chunks), 'chunks:')
+    #
+    #     #Dictionary to store chunk : np.array(depth estimate)
+    #     psObj.portBankDetect = {}
+    #     psObj.starBankDetect = {}
+    #
+    #     # Store model weights and config
+    #     psObj.weights = r'./models/bankpick/bankpick_20220705.h5'
+    #     psObj.configfile = psObj.weights.replace('.h5', '.json')
+    #
+    #     # Parallel estimate bankpick for each chunk using appropriate method
+    #     r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectBank)(int(chunk), USE_GPU) for chunk in chunks)
+    #
+    #     # store the bankpick predictions in the class
+    #     for ret in r:
+    #         psObj.portBankDetect[ret[2]] = ret[0]
+    #         psObj.starBankDetect[ret[2]] = ret[1]
+    #
+    #     # Save detected bankpick to csv
+    #     psObj._saveBank(chunks)
+    #     gc.collect()
+    #
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
-    if doBankpick:
+
+    ############################################################################
+    # For shadow removal                                                       #
+    ############################################################################
+
+    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+
+    if remShadow > 0:
         start_time = time.time()
-        print('\n\nAutomatically detecting bank location for', len(chunks), 'chunks:')
+        print('\n\nAutomatically removing shadows for', len(chunks), 'chunks:')
 
-        #Dictionary to store chunk : np.array(depth estimate)
-        psObj.portBankDetect = {}
-        psObj.starBankDetect = {}
+        if remShadow == 1:
+            print('MODE: 1 | Remove all shadows...')
+        elif remShadow == 2:
+            print('MODE: 2 | Remove shadows in farfield (river bank pick)...')
 
-        # Store model weights and config
-        psObj.weights = r'./models/bankpick/bankpick_20220705.h5'
-        psObj.configfile = psObj.weights.replace('.h5', '.json')
+        # Model weights and config file
+        psObj.configfile = r'./models/shadow/shadow_20220817_v1.json'
+        psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
+        # psObj.weights = r'./models/shadow/test.json'
 
-        # Parallel estimate bankpick for each chunk using appropriate method
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectBank)(int(chunk), USE_GPU) for chunk in chunks)
+        # print(os.path.exists(psObj.weights), os.path.exists(psObj.configfile))
 
-        # store the bankpick predictions in the class
-        for ret in r:
-            psObj.portBankDetect[ret[2]] = ret[0]
-            psObj.starBankDetect[ret[2]] = ret[1]
+        # Load sonMeta for water column removal and cropping
+        # # Load one beam's sonar metadata
+        # portstar[0]._loadSonMeta()
+        # sonMetaDF = portstar[0].sonMetaDF
 
-        # Save detected bankpick to csv
-        psObj._saveBank(chunks)
-        gc.collect()
+        psObj.port._loadSonMeta()
+        psObj.star._loadSonMeta()
 
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        # chunks = [chunks[0]]
+        for chunk in chunks:
+            psObj._detectShadow(remShadow, chunk, USE_GPU)
 
+        sys.exit()
 
 
     # Plot sonar depth, auto depth estimate, and bankpick (if available) on sonogram
@@ -619,7 +655,8 @@ def read_master_func(sonFiles,
         start_time = time.time()
 
         print("\n\nExporting bedpick plots...")
-        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, doBankpick) for chunk in chunks)
+        # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, doBankpick) for chunk in chunks)
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
 
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -658,7 +695,7 @@ def read_master_func(sonFiles,
     ############################################################################
     # Export water column removed and cropped tiles for substrate train set    #
     ############################################################################
-    wcr_crop = True
+    wcr_crop = False
     if wcr_crop:
         start_time = time.time()
         print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 615):\n")

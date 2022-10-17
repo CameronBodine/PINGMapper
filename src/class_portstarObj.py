@@ -30,7 +30,7 @@
 from funcs_common import *
 from funcs_bedpick import *
 
-import gdal
+# import gdal
 from scipy.signal import savgol_filter
 
 import matplotlib
@@ -428,26 +428,111 @@ class portstarObj(object):
         --------------------
         self._detectDepth()
         '''
-        SEED=42
-        np.random.seed(SEED)
-        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-
-        tf.random.set_seed(SEED)
-
-        if USE_GPU == True:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
-        else:
-
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        # SEED=42
+        # np.random.seed(SEED)
+        # AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+        #
+        # tf.random.set_seed(SEED)
+        #
+        # if USE_GPU == True:
+        #     os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+        # else:
+        #
+        #     os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+        #
+        # #suppress tensorflow warnings
+        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        #
+        # #suppress tensorflow warnings
+        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        #
+        # if USE_GPU == True:
+        #     os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
 
         # Open model configuration file
         with open(self.configfile) as f:
             config = json.load(f)
-
         globals().update(config)
+
+        ########################################################################
+        ########################################################################
+
+        if SET_GPU != '-1':
+            USE_GPU = True
+            print('Using GPU')
+
+        if len(SET_GPU.split(','))>1:
+            USE_MULTI_GPU = True
+            print('Using multiple GPUs')
+        else:
+            USE_MULTI_GPU = False
+            if USE_GPU:
+                print('Using single GPU device')
+            else:
+                print('Using single CPU device')
+
+        #suppress tensorflow warnings
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+        if USE_GPU:
+            os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
+
+            SEED = 42
+            np.random.seed(SEED)
+            AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
+
+            tf.random.set_seed(SEED)
+
+            print("Version: ", tf.__version__)
+            print("Eager mode: ", tf.executing_eagerly())
+            print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+
+            physical_devices = tf.config.experimental.list_physical_devices('GPU')
+            print(physical_devices)
+
+            if physical_devices:
+                # Restrict TensorFlow to only use the first GPU
+                try:
+                    tf.config.experimental.set_visible_devices(physical_devices, 'GPU')
+                except RuntimeError as e:
+                    # Visible devices must be set at program startup
+                    print(e)
+        else:
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+            SEED = 42
+            np.random.seed(SEED)
+            AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
+
+            tf.random.set_seed(SEED)
+
+            print("Version: ", tf.__version__)
+            print("Eager mode: ", tf.executing_eagerly())
+            print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+
+            physical_devices = tf.config.experimental.list_physical_devices('GPU')
+            print(physical_devices)
+
+        ### mixed precision
+        from tensorflow.keras import mixed_precision
+        mixed_precision.set_global_policy('mixed_float16')
+        # tf.debugging.set_log_device_placement(True)
+
+        for i in physical_devices:
+            tf.config.experimental.set_memory_growth(i, True)
+        print(tf.config.get_visible_devices())
+
+        if USE_MULTI_GPU:
+            # Create a MirroredStrategy.
+            strategy = tf.distribute.MirroredStrategy([p.name.split('/physical_device:')[-1] for p in physical_devices], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
+            print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
+
+
+
+        ########################################################################
+        ########################################################################
 
         model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
                         FILTERS,
@@ -460,8 +545,11 @@ class portstarObj(object):
                         use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
                         )
 
-        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
-        model.load_weights(self.weights)
+        try:
+            model = tf.keras.models.load_model(weights)
+        except:
+            model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+            model.load_weights(self.weights)
 
         # self.bedpickModel = model
         #
@@ -472,9 +560,10 @@ class portstarObj(object):
     #=======================================================================
     def _doPredict(self,
                    model,
-                   arr):
+                   arr,
+                   doCRF=False):
         '''
-        Predict the bed location or bankpick from an input array of sonogram
+        Predict the bed location or shadows from an input array of sonogram
         pixels. Workflow follows prediction routine from
         https://github.com/Doodleverse/segmentation_gym.
 
@@ -507,7 +596,13 @@ class portstarObj(object):
             image, w, h, bigimage = seg_file2tensor(arr, TARGET_SIZE)
 
         # Standardize
+        # imsave(os.path.join(self.star.projDir, 'img.png'), (image.numpy()).astype(np.uint8), check_contrast=False)
+        # print('\n\n', image, '\n', np.unique(image.numpy()), '\n')
+        # for r in range(image.shape[0]):
+        #     print('\n\n', r, image[r,:])
+        # print('\n\n', image.numpy().shape, '\n\n')
         image = standardize(image.numpy()).squeeze()
+        # print(image, image.shape, '\n\n')
 
         # Do segmentation on compressed sonogram
         est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
@@ -527,18 +622,25 @@ class portstarObj(object):
 
         # Final classification
         est_label = (e1+(1-e0))/2
+        softmax_scores = np.dstack((e0,e1))
         del e0, e1
 
-        # Ping by ping thresholding
-        # for p in range(w):
-        #     thres = threshold_otsu(est_label[p,:])
-        #     est_label[p,:] = (est_label[p,:]>thres).astype('uint8')
+        if doCRF:
+            est_label, l_unique = crf_refine(softmax_scores, bigimage, NCLASSES+1, 1, 1, 2)
+            est_label = est_label-1
+            est_prob = softmax_scores
+        else:
 
-        # Threshold entire label
-        thres = threshold_otsu(est_label)
+            # # Ping by ping thresholding
+            # for p in range(h):
+            #     thres = threshold_otsu(est_label[:,p])
+            #     est_label[:,p] = (est_label[:,p]>thres).astype('uint8')
 
-        est_prob = est_label.copy()
-        est_label = (est_label>thres).astype('uint8')
+            # Threshold entire label
+            thres = threshold_otsu(est_label)
+
+            est_prob = est_label.copy()
+            est_label = (est_label>thres).astype('uint8')
 
         return est_label, est_prob
 
@@ -1389,8 +1491,8 @@ class portstarObj(object):
 
         plt.imshow(mergeSon, cmap='gray')
         if acousticBed:
-            plt.plot(portInst, y, 'y-.', lw=1, label='Acoustic Depth')
-            plt.plot(starInst, y, 'y-.', lw=1)
+            plt.plot(portInst, y, 'r-.', lw=1, label='Acoustic Depth')
+            plt.plot(starInst, y, 'r-.', lw=1)
             del portInst, starInst
         if autoBed:
             plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
@@ -1547,6 +1649,74 @@ class portstarObj(object):
     # #=======================================================================
     # def _plotBank(self, i):
 
+    ############################################################################
+    # Shadow Removal                                                           #
+    ############################################################################
+
+
+    def _detectShadow(self, remShadow, i, USE_GPU, doPlot=True):
+        '''
+
+        '''
+        # Load the model if necessary
+        if not hasattr(self, 'shadowModel'):
+            self.shadowModel = self._initModel(USE_GPU)
+
+        # Get the model
+        model = self.shadowModel
+
+        #################################################
+        # Get depth for water column removal and cropping
+        portDF = self.port.sonMetaDF
+        starDF = self.star.sonMetaDF
+
+        # Get depth/ pix scaler for given chunk
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']]
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']]
+
+        # Load sonar
+        self.port._getScanChunkSingle(i)
+        self.star._getScanChunkSingle(i)
+
+        # Remove water and crop to min depth
+        self.port._WCR_crop(portDF)
+        self.star._WCR_crop(starDF)
+
+        ###############
+        # Do prediction
+        port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
+        star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
+
+        ######
+        # Plot
+        if doPlot:
+            # color map
+            # class_label_colormap = ['#3366CC','#DC3912', '#000000']
+            class_label_colormap = ['#3366CC', '#D3D3D3']
+
+            # Port
+            p_label = label_to_colors(port_label, self.port.sonDat[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            # imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+self.port.beamName+'_'+str(i)+".png"), (p_label).astype(np.uint8), check_contrast=False)
+            # imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+self.port.beamName+'_'+str(i)+".png"), (self.port.sonDat).astype(np.uint8), check_contrast=False)
+
+            s_label = label_to_colors(star_label, self.port.sonDat[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+            # imsave(os.path.join(self.star.projDir, str(i)+"_initLabel_"+self.star.beamName+'_'+str(i)+".png"), (s_label).astype(np.uint8), check_contrast=False)
+            # imsave(os.path.join(self.star.projDir, str(i)+"_initImg_"+self.star.beamName+'_'+str(i)+".png"), (self.star.sonDat).astype(np.uint8), check_contrast=False)
+
+            for son, lb in zip([self.port, self.star], [port_label, star_label]):
+                im = son.sonDat
+                plt.imshow(im, cmap='gray')
+
+                color_label = label_to_colors(lb, im[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+                plt.imshow(color_label, alpha=0.5)
+
+                plt.axis('off')
+                plt.savefig(os.path.join(son.projDir, str(i)+"_shadow_"+son.beamName+".png"), dpi=200, bbox_inches='tight')
+                plt.close('all')
+
+
+
+        pass
 
     #=======================================================================
     def _cleanup(self):

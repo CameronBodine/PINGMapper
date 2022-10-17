@@ -32,6 +32,7 @@ import json
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
+from tensorflow.python.client import device_lib
 from skimage.transform import resize
 from skimage.filters import threshold_otsu, gaussian
 from skimage.measure import label, regionprops
@@ -40,6 +41,10 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 from skimage.filters import threshold_otsu, gaussian
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, remove_small_objects
+
+#crf
+import pydensecrf.densecrf as dcrf
+from pydensecrf.utils import create_pairwise_bilateral, unary_from_softmax
 
 import itertools
 
@@ -56,7 +61,87 @@ tf.get_logger().setLevel('ERROR')
 Utilities provided courtesy Dr. Dan Buscombe from segmentation_gym
 https://github.com/Doodleverse/segmentation_gym
 '''
-### Model for bedpicking ###
+### Model for custom res-unet ###
+#=======================================================================
+def crf_refine(label,
+    img,n,
+    crf_theta_slider_value,
+    crf_mu_slider_value,
+    crf_downsample_factor): #gt_prob
+    """
+    "crf_refine(label, img)"
+    This function refines a label image based on an input label image and the associated image
+    Uses a conditional random field algorithm using spatial and image features
+    INPUTS:
+        * label [ndarray]: label image 2D matrix of integers
+        * image [ndarray]: image 3D matrix of integers
+    OPTIONAL INPUTS: None
+    GLOBAL INPUTS: None
+    OUTPUTS: label [ndarray]: label image 2D matrix of integers
+    """
+
+    Horig = img.shape[0]
+    Worig = img.shape[1]
+    l_unique = label.shape[-1]
+
+    label = label.reshape(Horig,Worig,l_unique)
+
+    scale = 1+(5 * (np.array(img.shape).max() / 3000))
+
+    # decimate by factor by taking only every other row and column
+    try:
+        img = img[::crf_downsample_factor,::crf_downsample_factor, :]
+    except:
+        img = img[::crf_downsample_factor,::crf_downsample_factor]
+
+    # do the same for the label image
+    label = label[::crf_downsample_factor,::crf_downsample_factor]
+    # yes, I know this aliases, but considering the task, it is ok; the objective is to
+    # make fast inference and resize the output
+
+    H = img.shape[0]
+    W = img.shape[1]
+    # U = unary_from_labels(np.argmax(label,-1).astype('int'), n, gt_prob=gt_prob)
+    # d = dcrf.DenseCRF2D(H, W, n)
+
+    U = unary_from_softmax(np.ascontiguousarray(np.rollaxis(label,-1,0)))
+    d = dcrf.DenseCRF2D(H, W, l_unique)
+
+    d.setUnaryEnergy(U)
+
+    # to add the color-independent term, where features are the locations only:
+    d.addPairwiseGaussian(sxy=(3, 3),
+                 compat=3,
+                 kernel=dcrf.DIAG_KERNEL,
+                 normalization=dcrf.NORMALIZE_SYMMETRIC)
+
+    try:
+        feats = create_pairwise_bilateral(
+                            sdims=(crf_theta_slider_value, crf_theta_slider_value),
+                            schan=(scale,scale,scale),
+                            img=img,
+                            chdim=2)
+
+        d.addPairwiseEnergy(feats, compat=crf_mu_slider_value, kernel=dcrf.DIAG_KERNEL,normalization=dcrf.NORMALIZE_SYMMETRIC)
+    except:
+        feats = create_pairwise_bilateral(
+                            sdims=(crf_theta_slider_value, crf_theta_slider_value),
+                            schan=(scale,scale, scale),
+                            img=np.dstack((img,img,img)),
+                            chdim=2)
+
+        d.addPairwiseEnergy(feats, compat=crf_mu_slider_value, kernel=dcrf.DIAG_KERNEL,normalization=dcrf.NORMALIZE_SYMMETRIC)
+
+    Q = d.inference(10)
+    result = np.argmax(Q, axis=0).reshape((H, W)).astype(np.uint8) +1
+
+    # uniq = np.unique(result.flatten())
+
+    result = resize(result, (Horig, Worig), order=0, anti_aliasing=False) #True)
+    result = rescale(result, 1, l_unique).astype(np.uint8)
+
+    return result, l_unique
+
 #=======================================================================
 def custom_resunet(sz,
     f,
@@ -98,20 +183,56 @@ def custom_resunet(sz,
     ## downsample
     e1 = bottleneck_block(inputs, f)
     f = int(f*2)
-    e2 = res_block(e1, f, strides=strides,  kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    e2 = res_block(
+         e1,
+         f,
+         strides=strides,
+         kernel_size = kernel_size,
+         dropout=dropout,
+         dropout_type=dropout_type)
     f = int(f*2)
     dropout += dropout_change_per_layer
-    e3 = res_block(e2, f, strides=strides,  kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    e3 = res_block(
+         e2,
+         f,
+         strides=strides,
+         kernel_size = kernel_size,
+         dropout=dropout,
+         dropout_type=dropout_type)
     f = int(f*2)
     dropout += dropout_change_per_layer
-    e4 = res_block(e3, f, strides=strides,  kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    e4 = res_block(
+         e3,
+         f,
+         strides=strides,
+         kernel_size = kernel_size,
+         dropout=dropout,
+         dropout_type=dropout_type)
     f = int(f*2)
     dropout += dropout_change_per_layer
-    _ = res_block(e4, f, strides=strides, kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    _ = res_block(
+        e4,
+        f,
+        strides=strides,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
 
     ## bottleneck
-    b0 = conv_block(_, f, strides=1,  kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
-    _ = conv_block(b0, f, strides=1,  kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    b0 = conv_block(
+         _,
+         f,
+         strides=1,
+         kernel_size = kernel_size,
+         dropout=dropout,
+         dropout_type=dropout_type)
+    _ = conv_block(
+        b0,
+        f,
+        strides=1,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
 
     if not use_dropout_on_upsampling:
         dropout = 0.0
@@ -119,22 +240,42 @@ def custom_resunet(sz,
 
     ## upsample
     _ = upsamp_concat_block(_, e4)
-    _ = res_block(_, f, kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    _ = res_block(
+        _,
+        f,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
     f = int(f/2)
     dropout -= dropout_change_per_layer
 
     _ = upsamp_concat_block(_, e3)
-    _ = res_block(_, f, kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    _ = res_block(
+        _,
+        f,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
     f = int(f/2)
     dropout -= dropout_change_per_layer
 
     _ = upsamp_concat_block(_, e2)
-    _ = res_block(_, f, kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    _ = res_block(
+        _,
+        f,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
     f = int(f/2)
     dropout -= dropout_change_per_layer
 
     _ = upsamp_concat_block(_, e1)
-    _ = res_block(_, f, kernel_size = kernel_size, dropout=dropout,dropout_type=dropout_type)
+    _ = res_block(
+        _,
+        f,
+        kernel_size = kernel_size,
+        dropout=dropout,
+        dropout_type=dropout_type)
 
     # ## classify
     if nclasses==1:
@@ -405,11 +546,12 @@ def standardize(img, mn=0, mx=1, doRescale=False):
     N = np.shape(img)[0] * np.shape(img)[1]
     s = np.maximum(np.std(img), 1.0/np.sqrt(N))
     m = np.mean(img)
+    
     img = (img - m) / s
     if doRescale:
         img = rescale(img, mn, mx)
     del m, s, N
-    #
+
     # if np.ndim(img)==2:
     #     img = np.dstack((img,img,img))
 
