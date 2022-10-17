@@ -276,6 +276,39 @@ class sonObj(object):
             'unknown_14':[92, 0, 4, -1]
             }
 
+        #### TESTING ######
+        elif datLen == 100:
+            self.isOnix = 0
+            humDic = {
+            'endianness':'<i', #<=little endian; I=unsigned Int
+            'SP1':[0, 0, 1, -1], #Unknown (spacer)
+            'water_code':[1, 0, 1, -1], #Need to check if consistent with other models (1=fresh?)
+            'SP2':[2, 0, 1, -1], #Unknown (spacer)
+            'unknown_1':[3, 0, 1, -1], #Unknown (gps flag?)
+            'sonar_name':[4, 0, 4, -1], #Sonar name
+            'unknown_2':[8, 0, 4, -1], #Unknown
+            'unknown_3':[12, 0, 4, -1], #Unknown
+            'unknown_4':[16, 0, 4, -1], #Unknown
+            'unix_time':[20, 0, 4, -1], #Unix Time
+            'utm_e':[24, 0, 4, -1], #UTM X
+            'utm_n':[28, 0, 4, -1], #UTM Y
+            'filename':[32, 0, 12, -1], #Recording name
+            'numrecords':[44, 0, 4, -1], #Number of records
+            'recordlens_ms':[48, 0, 4, -1], #Recording length milliseconds
+            'linesize':[52, 0, 4, -1], #Line Size (?)
+            'unknown_5':[56, 0, 4, -1], #Unknown
+            'unknown_6':[60, 0, 4, -1], #Unknown
+            'unknown_7':[64, 0, 4, -1], #Unknown
+            'unknown_8':[68, 0, 4, -1], #Unknown
+            'unknown_9':[72, 0, 4, -1], #Unknown
+            'unknown_10':[76, 0, 4, -1], #Unknown
+            'unknown_11':[80, 0, 4, -1], #Unknown
+            'unknown_12':[84, 0, 4, -1], #Unknown
+            'unknown_13':[88, 0, 4, -1], #Unknown
+            'unknown_14':[92, 0, 4, -1], #Unknown
+            'unknown_15':[96, 0, 4, -1]
+            }
+
         #Onix
         else:
             humDic = {}
@@ -352,6 +385,15 @@ class sonObj(object):
                 humDat['water_type'] = 'unknown'
         #Need to figure out water code for solix
         elif datLen == 96:
+            if waterCode == 1:
+                humDat['water_type'] = 'fresh'
+                S = 1
+            else:
+                humDat['water_type'] = 'unknown'
+                c = 1475
+
+        ###### TESTING ######
+        elif datLen == 100:
             if waterCode == 1:
                 humDat['water_type'] = 'fresh'
                 S = 1
@@ -1253,7 +1295,7 @@ class sonObj(object):
         try:
             # Export water column removed and cropped imagery
             if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                self._WCR_crop(sonMeta, chunk)
+                self._WCR_crop(sonMeta)
                 self._writeTiles(chunk, imgOutPrefix='wcr_crop')
         except:
             pass
@@ -1375,9 +1417,7 @@ class sonObj(object):
 
     # ======================================================================
     def _WCR_crop(self,
-                  sonMeta,
-                  i):
-
+                  sonMeta):
         # Load depth (in real units) and convert to pixels
         bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
         minDep = min(bedPick)
@@ -1387,19 +1427,21 @@ class sonObj(object):
         for j, d in enumerate(bedPick):
             sonDat[:d, j] = 0
 
-        # Bank crop
-        if 'bank_m' in sonMeta.columns:
-            bankPick = round(sonMeta['bank_m'] / sonMeta['pix_m'], 0).astype(int)
-            maxRange = max(bankPick)
+        # # Bank crop
+        # if 'bank_m' in sonMeta.columns:
+        #     bankPick = round(sonMeta['bank_m'] / sonMeta['pix_m'], 0).astype(int)
+        #     maxRange = max(bankPick)
+        #
+        #     for j, b in enumerate(bankPick):
+        #         sonDat[b:, j] = 0
+        #
+        #     sonDat = sonDat[minDep:maxRange,]
+        #
+        # else:
+        #     # Crop to minimum depth
+        #     sonDat = sonDat[minDep:,]
 
-            for j, b in enumerate(bankPick):
-                sonDat[b:, j] = 0
-
-            sonDat = sonDat[minDep:maxRange,]
-
-        else:
-            # Crop to minimum depth
-            sonDat = sonDat[minDep:,]
+        sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
         return self
