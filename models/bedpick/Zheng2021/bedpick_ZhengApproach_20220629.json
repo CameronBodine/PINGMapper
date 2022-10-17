@@ -34,5 +34,7 @@
   "AUG_VFLIP": false,
   "AUG_LOOPS": 10,
   "AUG_COPIES": 3,
-  "TESTTIMEAUG": false
+  "TESTTIMEAUG": false,
+  "SET_GPU": "0",
+  "MODE": "all"
 }
