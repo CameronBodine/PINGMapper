@@ -306,7 +306,7 @@ def read_master_func(sonFiles,
             pass
 
     ############################################################################
-    # Determine ping header length (varies by model)                   #
+    # Determine ping header length (varies by model)                           #
     ############################################################################
 
     start_time = time.time()
@@ -436,6 +436,68 @@ def read_master_func(sonFiles,
             utm_n=son.sonMetaDF.iloc[0]['utm_n']
             son._getEPSG(utm_e, utm_n)
 
+    ############################################################################
+    # Locating missing pings                                                   #
+    ############################################################################
+    dataGaps = defaultdict()
+    # add beams to dataGaps
+    for son in sonObjs:
+        dataGaps[son.beamName] = []
+
+    # # # of beams == record_num increment value, not always, need a different approach
+    # incBy = len(sonObjs)
+
+    for son in sonObjs:
+        son._loadSonMeta()
+        df = son.sonMetaDF
+
+        recs = df['record_num'].astype(int).to_numpy()
+        df['record_num_orig'] = df['record_num']
+
+        # find increment value between recs[i+1] and recs[i]
+        recsInc = np.diff(recs)
+
+        # Assume most frequent value is the correct increment value (it's not!!)
+        incBy = np.bincount(recsInc).argmax()
+
+        # Find indices where incBy is not met, location of missing data
+        misData = np.where(recsInc>incBy)[0]
+        addData = np.where(recsInc<incBy)[0]
+        # print(misData[0].shape, misData)
+
+        # We have missing data
+        if misData.shape[0] > 0:
+            # Iterate each data gap
+            for i in misData:
+                # Find number of rows to add
+                toAdd = np.floor(recsInc[i]/incBy).astype(int)
+
+                k = 1
+                while k <= toAdd:
+                    df = df.append(pd.Series(), ignore_index=True)
+                    df.iloc[-1, df.columns.get_loc('record_num')] = recs[i] + (k*incBy)
+                    k+=1
+
+            # df = df.sort(['record_num'])
+            # df = df.reset_index(drop=True)
+
+            df = df.sort_values(by=['record_num'], ignore_index=True)
+
+
+
+
+
+
+
+        son._saveSonMeta(df)
+
+
+
+
+
+
+
+    sys.exit()
 
     ############################################################################
     # Print Metadata Summary                                                   #

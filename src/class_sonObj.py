@@ -1070,10 +1070,11 @@ class sonObj(object):
         if len(lastChunk) <= (nchunk/2):
             sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
 
-        # Write metadata to csv
-        outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
-        sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
-        self.sonMetaFile = outCSV
+        # # Write metadata to csv
+        # outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
+        # sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
+        # self.sonMetaFile = outCSV
+        self._saveSonMeta(sonMetaAll)
 
     # ======================================================================
     def _getHeader(self,
@@ -1231,6 +1232,17 @@ class sonObj(object):
         df['pix_m'] = pix_m
 
         return df
+
+    #=======================================================================
+    def _saveSonMeta(self, sonMetaAll):
+        # Write metadata to csv
+        if not hasattr(self, 'sonMetaFile'):
+            outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
+            sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
+            self.sonMetaFile = outCSV
+        else:
+            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
