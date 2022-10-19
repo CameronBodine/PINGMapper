@@ -442,6 +442,7 @@ def read_master_func(sonFiles,
 
     # Do work
     ## Open each beam df, store beam name in new field, then concatenate df's into one
+    print("\nLocating missing pings and adding NoData...")
     frames = []
     for son in sonObjs:
         son._loadSonMeta()
@@ -450,80 +451,65 @@ def read_master_func(sonFiles,
         frames.append(df)
 
     dfAll = pd.concat(frames)
+    del frames
+    # Sort by record_num
+    dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
+    dfAll = dfAll.reset_index(drop=True)
+    beams = dfAll['beam'].unique()
 
     # Add workflow to balance workload (histogram). Determine total 'missing' pings
     ## and divide by processors, then subsample until workload is balanced
     rowCnt = len(dfAll)
-    rowsToProc = list(np.arange(0, rowCnt, rowCnt/threadCnt).astype(int))
+    # rowsToProc = list(np.arange(0, rowCnt, rowCnt/threadCnt).astype(int))
+    # r = 0
+    # while r < len(rowsToProc)-1:
+    #     rowsToProc[r] = (rowsToProc[r], rowsToProc[r+1])
+    #     r+=1
+    # rowsToProc[-1] = (rowsToProc[-1], rowCnt)
+
+    print('Thread Count: ', threadCnt)
+    rowsToProc = []
+    c = 0
     r = 0
-    while r < len(rowsToProc)-1:
-        rowsToProc[r] = (rowsToProc[r], rowsToProc[r+1])
-        r+=1
-    rowsToProc[-1] = (rowsToProc[-1], rowCnt)
+    n = int(rowCnt/threadCnt)
+    startB = dfAll.iloc[0]['beam']
+    print(startB)
 
-    # Add process to make sure each interval starts with same beam
+    while (r < threadCnt) and (n < rowCnt):
+        if (dfAll.loc[n]['beam']) != startB:
+            # print((dfAll.iloc[n]['beam']), startB)
+            n+=1
+        else:
+            # print('Yes', (dfAll.iloc[n]['beam']), startB)
+            rowsToProc.append((c, n))
+            c = n
+            n = c+int(rowCnt/threadCnt)
+            r+=1
+    rowsToProc.append((rowsToProc[-1][-1], rowCnt))
 
 
-    # Sort by record_num
+    # # iterate each range and do work
+    # frames = []
+    # for r in rowsToProc:
+    #     print('\n\n\n', r)
+    #     df = son._fixNoDat(dfAll[r[0]:r[1]].copy().reset_index(drop=True))
+    #     frames.append(df)
+    #     # print(frames)
+
+    r = Parallel(n_jobs=threadCnt, verbose=10)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in rowsToProc)
+
+    # print(r)
+
+    dfAll = pd.concat(r)
+
     dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
 
-    # iterate each range and do work
-    for r in rowsToProc:
-        print(r)
-        son._fixNoDat(dfAll[r[0]:r[1]].copy().reset_index(drop=True))
+    outCSV = os.path.join(son.metaDir, "testNoData.csv")
+    dfAll.to_csv(outCSV, index=True, float_format='%.14f')
 
     # Need to reset chunk_id
 
 
-
-
-
-
-    # dataGaps = defaultdict()
-    # # add beams to dataGaps
-    # for son in sonObjs:
-    #     dataGaps[son.beamName] = []
-    #
-    # # # # of beams == record_num increment value, not always, need a different approach
-    # # incBy = len(sonObjs)
-    #
-    # for son in sonObjs:
-    #     son._loadSonMeta()
-    #     df = son.sonMetaDF
-    #
-    #     recs = df['record_num'].astype(int).to_numpy()
-    #     df['record_num_orig'] = df['record_num']
-    #
-    #     # find increment value between recs[i+1] and recs[i]
-    #     recsInc = np.diff(recs)
-    #
-    #     # Assume most frequent value is the correct increment value (it's not!!)
-    #     incBy = np.bincount(recsInc).argmax()
-    #
-    #     # Find indices where incBy is not met, location of missing data
-    #     misData = np.where(recsInc>incBy)[0]
-    #     addData = np.where(recsInc<incBy)[0]
-    #     # print(misData[0].shape, misData)
-    #
-    #     # We have missing data
-    #     if misData.shape[0] > 0:
-    #         # Iterate each data gap
-    #         for i in misData:
-    #             # Find number of rows to add
-    #             toAdd = np.floor(recsInc[i]/incBy).astype(int)
-    #
-    #             k = 1
-    #             while k <= toAdd:
-    #                 df = df.append(pd.Series(), ignore_index=True)
-    #                 df.iloc[-1, df.columns.get_loc('record_num')] = recs[i] + (k*incBy)
-    #                 k+=1
-    #
-    #         # df = df.sort(['record_num'])
-    #         # df = df.reset_index(drop=True)
-    #
-    #         df = df.sort_values(by=['record_num'], ignore_index=True)
-    #
-    #     son._saveSonMeta(df)
 
     sys.exit()
 

@@ -1246,74 +1246,73 @@ class sonObj(object):
     ############################################################################
     # Fix corrupt recording w/ missing pings                                   #
     ############################################################################
-    def _fixNoDat(self, dfA):
+    def _fixNoDat(self, dfA, beams):
         # Empty dataframe to store final results
         df = pd.DataFrame(columns = dfA.columns)
-
-        # Slice dataframe to a and b range
-        # dfA = dfA[a:b].copy().reset_index(drop=True)
-        dfA.index = dfA.index+1
-        print(dfA)
 
         # For tracking beam presence
         b = defaultdict()
         bCnt = 0
-        for i in dfA['beam'].unique():
-            b[i] = 0
+        # for i in dfA['beam'].unique():
+        for i in beams:
+            b[i] = np.nan
             bCnt+=1
 
-        c = 1 # Current row index
+        c = 0 # Current row index
 
         # # Store current ping packet values
         # dfPacket = pd.DataFrame(columns = dfA.columns)
-        while (c < len(dfA)-1):
-            # print('\n\nC is:', c, b, '\n\n')
-            p = 0 # Number of pings in current ping packet
-            while (p < bCnt):
-                # Get current row
-                cRow = dfA.iloc[[c]]
+        while ((c) < len(dfA)):
 
-                # Check if b['beam'] is > 0, if it is, we found end of 'ping packet':
-                ## add unfound beams as NoData to ping packet
-                if b[cRow['beam'].values[0]] > 0:
-                    # Add valid data to df
-                    noDat = []
-                    for k, v in b.items():
-                        # Store valid data in df
-                        if v > 0:
-                            df = pd.concat([df,dfA.iloc[[v]]], ignore_index=True)
-                        # Add beam to noDat list
-                        else:
-                            noDat.append(k)
+            cRow = dfA.loc[[c]]
 
-                    # Duplicate valid data for missing rows
-                    for beam in noDat:
-                        df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
-                        df.iloc[-1, df.columns.get_loc('record_num')] = np.nan
-                        df.iloc[-1, df.columns.get_loc('index')] = np.nan
-                        df.iloc[-1, df.columns.get_loc('beam')] = beam
+            # Check if b['beam'] is > 0, if it is, we found end of 'ping packet':
+            ## add unfound beams as NoData to ping packet
+            if ~np.isnan(b[cRow['beam'].values[0]]):
+                # Add valid data to df
+                noDat = []
+                for k, v in b.items():
+                    # Store valid data in df
+                    if ~np.isnan(v):
+                        df = pd.concat([df,dfA.loc[[v]]], ignore_index=True)
+                    # Add beam to noDat list
+                    else:
+                        noDat.append(k)
 
-                    p = bCnt
-                    # print(df)
+                # Duplicate valid data for missing rows
+                for beam in noDat:
+                    df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
+                    # df.iloc[-1, df.columns.get_loc('record_num')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('index')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('beam')] = beam
 
-                    # reset b
-                    for k, v in b.items():
-                        b.update({k:0})
+                # reset b
+                for k, v in b.items():
+                    b.update({k:np.nan})
 
-                else:
-                    # Add c idx to b and keep searching for beams in current packet
-                    b[cRow['beam'].values[0]] = c
+            else:
+                # Add c idx to b and keep searching for beams in current packet
+                b[cRow['beam'].values[0]] = c
+                c+=1
 
-                    p+=1
-                    c+=1
+        # Add remaining data
+        # Add valid data to df
+        noDat = []
+        for k, v in b.items():
+            # Store valid data in df
+            if ~np.isnan(v):
+                df = pd.concat([df,dfA.loc[[v]]], ignore_index=True)
+            # Add beam to noDat list
+            else:
+                noDat.append(k)
 
+        # Duplicate valid data for missing rows
+        for beam in noDat:
+            df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
+            df.iloc[-1, df.columns.get_loc('index')] = np.nan
+            df.iloc[-1, df.columns.get_loc('beam')] = beam
 
-            # df = pd.concat([df,dfA.iloc[[c]]], ignore_index=True)
-            # c+=1
-            # sys.exit()
-
-        # print(df.head, df.tail)
-        return
+        return df
 
 
     ############################################################################
