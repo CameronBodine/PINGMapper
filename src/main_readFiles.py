@@ -440,52 +440,6 @@ def read_master_func(sonFiles,
     # Locating missing pings                                                   #
     ############################################################################
 
-    # Do work
-    ## Open each beam df, store beam name in new field, then concatenate df's into one
-    print("\nLocating missing pings and adding NoData...")
-    frames = []
-    for son in sonObjs:
-        son._loadSonMeta()
-        df = son.sonMetaDF
-        df['beam'] = son.beam
-        frames.append(df)
-
-    dfAll = pd.concat(frames)
-    del frames
-    # Sort by record_num
-    dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
-    dfAll = dfAll.reset_index(drop=True)
-    beams = dfAll['beam'].unique()
-
-    # Add workflow to balance workload (histogram). Determine total 'missing' pings
-    ## and divide by processors, then subsample until workload is balanced
-    rowCnt = len(dfAll)
-    # rowsToProc = list(np.arange(0, rowCnt, rowCnt/threadCnt).astype(int))
-    # r = 0
-    # while r < len(rowsToProc)-1:
-    #     rowsToProc[r] = (rowsToProc[r], rowsToProc[r+1])
-    #     r+=1
-    # rowsToProc[-1] = (rowsToProc[-1], rowCnt)
-
-    print('Thread Count: ', threadCnt)
-    rowsToProc = []
-    c = 0
-    r = 0
-    n = int(rowCnt/threadCnt)
-    startB = dfAll.iloc[0]['beam']
-    print(startB)
-
-    while (r < threadCnt) and (n < rowCnt):
-        if (dfAll.loc[n]['beam']) != startB:
-            # print((dfAll.iloc[n]['beam']), startB)
-            n+=1
-        else:
-            # print('Yes', (dfAll.iloc[n]['beam']), startB)
-            rowsToProc.append((c, n))
-            c = n
-            n = c+int(rowCnt/threadCnt)
-            r+=1
-    rowsToProc.append((rowsToProc[-1][-1], rowCnt))
     fixNoDat = True
     if fixNoDat:
         ## Open each beam df, store beam name in new field, then concatenate df's into one
@@ -531,31 +485,6 @@ def read_master_func(sonFiles,
 
         # Concatenate results from parallel processing
         dfAll = pd.concat(r)
-
-    # # iterate each range and do work
-    # frames = []
-    # for r in rowsToProc:
-    #     print('\n\n\n', r)
-    #     df = son._fixNoDat(dfAll[r[0]:r[1]].copy().reset_index(drop=True))
-    #     frames.append(df)
-    #     # print(frames)
-
-    r = Parallel(n_jobs=threadCnt, verbose=10)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in rowsToProc)
-
-    # print(r)
-
-    dfAll = pd.concat(r)
-
-    dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
-
-    outCSV = os.path.join(son.metaDir, "testNoData.csv")
-    dfAll.to_csv(outCSV, index=True, float_format='%.14f')
-
-    # Need to reset chunk_id
-
-
-
-    sys.exit()
 
         # Store original record_num and update record_num with new index
         dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)

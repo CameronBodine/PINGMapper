@@ -1276,7 +1276,6 @@ class sonObj(object):
                     else:
                         noDat.append(k)
 
-                # Duplicate valid data for missing rows
                 # Duplicate valid data for missing rows. Remove unneccessary values.
                 for beam in noDat:
                     df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
@@ -1290,28 +1289,6 @@ class sonObj(object):
                 # reset b
                 for k, v in b.items():
                     b.update({k:np.nan})
-
-            else:
-                # Add c idx to b and keep searching for beams in current packet
-                b[cRow['beam'].values[0]] = c
-                c+=1
-
-        # Add remaining data
-        # Add valid data to df
-        noDat = []
-        for k, v in b.items():
-            # Store valid data in df
-            if ~np.isnan(v):
-                df = pd.concat([df,dfA.loc[[v]]], ignore_index=True)
-            # Add beam to noDat list
-            else:
-                noDat.append(k)
-
-        # Duplicate valid data for missing rows
-        for beam in noDat:
-            df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
-            df.iloc[-1, df.columns.get_loc('index')] = np.nan
-            df.iloc[-1, df.columns.get_loc('beam')] = beam
 
             else:
                 # Add c idx to b and keep searching for beams in current packet
