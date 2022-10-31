@@ -440,92 +440,83 @@ def read_master_func(sonFiles,
     # Locating missing pings                                                   #
     ############################################################################
 
-    # Do work
-    ## Open each beam df, store beam name in new field, then concatenate df's into one
-    frames = []
-    for son in sonObjs:
-        son._loadSonMeta()
-        df = son.sonMetaDF
-        df['beam'] = son.beam
-        frames.append(df)
+    fixNoDat = True
+    if fixNoDat:
+        ## Open each beam df, store beam name in new field, then concatenate df's into one
+        print("\nLocating missing pings and adding NoData...")
+        frames = []
+        for son in sonObjs:
+            son._loadSonMeta()
+            df = son.sonMetaDF
+            df['beam'] = son.beam
+            frames.append(df)
 
-    dfAll = pd.concat(frames)
+        dfAll = pd.concat(frames)
+        del frames
+        # Sort by record_num
+        dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
+        dfAll = dfAll.reset_index(drop=True)
+        beams = dfAll['beam'].unique()
 
-    # Add workflow to balance workload (histogram). Determine total 'missing' pings
-    ## and divide by processors, then subsample until workload is balanced
-    rowCnt = len(dfAll)
-    rowsToProc = list(np.arange(0, rowCnt, rowCnt/threadCnt).astype(int))
-    r = 0
-    while r < len(rowsToProc)-1:
-        rowsToProc[r] = (rowsToProc[r], rowsToProc[r+1])
-        r+=1
-    rowsToProc[-1] = (rowsToProc[-1], rowCnt)
+        # 'Evenly' allocate work to process threads.
+        # Future: Add workflow to balance workload (histogram). Determine total 'missing' pings
+        ## and divide by processors, then subsample until workload is balanced
+        rowCnt = len(dfAll)
+        rowsToProc = []
+        c = 0
+        r = 0
+        n = int(rowCnt/threadCnt)
+        startB = dfAll.iloc[0]['beam']
 
-    # Add process to make sure each interval starts with same beam
+        while (r < threadCnt) and (n < rowCnt):
+            if (dfAll.loc[n]['beam']) != startB:
+                # print((dfAll.iloc[n]['beam']), startB)
+                n+=1
+            else:
+                # print('Yes', (dfAll.iloc[n]['beam']), startB)
+                rowsToProc.append((c, n))
+                c = n
+                n = c+int(rowCnt/threadCnt)
+                r+=1
+        rowsToProc.append((rowsToProc[-1][-1], rowCnt))
 
+        # Fix no data in parallel
+        r = Parallel(n_jobs=threadCnt, verbose=10)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in rowsToProc)
 
-    # Sort by record_num
-    dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
+        # Concatenate results from parallel processing
+        dfAll = pd.concat(r)
 
-    # iterate each range and do work
-    for r in rowsToProc:
-        print(r)
-        son._fixNoDat(dfAll[r[0]:r[1]].copy().reset_index(drop=True))
+        # Store original record_num and update record_num with new index
+        dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
+        dfAll['orig_record_num'] = dfAll['record_num']
+        dfAll['record_num'] = dfAll.index
 
-    # Need to reset chunk_id
+        # # For checking outputs
+        # outCSV = os.path.join(son.metaDir, "testNoData.csv")
+        # dfAll.to_csv(outCSV, index=False, float_format='%.14f')
 
+        # Slice dfAll by beam, update chunk_id, then save to file.
+        for son in sonObjs:
+            df = dfAll[dfAll['beam'] == son.beam]
 
+            if (len(df)%nchunk) != 0:
+                rdr = nchunk-(len(df)%nchunk)
+                chunkCnt = int(len(df)/nchunk)
+                chunkCnt += 1
+            else:
+                rdr = False
+                chunkCnt = int(len(df)/nchunk)
 
+            chunks = np.arange(chunkCnt)
+            chunks = np.repeat(chunks, nchunk)
 
+            if rdr:
+                chunks = chunks[:-rdr]
 
+            df['chunk_id'] = chunks
+            df.drop(columns = ['beam'], inplace=True)
+            son._saveSonMeta(df)
 
-    # dataGaps = defaultdict()
-    # # add beams to dataGaps
-    # for son in sonObjs:
-    #     dataGaps[son.beamName] = []
-    #
-    # # # # of beams == record_num increment value, not always, need a different approach
-    # # incBy = len(sonObjs)
-    #
-    # for son in sonObjs:
-    #     son._loadSonMeta()
-    #     df = son.sonMetaDF
-    #
-    #     recs = df['record_num'].astype(int).to_numpy()
-    #     df['record_num_orig'] = df['record_num']
-    #
-    #     # find increment value between recs[i+1] and recs[i]
-    #     recsInc = np.diff(recs)
-    #
-    #     # Assume most frequent value is the correct increment value (it's not!!)
-    #     incBy = np.bincount(recsInc).argmax()
-    #
-    #     # Find indices where incBy is not met, location of missing data
-    #     misData = np.where(recsInc>incBy)[0]
-    #     addData = np.where(recsInc<incBy)[0]
-    #     # print(misData[0].shape, misData)
-    #
-    #     # We have missing data
-    #     if misData.shape[0] > 0:
-    #         # Iterate each data gap
-    #         for i in misData:
-    #             # Find number of rows to add
-    #             toAdd = np.floor(recsInc[i]/incBy).astype(int)
-    #
-    #             k = 1
-    #             while k <= toAdd:
-    #                 df = df.append(pd.Series(), ignore_index=True)
-    #                 df.iloc[-1, df.columns.get_loc('record_num')] = recs[i] + (k*incBy)
-    #                 k+=1
-    #
-    #         # df = df.sort(['record_num'])
-    #         # df = df.reset_index(drop=True)
-    #
-    #         df = df.sort_values(by=['record_num'], ignore_index=True)
-    #
-    #     son._saveSonMeta(df)
-
-    sys.exit()
 
     ############################################################################
     # Print Metadata Summary                                                   #
@@ -544,9 +535,13 @@ def read_master_func(sonFiles,
         son._loadSonMeta()
         df = son.sonMetaDF
         for att in df.columns: # Find min/max/avg of each column
-            attMin = np.round(df[att].min(), 3)
-            attMax = np.round(df[att].max(), 3)
-            attAvg = np.round(df[att].mean(), 3)
+            # attMin = np.round(df[att].min(), 3)
+            # attMax = np.round(df[att].max(), 3)
+            # attAvg = np.round(df[att].mean(), 3)
+
+            attMin = np.round(np.nanmin(df[att]), 3)
+            attMax = np.round(np.nanmax(df[att]), 3)
+            attAvg = np.round(np.nanmean(df[att]), 3)
 
             # Check if data are valid.
             if (attMax != 0) or ("unknown" in att) or (att =="beam"):
@@ -763,7 +758,22 @@ def read_master_func(sonFiles,
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if wcp == 1:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son._loadSonMeta()
+                    sonMetaDF = son.sonMetaDF
+
+                    # Determine what chunks to process
+                    chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+                    if son.wcr_src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+                        chunkCnt = len(chunks)*2
+                    else:
+                        chunkCnt = len(chunks)
+                    print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
+
+                    # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+                    Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+            elif wcp == 2:
                 son._loadSonMeta()
                 sonMetaDF = son.sonMetaDF
 
