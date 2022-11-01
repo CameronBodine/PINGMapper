@@ -1345,36 +1345,37 @@ class sonObj(object):
         # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
         # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
 
-        self.pingMax = np.nanmax(sonMeta['ping_cnt']).astype(int) # store to determine max range per chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
         # print(self.beam, self.pingMax, '\nn', self.headIdx, '\n\n', self.pingCnt)
 
-        # Load chunk's sonar data into memory
-        self._loadSonChunk()
+        if ~np.isnan(self.pingMax):
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
 
-        if filterIntensity:
-            self._doPPDRC()
+            if filterIntensity:
+                self._doPPDRC()
 
-        # Export water column present (wcp) image
-        if self.wcp:
-            # self._doPPDRC()
-            self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
-        # Export slant range corrected (water column removed) imagery
-        if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-            self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
-            # self._doPPDRC()
-            self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
+            # Export water column present (wcp) image
+            if self.wcp:
+                # self._doPPDRC()
+                self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
+            # Export slant range corrected (water column removed) imagery
+            if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+                # self._doPPDRC()
+                self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
 
-        try:
-            # Export water column removed and cropped imagery
-            if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                self._WCR_crop(sonMeta)
-                self._writeTiles(chunk, imgOutPrefix='wcr_crop')
-        except:
-            pass
+            try:
+                # Export water column removed and cropped imagery
+                if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                    self._WCR_crop(sonMeta)
+                    self._writeTiles(chunk, imgOutPrefix='wcr_crop')
+            except:
+                pass
 
-        gc.collect()
+            gc.collect()
         return self
 
 
@@ -1399,7 +1400,7 @@ class sonObj(object):
         --------------------
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
-        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        sonDat = np.zeros((self.pingMax.astype(int), len(self.pingCnt)))#.astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
         # Iterate each ping
         for i in range(len(self.headIdx)):
