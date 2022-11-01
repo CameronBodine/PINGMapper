@@ -1362,14 +1362,16 @@ class sonObj(object):
                 # self._doPPDRC()
                 self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
             # Export slant range corrected (water column removed) imagery
-            if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            # if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            if self.wcr_src:
                 self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 # self._doPPDRC()
                 self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
 
             try:
                 # Export water column removed and cropped imagery
-                if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                if self.wcr_crop:
                     self._WCR_crop(sonMeta)
                     self._writeTiles(chunk, imgOutPrefix='wcr_crop')
             except:

@@ -425,8 +425,31 @@ def read_master_func(sonFiles,
 
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:
-        son.wcp = wcp
-        son.wcr_src = wcr
+        beam = son.beamName
+
+        if wcp > 0:
+            if wcp == 2:
+                son.wcp = True
+            else:
+                if beam == "ss_port" or beam == "ss_star":
+                    son.wcp = True
+                else:
+                    son.wcp = False
+        else:
+            son.wcp = False
+
+
+        if wcr > 0:
+            if wcr == 2:
+                son.wcr_src = True
+            else:
+                if beam == "ss_port" or beam == "ss_star":
+                    son.wcr_src = True
+                else:
+                    son.wcr_src = False
+
+        else:
+            son.wcr_src = False
 
     # If Onix, need to store self._trans in object
     if sonObjs[0].isOnix:
@@ -515,6 +538,13 @@ def read_master_func(sonFiles,
 
             df['chunk_id'] = chunks
             df.drop(columns = ['beam'], inplace=True)
+
+            ## For testing chunk with only NoData
+            df.loc[df['chunk_id']==0, 'index'] = np.nan
+            df.loc[df['chunk_id']==0, 'ping_cnt'] = np.nan
+            df.loc[df['chunk_id']==0, 'f'] = np.nan
+            df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
+
             son._saveSonMeta(df)
 
 
@@ -647,7 +677,20 @@ def read_master_func(sonFiles,
         autoBed = False
 
     # Save detected depth to csv
-    psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+    depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+
+    # Store depths in downlooking sonar files also
+    for son in sonObjs:
+        beam = son.beamName
+        if beam != "ss_port" and beam != "ss_star":
+            son._loadSonMeta()
+            sonDF = son.sonMetaDF
+
+            sonDF = pd.concat([sonDF, depDF], axis=1)
+
+            sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+            del sonDF
+
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
@@ -661,9 +704,9 @@ def read_master_func(sonFiles,
     #     print("Done!")
     #     print("Time (s):", round(time.time() - start_time, ndigits=1))
     #
-    # # Cleanup
+    # Cleanup
     # psObj._cleanup()
-    # # del psObj
+    # del psObj
 
     # ############################################################################
     # # For river bank picking (i.e. shadows caused by bank)                     #
@@ -758,28 +801,13 @@ def read_master_func(sonFiles,
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
-            if wcp == 1:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                    son._loadSonMeta()
-                    sonMetaDF = son.sonMetaDF
-
-                    # Determine what chunks to process
-                    chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-                    if son.wcr_src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
-                        chunkCnt = len(chunks)*2
-                    else:
-                        chunkCnt = len(chunks)
-                    print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
-
-                    # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-                    Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-            elif wcp == 2:
+            if son.wcp or son.wcr_src:
                 son._loadSonMeta()
                 sonMetaDF = son.sonMetaDF
 
                 # Determine what chunks to process
                 chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-                if son.wcr_src and son.wcp and (son.beamName=='ss_port' or son.beamName=='ss_star'):
+                if son.wcr_src and son.wcp:
                     chunkCnt = len(chunks)*2
                 else:
                     chunkCnt = len(chunks)
