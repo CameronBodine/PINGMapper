@@ -1246,6 +1246,8 @@ class sonObj(object):
     ############################################################################
     # Fix corrupt recording w/ missing pings                                   #
     ############################################################################
+
+    # ======================================================================
     def _fixNoDat(self, dfA, beams):
         # Empty dataframe to store final results
         df = pd.DataFrame(columns = dfA.columns)
@@ -1339,9 +1341,15 @@ class sonObj(object):
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
         # Update class attributes based on current chunk
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']).astype(int) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+        # print(self.beam, self.pingMax, '\nn', self.headIdx, '\n\n', self.pingCnt)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
 
@@ -1395,17 +1403,18 @@ class sonObj(object):
         file = open(self.sonFile, 'rb') # Open .SON file
         # Iterate each ping
         for i in range(len(self.headIdx)):
-            headIdx = self.headIdx[i] # Get current byte offset to ping
-            pingCnt = self.pingCnt[i] # Get current ping count
-            pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
-            file.seek(pingIdx) # Move to that location
-            k = 0
-            # Decode each sonar return and store in array
-            # while k < pingCnt:
-            while k < min(pingCnt, self.pingMax):
-                byte = self._fread(file, 1, 'B')[0]
-                sonDat[k,i] = byte
-                k+=1
+            if ~np.isnan(self.headIdx[i]):
+                headIdx = self.headIdx[i].astype(int) # Get current byte offset to ping
+                pingCnt = self.pingCnt[i].astype(int) # Get current ping count
+                pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+                file.seek(pingIdx) # Move to that location
+                k = 0
+                # Decode each sonar return and store in array
+                # while k < pingCnt:
+                while k < min(pingCnt, self.pingMax):
+                    byte = self._fread(file, 1, 'B')[0]
+                    sonDat[k,i] = byte
+                    k+=1
 
         file.close() # Close the file
         self.sonDat = sonDat # Store array in class attribute
