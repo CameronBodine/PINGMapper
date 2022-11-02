@@ -931,9 +931,13 @@ class rectObj(sonObj):
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         # Open image to rectify
         self._loadSonChunk()
