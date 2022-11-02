@@ -539,11 +539,20 @@ def read_master_func(sonFiles,
             df['chunk_id'] = chunks
             df.drop(columns = ['beam'], inplace=True)
 
-            ## For testing chunk with only NoData
-            df.loc[df['chunk_id']==0, 'index'] = np.nan
-            df.loc[df['chunk_id']==0, 'ping_cnt'] = np.nan
-            df.loc[df['chunk_id']==0, 'f'] = np.nan
-            df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
+            if son.beamName == 'ss_port':
+                ## For testing chunk with only NoData
+                df.loc[df['chunk_id']==0, 'index'] = np.nan
+                df.loc[df['chunk_id']==0, 'f'] = np.nan
+                df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
+
+                # mask = np.array([0,1])
+                # mask = np.tile(mask, int(len(df)/2))
+                # mask = np.insert(mask, 1, 1)
+                #
+                # df = df['index'].mul(mask)
+                # print(len(mask), len(df))
+
+                sys.exit()
 
             son._saveSonMeta(df)
 
@@ -617,13 +626,24 @@ def read_master_func(sonFiles,
     # Create portstarObj
     psObj = portstarObj(portstar)
 
-    # Load one beam's sonar metadata
-    portstar[0]._loadSonMeta()
-    sonMetaDF = portstar[0].sonMetaDF
+    # # Load one beam's sonar metadata
+    # portstar[0]._loadSonMeta()
+    # sonMetaDF = portstar[0].sonMetaDF
+    #
+    # # Determine what chunks to process
+    # chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
+    # del sonMetaDF, portstar[0].sonMetaDF
 
-    # Determine what chunks to process
-    chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
-    del sonMetaDF, portstar[0].sonMetaDF
+    chunks = []
+    for son in portstar:
+        son._loadSonMeta()
+        sonMetaDF = son.sonMetaDF
+
+        # Remove chunks completely filled with NoData
+        df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+        c = pd.unique(df['chunk_id'])
+        chunks.extend(c)
+    chunks = np.unique(chunks)
 
     # DISABLED: automatic depth detection disabled for now. Will return stronger
     # and better in the future!!!
@@ -806,7 +826,9 @@ def read_master_func(sonFiles,
                 sonMetaDF = son.sonMetaDF
 
                 # Determine what chunks to process
-                chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+                # chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+                df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+                chunks = pd.unique(df['chunk_id'])
                 if son.wcr_src and son.wcp:
                     chunkCnt = len(chunks)*2
                 else:

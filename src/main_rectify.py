@@ -280,12 +280,19 @@ def rectify_master_func(sonFiles,
     if rect_wcp or rect_wcr:
         for son in portstar:
             son._loadSonMeta()
-            # Locate and open smoothed trackline/range extent file
-            trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
-            trkMeta = pd.read_csv(trkMetaFile)
+            # # Locate and open smoothed trackline/range extent file
+            # trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
+            # trkMeta = pd.read_csv(trkMetaFile)
+            #
+            # # Determine what chunks to process
+            # chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
 
-            # Determine what chunks to process
-            chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
+            # Remove chunks completely filled with NoData
+            sonMetaDF = son.sonMetaDF
+            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+            chunks = pd.unique(df['chunk_id'])
+
+
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
             gc.collect()

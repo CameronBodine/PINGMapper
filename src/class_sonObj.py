@@ -1285,7 +1285,7 @@ class sonObj(object):
                     df.iloc[-1, df.columns.get_loc('index')] = np.nan
                     df.iloc[-1, df.columns.get_loc('volt_scale')] = np.nan
                     df.iloc[-1, df.columns.get_loc('f')] = np.nan
-                    df.iloc[-1, df.columns.get_loc('ping_cnt')] = np.nan
+                    # df.iloc[-1, df.columns.get_loc('ping_cnt')] = np.nan
                     df.iloc[-1, df.columns.get_loc('beam')] = beam
 
                 # reset b
@@ -1402,7 +1402,7 @@ class sonObj(object):
         --------------------
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
-        sonDat = np.zeros((self.pingMax.astype(int), len(self.pingCnt)))#.astype(int) # Initialize array to hold sonar returns
+        sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
         # Iterate each ping
         for i in range(len(self.headIdx)):
@@ -1647,6 +1647,25 @@ class sonObj(object):
         # Remove water if exporting wcr imagery
         if remWater:
             self._WCR(sonMeta)
+
+        # # set pingMax to most representative range, i.e. range with largest count
+        # rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
+        #
+        # if ~np.isnan(rangeCnt[0][0]) or (np.isnan(rangeCnt[0][0]) and rangeCnt[1][0] < self.nchunk):
+        #     pingMaxi = np.argmax(rangeCnt[1])
+        #     self.pingMax = int(rangeCnt[0][pingMaxi])
+        #
+        #     self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
+        #     self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        #
+        #     # Load chunk's sonar data into memory
+        #     self._loadSonChunk()
+        #     # Do PPDRC filter
+        #     if filterIntensity:
+        #         self._doPPDRC()
+        #     # Remove water if exporting wcr imagery
+        #     if remWater:
+        #         self._WCR(sonMeta)
 
         return self
 

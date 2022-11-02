@@ -138,8 +138,42 @@ class portstarObj(object):
         None
         '''
         # Load sonar intensity into memory
-        self.port._getScanChunkSingle(i)
-        self.star._getScanChunkSingle(i)
+        try:
+            self.port._getScanChunkSingle(i)
+            portsonDat = True
+        except:
+            portsonDat = False
+
+        try:
+            self.star._getScanChunkSingle(i)
+            starsonDat = True
+        except:
+            starsonDat = False
+
+        # print('\n\n', self.star.sonDat.shape, self.port.sonDat.shape)
+
+        if not portsonDat:
+            self.port.sonDat = np.zeros(self.star.sonDat.shape)
+
+        if not starsonDat:
+            self.star.sonDat = np.zeros(self.port.sonDat.shape)
+
+        del portsonDat, starsonDat
+
+        # s = 0
+        # if not hasattr(self.port, 'sonDat'):
+        #     portSon = False
+        # else:
+        #     portSon = True
+        #     s += 1
+        # if not hasattr(self.star, 'sonDat'):
+        #     starSon = False
+        # else:
+        #     starSon = True
+        #     s += 1
+        #
+        # print(portSon, starSon)
+
 
         # Rotate and merge arrays into one
         portSon = np.rot90(self.port.sonDat, k=1, axes=(1,0))
@@ -459,17 +493,17 @@ class portstarObj(object):
 
         if SET_GPU != '-1':
             USE_GPU = True
-            print('Using GPU')
+            # print('Using GPU')
 
         if len(SET_GPU.split(','))>1:
             USE_MULTI_GPU = True
-            print('Using multiple GPUs')
+            # print('Using multiple GPUs')
         else:
             USE_MULTI_GPU = False
-            if USE_GPU:
-                print('Using single GPU device')
-            else:
-                print('Using single CPU device')
+            # if USE_GPU:
+            #     print('Using single GPU device')
+            # else:
+            #     print('Using single CPU device')
 
         #suppress tensorflow warnings
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -483,13 +517,13 @@ class portstarObj(object):
 
             tf.random.set_seed(SEED)
 
-            print("Version: ", tf.__version__)
-            print("Eager mode: ", tf.executing_eagerly())
-            print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+            # print("Version: ", tf.__version__)
+            # print("Eager mode: ", tf.executing_eagerly())
+            # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
 
             physical_devices = tf.config.experimental.list_physical_devices('GPU')
-            print(physical_devices)
+            # print(physical_devices)
 
             if physical_devices:
                 # Restrict TensorFlow to only use the first GPU
@@ -497,7 +531,8 @@ class portstarObj(object):
                     tf.config.experimental.set_visible_devices(physical_devices, 'GPU')
                 except RuntimeError as e:
                     # Visible devices must be set at program startup
-                    print(e)
+                    # print(e)
+                    pass
         else:
             os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -507,13 +542,13 @@ class portstarObj(object):
 
             tf.random.set_seed(SEED)
 
-            print("Version: ", tf.__version__)
-            print("Eager mode: ", tf.executing_eagerly())
-            print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-            print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+            # print("Version: ", tf.__version__)
+            # print("Eager mode: ", tf.executing_eagerly())
+            # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
 
             physical_devices = tf.config.experimental.list_physical_devices('GPU')
-            print(physical_devices)
+            # print(physical_devices)
 
         ### mixed precision
         from tensorflow.keras import mixed_precision
@@ -522,12 +557,12 @@ class portstarObj(object):
 
         for i in physical_devices:
             tf.config.experimental.set_memory_growth(i, True)
-        print(tf.config.get_visible_devices())
+        # print(tf.config.get_visible_devices())
 
         if USE_MULTI_GPU:
             # Create a MirroredStrategy.
             strategy = tf.distribute.MirroredStrategy([p.name.split('/physical_device:')[-1] for p in physical_devices], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
-            print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
+            # print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
 
 
 
@@ -1351,9 +1386,16 @@ class portstarObj(object):
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
 
+        # Take average of both estimates to store with downlooking sonar csv
+        depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
+        depDF['dep_m'] = np.nanmean([portDF['dep_m'].to_numpy(), starDF['dep_m'].to_numpy()], axis=0)
+        depDF['dep_m_Method'] = portDF['dep_m_Method']
+        depDF['dep_m_smth'] = portDF['dep_m_smth']
+        depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
+
         del portDF, starDF
         gc.collect()
-        return self
+        return depDF
 
     #=======================================================================
     def _plotBedPick(self,
