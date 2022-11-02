@@ -539,20 +539,20 @@ def read_master_func(sonFiles,
             df['chunk_id'] = chunks
             df.drop(columns = ['beam'], inplace=True)
 
-            if son.beamName == 'ss_port':
-                ## For testing chunk with only NoData
-                df.loc[df['chunk_id']==0, 'index'] = np.nan
-                df.loc[df['chunk_id']==0, 'f'] = np.nan
-                df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
-
-                # mask = np.array([0,1])
-                # mask = np.tile(mask, int(len(df)/2))
-                # mask = np.insert(mask, 1, 1)
-                #
-                # df = df['index'].mul(mask)
-                # print(len(mask), len(df))
-
-                sys.exit()
+            # if son.beamName == 'ss_port':
+            #     ## For testing chunk with only NoData
+            #     df.loc[df['chunk_id']==0, 'index'] = np.nan
+            #     df.loc[df['chunk_id']==0, 'f'] = np.nan
+            #     df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
+            #
+            #     # mask = np.array([0,1])
+            #     # mask = np.tile(mask, int(len(df)/2))
+            #     # mask = np.insert(mask, 1, 1)
+            #     #
+            #     # df = df['index'].mul(mask)
+            #     # print(len(mask), len(df))
+            #
+            #     sys.exit()
 
             son._saveSonMeta(df)
 
