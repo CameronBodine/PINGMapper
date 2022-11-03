@@ -180,7 +180,7 @@ def read_master_func(sonFiles,
 
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
-    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -721,19 +721,21 @@ def read_master_func(sonFiles,
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
-    # # Plot sonar depth and auto depth estimate (if available) on sonogram
-    # if pltBedPick:
-    #     start_time = time.time()
-    #
-    #     print("\n\nExporting bedpick plots...")
-    #     Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
-    #
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #
+    print(psObj)
+
+    # Plot sonar depth and auto depth estimate (if available) on sonogram
+    if pltBedPick:
+        start_time = time.time()
+
+        print("\n\nExporting bedpick plots...")
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+
     # Cleanup
-    # psObj._cleanup()
-    # del psObj
+    psObj._cleanup()
+    del psObj
 
     # ############################################################################
     # # For river bank picking (i.e. shadows caused by bank)                     #
@@ -805,20 +807,20 @@ def read_master_func(sonFiles,
         sys.exit()
 
 
-    # Plot sonar depth, auto depth estimate, and bankpick (if available) on sonogram
-    if pltBedPick:
-        start_time = time.time()
-
-        print("\n\nExporting bedpick plots...")
-        # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, doBankpick) for chunk in chunks)
-        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
-
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-
-    # Cleanup
-    psObj._cleanup()
-    # del psObj
+    # # Plot sonar depth, auto depth estimate, and bankpick (if available) on sonogram
+    # if pltBedPick:
+    #     start_time = time.time()
+    #
+    #     print("\n\nExporting bedpick plots...")
+    #     # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, doBankpick) for chunk in chunks)
+    #     Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+    #
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #
+    # # Cleanup
+    # psObj._cleanup()
+    # # del psObj
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
