@@ -462,112 +462,112 @@ class portstarObj(object):
         --------------------
         self._detectDepth()
         '''
-        # SEED=42
-        # np.random.seed(SEED)
-        # AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-        #
-        # tf.random.set_seed(SEED)
-        #
-        # if USE_GPU == True:
-        #     os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
-        # else:
-        #
-        #     os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
-        #
-        # #suppress tensorflow warnings
-        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        #
-        # #suppress tensorflow warnings
-        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        #
-        # if USE_GPU == True:
-        #     os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
+        SEED=42
+        np.random.seed(SEED)
+        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+        tf.random.set_seed(SEED)
+
+        if USE_GPU == True:
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+        else:
+
+            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+
+        #suppress tensorflow warnings
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+        #suppress tensorflow warnings
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+        if USE_GPU == True:
+            os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
 
         # Open model configuration file
         with open(self.configfile) as f:
             config = json.load(f)
         globals().update(config)
 
-        ########################################################################
-        ########################################################################
-
-        if SET_GPU != '-1':
-            USE_GPU = True
-            # print('Using GPU')
-
-        if len(SET_GPU.split(','))>1:
-            USE_MULTI_GPU = True
-            # print('Using multiple GPUs')
-        else:
-            USE_MULTI_GPU = False
-            # if USE_GPU:
-            #     print('Using single GPU device')
-            # else:
-            #     print('Using single CPU device')
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-        if USE_GPU:
-            os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
-
-            SEED = 42
-            np.random.seed(SEED)
-            AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
-
-            tf.random.set_seed(SEED)
-
-            # print("Version: ", tf.__version__)
-            # print("Eager mode: ", tf.executing_eagerly())
-            # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
-
-            physical_devices = tf.config.experimental.list_physical_devices('GPU')
-            # print(physical_devices)
-
-            if physical_devices:
-                # Restrict TensorFlow to only use the first GPU
-                try:
-                    tf.config.experimental.set_visible_devices(physical_devices, 'GPU')
-                except RuntimeError as e:
-                    # Visible devices must be set at program startup
-                    # print(e)
-                    pass
-        else:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-            SEED = 42
-            np.random.seed(SEED)
-            AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
-
-            tf.random.set_seed(SEED)
-
-            # print("Version: ", tf.__version__)
-            # print("Eager mode: ", tf.executing_eagerly())
-            # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-            # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
-
-            physical_devices = tf.config.experimental.list_physical_devices('GPU')
-            # print(physical_devices)
-
-        ### mixed precision
-        from tensorflow.keras import mixed_precision
-        mixed_precision.set_global_policy('mixed_float16')
-        # tf.debugging.set_log_device_placement(True)
-
-        for i in physical_devices:
-            tf.config.experimental.set_memory_growth(i, True)
-        # print(tf.config.get_visible_devices())
-
-        if USE_MULTI_GPU:
-            # Create a MirroredStrategy.
-            strategy = tf.distribute.MirroredStrategy([p.name.split('/physical_device:')[-1] for p in physical_devices], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
-            # print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
-
-
-
-        ########################################################################
-        ########################################################################
+        # ########################################################################
+        # ########################################################################
+        #
+        # if SET_GPU != '-1':
+        #     USE_GPU = True
+        #     # print('Using GPU')
+        #
+        # if len(SET_GPU.split(','))>1:
+        #     USE_MULTI_GPU = True
+        #     # print('Using multiple GPUs')
+        # else:
+        #     USE_MULTI_GPU = False
+        #     # if USE_GPU:
+        #     #     print('Using single GPU device')
+        #     # else:
+        #     #     print('Using single CPU device')
+        #
+        # #suppress tensorflow warnings
+        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+        #
+        # if USE_GPU:
+        #     os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
+        #
+        #     SEED = 42
+        #     np.random.seed(SEED)
+        #     AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
+        #
+        #     tf.random.set_seed(SEED)
+        #
+        #     # print("Version: ", tf.__version__)
+        #     # print("Eager mode: ", tf.executing_eagerly())
+        #     # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+        #     # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+        #
+        #     physical_devices = tf.config.experimental.list_physical_devices('GPU')
+        #     # print(physical_devices)
+        #
+        #     if physical_devices:
+        #         # Restrict TensorFlow to only use the first GPU
+        #         try:
+        #             tf.config.experimental.set_visible_devices(physical_devices, 'GPU')
+        #         except RuntimeError as e:
+        #             # Visible devices must be set at program startup
+        #             # print(e)
+        #             pass
+        # else:
+        #     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+        #
+        #     SEED = 42
+        #     np.random.seed(SEED)
+        #     AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
+        #
+        #     tf.random.set_seed(SEED)
+        #
+        #     # print("Version: ", tf.__version__)
+        #     # print("Eager mode: ", tf.executing_eagerly())
+        #     # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
+        #     # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
+        #
+        #     physical_devices = tf.config.experimental.list_physical_devices('GPU')
+        #     # print(physical_devices)
+        #
+        # ### mixed precision
+        # from tensorflow.keras import mixed_precision
+        # mixed_precision.set_global_policy('mixed_float16')
+        # # tf.debugging.set_log_device_placement(True)
+        #
+        # for i in physical_devices:
+        #     tf.config.experimental.set_memory_growth(i, True)
+        # # print(tf.config.get_visible_devices())
+        #
+        # if USE_MULTI_GPU:
+        #     # Create a MirroredStrategy.
+        #     strategy = tf.distribute.MirroredStrategy([p.name.split('/physical_device:')[-1] for p in physical_devices], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
+        #     # print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
+        #
+        #
+        #
+        # ########################################################################
+        # ########################################################################
 
         model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
                         FILTERS,
