@@ -1,7 +1,7 @@
 name: ping
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - python
   - pandas
