@@ -30,7 +30,7 @@
 from funcs_common import *
 from funcs_bedpick import *
 
-# import gdal
+import gdal
 from scipy.signal import savgol_filter
 
 import matplotlib
@@ -283,7 +283,7 @@ class portstarObj(object):
         if mosaic == 1:
             if self.port.rect_wcp:
                 # self._mosaicGtiff(wcpToMosaic, overview)
-                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
                 # self._mosaicGtiff(srcToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
@@ -291,7 +291,7 @@ class portstarObj(object):
         elif mosaic == 2:
             if self.port.rect_wcp:
                 # self._mosaicVRT(wcpToMosaic, overview)
-                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
                 # self._mosaicVRT(srcToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))

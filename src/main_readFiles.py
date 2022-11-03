@@ -177,7 +177,10 @@ def read_master_func(sonFiles,
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
     '''
-    USE_GPU = False
+
+    # "Hidden" Parameters for added functionality
+    USE_GPU = False # Use GPU for predictions
+    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -463,7 +466,6 @@ def read_master_func(sonFiles,
     # Locating missing pings                                                   #
     ############################################################################
 
-    fixNoDat = True
     if fixNoDat:
         ## Open each beam df, store beam name in new field, then concatenate df's into one
         print("\nLocating missing pings and adding NoData...")
