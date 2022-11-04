@@ -55,6 +55,7 @@ import datetime
 # from skimage.filters import median
 # from skimage.morphology import square
 from skimage.io import imsave
+from skimage.transform import resize
 
 # =========================================================
 # Keep

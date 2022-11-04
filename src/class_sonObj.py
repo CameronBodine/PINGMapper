@@ -1070,10 +1070,20 @@ class sonObj(object):
         if len(lastChunk) <= (nchunk/2):
             sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
 
-        # # Write metadata to csv
-        # outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
-        # sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
-        # self.sonMetaFile = outCSV
+        # Update caltime to timestamp
+        sonTime = []
+        sonDate = []
+        for t in sonMetaAll['caltime'].to_numpy():
+            t = datetime.datetime.fromtimestamp(t)
+            sonDate.append(datetime.datetime.date(t))
+            sonTime.append(datetime.datetime.time(t))
+        sonMetaAll = sonMetaAll.drop('caltime', axis=1)
+        sonMetaAll['date'] = sonDate
+        sonMetaAll['time'] = sonTime
+
+        # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
+        sonMetaAll = self._calcTrkDistTS(sonMetaAll)
+
         self._saveSonMeta(sonMetaAll)
 
     # ======================================================================
@@ -1166,6 +1176,9 @@ class sonObj(object):
         try:
             starttime = float(humDat['unix_time'])
             sonHead['caltime'] = starttime + sonHead['time_s']
+            # starttime += sonHead['time_s']
+            # starttime = datetime.datetime.fromtimestamp(starttime)
+            # sonHead['caltime'] = starttime
         except :
             sonHead['caltime'] = 0
 
@@ -1234,6 +1247,32 @@ class sonObj(object):
         return df
 
     #=======================================================================
+    def _calcTrkDistTS(self,
+                       sonMetaAll):
+        '''
+        Calculate along track distance based on time ellapsed and gps speed.
+        '''
+
+        ts = sonMetaAll['time_s'].to_numpy()
+        ss = sonMetaAll['speed_ms'].to_numpy()
+        ds = np.zeros((len(ts)))
+
+        # Offset arrays for faster calculation
+        ts1 = ts[1:]
+        ss1 = ss[1:]
+        ts = ts[:-1]
+
+        # Calculate instantaneous distance
+        d = (ts1-ts)*ss1
+        ds[1:] = d
+
+        # Accumulate distance
+        ds = np.cumsum(ds)
+
+        sonMetaAll['trk_dist'] = ds
+        return sonMetaAll
+
+    #=======================================================================
     def _saveSonMeta(self, sonMetaAll):
         # Write metadata to csv
         if not hasattr(self, 'sonMetaFile'):
@@ -1298,7 +1337,6 @@ class sonObj(object):
                 c+=1
 
         return df
-
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -1379,7 +1417,6 @@ class sonObj(object):
 
             gc.collect()
         return self
-
 
     # ==========================================================================
     def _loadSonChunk(self):
@@ -1580,6 +1617,86 @@ class sonObj(object):
         channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
         imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), data, check_contrast=False)
+
+
+    ############################################################################
+    # Export imagery for labeling                                              #
+    ############################################################################
+
+    # ======================================================================
+    def _exportLblTiles(self,
+                        chunk,
+                        spdCor = 2):
+        '''
+
+        '''
+        # Make sonar imagery directory for each beam if it doesn't exist
+        try:
+            os.mkdir(self.outDir)
+        except:
+            pass
+
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+
+        # Update class attributes based on current chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+        if ~np.isnan(self.pingMax):
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
+
+            # Load depth (in real units) and convert to pixels
+            bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            minDep = min(bedPick)
+
+            sonDat = self.sonDat
+
+            # Zero out water column
+            for j, d in enumerate(bedPick):
+                sonDat[:d, j] = 0
+
+            # Add workflow to zero out bank shadow
+
+            if spdCor == 0:
+                # Don't do speed correction
+                pass
+            elif spdCor == 1:
+                # Add workflow to do speed correction
+
+                # Distance (in meters)
+                d = sonMeta['trk_dist'].to_numpy()
+                d = np.max(d) - np.min(d)
+
+                # Distance in pix
+                d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
+
+                sonDat = resize(sonDat,
+                                (sonDat.shape[0], d),
+                                mode='constant',
+                                cval=np.nan,
+                                clip=False, preserve_range=True)
+
+            else:
+                # Add along-track stretch x spdCor
+                sonDat = resize(sonDat,
+                                (sonDat.shape[0], sonDat.shape[1]*spdCor),
+                                mode='constant',
+                                cval=np.nan,
+                                clip=False, preserve_range=True)#.astype('uint8')
+
+            self.sonDat = sonDat.astype('uint8')
+            # print('\n\n\n\n', sonDat)
+            # sys.exit()
+
+            self._writeTiles(chunk, imgOutPrefix='for_label')
+        gc.collect()
+        return self
+
+
 
     ############################################################################
     # Miscellaneous                                                            #

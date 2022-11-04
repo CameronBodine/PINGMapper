@@ -580,17 +580,25 @@ def read_master_func(sonFiles,
         print("______________________________________________________________________________")
         son._loadSonMeta()
         df = son.sonMetaDF
-        for att in df.columns: # Find min/max/avg of each column
-            # attMin = np.round(df[att].min(), 3)
-            # attMax = np.round(df[att].max(), 3)
-            # attAvg = np.round(df[att].mean(), 3)
+        for att in df.columns:
 
-            attMin = np.round(np.nanmin(df[att]), 3)
-            attMax = np.round(np.nanmax(df[att]), 3)
-            attAvg = np.round(np.nanmean(df[att]), 3)
+            # Find min/max/avg of each column
+            if (att == 'date') or (att == 'time'):
+                attAvg = '-'
+                attMin = df.at[0, att]
+                attMax = df.at[df.tail(1).index.item(), att]
+                if att == 'time':
+                    attMin = attMin.split('.')[0]
+                    attMax = attMax.split('.')[0]
+            else:
+                attMin = np.round(np.nanmin(df[att]), 3)
+                attMax = np.round(np.nanmax(df[att]), 3)
+                attAvg = np.round(np.nanmean(df[att]), 3)
 
             # Check if data are valid.
-            if (attMax != 0) or ("unknown" in att) or (att =="beam"):
+            if (att == "date") or (att == "time"):
+                valid=True
+            elif (attMax != 0) or ("unknown" in att) or (att =="beam"):
                 valid=True
             elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
                 valid=False
@@ -721,8 +729,6 @@ def read_master_func(sonFiles,
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
-    print(psObj)
-
     # Plot sonar depth and auto depth estimate (if available) on sonogram
     if pltBedPick:
         start_time = time.time()
@@ -845,7 +851,7 @@ def read_master_func(sonFiles,
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
                 # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, spdCor) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -873,6 +879,29 @@ def read_master_func(sonFiles,
 
                 son.wcr_src = wcr
                 son.wcp = wcp
+            gc.collect()
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+
+    ############################################################################
+    # Export imagery for labeling                                              #
+    ############################################################################
+
+    lbl_set = True
+    spdCor = 1
+    if lbl_set:
+        start_time = time.time()
+        print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 886):\n")
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                son._loadSonMeta()
+                sonMetaDF = son.sonMetaDF
+
+                df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+                chunks = pd.unique(df['chunk_id'])
+
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
