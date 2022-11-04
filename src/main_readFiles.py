@@ -180,7 +180,7 @@ def read_master_func(sonFiles,
 
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
-    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -850,8 +850,7 @@ def read_master_func(sonFiles,
                     chunkCnt = len(chunks)
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
-                # Parallel(n_jobs= np.min([len(chunks), cpu_count()]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, spdCor) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
