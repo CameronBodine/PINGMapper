@@ -1386,12 +1386,20 @@ class portstarObj(object):
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
 
-        # Take average of both estimates to store with downlooking sonar csv
-        depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
-        depDF['dep_m'] = np.nanmean([portDF['dep_m'].to_numpy(), starDF['dep_m'].to_numpy()], axis=0)
-        depDF['dep_m_Method'] = portDF['dep_m_Method']
-        depDF['dep_m_smth'] = portDF['dep_m_smth']
-        depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
+        try:
+            # Take average of both estimates to store with downlooking sonar csv
+            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
+            depDF['dep_m'] = np.nanmean([portDF['dep_m'].to_numpy(), starDF['dep_m'].to_numpy()], axis=0)
+            depDF['dep_m_Method'] = portDF['dep_m_Method']
+            depDF['dep_m_smth'] = portDF['dep_m_smth']
+            depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
+        except:
+            # In case port and star are not same length
+            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
+            depDF['dep_m'] = portDF['dep_m']
+            depDF['dep_m_Method'] = portDF['dep_m_Method']
+            depDF['dep_m_smth'] = portDF['dep_m_smth']
+            depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
 
         del portDF, starDF
         gc.collect()

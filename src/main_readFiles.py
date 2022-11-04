@@ -180,7 +180,7 @@ def read_master_func(sonFiles,
 
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
-    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
