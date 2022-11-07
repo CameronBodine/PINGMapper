@@ -1556,7 +1556,44 @@ class sonObj(object):
         #     # Crop to minimum depth
         #     sonDat = sonDat[minDep:,]
 
+        # Crop to min depth
         sonDat = sonDat[minDep:,]
+
+        self.sonDat = sonDat
+        return self
+
+    # ======================================================================
+    def _SHW_crop(self, i):
+        '''
+        '''
+
+        sonDat = self.sonDat
+
+        shw_pix = self.shadow[i]
+
+        for k, val in shw_pix.items():
+            for v in val:
+                sonDat[v[0]:v[1], k] = 0
+
+        # Crop to max_r
+        max_r = []
+        lab = np.where(sonDat>0, 1, 0)
+        lab[sonDat.shape[0]-1, ] = 0 # Zero-out last row
+
+        R = lab.shape[0] # max range
+        P = lab.shape[1] # number of pings
+
+        for c in range(P):
+            bed = np.where(lab[:,c]==1)[0]
+            bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
+
+            max_r.append(bed)
+
+        # print(max_r)
+        max_r = max(max_r)
+
+        sonDat = sonDat[:max_r, ]
+        del lab
 
         self.sonDat = sonDat
         return self
@@ -1626,7 +1663,7 @@ class sonObj(object):
     # ======================================================================
     def _exportLblTiles(self,
                         chunk,
-                        spdCor = 2):
+                        spdCor = 1):
         '''
 
         '''
@@ -1649,17 +1686,23 @@ class sonObj(object):
             # Load chunk's sonar data into memory
             self._loadSonChunk()
 
-            # Load depth (in real units) and convert to pixels
-            bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            minDep = min(bedPick)
+            # # Load depth (in real units) and convert to pixels
+            # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            # minDep = min(bedPick)
+            #
+            # sonDat = self.sonDat
+            #
+            # # Zero out water column
+            # for j, d in enumerate(bedPick):
+            #     sonDat[:d, j] = 0
 
+            # Remove water column and crop
+            self._WCR_crop(sonMeta)
             sonDat = self.sonDat
 
-            # Zero out water column
-            for j, d in enumerate(bedPick):
-                sonDat[:d, j] = 0
-
             # Add workflow to zero out bank shadow
+            self._SHW_crop(chunk)
+            sonDat = self.sonDat
 
             if spdCor == 0:
                 # Don't do speed correction

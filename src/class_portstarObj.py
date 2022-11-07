@@ -1696,18 +1696,91 @@ class portstarObj(object):
         del portDF, starDF
         return self
 
-    # #=======================================================================
-    # def _plotBank(self, i):
-
     ############################################################################
     # Shadow Removal                                                           #
     ############################################################################
 
+    def _filtShadow(self, lab):
+        R = lab.shape[0] # max range
+        P = lab.shape[1] # number of pings
 
+        lab = remove_small_holes(lab.astype(bool), 2*R)#2*self.port.nchunk)
+        lab = remove_small_objects(lab, 2*R).astype('int')+1#2*self.port.nchunk)
+
+        return lab
+
+    #=======================================================================
+    def _getShadowPix(self, lab, remShadow):
+        '''
+        '''
+        R = lab.shape[0] # max range
+        P = lab.shape[1] # number of pings
+
+        # Zero out everything except shadows
+        lab = np.where(lab==1, lab, 0)
+
+        # print('\n\n\n', lab)
+        #
+        # for i, r in enumerate(range(lab.shape[0])):
+        #     print(i, lab[r, :], lab[r, :].shape)
+        #     # if i > 10:
+        #     #     sys.exit()
+
+        # Remove only far-field (river bank) shadows
+        if remShadow == 2:
+
+            # Label contiguous shadow regions
+            reg = label(lab)
+
+            # Get shadow regions which touch far-field boarder (max range)
+            ffReg = np.unique(reg[R-1,:])
+
+            # Remove region labeled 0
+            ffReg = ffReg[ffReg != 0]
+
+            # Keep only far-field regions
+            lab = np.zeros((R, P))
+            for r in ffReg:
+                l = np.where(reg==r, 1, 0)
+                lab += l
+
+
+
+        # Iterate pings, get begin, end indices for shadow regions
+        pix = defaultdict()
+        for p in range(P):
+            # Find shadows
+            bed = np.where(lab[:,p] == 1)[0]
+
+            # Find contiguous shadows
+            bed = np.split(bed, np.where(np.diff(bed)>1)[0]+1)
+
+            pPix = []
+
+            # Store per-ping shadow regions (begin, end)
+            if len(bed[0]) > 0:
+                for b in bed:
+                    pPix.append((b[0], b[-1]))
+
+            pix[p] = pPix
+
+
+        # for k, v in pix.items():
+        #     print(pix)
+
+        # Find bank
+        # bank = self._findBank(lab)
+
+        return pix
+
+    #=======================================================================
     def _detectShadow(self, remShadow, i, USE_GPU, doPlot=True):
         '''
 
         '''
+        self.port._loadSonMeta()
+        self.star._loadSonMeta()
+
         # Load the model if necessary
         if not hasattr(self, 'shadowModel'):
             self.shadowModel = self._initModel(USE_GPU)
@@ -1737,6 +1810,12 @@ class portstarObj(object):
         port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
         star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
 
+        ####################
+        # Filter predictions
+        port_label = self._filtShadow(port_label)
+        star_label = self._filtShadow(star_label)
+
+
         ######
         # Plot
         if doPlot:
@@ -1764,9 +1843,13 @@ class portstarObj(object):
                 plt.savefig(os.path.join(son.projDir, str(i)+"_shadow_"+son.beamName+".png"), dpi=200, bbox_inches='tight')
                 plt.close('all')
 
+        ###
+        # Get Pix Coordinates of shadow regions
+        port_pix = self._getShadowPix(port_label, remShadow)
+        star_pix = self._getShadowPix(star_label, remShadow)
 
-
-        pass
+        gc.collect()
+        return i, port_pix, star_pix
 
     #=======================================================================
     def _cleanup(self):

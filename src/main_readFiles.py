@@ -180,7 +180,7 @@ def read_master_func(sonFiles,
 
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
-    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -658,7 +658,7 @@ def read_master_func(sonFiles,
         df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
         c = pd.unique(df['chunk_id'])
         chunks.extend(c)
-    chunks = np.unique(chunks)
+    chunks = np.unique(chunks).astype(int)
 
     # DISABLED: automatic depth detection disabled for now. Will return stronger
     # and better in the future!!!
@@ -741,7 +741,7 @@ def read_master_func(sonFiles,
 
     # Cleanup
     psObj._cleanup()
-    del psObj
+    # del psObj
 
     # ############################################################################
     # # For river bank picking (i.e. shadows caused by bank)                     #
@@ -780,7 +780,7 @@ def read_master_func(sonFiles,
     # For shadow removal                                                       #
     ############################################################################
 
-    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+    remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 
     if remShadow > 0:
         start_time = time.time()
@@ -789,44 +789,31 @@ def read_master_func(sonFiles,
         if remShadow == 1:
             print('MODE: 1 | Remove all shadows...')
         elif remShadow == 2:
-            print('MODE: 2 | Remove shadows in farfield (river bank pick)...')
+            print('MODE: 2 | Remove shadows in far-field (river bankpick)...')
 
         # Model weights and config file
         psObj.configfile = r'./models/shadow/shadow_20220817_v1.json'
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
-        # psObj.weights = r'./models/shadow/test.json'
 
-        # print(os.path.exists(psObj.weights), os.path.exists(psObj.configfile))
-
-        # Load sonMeta for water column removal and cropping
-        # # Load one beam's sonar metadata
-        # portstar[0]._loadSonMeta()
-        # sonMetaDF = portstar[0].sonMetaDF
-
-        psObj.port._loadSonMeta()
-        psObj.star._loadSonMeta()
+        psObj.port.shadow = defaultdict()
+        psObj.star.shadow = defaultdict()
 
         # chunks = [chunks[0]]
-        for chunk in chunks:
-            psObj._detectShadow(remShadow, chunk, USE_GPU)
+        # for chunk in chunks:
+        #     c, port_pix, star_pix = psObj._detectShadow(remShadow, chunk, USE_GPU, True)
+        #     # print('\n\n\n\n', c, port_pix, star_pix)
 
-        sys.exit()
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False) for chunk in chunks)
 
+        for ret in r:
+            psObj.port.shadow[ret[0]] = ret[1]
+            psObj.star.shadow[ret[0]] = ret[2]
 
-    # # Plot sonar depth, auto depth estimate, and bankpick (if available) on sonogram
-    # if pltBedPick:
-    #     start_time = time.time()
-    #
-    #     print("\n\nExporting bedpick plots...")
-    #     # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, doBankpick) for chunk in chunks)
-    #     Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
-    #
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #
-    # # Cleanup
-    # psObj._cleanup()
-    # # del psObj
+        del r
+
+    # Cleanup
+    psObj._cleanup()
+    del psObj
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -898,7 +885,7 @@ def read_master_func(sonFiles,
                 sonMetaDF = son.sonMetaDF
 
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-                chunks = pd.unique(df['chunk_id'])
+                chunks = pd.unique(df['chunk_id']).astype(int)
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor) for i in chunks)
             gc.collect()
