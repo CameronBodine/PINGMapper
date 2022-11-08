@@ -150,8 +150,6 @@ class portstarObj(object):
         except:
             starsonDat = False
 
-        # print('\n\n', self.star.sonDat.shape, self.port.sonDat.shape)
-
         if not portsonDat:
             self.port.sonDat = np.zeros(self.star.sonDat.shape)
 

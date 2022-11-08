@@ -180,7 +180,7 @@ def read_master_func(sonFiles,
 
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
-    fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -541,25 +541,29 @@ def read_master_func(sonFiles,
             df['chunk_id'] = chunks
             df.drop(columns = ['beam'], inplace=True)
 
-            # if son.beamName == 'ss_port':
-            #     ## For testing chunk with only NoData
-            #     # df.loc[df['chunk_id']==0, 'index'] = np.nan
-            #     # df.loc[df['chunk_id']==0, 'f'] = np.nan
-            #     # df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
-            #
-            #     df.loc[:500, ['index']] = [np.nan]
-            #     df.loc[:500, ['f']] = [np.nan]
-            #     df.loc[:500, ['volt_scale']] = [np.nan]
-            #
-            #
-            #     # mask = np.array([0,1])
-            #     # mask = np.tile(mask, int(len(df)/2))
-            #     # mask = np.insert(mask, 1, 1)
-            #     #
-            #     # df = df['index'].mul(mask)
-            #     # print(len(mask), len(df))
-            #
-            #     # sys.exit()
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                ## For testing chunk with only NoData
+                # df.loc[df['chunk_id']==0, 'index'] = np.nan
+                # df.loc[df['chunk_id']==0, 'f'] = np.nan
+                # df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
+
+                # df.loc[:500, ['index']] = [np.nan]
+                # df.loc[:500, ['f']] = [np.nan]
+                # df.loc[:500, ['volt_scale']] = [np.nan]
+
+                df.loc[:1, ['index']] = [np.nan]
+                df.loc[:1, ['f']] = [np.nan]
+                df.loc[:1, ['volt_scale']] = [np.nan]
+
+
+                # mask = np.array([0,1])
+                # mask = np.tile(mask, int(len(df)/2))
+                # mask = np.insert(mask, 1, 1)
+                #
+                # df = df['index'].mul(mask)
+                # print(len(mask), len(df))
+
+                # sys.exit()
 
             son._saveSonMeta(df)
 
@@ -588,8 +592,8 @@ def read_master_func(sonFiles,
                 attMin = df.at[0, att]
                 attMax = df.at[df.tail(1).index.item(), att]
                 if att == 'time':
-                    attMin = attMin.split('.')[0]
-                    attMax = attMax.split('.')[0]
+                    attMin = str(attMin).split('.')[0]
+                    attMax = str(attMax).split('.')[0]
             else:
                 attMin = np.round(np.nanmin(df[att]), 3)
                 attMax = np.round(np.nanmax(df[att]), 3)
@@ -684,15 +688,16 @@ def read_master_func(sonFiles,
             print('\n\tUsing binary thresholding...')
 
         # # Sequential estimate depth for each chunk using appropriate method
-        # chunks = [chunks[108]]
+        # # chunks = [chunks[108]]
         # # chunks = chunks[107:110]
         # # chunks = [chunks[30]]
         # # chunks = [chunks[282], chunks[332], chunks[383]]
         # for chunk in chunks:
+        #     print('Chunk: ', chunk)
         #     r = psObj._detectDepth(detectDep, int(chunk), USE_GPU)
         #     psObj.portDepDetect[r[2]] = r[0]
         #     psObj.starDepDetect[r[2]] = r[1]
-        # sys.exit()
+        # # sys.exit()
 
         # Parallel estimate depth for each chunk using appropriate method
         r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
@@ -784,7 +789,7 @@ def read_master_func(sonFiles,
 
     if remShadow > 0:
         start_time = time.time()
-        print('\n\nAutomatically removing shadows for', len(chunks), 'chunks:')
+        print('\n\nAutomatically detecting shadows for', len(chunks), 'chunks:')
 
         if remShadow == 1:
             print('MODE: 1 | Remove all shadows...')
@@ -830,7 +835,7 @@ def read_master_func(sonFiles,
                 # Determine what chunks to process
                 # chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-                chunks = pd.unique(df['chunk_id'])
+                chunks = pd.unique(df['chunk_id']).astype(int)
                 if son.wcr_src and son.wcp:
                     chunkCnt = len(chunks)*2
                 else:
@@ -851,7 +856,7 @@ def read_master_func(sonFiles,
     maxCrop = False
     if lbl_set:
         start_time = time.time()
-        print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 886):\n")
+        print("\n\n\nWARNING: Exporting substrate tiles for labeling (main_readFiles.py line 886):\n")
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
                 son._loadSonMeta()
@@ -859,6 +864,8 @@ def read_master_func(sonFiles,
 
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
                 chunks = pd.unique(df['chunk_id']).astype(int)
+
+                print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop) for i in chunks)
             gc.collect()

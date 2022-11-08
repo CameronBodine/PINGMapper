@@ -1641,12 +1641,17 @@ class sonObj(object):
 
         for c in range(P):
             bed = np.where(mask[:,c]==1)[0]
-            bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
+            try:
+                bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
+            except:
+                bed = np.nan
 
             max_r.append(bed)
+        # print('\n\n\n', max_r)
 
         # Find max range
-        max_r = max(max_r)
+        max_r = np.nanmax(max_r).astype(int)
+        # print(max_r)
         if maxCrop:
             # Keep ping-wise crop (aggressive crop)
             pass
@@ -1864,8 +1869,10 @@ class sonObj(object):
         self.pingMax = int(rangeCnt[0][pingMaxi])
         # print(self.pingMax)
 
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+        # print('\n\n\n\n', self.pingMax, self.headIdx, self.pingCnt)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
