@@ -842,40 +842,13 @@ def read_master_func(sonFiles,
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
 
-
-    ############################################################################
-    # Export water column removed and cropped tiles for substrate train set    #
-    ############################################################################
-    wcr_crop = False
-    if wcr_crop:
-        start_time = time.time()
-        print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 615):\n")
-        for son in sonObjs:
-            son.wcr_crop = wcr_crop
-            son.wcr_src = False
-            son.wcp = False
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                son._loadSonMeta()
-                sonMetaDF = son.sonMetaDF
-
-                # Determine what chunks to process
-                chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-
-                son.wcr_src = wcr
-                son.wcp = wcp
-            gc.collect()
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-
-
     ############################################################################
     # Export imagery for labeling                                              #
     ############################################################################
 
     lbl_set = True
     spdCor = 1
+    maxCrop = False
     if lbl_set:
         start_time = time.time()
         print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 886):\n")
@@ -887,10 +860,37 @@ def read_master_func(sonFiles,
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
                 chunks = pd.unique(df['chunk_id']).astype(int)
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+
+    # ############################################################################
+    # # Export water column removed and cropped tiles for substrate train set    #
+    # ############################################################################
+    # wcr_crop = False
+    # if wcr_crop:
+    #     start_time = time.time()
+    #     print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 615):\n")
+    #     for son in sonObjs:
+    #         son.wcr_crop = wcr_crop
+    #         son.wcr_src = False
+    #         son.wcp = False
+    #         if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+    #             son._loadSonMeta()
+    #             sonMetaDF = son.sonMetaDF
+    #
+    #             # Determine what chunks to process
+    #             chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
+    #
+    #             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+    #
+    #             son.wcr_src = wcr
+    #             son.wcp = wcp
+    #         gc.collect()
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
 
     ##############################################

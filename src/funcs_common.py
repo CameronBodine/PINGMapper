@@ -56,6 +56,7 @@ import datetime
 # from skimage.morphology import square
 from skimage.io import imsave
 from skimage.transform import resize
+from skimage.measure import label, regionprops
 
 # =========================================================
 # Keep

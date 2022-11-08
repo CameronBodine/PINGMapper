@@ -1562,40 +1562,106 @@ class sonObj(object):
         self.sonDat = sonDat
         return self
 
+    # # ======================================================================
+    # def _SHW_crop(self, i):
+    #     '''
+    #     '''
+    #
+    #     sonDat = self.sonDat
+    #
+    #     shw_pix = self.shadow[i]
+    #
+    #     for k, val in shw_pix.items():
+    #         for v in val:
+    #             sonDat[v[0]:v[1], k] = 0
+    #
+    #     # Crop to max_r
+    #     max_r = []
+    #     lab = np.where(sonDat>0, 1, 0)
+    #     lab[sonDat.shape[0]-1, ] = 0 # Zero-out last row
+    #
+    #     R = lab.shape[0] # max range
+    #     P = lab.shape[1] # number of pings
+    #
+    #     for c in range(P):
+    #         bed = np.where(lab[:,c]==1)[0]
+    #         bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
+    #
+    #         max_r.append(bed)
+    #
+    #     # print(max_r)
+    #     max_r = max(max_r)
+    #
+    #     sonDat = sonDat[:max_r, ]
+    #     del lab
+    #
+    #     self.sonDat = sonDat
+    #     return self
+
     # ======================================================================
-    def _SHW_crop(self, i):
+    def _SHW_crop(self, i, maxCrop=True):
         '''
+        maxCrop: True: ping-wise crop; False: crop tile to max range
         '''
+        buf=50 # Add buf if maxCrop is false
 
+        # Get sonar data and shadow pix coordinates
         sonDat = self.sonDat
-
         shw_pix = self.shadow[i]
+
+        # Create a mask and work on that first, then mask sonDat
+        mask = np.where(sonDat>0, 1, 0)
 
         for k, val in shw_pix.items():
             for v in val:
-                sonDat[v[0]:v[1], k] = 0
+                mask[v[0]:v[1], k] = 0
 
-        # Crop to max_r
+        # Remove non-contiguous regions
+        reg = label(mask)
+
+        # Find region w/ min row value/highest up on sonogram
+        highReg = -1
+        minRow = mask.shape[0]
+        for region in regionprops(reg):
+            minr, minc, maxr, maxc = region.bbox
+
+            if (minr < minRow) and (highReg != 0):
+                highReg = region.label
+                minRow = minr
+
+        # Keep only region matching highReg, update mask with reg
+        mask = np.where(reg==highReg, 1, 0)
+
+        # Find max range of valid son returns
         max_r = []
-        lab = np.where(sonDat>0, 1, 0)
-        lab[sonDat.shape[0]-1, ] = 0 # Zero-out last row
+        mask[mask.shape[0]-1, :] = 0 # Zero-out last row
 
-        R = lab.shape[0] # max range
-        P = lab.shape[1] # number of pings
+        R = mask.shape[0] # max range
+        P = mask.shape[1] # number of pings
 
         for c in range(P):
-            bed = np.where(lab[:,c]==1)[0]
+            bed = np.where(mask[:,c]==1)[0]
             bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
 
             max_r.append(bed)
 
-        # print(max_r)
+        # Find max range
         max_r = max(max_r)
+        if maxCrop:
+            # Keep ping-wise crop (aggressive crop)
+            pass
+        else:
+            # Keep all returns up to max_r
+            if (max_r+buf) > mask.shape[0]:
+                mask[:max_r,:] = 1
+            else:
+                mask[:max_r+buf,:] = 1
 
-        sonDat = sonDat[:max_r, ]
-        del lab
+        # Mask shadows on sonDat
+        sonDat = sonDat * mask
 
         self.sonDat = sonDat
+        del mask, reg
         return self
 
     # ======================================================================
@@ -1663,7 +1729,8 @@ class sonObj(object):
     # ======================================================================
     def _exportLblTiles(self,
                         chunk,
-                        spdCor = 1):
+                        spdCor = 1,
+                        maxCrop = True):
         '''
 
         '''
@@ -1701,7 +1768,7 @@ class sonObj(object):
             sonDat = self.sonDat
 
             # Add workflow to zero out bank shadow
-            self._SHW_crop(chunk)
+            self._SHW_crop(chunk, maxCrop)
             sonDat = self.sonDat
 
             if spdCor == 0:

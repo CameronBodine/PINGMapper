@@ -35,11 +35,6 @@ import tensorflow.keras.backend as K
 from tensorflow.python.client import device_lib
 from skimage.transform import resize
 from skimage.filters import threshold_otsu, gaussian
-from skimage.measure import label, regionprops
-from skimage.morphology import remove_small_holes, remove_small_objects
-
-from skimage.filters import threshold_otsu, gaussian
-from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, remove_small_objects
 
 #crf
