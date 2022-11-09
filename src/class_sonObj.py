@@ -1661,9 +1661,13 @@ class sonObj(object):
                 mask[:max_r,:] = 1
             else:
                 mask[:max_r+buf,:] = 1
+                max_r += buf
 
         # Mask shadows on sonDat
         sonDat = sonDat * mask
+
+        # Crop SonDat
+        sonDat = sonDat[:max_r,:]
 
         self.sonDat = sonDat
         del mask, reg
