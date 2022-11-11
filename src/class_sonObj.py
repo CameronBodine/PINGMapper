@@ -1344,7 +1344,8 @@ class sonObj(object):
 
     # ==========================================================================
     def _exportTiles(self,
-                     chunk):
+                     chunk,
+                     tileFile):
         '''
          Main function to read sonar record ping return values.  Stores the
         number of pings per chunk, chunk id, and byte index location in son file,
@@ -1398,20 +1399,20 @@ class sonObj(object):
             # Export water column present (wcp) image
             if self.wcp:
                 # self._doPPDRC()
-                self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
+                self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
             # Export slant range corrected (water column removed) imagery
             # if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
             if self.wcr_src:
                 self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 # self._doPPDRC()
-                self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
+                self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
 
             try:
                 # Export water column removed and cropped imagery
                 # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 if self.wcr_crop:
                     self._WCR_crop(sonMeta)
-                    self._writeTiles(chunk, imgOutPrefix='wcr_crop')
+                    self._writeTiles(chunk, imgOutPrefix='wcr_crop', tileFile=tileFile)
             except:
                 pass
 
@@ -1676,7 +1677,8 @@ class sonObj(object):
     # ======================================================================
     def _writeTiles(self,
                     k,
-                    imgOutPrefix):
+                    imgOutPrefix,
+                    tileFile='.jpg'):
         '''
         Using currently saved ping ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
@@ -1728,7 +1730,7 @@ class sonObj(object):
 
         channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
-        imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), data, check_contrast=False)
+        imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile), data, check_contrast=False)
 
 
     ############################################################################
@@ -1739,7 +1741,8 @@ class sonObj(object):
     def _exportLblTiles(self,
                         chunk,
                         spdCor = 1,
-                        maxCrop = True):
+                        maxCrop = True,
+                        tileFile='.jpg'):
         '''
 
         '''
@@ -1811,7 +1814,7 @@ class sonObj(object):
             # print('\n\n\n\n', sonDat)
             # sys.exit()
 
-            self._writeTiles(chunk, imgOutPrefix='for_label')
+            self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
         gc.collect()
         return self
 

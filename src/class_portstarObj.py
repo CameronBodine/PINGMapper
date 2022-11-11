@@ -685,7 +685,8 @@ class portstarObj(object):
     def _detectDepth(self,
                      method,
                      i,
-                     USE_GPU):
+                     USE_GPU,
+                     tileFile):
         '''
         Main function to automatically calculate depth (i.e. bedpick).
 
@@ -719,11 +720,11 @@ class portstarObj(object):
             if not hasattr(self, 'bedpickModel'):
                 model = self._initModel(USE_GPU)
                 self.bedpickModel = model
-            portDepPixCrop, starDepPixCrop, i = self._depthZheng(i)
+            portDepPixCrop, starDepPixCrop, i = self._depthZheng(i, tileFile)
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
-            portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i)
+            portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i, tileFile)
 
         gc.collect()
         return portDepPixCrop, starDepPixCrop, i
@@ -828,7 +829,7 @@ class portstarObj(object):
         return lab
 
     #=======================================================================
-    def _depthZheng(self,i):
+    def _depthZheng(self,i,tileFile):
         '''
         Automatically estimate the depth following method of Zheng et al. 2021:
         https://doi.org/10.3390/rs13101945. The only difference between this
@@ -1063,13 +1064,13 @@ class portstarObj(object):
 
             # Initial
             color_label = label_to_colors(init_label, son3bnd[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-            imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-            imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+str(i)+".png"), (son3bnd).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+str(i)+tileFile), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+str(i)+tileFile), (son3bnd).astype(np.uint8), check_contrast=False)
 
             # Cropped
             color_label = label_to_colors(crop_label, sonCrop[:,:,0]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-            imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-            imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+".png"), (sonCrop).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+tileFile), (color_label).astype(np.uint8), check_contrast=False)
+            imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+tileFile), (sonCrop).astype(np.uint8), check_contrast=False)
 
 
         del son3bnd, init_label, crop_label, sonCrop
@@ -1408,7 +1409,8 @@ class portstarObj(object):
                      i,
                      acousticBed = True,
                      autoBed = True,
-                     autoBank = False):
+                     autoBank = False,
+                     tileFile = '.jpg'):
 
         '''
         Export a plot of bedpicks on sonogram for a given chunk.
@@ -1454,12 +1456,15 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        if autoBank:
-            portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
-            starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
-        else:
-            portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
-            starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+        # if autoBank:
+        #     portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
+        #     starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
+        # else:
+        #     portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+        #     starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
         # Convert depth in meters to pixels
         portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
@@ -1468,9 +1473,9 @@ class portstarObj(object):
         starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
         starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
-        if autoBank:
-            portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-            starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # if autoBank:
+        #     portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        #     starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
@@ -1480,13 +1485,13 @@ class portstarObj(object):
             if (pL > sL):
                 starAuto = np.append(starAuto, portAuto[(sL-pL):])
                 starInst = np.append(starInst, portInst[(sL-pL):])
-                if autoBank:
-                    starBank = np.append(starBank, portBank[(sL-pL):])
+                # if autoBank:
+                #     starBank = np.append(starBank, portBank[(sL-pL):])
             else:
                 portAuto = np.append(portAuto, starAuto[(pL-sL):])
                 portInst = np.append(portInst, starInst[(pL-sL):])
-                if autoBank:
-                    portBank = np.append(portBank, starBank[(pL-sL):])
+                # if autoBank:
+                #     portBank = np.append(portBank, starBank[(pL-sL):])
 
         # Relocate depths relative to horizontal center of image
         c = int(mergeSon.shape[1]/2)
@@ -1504,12 +1509,12 @@ class portstarObj(object):
         starInst = np.flip(starInst)
         starAuto = np.flip(starAuto)
 
-        if autoBank:
-            portBank = c - portBank
-            starBank = c + starBank
-
-            portBank = np.flip(portBank)
-            starBank = np.flip(starBank)
+        # if autoBank:
+        #     portBank = c - portBank
+        #     starBank = c + starBank
+        #
+        #     portBank = np.flip(portBank)
+        #     starBank = np.flip(starBank)
 
         #############
         # Export Plot
@@ -1535,7 +1540,7 @@ class portstarObj(object):
 
         # projName = os.path.split(outDir)[-1]
         projName = os.path.split(self.port.projDir)[-1]
-        outFile = os.path.join(outDir, projName+'_Bedpick_'+addZero+str(i)+'.png')
+        outFile = os.path.join(outDir, projName+'_Bedpick_'+addZero+str(i)+tileFile)
 
         plt.imshow(mergeSon, cmap='gray')
         if acousticBed:
@@ -1546,10 +1551,10 @@ class portstarObj(object):
             plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
             plt.plot(starAuto, y, 'b-.', lw=1)
             del portAuto, starAuto
-        if autoBank:
-            plt.plot(portBank, y, 'g-.', lw=1, label='Bank Pick')
-            plt.plot(starBank, y, 'g-.', lw=1)
-            del portBank, starBank
+        # if autoBank:
+        #     plt.plot(portBank, y, 'g-.', lw=1, label='Bank Pick')
+        #     plt.plot(starBank, y, 'g-.', lw=1)
+        #     del portBank, starBank
 
         plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
@@ -1772,7 +1777,7 @@ class portstarObj(object):
         return pix
 
     #=======================================================================
-    def _detectShadow(self, remShadow, i, USE_GPU, doPlot=True):
+    def _detectShadow(self, remShadow, i, USE_GPU, doPlot=True, tileFile='.jpg'):
         '''
 
         '''
@@ -1838,7 +1843,7 @@ class portstarObj(object):
                 plt.imshow(color_label, alpha=0.5)
 
                 plt.axis('off')
-                plt.savefig(os.path.join(son.projDir, str(i)+"_shadow_"+son.beamName+".png"), dpi=200, bbox_inches='tight')
+                plt.savefig(os.path.join(son.projDir, str(i)+"_shadow_"+son.beamName+tileFile), dpi=200, bbox_inches='tight')
                 plt.close('all')
 
         ###

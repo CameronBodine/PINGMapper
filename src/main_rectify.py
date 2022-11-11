@@ -252,8 +252,8 @@ def rectify_master_func(sonFiles,
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
-
     gc.collect()
+    printUsage()
 
     ############################################################################
     # Calculate range extent coordinates                                       #
@@ -263,6 +263,8 @@ def rectify_master_func(sonFiles,
     Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Rectify sonar imagery                                                    #
@@ -303,6 +305,8 @@ def rectify_master_func(sonFiles,
             del son.smthTrk
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Mosaic imagery                                                           #
@@ -315,3 +319,5 @@ def rectify_master_func(sonFiles,
         psObj._createMosaic(mosaic, overview, threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()

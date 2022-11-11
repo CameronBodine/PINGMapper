@@ -40,6 +40,7 @@ def read_master_func(sonFiles,
                      exportUnknown=False,
                      wcp=False,
                      wcr=False,
+                     tileFile = '.jpg',
                      detectDep=0,
                      smthDep=False,
                      adjDep=0,
@@ -214,6 +215,7 @@ def read_master_func(sonFiles,
     # Decode DAT file (varies by model)                                        #
     ############################################################################
 
+    printUsage()
     start_time = time.time()
     print("\nGetting DAT Metadata...")
     # Create sonObj to store sonar attributes, access processing functions,
@@ -250,6 +252,7 @@ def read_master_func(sonFiles,
     son.datMetaFile = outFile # Store metadata file path in sonObj
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    printUsage()
 
     #######################################################
     # Try copying sonObj instance for every sonar channel #
@@ -390,6 +393,7 @@ def read_master_func(sonFiles,
                 sys.exit()
 
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    printUsage()
     ########################################
     # Let's get the metadata for each ping #
     ########################################
@@ -466,6 +470,7 @@ def read_master_func(sonFiles,
     # Locating missing pings                                                   #
     ############################################################################
 
+    printUsage()
     if fixNoDat:
         ## Open each beam df, store beam name in new field, then concatenate df's into one
         print("\nLocating missing pings and adding NoData...")
@@ -567,7 +572,7 @@ def read_master_func(sonFiles,
 
             son._saveSonMeta(df)
 
-
+    printUsage()
     ############################################################################
     # Print Metadata Summary                                                   #
     ############################################################################
@@ -634,6 +639,7 @@ def read_master_func(sonFiles,
     ############################################################################
     # For Depth Detection                                                      #
     ############################################################################
+    printUsage()
     start_time = time.time()
     # Determine which sonObj is port/star
     portstar = []
@@ -700,7 +706,7 @@ def read_master_func(sonFiles,
         # # sys.exit()
 
         # Parallel estimate depth for each chunk using appropriate method
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU) for chunk in chunks)
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
 
         # store the depth predictions in the class
         for ret in r:
@@ -733,16 +739,19 @@ def read_master_func(sonFiles,
 
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    printUsage()
 
     # Plot sonar depth and auto depth estimate (if available) on sonogram
     if pltBedPick:
         start_time = time.time()
 
         print("\n\nExporting bedpick plots...")
-        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed) for chunk in chunks)
+        print(tileFile)
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
 
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
 
     # Cleanup
     psObj._cleanup()
@@ -808,13 +817,14 @@ def read_master_func(sonFiles,
         #     c, port_pix, star_pix = psObj._detectShadow(remShadow, chunk, USE_GPU, True)
         #     # print('\n\n\n\n', c, port_pix, star_pix)
 
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False) for chunk in chunks)
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
 
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
             psObj.star.shadow[ret[0]] = ret[2]
 
         del r
+        printUsage()
 
     # Cleanup
     psObj._cleanup()
@@ -842,10 +852,11 @@ def read_master_func(sonFiles,
                     chunkCnt = len(chunks)
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
 
     ############################################################################
     # Export imagery for labeling                                              #
@@ -867,10 +878,11 @@ def read_master_func(sonFiles,
 
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop, tileFile) for i in chunks)
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
 
 
     # ############################################################################
@@ -910,3 +922,4 @@ def read_master_func(sonFiles,
         with open(outFile, 'wb') as sonFile:
             pickle.dump(son, sonFile)
     gc.collect()
+    printUsage()
