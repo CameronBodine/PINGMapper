@@ -15,7 +15,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 
 ---
 
-`PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
+`PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ## Compatible Sonar Systems
 
@@ -67,15 +67,11 @@ There are several ways you can find out more about `PING-Mapper`. The first of w
 
 
 ## Paper
-[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
-
-*Peer Reviewed: Forthcoming...*
-
-### Citation
 If you use `PING-Mapper` for your work, please cite the paper:
 
-Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., Kaeser, A. J. (2022). *PING-Mapper: open-source software for automated benthic imaging and mapping using recreation-grade sonar.* Manuscript submitted to *Earth and Space Science*.
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
 
+PrePrint: [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
 
 ## Code that made the paper
