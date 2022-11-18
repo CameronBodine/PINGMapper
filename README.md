@@ -1,8 +1,10 @@
 # 🔥 CAUTION 🔥
 *This is a development branch. Scripts may not perform as expected, or may error out. Use at your own peril!!! :-)*
 
-In Development:
-- Automatic depth detection using deep learning models.
+In Development for v2.0.0:
+- Automated depth estimation.
+- Automated shadow removal.
+- Automated substrate segmentation.
 
 #  🔥THAT IS ALL🔥
 
