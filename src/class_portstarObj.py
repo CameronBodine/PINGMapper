@@ -37,6 +37,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+import inspect
+
 class portstarObj(object):
     '''
     Python class to store port and starboard objects (sonObj() or rectObj()) in
@@ -868,12 +870,15 @@ class portstarObj(object):
         self._getPortStarScanChunk(i)
         mergeSon = self.mergeSon
 
+        # Clean unneeded Attributes
+        # del self.headIdx, self.pingCnt
+
         ###################
         # Make 3-band array
         b1 = mergeSon.copy() # Band 1: no change
         b2 = np.fliplr(b1.copy()) # Band 2: flip port and star
         b3 = np.mean([b1,b2], axis=0) # Band 3: mean of band 1 and 2
-        del mergeSon
+        del mergeSon, self.mergeSon
 
         # Stack the bands
         son3bnd = np.dstack((b1, b2, b3)).astype(np.uint8)
@@ -885,7 +890,7 @@ class portstarObj(object):
 
         ##########################################
         # Do initial prediction on entire sonogram
-        init_label, init_prob = self._doPredict(model, son3bnd)
+        init_label, init_prob = self._doPredict(model, son3bnd) ###############################
 
         ######################################
         # Filters for removing small artifacts
@@ -1050,6 +1055,7 @@ class portstarObj(object):
 
             portDepPixFinal = port
             starDepPixFinal = star
+            del port, star
 
         # For debug purposes
         if plotInitPicks:
@@ -1072,8 +1078,11 @@ class portstarObj(object):
             imsave(os.path.join(self.port.projDir, str(i)+"_cropLabel_"+str(i)+tileFile), (color_label).astype(np.uint8), check_contrast=False)
             imsave(os.path.join(self.port.projDir, str(i)+"_cropImg_"+str(i)+tileFile), (sonCrop).astype(np.uint8), check_contrast=False)
 
+        del son3bnd, init_label, init_prob, crop_label, crop_prob, sonCrop
+        del maxDepths, minDepths, avgDepths, Wp, portDepPixCrop, starDepPixCrop
+        del portDepPix, starDepPix
+        del model, self.bedpickModel ######## Not sure about this one...
 
-        del son3bnd, init_label, crop_label, sonCrop
         # return self
         return portDepPixFinal, starDepPixFinal, i
 
@@ -1871,6 +1880,11 @@ class portstarObj(object):
 
         try:
             del self.port.sonMetaDF, self.star.sonMetaDF
+        except:
+            pass
+
+        try:
+            del self.starDepDetect, self.portDepDetect
         except:
             pass
 

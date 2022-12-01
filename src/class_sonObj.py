@@ -1297,6 +1297,7 @@ class sonObj(object):
         for i in beams:
             b[i] = np.nan
             bCnt+=1
+        del i
 
         c = 0 # Current row index
 
@@ -1330,11 +1331,14 @@ class sonObj(object):
                 # reset b
                 for k, v in b.items():
                     b.update({k:np.nan})
+                del k, v
 
             else:
                 # Add c idx to b and keep searching for beams in current packet
                 b[cRow['beam'].values[0]] = c
                 c+=1
+
+        del beam, beams, noDat, dfA, cRow, bCnt, c, b
 
         return df
 
@@ -1908,6 +1912,8 @@ class sonObj(object):
         #     if remWater:
         #         self._WCR(sonMeta)
 
+        del self.headIdx, self.pingCnt
+
         return self
 
     # ======================================================================
@@ -1918,6 +1924,20 @@ class sonObj(object):
         meta = pd.read_csv(self.sonMetaFile)
         self.sonMetaDF = meta
         return self
+
+
+    # ======================================================================
+    def _cleanup(self):
+
+        try:
+            del self.sonMetaDF
+        except:
+            pass
+
+        try:
+            del self.sonDat
+        except:
+            pass
 
     # ======================================================================
     def __str__(self):

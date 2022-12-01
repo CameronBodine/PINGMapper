@@ -250,6 +250,11 @@ def read_master_func(sonFiles,
     outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name
     pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
     son.datMetaFile = outFile # Store metadata file path in sonObj
+    del outFile
+
+    # Cleanup
+    son._cleanup()
+
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     printUsage()
@@ -263,6 +268,7 @@ def read_master_func(sonFiles,
     for s in sonFiles:
         beam = os.path.split(s)[-1].split('.')[0] #Get beam number (B000,B001,..)
         chanAvail[beam] = s
+    del s, beam
 
     # Copy the previously created sonObj instance to make a unique sonObj for
     ## each beam.  Then update sonObj attributes specific to each beam.
@@ -311,6 +317,8 @@ def read_master_func(sonFiles,
         else:
             pass
 
+    del chanAvail, chan, file
+
     ############################################################################
     # Determine ping header length (varies by model)                           #
     ############################################################################
@@ -334,11 +342,15 @@ def read_master_func(sonFiles,
         except:
             sys.exit("\n#####\nERROR: Out of SON files... \n"+
             "Unable to determine header length.")
+    del i, gotHeader, cntSON
 
     # Update each sonObj with header length
     if headbytes > 0:
         for son in sonObjs:
             son.headBytes = headbytes
+
+    # Cleanup
+    del son, headbytes
 
     ############################################################################
     # Get the SON header structure and attributes                              #
@@ -349,10 +361,12 @@ def read_master_func(sonFiles,
     ## header structure will be stored in the sonObj.
     for son in sonObjs:
         son._getHeadStruct(exportUnknown)
+    del son
 
     # Let's check and make sure the header structure is correct.
     for son in sonObjs:
         son._checkHeadStruct()
+    del son
 
     for son in sonObjs:
         headValid = son.headValid # Flag indicating if sonar header structure is known.
@@ -373,6 +387,7 @@ def read_master_func(sonFiles,
             print("\n#####\nERROR: Wrong Header Structure")
             print("Attempting to decode header structure.....")
             son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
+    del son, headValid
 
     # If we had to decode header structure, let's make sure it decoded correctly.
     ## If we are wrong, then we found a completely new Humminbird file format.
@@ -391,6 +406,7 @@ def read_master_func(sonFiles,
                 print("Found {} instead.".format(headValid[3]))
                 print("Terminating srcipt.")
                 sys.exit()
+    del son
 
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     printUsage()
@@ -412,6 +428,7 @@ def read_master_func(sonFiles,
             son.sonMetaFile = file
         else:
             toProcess.append(son)
+    del son, file
 
     # See if .IDX file is available.  If it is, store file path for later use.
     for son in sonObjs:
@@ -420,15 +437,18 @@ def read_master_func(sonFiles,
             son.sonIdxFile = idxFile
         else:
             son.sonIdxFile = False
+    del son, idxFile
 
     # Get metadata for each beam in parallel.
     if len(toProcess) > 0:
         Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        del toProcess
 
     metaDir = sonObjs[0].metaDir # Get path to metadata directory
     sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv'))) # Get path to metadata files
     for i in range(0,len(sonObjs)): # Iterate each metadata file
         sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
+    del i, sonMeta
 
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:
@@ -457,6 +477,7 @@ def read_master_func(sonFiles,
 
         else:
             son.wcr_src = False
+    del son
 
     # If Onix, need to store self._trans in object
     if sonObjs[0].isOnix:
@@ -465,6 +486,7 @@ def read_master_func(sonFiles,
             utm_e=son.sonMetaDF.iloc[0]['utm_e']
             utm_n=son.sonMetaDF.iloc[0]['utm_n']
             son._getEPSG(utm_e, utm_n)
+        del son
 
     ############################################################################
     # Locating missing pings                                                   #
@@ -480,6 +502,8 @@ def read_master_func(sonFiles,
             df = son.sonMetaDF
             df['beam'] = son.beam
             frames.append(df)
+            son._cleanup()
+            del df
 
         dfAll = pd.concat(frames)
         del frames
@@ -509,12 +533,15 @@ def read_master_func(sonFiles,
                 n = c+int(rowCnt/threadCnt)
                 r+=1
         rowsToProc.append((rowsToProc[-1][-1], rowCnt))
+        del c, r, n, startB, rowCnt
 
         # Fix no data in parallel
         r = Parallel(n_jobs=threadCnt, verbose=10)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in rowsToProc)
+        gc.collect()
 
         # Concatenate results from parallel processing
         dfAll = pd.concat(r)
+        del r
 
         # Store original record_num and update record_num with new index
         dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
@@ -539,6 +566,7 @@ def read_master_func(sonFiles,
 
             chunks = np.arange(chunkCnt)
             chunks = np.repeat(chunks, nchunk)
+            del chunkCnt
 
             if rdr:
                 chunks = chunks[:-rdr]
@@ -571,8 +599,11 @@ def read_master_func(sonFiles,
                 # sys.exit()
 
             son._saveSonMeta(df)
+            son._cleanup()
+        del df, rowsToProc, dfAll, son, chunks, rdr
 
     printUsage()
+
     ############################################################################
     # Print Metadata Summary                                                   #
     ############################################################################
@@ -619,7 +650,9 @@ def read_master_func(sonFiles,
 
             print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format(att, str(attMin), str(attMax), str(attAvg), str(valid)))
 
+        son._cleanup()
         print("\n")
+    del son, df, att, attAvg, attMin, attMax, valid
 
     if len(invalid) > 0:
         print("*******************************\n****WARNING: INVALID VALUES****\n*******************************")
@@ -630,6 +663,7 @@ def read_master_func(sonFiles,
             print("{:<15s} | {:<15s}".format(key.split(".")[0], key.split(".")[1]))
         print("\n*******************************\n****WARNING: INVALID VALUES****\n*******************************")
         print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
+    del invalid, beam, beams
 
 
 
@@ -668,6 +702,10 @@ def read_master_func(sonFiles,
         df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
         c = pd.unique(df['chunk_id'])
         chunks.extend(c)
+
+        del sonMetaDF, df, c
+    del son
+
     chunks = np.unique(chunks).astype(int)
 
     # DISABLED: automatic depth detection disabled for now. Will return stronger
@@ -712,11 +750,12 @@ def read_master_func(sonFiles,
         for ret in r:
             psObj.portDepDetect[ret[2]] = ret[0]
             psObj.starDepDetect[ret[2]] = ret[1]
+            del ret
+        del r
 
         # Flag indicating depth autmatically estimated
         autoBed = True
-        # Cleanup
-        psObj._cleanup()
+
 
     else:
         print('\n\nUsing instrument depth:')
@@ -736,6 +775,12 @@ def read_master_func(sonFiles,
 
             sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
             del sonDF
+            son._cleanup()
+
+    del depDF
+
+    # Cleanup
+    psObj._cleanup()
 
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -755,7 +800,11 @@ def read_master_func(sonFiles,
 
     # Cleanup
     psObj._cleanup()
-    # del psObj
+    del psObj, portstar
+
+    for son in sonObjs:
+        son._cleanup()
+    del son
 
     # ############################################################################
     # # For river bank picking (i.e. shadows caused by bank)                     #
@@ -805,6 +854,17 @@ def read_master_func(sonFiles,
         elif remShadow == 2:
             print('MODE: 2 | Remove shadows in far-field (river bankpick)...')
 
+        # Determine which sonObj is port/star
+        portstar = []
+        for son in sonObjs:
+            beam = son.beamName
+            if beam == "ss_port" or beam == "ss_star":
+                portstar.append(son)
+        del son
+
+        # Create portstarObj
+        psObj = portstarObj(portstar)
+
         # Model weights and config file
         psObj.configfile = r'./models/shadow/shadow_20220817_v1.json'
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
@@ -822,13 +882,14 @@ def read_master_func(sonFiles,
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
             psObj.star.shadow[ret[0]] = ret[2]
+            del ret
 
         del r
         printUsage()
 
     # Cleanup
     psObj._cleanup()
-    del psObj
+    del psObj, portstar
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -853,7 +914,10 @@ def read_master_func(sonFiles,
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+                del df
+            son._cleanup()
             gc.collect()
+        del son, sonMetaDF
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
@@ -879,11 +943,13 @@ def read_master_func(sonFiles,
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop, tileFile) for i in chunks)
+                son._cleanup()
             gc.collect()
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
+    del chunkCnt
 
     # ############################################################################
     # # Export water column removed and cropped tiles for substrate train set    #
