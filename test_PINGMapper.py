@@ -95,7 +95,7 @@ pltBedPick = True #Plot bedpick on sonogram
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
-mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 

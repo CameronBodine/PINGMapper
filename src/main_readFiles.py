@@ -843,7 +843,7 @@ def read_master_func(sonFiles,
     # For shadow removal                                                       #
     ############################################################################
 
-    remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 
     if remShadow > 0:
         start_time = time.time()
@@ -888,8 +888,11 @@ def read_master_func(sonFiles,
         printUsage()
 
     # Cleanup
-    psObj._cleanup()
-    del psObj, portstar
+    try:
+        psObj._cleanup()
+        del psObj, portstar
+    except:
+        pass
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #
@@ -926,7 +929,7 @@ def read_master_func(sonFiles,
     # Export imagery for labeling                                              #
     ############################################################################
 
-    lbl_set = True
+    lbl_set = False
     spdCor = 1
     maxCrop = False
     if lbl_set:
@@ -949,7 +952,10 @@ def read_master_func(sonFiles,
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
-    del chunkCnt
+    try:
+        del chunkCnt
+    except:
+        pass
 
     # ############################################################################
     # # Export water column removed and cropped tiles for substrate train set    #

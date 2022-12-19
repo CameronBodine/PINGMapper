@@ -33,6 +33,8 @@ from funcs_common import *
 from class_rectObj import rectObj
 from class_portstarObj import portstarObj
 
+import inspect
+
 #===============================================================================
 def rectify_master_func(sonFiles,
                         humFile,
@@ -157,6 +159,7 @@ def rectify_master_func(sonFiles,
         metaFiles = sorted(glob(metaDir+os.sep+"*.meta"))
     else:
         sys.exit("No SON metadata files exist")
+    del metaDir
 
     #############################################
     # Create a rectObj instance from pickle files
@@ -164,6 +167,7 @@ def rectify_master_func(sonFiles,
     for meta in metaFiles:
         son = rectObj(meta) # Initialize rectObj()
         rectObjs.append(son) # Store rectObj() in rectObjs[]
+    del meta, metaFiles
 
     #####################################
     # Determine which sonObj is port/star
@@ -174,6 +178,7 @@ def rectify_master_func(sonFiles,
             portstar.append(son)
         else:
             del son # Remove non-port/star objects since they can't be rectified
+    del son, beam, rectObjs
 
     ############################################################################
     # Smooth GPS trackpoint coordinates                                        #
@@ -204,6 +209,7 @@ def rectify_master_func(sonFiles,
     son0 = portstar[maxRec]
     sonDF = son0.sonMetaDF # Get ping metadata
     sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
+    del sonDF
 
     ####################################
     ####################################
@@ -227,6 +233,7 @@ def rectify_master_func(sonFiles,
         sDF.at[curRow, "cog"] = lastRow["cog"]
 
         i+=1
+    del lastRow, curRow, i
 
     son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
 
@@ -244,12 +251,14 @@ def rectify_master_func(sonFiles,
     sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
     son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
-    del sDF
+    del sDF, df, son0, son1
 
     # Save smoothed trackline coordinates to file
     for son in portstar:
         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
+        son._cleanup()
+    del son, outCSV
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     gc.collect()
@@ -293,6 +302,7 @@ def rectify_master_func(sonFiles,
             sonMetaDF = son.sonMetaDF
             df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
             chunks = pd.unique(df['chunk_id'])
+            del sonMetaDF, df
 
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
@@ -303,6 +313,7 @@ def rectify_master_func(sonFiles,
         for son in portstar:
             del son.sonMetaDF
             del son.smthTrk
+        del son
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     gc.collect()
@@ -319,5 +330,23 @@ def rectify_master_func(sonFiles,
         psObj._createMosaic(mosaic, overview, threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        del psObj
         gc.collect()
         printUsage()
+
+
+    ##############################################
+    # Let's pickle sonObj so we can reload later #
+    ##############################################
+
+    for son in portstar:
+        outFile = son.sonMetaFile.replace(".csv", ".meta")
+        son.sonMetaPickle = outFile
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(son, sonFile)
+        del son
+
+    # Cleanup
+    del portstar
+
+    printUsage()
