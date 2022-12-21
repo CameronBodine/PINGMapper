@@ -185,7 +185,7 @@ def read_master_func(sonFiles,
     remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 
     # For image export for labeling imagery
-    lbl_set = True # Export images for labeling
+    lbl_set = False # Export images for labeling
     spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
     maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
