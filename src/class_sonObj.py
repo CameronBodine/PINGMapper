@@ -938,7 +938,7 @@ class sonObj(object):
         return
 
     ############################################################################
-    # Get the metadata for each ping                                   #
+    # Get the metadata for each ping                                           #
     ############################################################################
 
     # ======================================================================
@@ -1016,24 +1016,6 @@ class sonObj(object):
                 if j == nchunk:
                     j=0
                     chunk+=1
-
-                # Tried variable chunk size for rectification issues, but didn't
-                ## fix the problem and introduced new problems
-                # if j == 0:
-                #     lastPingCnt = curPingCnt = headerDat['ping_cnt']
-                # else:
-                #     curPingCnt = headerDat['ping_cnt']
-                # i+=8
-                # j+=1
-                # if (j == nchunk) or (lastPingCnt != curPingCnt):
-                #     j=0
-                #     chunk+=1
-                # # else:
-                #     # j+=1
-                # # print('L: ', lastPingCnt, ' C: ', curPingCnt)
-                # idx['chunk_id'].append(chunk) # Store chunk id
-                # head['chunk_id'].append(chunk) # ping chunk id
-                # lastPingCnt = curPingCnt
 
         # If .IDX file is missing
         ## Attempt to automatically decode .SON file
@@ -1142,10 +1124,7 @@ class sonObj(object):
         file.close() # Close .SON file
 
         if self.isOnix and not hasattr(self, 'trans'):
-            # print('\n\n\n\n\n\nONIX\n\n')
             self._getEPSG(sonHead['utm_e'], sonHead['utm_n'])
-            # print(self.trans)
-            # sys.exit()
 
         # Make necessary conversions
         # Convert eastings/northings to latitude/longitude
@@ -1176,9 +1155,7 @@ class sonObj(object):
         try:
             starttime = float(humDat['unix_time'])
             sonHead['caltime'] = starttime + sonHead['time_s']
-            # starttime += sonHead['time_s']
-            # starttime = datetime.datetime.fromtimestamp(starttime)
-            # sonHead['caltime'] = starttime
+
         except :
             sonHead['caltime'] = 0
 
@@ -1382,16 +1359,11 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
-        # Update class attributes based on current chunk
-        # Update class attributes based on current chunk
-        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
 
+        # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
-        # print(self.beam, self.pingMax, '\nn', self.headIdx, '\n\n', self.pingCnt)
 
         if ~np.isnan(self.pingMax):
             # Load chunk's sonar data into memory
@@ -1404,8 +1376,8 @@ class sonObj(object):
             if self.wcp:
                 # self._doPPDRC()
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
+
             # Export slant range corrected (water column removed) imagery
-            # if self.wcr_src and (self.beamName=='ss_port' or self.beamName=='ss_star'):
             if self.wcr_src:
                 self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 # self._doPPDRC()
@@ -1454,8 +1426,8 @@ class sonObj(object):
                 pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
                 file.seek(pingIdx) # Move to that location
                 k = 0
+
                 # Decode each sonar return and store in array
-                # while k < pingCnt:
                 while k < min(pingCnt, self.pingMax):
                     byte = self._fread(file, 1, 'B')[0]
                     sonDat[k,i] = byte
@@ -1547,61 +1519,11 @@ class sonObj(object):
         for j, d in enumerate(bedPick):
             sonDat[:d, j] = 0
 
-        # # Bank crop
-        # if 'bank_m' in sonMeta.columns:
-        #     bankPick = round(sonMeta['bank_m'] / sonMeta['pix_m'], 0).astype(int)
-        #     maxRange = max(bankPick)
-        #
-        #     for j, b in enumerate(bankPick):
-        #         sonDat[b:, j] = 0
-        #
-        #     sonDat = sonDat[minDep:maxRange,]
-        #
-        # else:
-        #     # Crop to minimum depth
-        #     sonDat = sonDat[minDep:,]
-
         # Crop to min depth
         sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
         return self
-
-    # # ======================================================================
-    # def _SHW_crop(self, i):
-    #     '''
-    #     '''
-    #
-    #     sonDat = self.sonDat
-    #
-    #     shw_pix = self.shadow[i]
-    #
-    #     for k, val in shw_pix.items():
-    #         for v in val:
-    #             sonDat[v[0]:v[1], k] = 0
-    #
-    #     # Crop to max_r
-    #     max_r = []
-    #     lab = np.where(sonDat>0, 1, 0)
-    #     lab[sonDat.shape[0]-1, ] = 0 # Zero-out last row
-    #
-    #     R = lab.shape[0] # max range
-    #     P = lab.shape[1] # number of pings
-    #
-    #     for c in range(P):
-    #         bed = np.where(lab[:,c]==1)[0]
-    #         bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
-    #
-    #         max_r.append(bed)
-    #
-    #     # print(max_r)
-    #     max_r = max(max_r)
-    #
-    #     sonDat = sonDat[:max_r, ]
-    #     del lab
-    #
-    #     self.sonDat = sonDat
-    #     return self
 
     # ======================================================================
     def _SHW_crop(self, i, maxCrop=True):
@@ -1652,7 +1574,6 @@ class sonObj(object):
                 bed = np.nan
 
             max_r.append(bed)
-        # print('\n\n\n', max_r)
 
         # Find max range
         max_r = np.nanmax(max_r).astype(int)
@@ -1769,16 +1690,6 @@ class sonObj(object):
             # Load chunk's sonar data into memory
             self._loadSonChunk()
 
-            # # Load depth (in real units) and convert to pixels
-            # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            # minDep = min(bedPick)
-            #
-            # sonDat = self.sonDat
-            #
-            # # Zero out water column
-            # for j, d in enumerate(bedPick):
-            #     sonDat[:d, j] = 0
-
             # Remove water column and crop
             self._WCR_crop(sonMeta)
             sonDat = self.sonDat
@@ -1815,14 +1726,10 @@ class sonObj(object):
                                 clip=False, preserve_range=True)#.astype('uint8')
 
             self.sonDat = sonDat.astype('uint8')
-            # print('\n\n\n\n', sonDat)
-            # sys.exit()
 
             self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
         gc.collect()
         return self
-
-
 
     ############################################################################
     # Miscellaneous                                                            #
@@ -1870,19 +1777,14 @@ class sonObj(object):
         # Filter df by chunk
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
-        # Update class attributes based on current chunk
-        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
 
-        # set pingMax to most representative range, i.e. range with largest count
-        # print(np.unique(sonMeta['ping_cnt'], return_counts=True))
+        # Update class attributes based on current chunk
         rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
         pingMaxi = np.argmax(rangeCnt[1])
         self.pingMax = int(rangeCnt[0][pingMaxi])
-        # print(self.pingMax)
 
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
-        # print('\n\n\n\n', self.pingMax, self.headIdx, self.pingCnt)
 
         # Load chunk's sonar data into memory
         self._loadSonChunk()
@@ -1892,25 +1794,6 @@ class sonObj(object):
         # Remove water if exporting wcr imagery
         if remWater:
             self._WCR(sonMeta)
-
-        # # set pingMax to most representative range, i.e. range with largest count
-        # rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
-        #
-        # if ~np.isnan(rangeCnt[0][0]) or (np.isnan(rangeCnt[0][0]) and rangeCnt[1][0] < self.nchunk):
-        #     pingMaxi = np.argmax(rangeCnt[1])
-        #     self.pingMax = int(rangeCnt[0][pingMaxi])
-        #
-        #     self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        #     self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
-        #
-        #     # Load chunk's sonar data into memory
-        #     self._loadSonChunk()
-        #     # Do PPDRC filter
-        #     if filterIntensity:
-        #         self._doPPDRC()
-        #     # Remove water if exporting wcr imagery
-        #     if remWater:
-        #         self._WCR(sonMeta)
 
         del self.headIdx, self.pingCnt
 

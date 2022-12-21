@@ -28,7 +28,7 @@
 
 
 from funcs_common import *
-from funcs_bedpick import *
+from funcs_model import *
 
 import gdal
 from scipy.signal import savgol_filter
@@ -160,20 +160,6 @@ class portstarObj(object):
 
         del portsonDat, starsonDat
 
-        # s = 0
-        # if not hasattr(self.port, 'sonDat'):
-        #     portSon = False
-        # else:
-        #     portSon = True
-        #     s += 1
-        # if not hasattr(self.star, 'sonDat'):
-        #     starSon = False
-        # else:
-        #     starSon = True
-        #     s += 1
-        #
-        # print(portSon, starSon)
-
 
         # Rotate and merge arrays into one
         portSon = np.rot90(self.port.sonDat, k=1, axes=(1,0))
@@ -282,24 +268,16 @@ class portstarObj(object):
         # Create geotiff
         if mosaic == 1:
             if self.port.rect_wcp:
-                # self._mosaicGtiff(wcpToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
-                # self._mosaicGtiff(srcToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
         # Create vrt
         elif mosaic == 2:
             if self.port.rect_wcp:
-                # self._mosaicVRT(wcpToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
-                # self._mosaicVRT(srcToMosaic, overview)
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
 
-        # elif mosaic == 3:
-        #     if self.port.rect_wcr:
-        #         outTIF = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(srcToMosaic))
-        #         self._mosaicVRT([outTIF], False)
         return self
 
 
@@ -336,7 +314,7 @@ class portstarObj(object):
         --------------------
         None
         '''
-        # i = 0 # Mosaic number
+
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
@@ -406,7 +384,7 @@ class portstarObj(object):
         --------------------
         None
         '''
-        # i = 0 # Mosaic number
+
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
@@ -488,86 +466,9 @@ class portstarObj(object):
             config = json.load(f)
         globals().update(config)
 
-        # ########################################################################
-        # ########################################################################
-        #
-        # if SET_GPU != '-1':
-        #     USE_GPU = True
-        #     # print('Using GPU')
-        #
-        # if len(SET_GPU.split(','))>1:
-        #     USE_MULTI_GPU = True
-        #     # print('Using multiple GPUs')
-        # else:
-        #     USE_MULTI_GPU = False
-        #     # if USE_GPU:
-        #     #     print('Using single GPU device')
-        #     # else:
-        #     #     print('Using single CPU device')
-        #
-        # #suppress tensorflow warnings
-        # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        #
-        # if USE_GPU:
-        #     os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
-        #
-        #     SEED = 42
-        #     np.random.seed(SEED)
-        #     AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
-        #
-        #     tf.random.set_seed(SEED)
-        #
-        #     # print("Version: ", tf.__version__)
-        #     # print("Eager mode: ", tf.executing_eagerly())
-        #     # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-        #     # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
-        #
-        #     physical_devices = tf.config.experimental.list_physical_devices('GPU')
-        #     # print(physical_devices)
-        #
-        #     if physical_devices:
-        #         # Restrict TensorFlow to only use the first GPU
-        #         try:
-        #             tf.config.experimental.set_visible_devices(physical_devices, 'GPU')
-        #         except RuntimeError as e:
-        #             # Visible devices must be set at program startup
-        #             # print(e)
-        #             pass
-        # else:
-        #     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-        #
-        #     SEED = 42
-        #     np.random.seed(SEED)
-        #     AUTO = tf.data.experimental.AUTOTUNE  # used in tf.data.Dataset API
-        #
-        #     tf.random.set_seed(SEED)
-        #
-        #     # print("Version: ", tf.__version__)
-        #     # print("Eager mode: ", tf.executing_eagerly())
-        #     # print("GPU name: ", tf.config.experimental.list_physical_devices("GPU"))
-        #     # print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices("GPU")))
-        #
-        #     physical_devices = tf.config.experimental.list_physical_devices('GPU')
-        #     # print(physical_devices)
-        #
-        # ### mixed precision
-        # from tensorflow.keras import mixed_precision
-        # mixed_precision.set_global_policy('mixed_float16')
-        # # tf.debugging.set_log_device_placement(True)
-        #
-        # for i in physical_devices:
-        #     tf.config.experimental.set_memory_growth(i, True)
-        # # print(tf.config.get_visible_devices())
-        #
-        # if USE_MULTI_GPU:
-        #     # Create a MirroredStrategy.
-        #     strategy = tf.distribute.MirroredStrategy([p.name.split('/physical_device:')[-1] for p in physical_devices], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
-        #     # print("Number of distributed devices: {}".format(strategy.num_replicas_in_sync))
-        #
-        #
-        #
-        # ########################################################################
-        # ########################################################################
+
+        ########################################################################
+        ########################################################################
 
         model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
                         FILTERS,
@@ -585,10 +486,6 @@ class portstarObj(object):
         except:
             model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
             model.load_weights(self.weights)
-
-        # self.bedpickModel = model
-        #
-        # return self
 
         return model
 
@@ -631,13 +528,7 @@ class portstarObj(object):
             image, w, h, bigimage = seg_file2tensor(arr, TARGET_SIZE)
 
         # Standardize
-        # imsave(os.path.join(self.star.projDir, 'img.png'), (image.numpy()).astype(np.uint8), check_contrast=False)
-        # print('\n\n', image, '\n', np.unique(image.numpy()), '\n')
-        # for r in range(image.shape[0]):
-        #     print('\n\n', r, image[r,:])
-        # print('\n\n', image.numpy().shape, '\n\n')
         image = standardize(image.numpy()).squeeze()
-        # print(image, image.shape, '\n\n')
 
         # Do segmentation on compressed sonogram
         est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
@@ -665,11 +556,6 @@ class portstarObj(object):
             est_label = est_label-1
             est_prob = softmax_scores
         else:
-
-            # # Ping by ping thresholding
-            # for p in range(h):
-            #     thres = threshold_otsu(est_label[:,p])
-            #     est_label[:,p] = (est_label[:,p]>thres).astype('uint8')
 
             # Threshold entire label
             thres = threshold_otsu(est_label)
@@ -1044,15 +930,6 @@ class portstarObj(object):
                 else: # Final pick ok
                     star.append(sdc)
 
-
-            # # Interpolation????
-            # bed = np.array(bed).astype(np.float32)
-            #
-            # # Interpolate over nan's
-            # nans, x = np.isnan(bed), lambda z: z.nonzero()[0]
-            # bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
-            # bed = bed.astype(int)
-
             portDepPixFinal = port
             starDepPixFinal = star
             del port, star
@@ -1340,31 +1217,6 @@ class portstarObj(object):
                 lenDif = starDF.shape[0] - len(starFinal)
                 starFinal = starFinal[:lenDif]
 
-            # # Check for bad picks (i.e. depth==0) for each sonar channel. If one
-            # ## channel is 0 and other is non-zero, use non-zero estimate for both.
-            # for i, ps in enumerate(zip(portFinal, starFinal)):
-            #     pValid = False
-            #     sValid = False
-            #     if ps[0] > 0:
-            #         pValid = True
-            #     if ps[1] > 0:
-            #         sValid = True
-            #
-            #     # Both > 0
-            #     if pValid and sValid:
-            #         pass
-            #     # Both <= 0
-            #     elif not pValid and not sValid:
-            #         portFinal[i]=np.nan
-            #         starFinal[i]=np.nan
-            #     # Port > 0, update star
-            #     elif pValid:
-            #         starFinal[i] = portFinal[i]
-            #     # Star > 0, update port
-            #     else:
-            #         portFinal[i] = starFinal[i]
-
-
             if smthDep:
                 portFinal = savgol_filter(portFinal, 51, 3)
                 starFinal = savgol_filter(starFinal, 51, 3)
@@ -1574,139 +1426,6 @@ class portstarObj(object):
         gc.collect()
         return self
 
-    ############################################################################
-    # Bankpicking                                                              #
-    ############################################################################
-
-    #=======================================================================
-    def _detectBank(self,
-                    i,
-                    USE_GPU):
-        '''
-
-        '''
-        if not hasattr(self, 'bankpickModel'):
-            model = self._initModel(USE_GPU)
-            self.bankpickModel = model
-
-        # Get the model
-        model = self.bankpickModel
-
-        # Load port/star ping returns
-        self.port._loadSonMeta()
-        self.star._loadSonMeta()
-
-        portstar = [self.port, self.star]
-        for son in portstar:
-            # Load sonar intensity, standardize & rescale
-            son._getScanChunkSingle(i)
-            img = son.sonDat
-
-            init_label, init_prob = self._doPredict(model, img)
-
-            bank = self._findBank(init_label)
-
-            if son.beamName == "ss_port":
-                portBank = bank
-            else:
-                starBank = bank
-
-
-            # #*#*#*#*#*#*#*#
-            # # Plot
-            # # color map
-            # class_label_colormap = ['#3366CC','#DC3912', '#000000']
-            #
-            # # Initial
-            # color_label = label_to_colors(init_label, img[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-            # imsave(os.path.join(son.projDir, str(i)+"_initLabel_"+son.beamName+'_'+str(i)+".png"), (color_label).astype(np.uint8), check_contrast=False)
-            # imsave(os.path.join(son.projDir, str(i)+"_initImg_"+son.beamName+'_'+str(i)+".png"), (img).astype(np.uint8), check_contrast=False)
-
-
-        gc.collect()
-        return portBank, starBank, i
-
-    #=======================================================================
-    def _findBank(self, lab):
-        R = lab.shape[0] # max range
-        P = lab.shape[1] # number of pings
-
-        lab = remove_small_holes(lab.astype(bool), 2*R)#2*self.port.nchunk)
-        lab = remove_small_objects(lab, 2*R).astype('int')+1#2*self.port.nchunk)
-
-        bank = []
-        for c in range(P):
-            bed = np.where(lab[:,c]!=1)[0]
-            bed = np.split(bed, np.where(np.diff(bed) != 1)[0])[0][-1]
-            bank.append(bed)
-
-        return bank
-
-    #=======================================================================
-    def _saveBank(self, chunks):
-        # Load sonar metadata file
-        self.port._loadSonMeta()
-        portDF = self.port.sonMetaDF
-        self.star._loadSonMeta()
-        starDF = self.star.sonMetaDF
-
-        # Prepare bank detection dictionaries
-        portFinal = []
-        starFinal = []
-        for i in sorted(chunks):
-            portDep = self.portBankDetect[i]
-            starDep = self.starBankDetect[i]
-
-            portFinal.extend(portDep)
-            starFinal.extend(starDep)
-
-        # Check shapes to ensure they are same length.  If not, slice off extra.
-        if len(portFinal) > portDF.shape[0]:
-            lenDif = portDF.shape[0] - len(portFinal)
-            portFinal = portFinal[:lenDif]
-
-        if len(starFinal) > starDF.shape[0]:
-            lenDif = starDF.shape[0] - len(starFinal)
-            starFinal = starFinal[:lenDif]
-
-        portDF['bank_m'] = portFinal * portDF['pix_m']
-        starDF['bank_m'] = starFinal * starDF['pix_m']
-
-        ####################################
-        # Determine if bankpick < depth pick
-        ## If it is, replace with nans then interpolate
-        # Port
-        portFinal = portDF['bank_m'].to_numpy(copy=True)
-        portDep = portDF['dep_m'].to_numpy(copy=True)
-
-        portFinal = np.where(portFinal <= portDep, np.nan, portFinal)
-
-        # Interpolate over nan's
-        nans, x = np.isnan(portFinal), lambda z: z.nonzero()[0]
-        portFinal[nans] = np.interp(x(nans), x(~nans), portFinal[~nans])
-        portFinal = portFinal
-
-        # Star
-        starFinal = starDF['bank_m'].to_numpy(copy=True)
-        starDep = starDF['dep_m'].to_numpy(copy=True)
-
-        starFinal = np.where(starFinal <= starDep, np.nan, starFinal)
-
-        # Interpolate over nan's
-        nans, x = np.isnan(starFinal), lambda z: z.nonzero()[0]
-        starFinal[nans] = np.interp(x(nans), x(~nans), starFinal[~nans])
-        starFinal = starFinal
-
-        portDF['bank_m'] = portFinal
-        starDF['bank_m'] = starFinal
-
-        ###############
-        # Export to csv
-        portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
-        starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
-
-        del portDF, starDF
-        return self
 
     ############################################################################
     # Shadow Removal                                                           #
@@ -1731,13 +1450,6 @@ class portstarObj(object):
         # Zero out everything except shadows
         lab = np.where(lab==1, lab, 0)
 
-        # print('\n\n\n', lab)
-        #
-        # for i, r in enumerate(range(lab.shape[0])):
-        #     print(i, lab[r, :], lab[r, :].shape)
-        #     # if i > 10:
-        #     #     sys.exit()
-
         # Remove only far-field (river bank) shadows
         if remShadow == 2:
 
@@ -1756,8 +1468,6 @@ class portstarObj(object):
                 l = np.where(reg==r, 1, 0)
                 lab += l
 
-
-
         # Iterate pings, get begin, end indices for shadow regions
         pix = defaultdict()
         for p in range(P):
@@ -1775,13 +1485,6 @@ class portstarObj(object):
                     pPix.append((b[0], b[-1]))
 
             pix[p] = pPix
-
-
-        # for k, v in pix.items():
-        #     print(pix)
-
-        # Find bank
-        # bank = self._findBank(lab)
 
         return pix
 

@@ -182,6 +182,12 @@ def read_master_func(sonFiles,
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
     fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+
+    # For image export for labeling imagery
+    lbl_set = False # Export images for labeling
+    spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
+    maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -410,6 +416,7 @@ def read_master_func(sonFiles,
 
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     printUsage()
+
     ########################################
     # Let's get the metadata for each ping #
     ########################################
@@ -524,10 +531,8 @@ def read_master_func(sonFiles,
 
         while (r < threadCnt) and (n < rowCnt):
             if (dfAll.loc[n]['beam']) != startB:
-                # print((dfAll.iloc[n]['beam']), startB)
                 n+=1
             else:
-                # print('Yes', (dfAll.iloc[n]['beam']), startB)
                 rowsToProc.append((c, n))
                 c = n
                 n = c+int(rowCnt/threadCnt)
@@ -547,10 +552,6 @@ def read_master_func(sonFiles,
         dfAll = dfAll.sort_values(by=['record_num'], ignore_index=True)
         dfAll['orig_record_num'] = dfAll['record_num']
         dfAll['record_num'] = dfAll.index
-
-        # # For checking outputs
-        # outCSV = os.path.join(son.metaDir, "testNoData.csv")
-        # dfAll.to_csv(outCSV, index=False, float_format='%.14f')
 
         # Slice dfAll by beam, update chunk_id, then save to file.
         for son in sonObjs:
@@ -575,28 +576,10 @@ def read_master_func(sonFiles,
             df.drop(columns = ['beam'], inplace=True)
 
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                ## For testing chunk with only NoData
-                # df.loc[df['chunk_id']==0, 'index'] = np.nan
-                # df.loc[df['chunk_id']==0, 'f'] = np.nan
-                # df.loc[df['chunk_id']==0, 'volt_scale'] = np.nan
-
-                # df.loc[:500, ['index']] = [np.nan]
-                # df.loc[:500, ['f']] = [np.nan]
-                # df.loc[:500, ['volt_scale']] = [np.nan]
 
                 df.loc[:1, ['index']] = [np.nan]
                 df.loc[:1, ['f']] = [np.nan]
                 df.loc[:1, ['volt_scale']] = [np.nan]
-
-
-                # mask = np.array([0,1])
-                # mask = np.tile(mask, int(len(df)/2))
-                # mask = np.insert(mask, 1, 1)
-                #
-                # df = df['index'].mul(mask)
-                # print(len(mask), len(df))
-
-                # sys.exit()
 
             son._saveSonMeta(df)
             son._cleanup()
@@ -666,15 +649,20 @@ def read_master_func(sonFiles,
     del invalid, beam, beams
 
 
-
     print("\nDone!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # For Depth Detection                                                      #
     ############################################################################
+    # Automatically detect depth from side scan channels. Two options are avail:
+    ## Method based on Zheng et al. 2021 using deep learning for segmenting
+    ## water-bed interface.
+    ## Second is rule's based binary segmentation (may be deprecated in future..)
+
     printUsage()
     start_time = time.time()
+
     # Determine which sonObj is port/star
     portstar = []
     for son in sonObjs:
@@ -684,14 +672,6 @@ def read_master_func(sonFiles,
 
     # Create portstarObj
     psObj = portstarObj(portstar)
-
-    # # Load one beam's sonar metadata
-    # portstar[0]._loadSonMeta()
-    # sonMetaDF = portstar[0].sonMetaDF
-    #
-    # # Determine what chunks to process
-    # chunks = pd.unique(sonMetaDF['chunk_id']).astype('int') # Store chunk values in list
-    # del sonMetaDF, portstar[0].sonMetaDF
 
     chunks = []
     for son in portstar:
@@ -708,9 +688,6 @@ def read_master_func(sonFiles,
 
     chunks = np.unique(chunks).astype(int)
 
-    # DISABLED: automatic depth detection disabled for now. Will return stronger
-    # and better in the future!!!
-
     # # Automatically estimate depth
     if detectDep > 0:
         print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
@@ -721,27 +698,15 @@ def read_master_func(sonFiles,
 
         # Estimate depth using:
         # Zheng et al. 2021
+        # Load model weights and configuration file
         if detectDep == 1:
             psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
-            # psObj._initModel(USE_GPU)
 
         # With binary thresholding
         elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
-
-        # # Sequential estimate depth for each chunk using appropriate method
-        # # chunks = [chunks[108]]
-        # # chunks = chunks[107:110]
-        # # chunks = [chunks[30]]
-        # # chunks = [chunks[282], chunks[332], chunks[383]]
-        # for chunk in chunks:
-        #     print('Chunk: ', chunk)
-        #     r = psObj._detectDepth(detectDep, int(chunk), USE_GPU)
-        #     psObj.portDepDetect[r[2]] = r[0]
-        #     psObj.starDepDetect[r[2]] = r[1]
-        # # sys.exit()
 
         # Parallel estimate depth for each chunk using appropriate method
         r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
@@ -756,7 +721,7 @@ def read_master_func(sonFiles,
         # Flag indicating depth autmatically estimated
         autoBed = True
 
-
+    # Don't estimate depth, use instrument depth estimate (sonar derived)
     else:
         print('\n\nUsing instrument depth:')
         autoBed = False
@@ -806,44 +771,14 @@ def read_master_func(sonFiles,
         son._cleanup()
     del son
 
-    # ############################################################################
-    # # For river bank picking (i.e. shadows caused by bank)                     #
-    # ############################################################################
-    # doBankpick = False
-    #
-    # if doBankpick:
-        # start_time = time.time()
-        # print('\n\nAutomatically detecting bank location for', len(chunks), 'chunks:')
-    #
-    #     #Dictionary to store chunk : np.array(depth estimate)
-    #     psObj.portBankDetect = {}
-    #     psObj.starBankDetect = {}
-    #
-    #     # Store model weights and config
-    #     psObj.weights = r'./models/bankpick/bankpick_20220705.h5'
-    #     psObj.configfile = psObj.weights.replace('.h5', '.json')
-    #
-    #     # Parallel estimate bankpick for each chunk using appropriate method
-    #     r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectBank)(int(chunk), USE_GPU) for chunk in chunks)
-    #
-    #     # store the bankpick predictions in the class
-    #     for ret in r:
-    #         psObj.portBankDetect[ret[2]] = ret[0]
-    #         psObj.starBankDetect[ret[2]] = ret[1]
-    #
-    #     # Save detected bankpick to csv
-    #     psObj._saveBank(chunks)
-    #     gc.collect()
-    #
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-
 
     ############################################################################
     # For shadow removal                                                       #
     ############################################################################
-
-    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+    # Use deep learning segmentation algorithms to automatically detect shadows.
+    ## 1: Remove all shadows (those cause by boulders/objects)
+    ## 2: Remove only contiguous shadows touching max range extent. May be
+    ## useful for locating river banks...
 
     if remShadow > 0:
         start_time = time.time()
@@ -871,11 +806,6 @@ def read_master_func(sonFiles,
 
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()
-
-        # chunks = [chunks[0]]
-        # for chunk in chunks:
-        #     c, port_pix, star_pix = psObj._detectShadow(remShadow, chunk, USE_GPU, True)
-        #     # print('\n\n\n\n', c, port_pix, star_pix)
 
         r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
 
@@ -907,7 +837,6 @@ def read_master_func(sonFiles,
                 sonMetaDF = son.sonMetaDF
 
                 # Determine what chunks to process
-                # chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
                 chunks = pd.unique(df['chunk_id']).astype(int)
                 if son.wcr_src and son.wcp:
@@ -928,10 +857,10 @@ def read_master_func(sonFiles,
     ############################################################################
     # Export imagery for labeling                                              #
     ############################################################################
+    # Export speed corrected or stretched non-rectified imagery for purpose of
+    ## labeling for subsequent model training. Optionally remove water column
+    ## and shadows (essentially NoData if interested in substrate related pixels)
 
-    lbl_set = False
-    spdCor = 1
-    maxCrop = False
     if lbl_set:
         start_time = time.time()
         print("\n\n\nWARNING: Exporting substrate tiles for labeling (main_readFiles.py line 886):\n")
@@ -956,32 +885,6 @@ def read_master_func(sonFiles,
         del chunkCnt
     except:
         pass
-
-    # ############################################################################
-    # # Export water column removed and cropped tiles for substrate train set    #
-    # ############################################################################
-    # wcr_crop = False
-    # if wcr_crop:
-    #     start_time = time.time()
-    #     print("\n\n\nWARNING: Exporting substrate training tiles (main_readFiles.py line 615):\n")
-    #     for son in sonObjs:
-    #         son.wcr_crop = wcr_crop
-    #         son.wcr_src = False
-    #         son.wcp = False
-    #         if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-    #             son._loadSonMeta()
-    #             sonMetaDF = son.sonMetaDF
-    #
-    #             # Determine what chunks to process
-    #             chunks = pd.unique(sonMetaDF['chunk_id']).astype('int')
-    #
-    #             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i) for i in chunks)
-    #
-    #             son.wcr_src = wcr
-    #             son.wcp = wcp
-    #         gc.collect()
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
 
     ##############################################

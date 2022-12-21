@@ -521,15 +521,7 @@ class rectObj(sonObj):
             chunkDF.reset_index(drop=True, inplace=True)
 
             # Extract every `filt` recording, including last value
-            # last = chunkDF.iloc[-1].copy()
             last = chunkDF.iloc[-1].to_frame().T
-            #####
-            # Tried to add variable chunk size to fix rectification issues,
-            ## but didn't fix and added new issues
-            # filt = int(len(chunkDF.index)*0.1)
-            # if filt != 0:
-            #     chunkDF = chunkDF.iloc[::filt]
-            #####
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
 

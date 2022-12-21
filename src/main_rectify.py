@@ -177,7 +177,7 @@ def rectify_master_func(sonFiles,
         if beam == "ss_port" or beam == "ss_star":
             portstar.append(son)
         else:
-            del son # Remove non-port/star objects since they can't be rectified
+            pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, rectObjs
 
     ############################################################################
@@ -214,14 +214,14 @@ def rectify_master_func(sonFiles,
     ####################################
     ####################################
     # To remove gap between sonar tiles:
-    # For chunk > 0, use coords from previous chunks last ping
+    # For chunk > 0, use coords from previous chunks second to last ping
     # and assign as current chunk's first ping coords
     chunks = pd.unique(sDF['chunk_id'])
 
     i = 1
     while i <= max(chunks):
-        # Get last row of previous chunk
-        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-1]]
+        # Get second to last row of previous chunk
+        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
         # Get index of first row of current chunk
         curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
         curRow = curRow.index[0]
@@ -291,19 +291,12 @@ def rectify_master_func(sonFiles,
     if rect_wcp or rect_wcr:
         for son in portstar:
             son._loadSonMeta()
-            # # Locate and open smoothed trackline/range extent file
-            # trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
-            # trkMeta = pd.read_csv(trkMetaFile)
-            #
-            # # Determine what chunks to process
-            # chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
 
             # Remove chunks completely filled with NoData
             sonMetaDF = son.sonMetaDF
             df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
             chunks = pd.unique(df['chunk_id'])
             del sonMetaDF, df
-
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
