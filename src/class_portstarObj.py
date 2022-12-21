@@ -1484,7 +1484,7 @@ class portstarObj(object):
                 for b in bed:
                     pPix.append((b[0], b[-1]))
 
-            pix[p] = pPix
+                pix[p] = pPix
 
         return pix
 
@@ -1516,19 +1516,31 @@ class portstarObj(object):
         self.port._getScanChunkSingle(i)
         self.star._getScanChunkSingle(i)
 
+        # Get original sonDat dimensions
+        pR, pW = self.port.sonDat.shape
+        sR, sW = self.star.sonDat.shape
+
         # Remove water and crop to min depth
-        self.port._WCR_crop(portDF)
-        self.star._WCR_crop(starDF)
+        pMinDep = self.port._WCR_crop(portDF)
+        sMinDep = self.star._WCR_crop(starDF)
 
         ###############
         # Do prediction
         port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
         star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
 
+        ##############################################
+        # Recover original dimensions for shadow label
+        pMask = np.zeros((pR, pW))
+        sMask = np.zeros((sR, sW))
+
+        pMask[pMinDep:,] = port_label
+        sMask[sMinDep:,] = star_label
+
         ####################
         # Filter predictions
-        port_label = self._filtShadow(port_label)
-        star_label = self._filtShadow(star_label)
+        port_label = self._filtShadow(pMask)
+        star_label = self._filtShadow(sMask)
 
 
         ######

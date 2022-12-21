@@ -182,12 +182,12 @@ def read_master_func(sonFiles,
     # "Hidden" Parameters for added functionality
     USE_GPU = False # Use GPU for predictions
     fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
-    remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+    remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 
     # For image export for labeling imagery
-    lbl_set = False # Export images for labeling
+    lbl_set = True # Export images for labeling
     spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-    maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
+    maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -792,6 +792,7 @@ def read_master_func(sonFiles,
         # Determine which sonObj is port/star
         portstar = []
         for son in sonObjs:
+            son.remShadow = True
             beam = son.beamName
             if beam == "ss_port" or beam == "ss_star":
                 portstar.append(son)
@@ -816,6 +817,10 @@ def read_master_func(sonFiles,
 
         del r
         printUsage()
+
+    else:
+        for son in sonObjs:
+            son.remShadow = False
 
     # Cleanup
     try:

@@ -1372,6 +1372,15 @@ class sonObj(object):
             if filterIntensity:
                 self._doPPDRC()
 
+            # Remove shadows
+            if self.remShadow:
+                # Get mask
+                self._SHW_mask(chunk)
+
+                # Mask out shadows
+                self.sonDat = self.sonDat*self.shadowMask
+
+
             # Export water column present (wcp) image
             if self.wcp:
                 # self._doPPDRC()
@@ -1387,7 +1396,7 @@ class sonObj(object):
                 # Export water column removed and cropped imagery
                 # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
                 if self.wcr_crop:
-                    self._WCR_crop(sonMeta)
+                    _ = self._WCR_crop(sonMeta)
                     self._writeTiles(chunk, imgOutPrefix='wcr_crop', tileFile=tileFile)
             except:
                 pass
@@ -1523,14 +1532,13 @@ class sonObj(object):
         sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
-        return self
+        return minDep
 
     # ======================================================================
-    def _SHW_crop(self, i, maxCrop=True):
+    def _SHW_mask(self, i):
         '''
-        maxCrop: True: ping-wise crop; False: crop tile to max range
+
         '''
-        buf=50 # Add buf if maxCrop is false
 
         # Get sonar data and shadow pix coordinates
         sonDat = self.sonDat
@@ -1542,6 +1550,32 @@ class sonObj(object):
         for k, val in shw_pix.items():
             for v in val:
                 mask[v[0]:v[1], k] = 0
+
+        self.shadowMask = mask
+
+        return self
+
+
+    # ======================================================================
+    def _SHW_crop(self, i, maxCrop=True):
+        '''
+        maxCrop: True: ping-wise crop; False: crop tile to max range
+        '''
+        buf=50 # Add buf if maxCrop is false
+
+        # Get sonar data
+        sonDat = self.sonDat
+
+        # # Create a mask and work on that first, then mask sonDat
+        # mask = np.where(sonDat>0, 1, 0)
+        #
+        # for k, val in shw_pix.items():
+        #     for v in val:
+        #         mask[v[0]:v[1], k] = 0
+
+        # Get sonar data and shadow pix coordinates
+        self._SHW_mask(i)
+        mask = self.shadowMask
 
         # Remove non-contiguous regions
         reg = label(mask)
@@ -1691,10 +1725,10 @@ class sonObj(object):
             self._loadSonChunk()
 
             # Remove water column and crop
-            self._WCR_crop(sonMeta)
+            _ = self._WCR_crop(sonMeta)
             sonDat = self.sonDat
 
-            # Add workflow to zero out bank shadow
+            # Remove shadows and crop
             self._SHW_crop(chunk, maxCrop)
             sonDat = self.sonDat
 
@@ -1702,7 +1736,6 @@ class sonObj(object):
                 # Don't do speed correction
                 pass
             elif spdCor == 1:
-                # Add workflow to do speed correction
 
                 # Distance (in meters)
                 d = sonMeta['trk_dist'].to_numpy()

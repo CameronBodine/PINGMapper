@@ -936,6 +936,14 @@ class rectObj(sonObj):
         if filterIntensity:
             self._doPPDRC()
 
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
         img = self.sonDat
 
         # For each ping, we need the pixel coordinates where the sonar
