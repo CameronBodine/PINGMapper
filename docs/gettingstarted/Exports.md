@@ -143,11 +143,21 @@ Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](
 ## Water Column Present
 {: .no_toc }
 
-`wcp=True`; `remShadows=False`.
+`wcp=True`; `remShadows=0`.
 
-<img src="../../assets/wcp_NoRemShadow.jpg" height="400"/>
+<img src="../../assets/wcp_NoRemShadow.jpg" height="50"/>
 
 
-`wcr=True`; `detectDep=0`; `remShadows=False`.
+`wcr=True`; `detectDep=0`; `remShadows=0`.
 
-<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" height="400"/>
+<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" height="50"/>
+
+
+`wcp=True`; `remShadows=2` (Remove shadows in far-field only).
+
+<img src="../../assets/wcp_shadow2.jpg" height="50"/>
+
+
+`wcr=True`; `detectDep=1`; `remShadows=2`.
+
+<img src="../../assets/wcr_Dep1_shadow2.jpg" height="50"/>
