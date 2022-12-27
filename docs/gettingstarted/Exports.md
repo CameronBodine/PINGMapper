@@ -139,3 +139,9 @@ Option to make additional pixel-wise adjustments to final depth estimate, as spe
 
 # Sonogram Tiles
 Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L60-L61) parameters. These exports are further controlled with [depth detection](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72) and [shadow removal](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L70) settings.
+
+## Water Column Present
+{: .no_toc }
+
+`wcp=True`; `remShadows=False`.
+<img src="./assets/wcp_NoRemShadow.jpg" height="400"/>
