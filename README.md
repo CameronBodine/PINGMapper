@@ -46,25 +46,28 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 2. Export all metadata from .DAT and .SON files to .CSV.
 
-3. (Optional) Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonar tiles with water column removed (WCR) using Humminbird depth estimates.
+3. Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels .
 
-4. Smooth and interpolate GPS track points.
+4. Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonograms with water column removed (WCR) using Humminbird depth estimates OR automated depth detections.
 
-5. (Optional) Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS.
+5. Export speed corrected un-rectified sonograms.
 
-6. (Optional) Mosaic georectified sonar imagery from step 5.
+6. Smooth and interpolate GPS track points.
+
+7. Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
+
+8. Mosaic georectified sonar imagery.
 
 ### Workflows in the Pipeline
-1. Automatic depth detection (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945))
-2. Imagery corrections (radiometric, attenuation, etc.)
-3. Automatic substrate classification
-4. GUI front-end, either as standalone software, or QGIS plugin
-5. So much more...
+1. Automatic substrate classification
+2. GUI front-end, either as standalone software, or QGIS plugin
+3. Imagery corrections (radiometric, attenuation, etc.)
+4. So much more...
 
 ## Installation
-1. Install [Anaconda](https://www.anaconda.com) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (preferred) or [Anaconda](https://www.anaconda.com).
 
-2. Open Anaconda Prompt and navigate to where you would like to save PING Mapper:
+2. Open Anaconda Prompt and navigate to where you would like to save PING-Mapper:
 ```
 cd C:\users\Cam\MyPythonRepos
 ```
@@ -116,7 +119,7 @@ Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
 
 3. Enter paths to DAT, SON, and output directory:
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L45-L48
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L45-L48
 
 Windows users: Make sure your filepaths are structured in one of the three following file formats:
 - (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
@@ -125,47 +128,69 @@ Windows users: Make sure your filepaths are structured in one of the three follo
 
 4. Update temperature `t=10` with average temperature during scan.
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L50
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L51
 
 5. Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L51
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L52
 
 6. Option to export unknown ping metadata fields.
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L52
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L53
 
-7. Export un-rectified sonar tiles with water column present AND/OR water column removed.
+7. Locate and flag missing pings with NoData.
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L53-L54
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L54
 
-<!-- 8. Line 37: Option to use Humminbird depth (`detectDepth=0`), automatically detect depth through thresholding (`detectDepth=1`), automatically detect depth with Residual U-Net (`detectDepth=2`), or do both automatic depth picking methods (`detectDepth=3`).  NOTE: this will soon be updated with a new method, stay tuned... -->
+8. Number of compute threads to use for processing in parallel.
 
-8. Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L55
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L55
+9. Select un-rectified sonogram file type.
 
-9. Additional depth adjustment in number of pixels for water column removal.
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L59
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L56
+10. Export un-rectified sonar tiles with water column present AND/OR water column removed.
 
-10. Plot bedick(s) on non-rectified sonogram for visual inspection.
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L60-L61
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L57
+11. Export speed corrected or stretch un-rectified sonograms.
 
-11. Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L63-L65
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L59-L60
+12. Use computer's GPU for image segmentation.
 
-12. Option to mosaic georectified sonar imagery (exported from step 12).
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L69
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L62
+13. Automatically segment and remove shadows.
 
-13. Number of compute threads to use for processing in parallel.
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L70
 
-https://github.com/CameronBodine/PINGMapper/blob/a45db3039d13ab5e1c317002f17050f10600f035/main.py#L64
+14. Automatically remove water column with Humminbird depth (`detectDepth=0`), a Residual U-Net (`detectDepth=1`) based on [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945), or with binary thresholding (`detectDepth=2`).
 
-14. Run the program by entering the following in the command prompt:
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72
+
+15. Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
+
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L74
+
+16. Additional depth adjustment in number of pixels for water column removal.
+
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L75
+
+17. Plot bedick(s) on non-rectified sonogram for visual inspection.
+
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L76
+
+18. Export georectified sonar imagery (water-column-present AND/OR water-column-removed/slant-range-corrected) for use in GIS.
+
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L80-L81
+
+19. Mosaic georectified sonar imagery.
+
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L82
+
+20. Run the program by entering the following in the command prompt:
 ```
 python main.py
 ```
@@ -180,11 +205,11 @@ PING-Mapper includes a script which will find all sonar recordings in a director
 
 3. Enter paths to input and output directory:
 
-https://github.com/CameronBodine/PINGMapper/blob/ab77cdf0a5a4fc06d3833700e638777a0b1ec7fa/main_batchDirectory.py#L39-L40
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main_batchDirectory.py#L40-L41
 
 4. Edit parameters as necessary (Note: supplied parameters will be applied to all sonar recordings):
 
-https://github.com/CameronBodine/PINGMapper/blob/dd74f508e689ace132bdf304e28e8561cb0e100f/main_batchDirectory.py#L42-L58
+https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main_batchDirectory.py#L43-L77
 
 5. Run the program by entering the following in the command prompt:
 ```
