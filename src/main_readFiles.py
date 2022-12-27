@@ -32,20 +32,30 @@ from class_sonObj import sonObj
 from class_portstarObj import portstarObj
 
 #===========================================
-def read_master_func(sonFiles,
-                     humFile,
-                     projDir,
+def read_master_func(humFile='',
+                     sonFiles='',
+                     projDir='',
                      tempC=10,
                      nchunk=500,
                      exportUnknown=False,
+                     fixNoDat=False,
+                     threadCnt=0,
+                     tileFile=False,
                      wcp=False,
                      wcr=False,
-                     tileFile = '.jpg',
+                     lbl_set=False,
+                     spdCor=0,
+                     maxCrop=False,
+                     USE_GPU=False,
+                     remShadow=0,
                      detectDep=0,
-                     smthDep=False,
+                     smthDep=0,
                      adjDep=0,
                      pltBedPick=False,
-                     threadCnt=0):
+                     rect_wcp=False,
+                     rect_wcr=False,
+                     mosaic=False):
+
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
     tested on 9xx, 11xx, Helix, Solix and Onyx models but should work with any
@@ -179,15 +189,20 @@ def read_master_func(sonFiles,
     |     |          water column present (wcp)
     '''
 
+
+    # globals().update(params)
+    # for k, v in params.items():
+    #     globals().update(k=v)
+
     # "Hidden" Parameters for added functionality
-    USE_GPU = False # Use GPU for predictions
-    fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
-    remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+    # USE_GPU = False # Use GPU for predictions
+    # fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+    # remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 
     # For image export for labeling imagery
-    lbl_set = False # Export images for labeling
-    spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-    maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+    # lbl_set = False # Export images for labeling
+    # spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
+    # maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads

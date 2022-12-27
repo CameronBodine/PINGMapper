@@ -36,14 +36,29 @@ from class_portstarObj import portstarObj
 import inspect
 
 #===============================================================================
-def rectify_master_func(sonFiles,
-                        humFile,
-                        projDir,
+def rectify_master_func(humFile='',
+                        sonFiles='',
+                        projDir='',
+                        tempC=10,
                         nchunk=500,
+                        exportUnknown=False,
+                        fixNoDat=False,
+                        threadCnt=0,
+                        tileFile=False,
+                        wcp=False,
+                        wcr=False,
+                        lbl_set=False,
+                        spdCor=0,
+                        maxCrop=False,
+                        USE_GPU=False,
+                        remShadow=0,
+                        detectDep=0,
+                        smthDep=0,
+                        adjDep=0,
+                        pltBedPick=False,
                         rect_wcp=False,
                         rect_wcr=False,
-                        mosaic=0,
-                        threadCnt=0):
+                        mosaic=False):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -128,6 +143,12 @@ def rectify_master_func(sonFiles,
     |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
 
+    ############
+    # Parameters
+    flip = False #Flip port/star
+    filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
+    filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
+
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
         threadCnt=cpu_count()
@@ -141,12 +162,6 @@ def rectify_master_func(sonFiles,
     if threadCnt>cpu_count(): # If more than total avail. threads, make cpu_count()
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
-
-    ############
-    # Parameters
-    flip = False #Flip port/star
-    filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
-    filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
 
     ############################################################################
     # Create rectObj() instance from previously created sonObj() instance      #
