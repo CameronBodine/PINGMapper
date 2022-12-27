@@ -276,6 +276,39 @@ class sonObj(object):
             'unknown_14':[92, 0, 4, -1]
             }
 
+        #### TESTING ######
+        elif datLen == 100:
+            self.isOnix = 0
+            humDic = {
+            'endianness':'<i', #<=little endian; I=unsigned Int
+            'SP1':[0, 0, 1, -1], #Unknown (spacer)
+            'water_code':[1, 0, 1, -1], #Need to check if consistent with other models (1=fresh?)
+            'SP2':[2, 0, 1, -1], #Unknown (spacer)
+            'unknown_1':[3, 0, 1, -1], #Unknown (gps flag?)
+            'sonar_name':[4, 0, 4, -1], #Sonar name
+            'unknown_2':[8, 0, 4, -1], #Unknown
+            'unknown_3':[12, 0, 4, -1], #Unknown
+            'unknown_4':[16, 0, 4, -1], #Unknown
+            'unix_time':[20, 0, 4, -1], #Unix Time
+            'utm_e':[24, 0, 4, -1], #UTM X
+            'utm_n':[28, 0, 4, -1], #UTM Y
+            'filename':[32, 0, 12, -1], #Recording name
+            'numrecords':[44, 0, 4, -1], #Number of records
+            'recordlens_ms':[48, 0, 4, -1], #Recording length milliseconds
+            'linesize':[52, 0, 4, -1], #Line Size (?)
+            'unknown_5':[56, 0, 4, -1], #Unknown
+            'unknown_6':[60, 0, 4, -1], #Unknown
+            'unknown_7':[64, 0, 4, -1], #Unknown
+            'unknown_8':[68, 0, 4, -1], #Unknown
+            'unknown_9':[72, 0, 4, -1], #Unknown
+            'unknown_10':[76, 0, 4, -1], #Unknown
+            'unknown_11':[80, 0, 4, -1], #Unknown
+            'unknown_12':[84, 0, 4, -1], #Unknown
+            'unknown_13':[88, 0, 4, -1], #Unknown
+            'unknown_14':[92, 0, 4, -1], #Unknown
+            'unknown_15':[96, 0, 4, -1]
+            }
+
         #Onix
         else:
             humDic = {}
@@ -352,6 +385,15 @@ class sonObj(object):
                 humDat['water_type'] = 'unknown'
         #Need to figure out water code for solix
         elif datLen == 96:
+            if waterCode == 1:
+                humDat['water_type'] = 'fresh'
+                S = 1
+            else:
+                humDat['water_type'] = 'unknown'
+                c = 1475
+
+        ###### TESTING ######
+        elif datLen == 100:
             if waterCode == 1:
                 humDat['water_type'] = 'fresh'
                 S = 1
@@ -896,7 +938,7 @@ class sonObj(object):
         return
 
     ############################################################################
-    # Get the metadata for each ping                                   #
+    # Get the metadata for each ping                                           #
     ############################################################################
 
     # ======================================================================
@@ -975,24 +1017,6 @@ class sonObj(object):
                     j=0
                     chunk+=1
 
-                # Tried variable chunk size for rectification issues, but didn't
-                ## fix the problem and introduced new problems
-                # if j == 0:
-                #     lastPingCnt = curPingCnt = headerDat['ping_cnt']
-                # else:
-                #     curPingCnt = headerDat['ping_cnt']
-                # i+=8
-                # j+=1
-                # if (j == nchunk) or (lastPingCnt != curPingCnt):
-                #     j=0
-                #     chunk+=1
-                # # else:
-                #     # j+=1
-                # # print('L: ', lastPingCnt, ' C: ', curPingCnt)
-                # idx['chunk_id'].append(chunk) # Store chunk id
-                # head['chunk_id'].append(chunk) # ping chunk id
-                # lastPingCnt = curPingCnt
-
         # If .IDX file is missing
         ## Attempt to automatically decode .SON file
         else:
@@ -1028,10 +1052,21 @@ class sonObj(object):
         if len(lastChunk) <= (nchunk/2):
             sonMetaAll.loc[sonMetaAll['chunk_id']==chunk, 'chunk_id'] = chunk-1
 
-        # Write metadata to csv
-        outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
-        sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
-        self.sonMetaFile = outCSV
+        # Update caltime to timestamp
+        sonTime = []
+        sonDate = []
+        for t in sonMetaAll['caltime'].to_numpy():
+            t = datetime.datetime.fromtimestamp(t)
+            sonDate.append(datetime.datetime.date(t))
+            sonTime.append(datetime.datetime.time(t))
+        sonMetaAll = sonMetaAll.drop('caltime', axis=1)
+        sonMetaAll['date'] = sonDate
+        sonMetaAll['time'] = sonTime
+
+        # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
+        sonMetaAll = self._calcTrkDistTS(sonMetaAll)
+
+        self._saveSonMeta(sonMetaAll)
 
     # ======================================================================
     def _getHeader(self,
@@ -1089,10 +1124,7 @@ class sonObj(object):
         file.close() # Close .SON file
 
         if self.isOnix and not hasattr(self, 'trans'):
-            # print('\n\n\n\n\n\nONIX\n\n')
             self._getEPSG(sonHead['utm_e'], sonHead['utm_n'])
-            # print(self.trans)
-            # sys.exit()
 
         # Make necessary conversions
         # Convert eastings/northings to latitude/longitude
@@ -1123,6 +1155,7 @@ class sonObj(object):
         try:
             starttime = float(humDat['unix_time'])
             sonHead['caltime'] = starttime + sonHead['time_s']
+
         except :
             sonHead['caltime'] = 0
 
@@ -1190,13 +1223,110 @@ class sonObj(object):
 
         return df
 
+    #=======================================================================
+    def _calcTrkDistTS(self,
+                       sonMetaAll):
+        '''
+        Calculate along track distance based on time ellapsed and gps speed.
+        '''
+
+        ts = sonMetaAll['time_s'].to_numpy()
+        ss = sonMetaAll['speed_ms'].to_numpy()
+        ds = np.zeros((len(ts)))
+
+        # Offset arrays for faster calculation
+        ts1 = ts[1:]
+        ss1 = ss[1:]
+        ts = ts[:-1]
+
+        # Calculate instantaneous distance
+        d = (ts1-ts)*ss1
+        ds[1:] = d
+
+        # Accumulate distance
+        ds = np.cumsum(ds)
+
+        sonMetaAll['trk_dist'] = ds
+        return sonMetaAll
+
+    #=======================================================================
+    def _saveSonMeta(self, sonMetaAll):
+        # Write metadata to csv
+        if not hasattr(self, 'sonMetaFile'):
+            outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
+            sonMetaAll.to_csv(outCSV, index=False, float_format='%.14f')
+            self.sonMetaFile = outCSV
+        else:
+            sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+
+    ############################################################################
+    # Fix corrupt recording w/ missing pings                                   #
+    ############################################################################
+
+    # ======================================================================
+    def _fixNoDat(self, dfA, beams):
+        # Empty dataframe to store final results
+        df = pd.DataFrame(columns = dfA.columns)
+
+        # For tracking beam presence
+        b = defaultdict()
+        bCnt = 0
+        for i in beams:
+            b[i] = np.nan
+            bCnt+=1
+        del i
+
+        c = 0 # Current row index
+
+        while ((c) < len(dfA)):
+
+            cRow = dfA.loc[[c]]
+
+            # Check if b['beam'] is > 0, if it is, we found end of 'ping packet':
+            ## add unfound beams as NoData to ping packet
+            if ~np.isnan(b[cRow['beam'].values[0]]):
+                # Add valid data to df
+                noDat = []
+                for k, v in b.items():
+                    # Store valid data in df
+                    if ~np.isnan(v):
+                        df = pd.concat([df,dfA.loc[[v]]], ignore_index=True)
+                    # Add beam to noDat list
+                    else:
+                        noDat.append(k)
+
+                # Duplicate valid data for missing rows. Remove unneccessary values.
+                for beam in noDat:
+                    df = pd.concat([df, df.iloc[[-1]]], ignore_index=True)
+                    # df.iloc[-1, df.columns.get_loc('record_num')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('index')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('volt_scale')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('f')] = np.nan
+                    # df.iloc[-1, df.columns.get_loc('ping_cnt')] = np.nan
+                    df.iloc[-1, df.columns.get_loc('beam')] = beam
+
+                # reset b
+                for k, v in b.items():
+                    b.update({k:np.nan})
+                del k, v
+
+            else:
+                # Add c idx to b and keep searching for beams in current packet
+                b[cRow['beam'].values[0]] = c
+                c+=1
+
+        del beam, beams, noDat, dfA, cRow, bCnt, c, b
+
+        return df
+
     ############################################################################
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
     # ==========================================================================
     def _exportTiles(self,
-                     chunk):
+                     chunk,
+                     tileFile):
         '''
          Main function to read sonar record ping return values.  Stores the
         number of pings per chunk, chunk id, and byte index location in son file,
@@ -1229,29 +1359,50 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+
         # Update class attributes based on current chunk
-        # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
-        # Load chunk's sonar data into memory
-        self._loadSonChunk()
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
-        if filterIntensity:
-            self._doPPDRC()
+        if ~np.isnan(self.pingMax):
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
 
-        # Export water column present (wcp) image
-        if self.wcp:
-            # self._doPPDRC()
-            self._writeTiles(chunk, imgOutPrefix='wcp') # Save image
-        # Export slant range corrected (water column removed) imagery
-        if self.wcr and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-            self._WCR(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
-            # self._doPPDRC()
-            self._writeTiles(chunk, imgOutPrefix='wcr') # Save image
+            if filterIntensity:
+                self._doPPDRC()
 
+            # Remove shadows
+            if self.remShadow:
+                # Get mask
+                self._SHW_mask(chunk)
+
+                # Mask out shadows
+                self.sonDat = self.sonDat*self.shadowMask
+
+
+            # Export water column present (wcp) image
+            if self.wcp:
+                # self._doPPDRC()
+                self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
+
+            # Export slant range corrected (water column removed) imagery
+            if self.wcr_src:
+                self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+                # self._doPPDRC()
+                self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
+
+            try:
+                # Export water column removed and cropped imagery
+                # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+                if self.wcr_crop:
+                    _ = self._WCR_crop(sonMeta)
+                    self._writeTiles(chunk, imgOutPrefix='wcr_crop', tileFile=tileFile)
+            except:
+                pass
+
+            gc.collect()
         return self
-
 
     # ==========================================================================
     def _loadSonChunk(self):
@@ -1274,27 +1425,29 @@ class sonObj(object):
         --------------------
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
-        sonDat = np.zeros((self.pingMax, len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
         # Iterate each ping
         for i in range(len(self.headIdx)):
-            headIdx = self.headIdx[i] # Get current byte offset to ping
-            pingCnt = self.pingCnt[i] # Get current ping count
-            pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
-            file.seek(pingIdx) # Move to that location
-            k = 0
-            # Decode each sonar return and store in array
-            while k < pingCnt:
-                byte = self._fread(file, 1, 'B')[0]
-                sonDat[k,i] = byte
-                k+=1
+            if ~np.isnan(self.headIdx[i]):
+                headIdx = self.headIdx[i].astype(int) # Get current byte offset to ping
+                pingCnt = self.pingCnt[i].astype(int) # Get current ping count
+                pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+                file.seek(pingIdx) # Move to that location
+                k = 0
+
+                # Decode each sonar return and store in array
+                while k < min(pingCnt, self.pingMax):
+                    byte = self._fread(file, 1, 'B')[0]
+                    sonDat[k,i] = byte
+                    k+=1
 
         file.close() # Close the file
         self.sonDat = sonDat # Store array in class attribute
         return self
 
     # ======================================================================
-    def _WCR(self,
+    def _WCR_SRC(self,
              sonMeta):
         '''
         Slant range correction is the process of relocating sonar returns after
@@ -1364,9 +1517,127 @@ class sonObj(object):
         return self
 
     # ======================================================================
+    def _WCR_crop(self,
+                  sonMeta):
+        # Load depth (in real units) and convert to pixels
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        minDep = min(bedPick)
+
+        sonDat = self.sonDat
+        # Zero out water column
+        for j, d in enumerate(bedPick):
+            sonDat[:d, j] = 0
+
+        # Crop to min depth
+        sonDat = sonDat[minDep:,]
+
+        self.sonDat = sonDat
+        return minDep
+
+    # ======================================================================
+    def _SHW_mask(self, i):
+        '''
+
+        '''
+
+        # Get sonar data and shadow pix coordinates
+        sonDat = self.sonDat
+        shw_pix = self.shadow[i]
+
+        # Create a mask and work on that first, then mask sonDat
+        mask = np.where(sonDat>0, 1, 0)
+
+        for k, val in shw_pix.items():
+            for v in val:
+                mask[v[0]:v[1], k] = 0
+
+        self.shadowMask = mask
+
+        return self
+
+
+    # ======================================================================
+    def _SHW_crop(self, i, maxCrop=True):
+        '''
+        maxCrop: True: ping-wise crop; False: crop tile to max range
+        '''
+        buf=50 # Add buf if maxCrop is false
+
+        # Get sonar data
+        sonDat = self.sonDat
+
+        # # Create a mask and work on that first, then mask sonDat
+        # mask = np.where(sonDat>0, 1, 0)
+        #
+        # for k, val in shw_pix.items():
+        #     for v in val:
+        #         mask[v[0]:v[1], k] = 0
+
+        # Get sonar data and shadow pix coordinates
+        self._SHW_mask(i)
+        mask = self.shadowMask
+
+        # Remove non-contiguous regions
+        reg = label(mask)
+
+        # Find region w/ min row value/highest up on sonogram
+        highReg = -1
+        minRow = mask.shape[0]
+        for region in regionprops(reg):
+            minr, minc, maxr, maxc = region.bbox
+
+            if (minr < minRow) and (highReg != 0):
+                highReg = region.label
+                minRow = minr
+
+        # Keep only region matching highReg, update mask with reg
+        mask = np.where(reg==highReg, 1, 0)
+
+        # Find max range of valid son returns
+        max_r = []
+        mask[mask.shape[0]-1, :] = 0 # Zero-out last row
+
+        R = mask.shape[0] # max range
+        P = mask.shape[1] # number of pings
+
+        for c in range(P):
+            bed = np.where(mask[:,c]==1)[0]
+            try:
+                bed = np.split(bed, np.where(np.diff(bed) != 1)[0]+1)[-1][-1]
+            except:
+                bed = np.nan
+
+            max_r.append(bed)
+
+        # Find max range
+        max_r = np.nanmax(max_r).astype(int)
+        # print(max_r)
+        if maxCrop:
+            # Keep ping-wise crop (aggressive crop)
+            pass
+        else:
+            # Keep all returns up to max_r
+            if (max_r+buf) > mask.shape[0]:
+                mask[:max_r,:] = 1
+            else:
+                mask[:max_r+buf,:] = 1
+                max_r += buf
+
+        # Mask shadows on sonDat
+        sonDat = sonDat * mask
+
+        # Crop SonDat
+        sonDat = sonDat[:max_r,:]
+
+        self.sonDat = sonDat
+        del mask, reg
+        return self
+
+    # ======================================================================
     def _writeTiles(self,
                     k,
-                    imgOutPrefix):
+                    imgOutPrefix,
+                    tileFile='.jpg'):
         '''
         Using currently saved ping ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
@@ -1418,7 +1689,80 @@ class sonObj(object):
 
         channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
-        imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+'.png'), data, check_contrast=False)
+        imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile), data, check_contrast=False)
+
+
+    ############################################################################
+    # Export imagery for labeling                                              #
+    ############################################################################
+
+    # ======================================================================
+    def _exportLblTiles(self,
+                        chunk,
+                        spdCor = 1,
+                        maxCrop = True,
+                        tileFile='.jpg'):
+        '''
+
+        '''
+        # Make sonar imagery directory for each beam if it doesn't exist
+        try:
+            os.mkdir(self.outDir)
+        except:
+            pass
+
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+
+        # Update class attributes based on current chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+        if ~np.isnan(self.pingMax):
+            # Load chunk's sonar data into memory
+            self._loadSonChunk()
+
+            # Remove water column and crop
+            _ = self._WCR_crop(sonMeta)
+            sonDat = self.sonDat
+
+            # Remove shadows and crop
+            self._SHW_crop(chunk, maxCrop)
+            sonDat = self.sonDat
+
+            if spdCor == 0:
+                # Don't do speed correction
+                pass
+            elif spdCor == 1:
+
+                # Distance (in meters)
+                d = sonMeta['trk_dist'].to_numpy()
+                d = np.max(d) - np.min(d)
+
+                # Distance in pix
+                d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
+
+                sonDat = resize(sonDat,
+                                (sonDat.shape[0], d),
+                                mode='constant',
+                                cval=np.nan,
+                                clip=False, preserve_range=True)
+
+            else:
+                # Add along-track stretch x spdCor
+                sonDat = resize(sonDat,
+                                (sonDat.shape[0], sonDat.shape[1]*spdCor),
+                                mode='constant',
+                                cval=np.nan,
+                                clip=False, preserve_range=True)#.astype('uint8')
+
+            self.sonDat = sonDat.astype('uint8')
+
+            self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
+        gc.collect()
+        return self
 
     ############################################################################
     # Miscellaneous                                                            #
@@ -1466,10 +1810,15 @@ class sonObj(object):
         # Filter df by chunk
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
+
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
+        pingMaxi = np.argmax(rangeCnt[1])
+        self.pingMax = int(rangeCnt[0][pingMaxi])
+
+        self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
@@ -1478,6 +1827,8 @@ class sonObj(object):
         # Remove water if exporting wcr imagery
         if remWater:
             self._WCR(sonMeta)
+
+        del self.headIdx, self.pingCnt
 
         return self
 
@@ -1489,6 +1840,21 @@ class sonObj(object):
         meta = pd.read_csv(self.sonMetaFile)
         self.sonMetaDF = meta
         return self
+
+
+    # ======================================================================
+    def _cleanup(self):
+
+        try:
+            del self.sonMetaDF
+        except:
+            pass
+
+        try:
+            del self.sonDat
+        except:
+            pass
+
 
     # ======================================================================
     def __str__(self):

@@ -33,15 +33,32 @@ from funcs_common import *
 from class_rectObj import rectObj
 from class_portstarObj import portstarObj
 
+import inspect
+
 #===============================================================================
-def rectify_master_func(sonFiles,
-                        humFile,
-                        projDir,
+def rectify_master_func(humFile='',
+                        sonFiles='',
+                        projDir='',
+                        tempC=10,
                         nchunk=500,
+                        exportUnknown=False,
+                        fixNoDat=False,
+                        threadCnt=0,
+                        tileFile=False,
+                        wcp=False,
+                        wcr=False,
+                        lbl_set=False,
+                        spdCor=0,
+                        maxCrop=False,
+                        USE_GPU=False,
+                        remShadow=0,
+                        detectDep=0,
+                        smthDep=0,
+                        adjDep=0,
+                        pltBedPick=False,
                         rect_wcp=False,
                         rect_wcr=False,
-                        mosaic=0,
-                        threadCnt=0):
+                        mosaic=False):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -126,6 +143,12 @@ def rectify_master_func(sonFiles,
     |--*_wcp_mosaic.tif : WCP mosaic [rect_wcp=True & mosaic=1]
     '''
 
+    ############
+    # Parameters
+    flip = False #Flip port/star
+    filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
+    filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
+
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
         threadCnt=cpu_count()
@@ -140,12 +163,6 @@ def rectify_master_func(sonFiles,
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
-    ############
-    # Parameters
-    flip = False #Flip port/star
-    filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
-    filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
-
     ############################################################################
     # Create rectObj() instance from previously created sonObj() instance      #
     ############################################################################
@@ -157,6 +174,7 @@ def rectify_master_func(sonFiles,
         metaFiles = sorted(glob(metaDir+os.sep+"*.meta"))
     else:
         sys.exit("No SON metadata files exist")
+    del metaDir
 
     #############################################
     # Create a rectObj instance from pickle files
@@ -164,6 +182,7 @@ def rectify_master_func(sonFiles,
     for meta in metaFiles:
         son = rectObj(meta) # Initialize rectObj()
         rectObjs.append(son) # Store rectObj() in rectObjs[]
+    del meta, metaFiles
 
     #####################################
     # Determine which sonObj is port/star
@@ -173,7 +192,8 @@ def rectify_master_func(sonFiles,
         if beam == "ss_port" or beam == "ss_star":
             portstar.append(son)
         else:
-            del son # Remove non-port/star objects since they can't be rectified
+            pass # Don't add non-port/star objects since they can't be rectified
+    del son, beam, rectObjs
 
     ############################################################################
     # Smooth GPS trackpoint coordinates                                        #
@@ -204,18 +224,19 @@ def rectify_master_func(sonFiles,
     son0 = portstar[maxRec]
     sonDF = son0.sonMetaDF # Get ping metadata
     sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
+    del sonDF
 
     ####################################
     ####################################
     # To remove gap between sonar tiles:
-    # For chunk > 0, use coords from previous chunks last ping
+    # For chunk > 0, use coords from previous chunks second to last ping
     # and assign as current chunk's first ping coords
     chunks = pd.unique(sDF['chunk_id'])
 
     i = 1
     while i <= max(chunks):
-        # Get last row of previous chunk
-        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-1]]
+        # Get second to last row of previous chunk
+        lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
         # Get index of first row of current chunk
         curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
         curRow = curRow.index[0]
@@ -227,6 +248,7 @@ def rectify_master_func(sonFiles,
         sDF.at[curRow, "cog"] = lastRow["cog"]
 
         i+=1
+    del lastRow, curRow, i
 
     son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
 
@@ -244,14 +266,18 @@ def rectify_master_func(sonFiles,
     sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
     son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
-    del sDF
+    del sDF, df, son0, son1
 
     # Save smoothed trackline coordinates to file
     for son in portstar:
         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
+        son._cleanup()
+    del son, outCSV
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Calculate range extent coordinates                                       #
@@ -261,6 +287,8 @@ def rectify_master_func(sonFiles,
     Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Rectify sonar imagery                                                    #
@@ -278,21 +306,26 @@ def rectify_master_func(sonFiles,
     if rect_wcp or rect_wcr:
         for son in portstar:
             son._loadSonMeta()
-            # Locate and open smoothed trackline/range extent file
-            trkMetaFile = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
-            trkMeta = pd.read_csv(trkMetaFile)
 
-            # Determine what chunks to process
-            chunks = pd.unique(trkMeta['chunk_id']).astype('int') # Store chunk values in list
+            # Remove chunks completely filled with NoData
+            sonMetaDF = son.sonMetaDF
+            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+            chunks = pd.unique(df['chunk_id'])
+            del sonMetaDF, df
+
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            gc.collect()
 
     if rect_wcp or rect_wcr:
         for son in portstar:
             del son.sonMetaDF
             del son.smthTrk
+        del son
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Mosaic imagery                                                           #
@@ -302,6 +335,26 @@ def rectify_master_func(sonFiles,
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        psObj._createMosaic(mosaic, overview)
+        psObj._createMosaic(mosaic, overview, threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        del psObj
+        gc.collect()
+        printUsage()
+
+
+    ##############################################
+    # Let's pickle sonObj so we can reload later #
+    ##############################################
+
+    for son in portstar:
+        outFile = son.sonMetaFile.replace(".csv", ".meta")
+        son.sonMetaPickle = outFile
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(son, sonFile)
+        del son
+
+    # Cleanup
+    del portstar
+
+    printUsage()

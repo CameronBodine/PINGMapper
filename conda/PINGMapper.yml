@@ -12,3 +12,4 @@ dependencies:
   - joblib
   - gdal
   - matplotlib
+  - psutil

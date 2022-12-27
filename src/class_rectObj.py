@@ -466,6 +466,7 @@ class rectObj(sonObj):
         ##########################################
         # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
+        gc.collect()
         return self
 
     #===========================================
@@ -520,15 +521,7 @@ class rectObj(sonObj):
             chunkDF.reset_index(drop=True, inplace=True)
 
             # Extract every `filt` recording, including last value
-            # last = chunkDF.iloc[-1].copy()
             last = chunkDF.iloc[-1].to_frame().T
-            #####
-            # Tried to add variable chunk size to fix rectification issues,
-            ## but didn't fix and added new issues
-            # filt = int(len(chunkDF.index)*0.1)
-            # if filt != 0:
-            #     chunkDF = chunkDF.iloc[::filt]
-            #####
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
 
@@ -930,14 +923,26 @@ class rectObj(sonObj):
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
         # Update class attributes based on current chunk
-        self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
+        # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
+
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         # Open image to rectify
         self._loadSonChunk()
         if filterIntensity:
             self._doPPDRC()
+
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
 
         img = self.sonDat
 
@@ -1100,7 +1105,7 @@ class rectObj(sonObj):
             except:
                 pass
 
-            self._WCR(sonMeta)
+            self._WCR_SRC(sonMeta)
             img = self.sonDat
 
             img[0]=0 # To fix extra white on curves
@@ -1145,4 +1150,5 @@ class rectObj(sonObj):
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
 
+        gc.collect()
         return self

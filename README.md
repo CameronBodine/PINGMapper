@@ -190,4 +190,3 @@ https://github.com/CameronBodine/PINGMapper/blob/dd74f508e689ace132bdf304e28e856
 ```
 python main_batchDirectory.py
 ```
-
