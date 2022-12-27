@@ -8,6 +8,8 @@ nav_exclude: false
 
 ---
 
+{: .no_toc }
+
 # Ping Attributes to CSV
 
 PING-Mapper will locate each sonar ping's attributes for each available sonar channel. The attributes which PING-Mapper's developers have reverse-engineered are documented below. The attributes are written to CSV and saved in the `meta` folder in the project directory. By selecting `exportUnknown=True` in [`main.py`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L53), attributes which have not been reverse-engineered are also exported to CSV for review.
@@ -86,7 +88,13 @@ Time of sonar ping.
 Sonar recordings will often have missing pings (see [Issue #33](https://github.com/CameronBodine/PINGMapper/issues/33)). There is an option for PING-Mapper to locate and flag missing data by setting [`fixNoDat`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L54) to `True`. This will insert a placeholder line in the ping attribute CSV using data from another ping, as identified by `orig_record_num`. If `record_num != orig_record_num`, then a missing ping has been identified. This information is used during sonogram image export to insert `NoData` in the appropriate location, ensuring ping's are properly geographically located.
 
 ## dep_m
-Final depth in meters. This value is based on the depth detection method used ([`detect_dep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72)), whether depth estimates are smoothed ([`smthDep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L74)), and if any additional pixel-wise adjustments are made ().
+Final depth in meters. This value is based on the depth [detection method](#dep_m_method) used, whether depth estimates are [smoothed](dep_m_smth), and if any additional [pixel-wise adjustments](#dep_m_adjby) are made.
 
 ## dep_m_Method
 The method used to derive [`dep_m`](#dep_m), as given by the [`detect_dep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72) parameter.
+
+## dep_m_smth
+Option to smooth the depth estimates, as specified by [`smthDep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L74).
+
+## dep_m_adjBy
+Option to make additional pixel-wise adjustments to final depth estimate, as specified by ['adjDep'](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L75).
