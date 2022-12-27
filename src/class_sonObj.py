@@ -1729,7 +1729,8 @@ class sonObj(object):
             sonDat = self.sonDat
 
             # Remove shadows and crop
-            self._SHW_crop(chunk, maxCrop)
+            if self.remShadow:
+                self._SHW_crop(chunk, maxCrop)
             sonDat = self.sonDat
 
             if spdCor == 0:

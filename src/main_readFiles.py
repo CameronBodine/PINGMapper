@@ -891,6 +891,7 @@ def read_master_func(humFile='',
 
                 df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
                 chunks = pd.unique(df['chunk_id']).astype(int)
+                chunkCnt = len(chunks)
 
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
