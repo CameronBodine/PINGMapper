@@ -166,7 +166,7 @@ https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db10
 
 https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L70
 
-14. Automatically remove water column with Humminbird depth (`detectDepth=0`), a Residual U-Net (`detectDepth=1`) based on [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945), or with binary thresholding (`detectDepth=1`).
+14. Automatically remove water column with Humminbird depth (`detectDepth=0`), a Residual U-Net (`detectDepth=1`) based on [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945), or with binary thresholding (`detectDepth=2`).
 
 https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72
 
