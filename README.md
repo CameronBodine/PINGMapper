@@ -1,15 +1,3 @@
-# 🔥 CAUTION 🔥
-*This is a development branch. Scripts may not perform as expected, or may error out. Use at your own peril!!! :-)*
-
-In Development for v2.0.0:
-- Automated depth estimation.
-- Automated shadow removal.
-- Automated substrate segmentation.
-
-#  🔥THAT IS ALL🔥
-
-
-
 # PING-Mapper
 {PING-Mapper is a Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.}
 
@@ -38,13 +26,15 @@ In Development for v2.0.0:
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
 ## Documentation
-### Website
-None yet, but you can check out some [preliminary documentation](../main/docs/BinaryStructure.md)
+### Website 
+Check out PING-Mapper's [website!](https://cameronbodine.github.io/PINGMapper/)
 
 ### Paper
-[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
-Peer Reviewed: Forthcoming...
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469 
+
+PrePrint: [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+
 
 ### Code that made the paper
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
