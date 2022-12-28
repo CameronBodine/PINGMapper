@@ -186,6 +186,7 @@ sonPath = "C:/user/cam/myHumDat"
 projDir = "C:/user/cam/myHumAnswerBox/myHumDat"
 ```
 
+{: .warning }
 Windows users: Make sure your filepaths are structured in one of the three following file formats:
 - (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
 - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
@@ -214,11 +215,9 @@ fixNoDat = True
 ```
 
 - Specify maximum number of threads to use during processing:
-`threadCnt = 0`: Use all available threads.
-
-`threadCnt > 0`: Use specified number of threads.
-
-`threadCnt < 0`: Use total number of threads minus `threadCnt`.
+    - `threadCnt = 0`: Use all available threads.
+    - `threadCnt > 0`: Use specified number of threads.
+    - `threadCnt < 0`: Use total number of threads minus `threadCnt`.
 
 - Specify sonogram tile file type (".png" or ".jpg") 
 ```
@@ -234,20 +233,16 @@ wcr = True
 
 
 - Export images that are speed corrected or stretched along track by some factor. This is used for generating images for substrate labeling but can have other applications:
-`lbl_set = 0`: Don't export.
-
-`lbl_set = 1`: Export images with water column and shadows *present*.
-
-`lbl_set = 2`: Export images with water column and shadows *removed*.
+    - `lbl_set = 0`: Don't export.
+    - `lbl_set = 1`: Export images with water column and shadows *present*.
+    - `lbl_set = 2`: Export images with water column and shadows *removed*.
 
 
 
 - Specify if images should be speed corrected (based on distance traveled) or stretched by a factor:
-`spdCor = 0`: No speed correction.
-
-`spdCor = 1`: Speed correction based on distance traveled.
-
-`spdCor != 0 or 1`: Stretch along the track by the specified factor.
+    - `spdCor = 0`: No speed correction.
+    - `spdCor = 1`: Speed correction based on distance traveled.
+    - `spdCor != 0 or 1`: Stretch along the track by the specified factor.
 
 
 - Perform ping-wise (`True`) or maximum range for a chunk as determined by shadow detection (`False`). See [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#speed-corrected) for more information:
@@ -263,20 +258,14 @@ USE_GPU = True
 
 
 - Automatically segment and remove shadows from any image exports:
-
     - `remShadow = 0`: Don't segment or remove shadows.
-
     - `remShadow = 1`: Remove all shadows.
-
     - `remShadow = 2`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
 
 
 - Automatically estimate the depth of water column for each side scan channel:
-
     - `detectDep = 0`: Don't automatically estimate depth. Use sonar sensor depth instead.
-
     - `detectDep = 1`: Automatically segment and remove water column with a Residual U-Net, based upon [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945).
-
     - `detectDep = 2`: Automatically segment and remove water column with binary segmentation.
 
 
@@ -305,7 +294,6 @@ rect_wcr = True
 
 
 - Option to mosaic georectified sonar imagery (exported from step 12). Options include:
-
     - `mosaic = 0`: Don't Mosaic
     - `mosaic = 1`: Do Mosaic - GeoTiff
     - `mosaic = 2`: Do Mosaic - VRT (virtual raster)
