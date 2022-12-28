@@ -137,7 +137,7 @@ Option to smooth the depth estimates, as specified by [`smthDep`](https://github
 
 ## dep_m_adjBy
 {: .no_toc }
-Option to make additional pixel-wise adjustments to final depth estimate, as specified by ['adjDep'](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L75).
+Option to make additional pixel-wise adjustments to final depth estimate, as specified by [`adjDep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L75).
 
 
 
@@ -147,13 +147,19 @@ Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](
 ## Water Column Present
 {: .no_toc }
 
-`wcp=True`; `remShadows=0`.
+```
+wcp=True
+remShadows=0
+```
 
 <img src="../../assets/wcp_NoRemShadow.jpg" width="200"/>
 
-Shadows in the far-field can be segmented and removed by specifying `remShadows=2`. This model will improve with future software releases.
+Shadows in the far-field can be segmented and removed by specifying `remShadows=2` (Remove shadows in far-field only). This model will improve with future software releases.
 
-`wcp=True`; `remShadows=2` (Remove shadows in far-field only).
+```
+wcp=True
+remShadows=2
+```
 
 <img src="../../assets/wcp_shadow2.jpg" width="200"/>
 
@@ -164,15 +170,32 @@ Shadows in the far-field can be segmented and removed by specifying `remShadows=
 The water column can be removed by setting `wcp=True` and selecting desired [detection method](#dep_m_method). Once the water column is removed, pixels are relocated using a flat bottom assumption.
 
 
-`wcr=True`; `detectDep=0`; `remShadows=0`.
+```
+wcr=True
+detectDep=0
+remShadows=0
+```
 
 <img src="../../assets/wcr_Dep0_NoRemShadow.jpg" width="200">
 
 Shadows in the far-field can be segmented and removed by specifying `remShadows=2`. This model will improve with future software releases.
 
-`wcr=True`; `detectDep=1`; `remShadows=2`.
+```
+wcr=True
+detectDep=1
+remShadows=2
+```
 
 <img src="../../assets/wcr_Dep1_shadow2.jpg" width="200"/>
+
+# Bedpick Plots
+Plots of the bedpick are exported to compare the sonar sensor depth estimate to the automated bedpicks.
+```
+detectDep = 1
+pltBedPick = True
+```
+<img src="../../assets/bedpick.jpg"/>
+
 
 # Speed Corrected & Along-Track Stretched Sonogram
 
