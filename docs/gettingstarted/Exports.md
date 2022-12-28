@@ -207,22 +207,24 @@ detectDep = 1
 ## Along-Track Stretch
 {: .no_toc }
 
-Stretch factor of `0.5` with water column and shadows removed:
+Stretch factor of `0.75` with water column and shadows removed:
 ```
 lbl_set = 2
-spdCor = 0.5
+spdCor = 0.75
 maxCrop = True
 
 remShadow = 2
 detectDep = 1
 ```
+<img src="../../assets/lbl2_spdcor075.jpg" width="200"/>
 
-Stretch factor of `2` with water column and shadows removed:
+Stretch factor of `10` with water column and shadows removed:
 ```
 lbl_set = 2
-spdCor = 2
+spdCor = 10
 maxCrop = True
 
 remShadow = 2
 detectDep = 1
 ```
+<img src="../../assets/lbl2_spdcor10.jpg"/>
