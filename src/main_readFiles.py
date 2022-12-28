@@ -895,7 +895,7 @@ def read_master_func(humFile='',
 
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, spdCor, maxCrop, tileFile) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
                 son._cleanup()
             gc.collect()
         print("Done!")

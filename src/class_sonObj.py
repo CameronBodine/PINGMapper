@@ -1699,6 +1699,7 @@ class sonObj(object):
     # ======================================================================
     def _exportLblTiles(self,
                         chunk,
+                        lbl_set = 1,
                         spdCor = 1,
                         maxCrop = True,
                         tileFile='.jpg'):
@@ -1725,12 +1726,13 @@ class sonObj(object):
             self._loadSonChunk()
 
             # Remove shadows and crop
-            if self.remShadow:
+            if self.remShadow and (lbl_set==2):
                 self._SHW_crop(chunk, maxCrop)
             sonDat = self.sonDat
 
             # Remove water column and crop
-            _ = self._WCR_crop(sonMeta)
+            if (lbl_set==2):
+                _ = self._WCR_crop(sonMeta)
             sonDat = self.sonDat
 
             if spdCor == 0:
