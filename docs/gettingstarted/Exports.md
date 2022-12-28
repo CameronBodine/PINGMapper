@@ -253,7 +253,22 @@ detectDep = 1
 <img src="../../assets/lbl2_spdcor10.jpg"/>
 
 # Georectified Mosaics
-Sonograms can be georectified and mosaicked and brought into a GIS for additional analysis. Either the sonar sensor depth estimate or the automated depth estimates can be used for water column removal and slant range correction. The following parameters where used to create the images below:
+Sonograms can be georectified and mosaicked and brought into a GIS for additional analysis. Either the sonar sensor depth estimate or the automated depth estimates can be used for water column removal and slant range correction.
+
+## Water Column Present
+{: .no_toc }
+
+Mosaics with the water column present can also be exported, however, these mosaics are not geographically correct due to the presence of the water column.
+
+```
+rect_wcp=True
+```
+<img src="../../assets/GeorectifiedSon.PNG"/>
+
+## Water Column Removed
+{: .no_toc }
+
+The two panels show mosaics with water column removed. The left panel shows the mosaic with shadows removed in contrast to the right panel with shadows preserved.
 
 ```
 # Left Panel
@@ -265,7 +280,7 @@ mosaic=1
 ```
 
 ```
-# Left Panel
+# Right Panel
 
 rect_wcr=True
 detectDep=1
@@ -274,10 +289,3 @@ mosaic=1
 ```
 
 <img src="../../assets/rect_shadow.jpeg"/>
-
-Mosaics with the water column present can also be exported, however, these mosaics are not geographically correct due to the presence of the water column.
-
-```
-rect_wcp=True
-```
-<img src="../../assets/GeorectifiedSon.PNG"/>
