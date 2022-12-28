@@ -173,3 +173,17 @@ Shadows in the far-field can be segmented and removed by specifying `remShadows=
 `wcr=True`; `detectDep=1`; `remShadows=2`.
 
 <img src="../../assets/wcr_Dep1_shadow2.jpg" width="200"/>
+
+# Speed Corrected & Along-Track Stretched Sonogram
+
+## Speed Corrected
+```
+lbl_set = True
+spdCor = 1
+maxCrop = True
+
+remShadow = 2
+detectDep = 1
+```
+
+<img src="../../assets/lbl_spdcor1.jpg"/>
