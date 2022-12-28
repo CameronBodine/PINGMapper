@@ -87,7 +87,7 @@ The chunk that a given ping belongs to, as determined by the [`nchunk`](https://
 {: .no_toc }
 Longitude in WGS 1984.
 
-##lat
+## lat
 {: .no_toc }
 Latitude in WGS 1984.
 
