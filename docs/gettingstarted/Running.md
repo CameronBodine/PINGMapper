@@ -187,10 +187,10 @@ projDir = "C:/user/cam/myHumAnswerBox/myHumDat"
 ```
 
 {: .warning }
-Windows users: Make sure your filepaths are structured in one of the three following file formats:
-- (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
-- (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
-- (Single forward slash): `humFile = “C:/Users/cam/Documents/Programs/PINGMapper/Rec00012.DAT”`
+> Windows users: Make sure your filepaths are structured in one of the three following file formats:
+> - (Double backslashes): `humFile = “C:\\Users\\cam\\Documents\\Programs\\PINGMapper\\Rec00012.DAT”`
+> - (Path preceded by `r`): `humFile = r“C:\Users\cam\Documents\Programs\PINGMapper\Rec00012.DAT”`
+> - (Single forward slash): `humFile = “C:/Users/cam/Documents/Programs/PINGMapper/Rec00012.DAT”`
 
 - Update temperature (in Celcius) with average temperature during scan:
 ```
