@@ -17,7 +17,6 @@ After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you 
 - Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
 - Open `main.py` in a text editor/IDE (I use [Atom](https://atom.io/)). Here is an example of the script:
-
 ```
 import sys
 sys.path.insert(0, 'src')
@@ -130,7 +129,6 @@ print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time
 ```
 
 We are going to update this script with new parameters that we define, specifically this chunk of code:
-
 ```
 #################
 # User Parameters
@@ -199,7 +197,6 @@ tempC=10
 
 
 - Choose the number of pings to export per sonar tile.  This can be any value but all testing has been performed on chunk sizes of 500.
-
 ```
 nchunk = 500
 ```
@@ -216,7 +213,6 @@ fixNoDat = True
 ```
 
 - Specify maximum number of threads to use during processing:
-
 `threadCnt = 0`: Use all available threads.
 
 `threadCnt > 0`: Use specified number of threads.
@@ -237,7 +233,6 @@ wcr = True
 
 
 - Export images that are speed corrected or stretched along track by some factor. This is used for generating images for substrate labeling but can have other applications:
-
 `lbl_set = 0`: Don't export.
 
 `lbl_set = 1`: Export images with water column and shadows *present*.
@@ -247,7 +242,6 @@ wcr = True
 
 
 - Specify if images should be speed corrected (based on distance traveled) or stretched by a factor:
-
 `spdCor = 0`: No speed correction.
 
 `spdCor = 1`: Speed correction based on distance traveled.
@@ -256,21 +250,18 @@ wcr = True
 
 
 - Perform ping-wise (`True`) or maximum range for a chunk as determined by shadow detection (`False`). See [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#speed-corrected) for more information:
-
 ```
 maxCrop = True
 ```
 
 
 - Use GPU (instead of CPU) for automated segmentation procedures (depth, shadow, substrate estimation):
-
 ```
 USE_GPU = True
 ```
 
 
 - Automatically segment and remove shadows from any image exports:
-
 `remShadow = 0`: Don't segment or remove shadows.
 
 `remShadow = 1`: Remove all shadows.
@@ -279,7 +270,6 @@ USE_GPU = True
 
 
 - Automatically estimate the depth of water column for each side scan channel:
-
 `detectDep = 0`: Don't automatically estimate depth. Use sonar sensor depth instead.
 
 `detectDep = 1`: Automatically segment and remove water column with a Residual U-Net, based upon [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945).
@@ -288,27 +278,23 @@ USE_GPU = True
 
 
 - Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
-
 ```
 smthDep = True
 ```
 
 
 - Additional depth adjustment in number of pixels for water column removal. Positive values increase depth estimate, resulting in a larger proportion of sonar returns being removed during water column removal:
-
 ```
 adjDep = 0
 ```
 
 
 - Plot bedick(s) on non-rectified sonogram for visual inspection:
-
 ```
 pltBedPick = True
 ```
 
 - Export georectified sonar imagery (water column present `rect_wcp` AND/OR water column removed/slant range corrected `rect_wcr`) for use in GIS.
-
 ```
 rect_wcp = True
 rect_wcr = True
@@ -316,7 +302,6 @@ rect_wcr = True
 
 
 - Option to mosaic georectified sonar imagery (exported from step 12). Options include:
-
 `mosaic = 0`: Don't Mosaic
 
 `mosaic = 1`: Do Mosaic - GeoTiff
@@ -335,7 +320,6 @@ PING-Mapper includes a script which will find all sonar recordings in a director
 - Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
 - Open `main_batchDirectory.py` in a text editor/IDE (I use [Atom](https://atom.io/)). Here is an example of the script:
-
 ```
 import sys
 sys.path.insert(0, 'src')
@@ -466,7 +450,6 @@ for datFile in inFiles:
 ```
 
 - Enter paths to input and output directory:
-
 ```
 inDir = r'./exampleData'
 outDir = r'./procData'
