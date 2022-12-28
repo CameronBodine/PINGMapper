@@ -17,6 +17,7 @@ After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you 
 - Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
 - Open `main.py` in a text editor/IDE (I use [Atom](https://atom.io/)). Here is an example of the script:
+
 ```
 import sys
 sys.path.insert(0, 'src')
@@ -129,6 +130,7 @@ print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time
 ```
 
 We are going to update this script with new parameters that we define, specifically this chunk of code:
+
 ```
 #################
 # User Parameters
@@ -178,7 +180,6 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 ```
 
 - Enter paths to DAT, SON, and output directory:
-
 ```
 humFile = "C:/user/cam/myHumDat.DAT"
 sonPath = "C:/user/cam/myHumDat"
@@ -262,19 +263,21 @@ USE_GPU = True
 
 
 - Automatically segment and remove shadows from any image exports:
-`remShadow = 0`: Don't segment or remove shadows.
 
-`remShadow = 1`: Remove all shadows.
+    - `remShadow = 0`: Don't segment or remove shadows.
 
-`remShadow = 2`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
+    - `remShadow = 1`: Remove all shadows.
+
+    - `remShadow = 2`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
 
 
 - Automatically estimate the depth of water column for each side scan channel:
-`detectDep = 0`: Don't automatically estimate depth. Use sonar sensor depth instead.
 
-`detectDep = 1`: Automatically segment and remove water column with a Residual U-Net, based upon [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945).
+    - `detectDep = 0`: Don't automatically estimate depth. Use sonar sensor depth instead.
 
-`detectDep = 2`: Automatically segment and remove water column with binary segmentation.
+    - `detectDep = 1`: Automatically segment and remove water column with a Residual U-Net, based upon [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945).
+
+    - `detectDep = 2`: Automatically segment and remove water column with binary segmentation.
 
 
 - Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
@@ -302,11 +305,10 @@ rect_wcr = True
 
 
 - Option to mosaic georectified sonar imagery (exported from step 12). Options include:
-`mosaic = 0`: Don't Mosaic
 
-`mosaic = 1`: Do Mosaic - GeoTiff
-
-`mosaic = 2`: Do Mosaic - VRT (virtual raster)
+    - `mosaic = 0`: Don't Mosaic
+    - `mosaic = 1`: Do Mosaic - GeoTiff
+    - `mosaic = 2`: Do Mosaic - VRT (virtual raster)
 
 - Run the program by entering the following in the command prompt:
 ```
@@ -320,6 +322,7 @@ PING-Mapper includes a script which will find all sonar recordings in a director
 - Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
 
 - Open `main_batchDirectory.py` in a text editor/IDE (I use [Atom](https://atom.io/)). Here is an example of the script:
+
 ```
 import sys
 sys.path.insert(0, 'src')
