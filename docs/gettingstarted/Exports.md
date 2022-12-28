@@ -145,7 +145,7 @@ Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](
 
 `wcp=True`; `remShadows=0`.
 
-<img src="../../assets/wcp_NoRemShadow.jpg" height="50"/>
+<img src="../../assets/wcp_NoRemShadow.jpg" width="50"/>
 
 
 `wcr=True`; `detectDep=0`; `remShadows=0`.
