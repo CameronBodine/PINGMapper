@@ -127,6 +127,10 @@ Final depth in meters. This value is based on the depth [detection method](#dep_
 {: .no_toc }
 The method used to derive [`dep_m`](#dep_m), as given by the [`detect_dep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L71-L72) parameter.
 
+- 0=Use sonar sensor depth estimate
+- 1=Use Residual U-Net model for depth estimate and water column segmentation (*Recommended*)
+- 2=Use binary thresholding for depth estimate and water column segmentation
+
 ## dep_m_smth
 {: .no_toc }
 Option to smooth the depth estimates, as specified by [`smthDep`](https://github.com/CameronBodine/PINGMapper/blob/4b2446f38cde6a54551fcb8f8a4db1014d040077/main.py#L74).
@@ -147,16 +151,24 @@ Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](
 
 <img src="../../assets/wcp_NoRemShadow.jpg" width="200"/>
 
-
-`wcr=True`; `detectDep=0`; `remShadows=0`.
-
-<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" width="200"/>
-
+Shadows in the far-field can be segmented and removed by specifying `remShadows=2`. This model will improve with future software releases.
 
 `wcp=True`; `remShadows=2` (Remove shadows in far-field only).
 
 <img src="../../assets/wcp_shadow2.jpg" width="200"/>
 
+
+## Water Column Removed
+{: .no_toc }
+
+The water column can be removed by setting `wcp=True` and selecting desired [detection method](#dep_m_method). Once the water column is removed, pixels are relocated using a flat bottom assumption.
+
+
+`wcr=True`; `detectDep=0`; `remShadows=0`.
+
+<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" width="200">
+
+Shadows in the far-field can be segmented and removed by specifying `remShadows=2`. This model will improve with future software releases.
 
 `wcr=True`; `detectDep=1`; `remShadows=2`.
 
