@@ -58,6 +58,8 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 8. Mosaic georectified sonar imagery.
 
+More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
+
 ### Workflows in the Pipeline
 1. Automatic substrate classification
 2. GUI front-end, either as standalone software, or QGIS plugin
