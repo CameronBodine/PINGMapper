@@ -145,19 +145,19 @@ Export of non-rectified sonogram tiles is controlled with the [`wcp` and `wcr`](
 
 `wcp=True`; `remShadows=0`.
 
-<img src="../../assets/wcp_NoRemShadow.jpg" width="50"/>
+<img src="../../assets/wcp_NoRemShadow.jpg" width="200"/>
 
 
 `wcr=True`; `detectDep=0`; `remShadows=0`.
 
-<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" height="50"/>
+<img src="../../assets/wcr_Dep0_NoRemShadow.jpg" width="200"/>
 
 
 `wcp=True`; `remShadows=2` (Remove shadows in far-field only).
 
-<img src="../../assets/wcp_shadow2.jpg" height="50"/>
+<img src="../../assets/wcp_shadow2.jpg" width="200"/>
 
 
 `wcr=True`; `detectDep=1`; `remShadows=2`.
 
-<img src="../../assets/wcr_Dep1_shadow2.jpg" height="50"/>
+<img src="../../assets/wcr_Dep1_shadow2.jpg" width="200"/>
