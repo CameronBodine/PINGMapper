@@ -1724,13 +1724,13 @@ class sonObj(object):
             # Load chunk's sonar data into memory
             self._loadSonChunk()
 
-            # Remove water column and crop
-            _ = self._WCR_crop(sonMeta)
-            sonDat = self.sonDat
-
             # Remove shadows and crop
             if self.remShadow:
                 self._SHW_crop(chunk, maxCrop)
+            sonDat = self.sonDat
+
+            # Remove water column and crop
+            _ = self._WCR_crop(sonMeta)
             sonDat = self.sonDat
 
             if spdCor == 0:
