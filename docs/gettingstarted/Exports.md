@@ -177,8 +177,24 @@ Shadows in the far-field can be segmented and removed by specifying `remShadows=
 # Speed Corrected & Along-Track Stretched Sonogram
 
 ## Speed Corrected
+{: .no_toc }
+
+Speed corrected sonogram with water column and shadows present:
 ```
-lbl_set = True
+lbl_set = 1
+spdCor = 1
+maxCrop = True
+
+remShadow = 0
+detectDep = 0
+```
+
+<img src="../../assets/lbl1_spdcor1.jpg"/>
+
+
+Speed corrected sonogram with water column and shadows removed:
+```
+lbl_set = 2
 spdCor = 1
 maxCrop = True
 
@@ -186,4 +202,4 @@ remShadow = 2
 detectDep = 1
 ```
 
-<img src="../../assets/lbl_spdcor1.jpg"/>
+<img src="../../assets/lbl2_spdcor1.jpg"/>
