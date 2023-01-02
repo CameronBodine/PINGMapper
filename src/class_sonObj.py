@@ -1304,6 +1304,7 @@ class sonObj(object):
                     df.iloc[-1, df.columns.get_loc('f')] = np.nan
                     # df.iloc[-1, df.columns.get_loc('ping_cnt')] = np.nan
                     df.iloc[-1, df.columns.get_loc('beam')] = beam
+                    del beam
 
                 # reset b
                 for k, v in b.items():
@@ -1315,7 +1316,7 @@ class sonObj(object):
                 b[cRow['beam'].values[0]] = c
                 c+=1
 
-        del beam, beams, noDat, dfA, cRow, bCnt, c, b
+        del beams, noDat, dfA, cRow, bCnt, c, b
 
         return df
 

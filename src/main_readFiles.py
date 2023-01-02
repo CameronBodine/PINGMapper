@@ -661,7 +661,9 @@ def read_master_func(humFile='',
             print("{:<15s} | {:<15s}".format(key.split(".")[0], key.split(".")[1]))
         print("\n*******************************\n****WARNING: INVALID VALUES****\n*******************************")
         print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
-    del invalid, beam, beams
+    del invalid, beam
+    if fixNoDat:
+        del beams
 
 
     print("\nDone!")
