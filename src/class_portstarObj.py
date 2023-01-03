@@ -458,9 +458,6 @@ class portstarObj(object):
         #suppress tensorflow warnings
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-        if USE_GPU == True:
-            os.environ['CUDA_VISIBLE_DEVICES'] = SET_GPU
-
         # Open model configuration file
         with open(self.configfile) as f:
             config = json.load(f)
