@@ -54,7 +54,8 @@ def read_master_func(humFile='',
                      pltBedPick=False,
                      rect_wcp=False,
                      rect_wcr=False,
-                     mosaic=False):
+                     mosaic=False,
+                     map_sub=0):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been

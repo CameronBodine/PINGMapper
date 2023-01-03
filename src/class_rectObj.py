@@ -91,8 +91,11 @@ class rectObj(sonObj):
         for attr, value in metaFile.__dict__.items(): # Store sonObj() attributes in self
             setattr(self, attr, value)
 
-        self.rect_wcp = False
-        self.rect_wcr = False
+        if not hasattr(self, 'rect_wcp'):
+            self.rect_wcp = False
+
+        if not hasattr(self, 'rect_wcr'):
+            self.rect_wcr = False
 
         return
 
@@ -585,7 +588,8 @@ class rectObj(sonObj):
 
         ###########################################
         # Overwrite Trackline_Smth_son.beamName.csv
-        outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        # outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        outCSV = self.smthTrkFile
         rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
         self.rangeExt = rsDF # Store smoothed range extent in rectObj

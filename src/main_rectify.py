@@ -37,28 +37,29 @@ import inspect
 
 #===============================================================================
 def rectify_master_func(humFile='',
-                        sonFiles='',
-                        projDir='',
-                        tempC=10,
-                        nchunk=500,
-                        exportUnknown=False,
-                        fixNoDat=False,
-                        threadCnt=0,
-                        tileFile=False,
-                        wcp=False,
-                        wcr=False,
-                        lbl_set=False,
-                        spdCor=0,
-                        maxCrop=False,
-                        USE_GPU=False,
-                        remShadow=0,
-                        detectDep=0,
-                        smthDep=0,
-                        adjDep=0,
-                        pltBedPick=False,
-                        rect_wcp=False,
-                        rect_wcr=False,
-                        mosaic=False):
+                     sonFiles='',
+                     projDir='',
+                     tempC=10,
+                     nchunk=500,
+                     exportUnknown=False,
+                     fixNoDat=False,
+                     threadCnt=0,
+                     tileFile=False,
+                     wcp=False,
+                     wcr=False,
+                     lbl_set=False,
+                     spdCor=0,
+                     maxCrop=False,
+                     USE_GPU=False,
+                     remShadow=0,
+                     detectDep=0,
+                     smthDep=0,
+                     adjDep=0,
+                     pltBedPick=False,
+                     rect_wcp=False,
+                     rect_wcr=False,
+                     mosaic=False,
+                     map_sub=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -272,6 +273,7 @@ def rectify_master_func(humFile='',
     for son in portstar:
         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
+        son.smthTrkFile = outCSV
         son._cleanup()
     del son, outCSV
     print("Done!")
