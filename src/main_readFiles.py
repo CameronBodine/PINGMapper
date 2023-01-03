@@ -614,11 +614,12 @@ def read_master_func(humFile='',
 
     for son in sonObjs: # Iterate each sonar object
         print(son.beam, ":", son.beamName)
+        son._loadSonMeta()
+        df = son.sonMetaDF
+        print("Ping Count:", len(df))
         print("______________________________________________________________________________")
         print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
         print("______________________________________________________________________________")
-        son._loadSonMeta()
-        df = son.sonMetaDF
         for att in df.columns:
 
             # Find min/max/avg of each column

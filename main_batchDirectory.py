@@ -61,7 +61,6 @@ maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
-USE_GPU = False # Use GPU for predictions
 remShadow = 1  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
@@ -116,7 +115,7 @@ for datFile in inFiles:
             'lbl_set':lbl_set,
             'spdCor':spdCor,
             'maxCrop':maxCrop,
-            'USE_GPU':USE_GPU,
+            'USE_GPU':False,
             'remShadow':remShadow,
             'detectDep':detectDep,
             'smthDep':smthDep,
