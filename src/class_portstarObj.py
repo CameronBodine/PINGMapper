@@ -915,6 +915,9 @@ class portstarObj(object):
                     else: # Initial pick not nan
                         port.append(pdi) # Use initial pick
 
+                elif pdc < 0:
+                    port.append(0)
+
                 else: # Final pick is ok
                     port.append(pdc)
 
@@ -926,6 +929,9 @@ class portstarObj(object):
                         star.append(0) # set to 0
                     else: # Initial pick not nan
                         star.append(sdi) # Use initial pick
+
+                elif sdc < 0:
+                    port.append(0)
 
                 else: # Final pick ok
                     star.append(sdc)
@@ -1129,7 +1135,7 @@ class portstarObj(object):
 
     #=======================================================================
     def _saveDepth(self,
-                   chunks,
+                   chunksPred,
                    detectDep=0,
                    smthDep=False,
                    adjDep=False):
@@ -1170,6 +1176,9 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
+        # Get all chunks
+        chunks = pd.unique(portDF['chunk_id'])
+
         if detectDep == 0:
             portInstDepth = portDF['inst_dep_m']
             starInstDepth = starDF['inst_dep_m']
@@ -1202,25 +1211,51 @@ class portstarObj(object):
             portFinal = []
             starFinal = []
             for i in sorted(chunks):
-                portDep = self.portDepDetect[i]
-                starDep = self.starDepDetect[i]
+                # portDep = self.portDepDetect[i]
+                # starDep = self.starDepDetect[i]
+                #
+                # portFinal.extend(portDep)
+                # starFinal.extend(starDep)
+
+                if i in self.portDepDetect:
+                    portDep = self.portDepDetect[i]
+                # For chunks completely filled with NoData
+                else:
+                    portDep = [0]*self.port.nchunk
+
+                if i in self.starDepDetect:
+                    starDep = self.starDepDetect[i]
+                # For chunks completely filled with NoData
+                else:
+                    starDep = [0]*self.star.nchunk
 
                 portFinal.extend(portDep)
                 starFinal.extend(starDep)
 
-            # Check shapes to ensure they are same length.  If not, slice off extra.
-            if len(portFinal) > portDF.shape[0]:
-                lenDif = portDF.shape[0] - len(portFinal)
-                portFinal = portFinal[:lenDif]
-
-            if len(starFinal) > starDF.shape[0]:
-                lenDif = starDF.shape[0] - len(starFinal)
-                starFinal = starFinal[:lenDif]
+            # # Check shapes to ensure they are same length.  If not, slice off extra.
+            # if len(portFinal) > portDF.shape[0]:
+            #     lenDif = portDF.shape[0] - len(portFinal)
+            #     portFinal = portFinal[:lenDif]
+            #
+            # if len(starFinal) > starDF.shape[0]:
+            #     lenDif = starDF.shape[0] - len(starFinal)
+            #     starFinal = starFinal[:lenDif]
 
             if smthDep:
                 portFinal = savgol_filter(portFinal, 51, 3)
                 starFinal = savgol_filter(starFinal, 51, 3)
 
+            # Set negatives to 0
+            portFinal = np.asarray(portFinal)
+            starFinal = np.asarray(starFinal)
+
+            portFinal = np.where(portFinal<0, 0, portFinal)
+            starFinal = np.where(starFinal<0, 0, starFinal)
+
+            portFinal = portFinal.tolist()
+            starFinal = starFinal.tolist()
+
+            # Convert pix to depth [m]
             portDF['dep_m'] = portFinal * portDF['pix_m']
             starDF['dep_m'] = starFinal * starDF['pix_m']
 
