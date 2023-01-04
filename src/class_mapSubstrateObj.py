@@ -29,7 +29,7 @@
 from funcs_common import *
 from class_rectObj import rectObj
 
-class mapObj(rectObj):
+class mapSubObj(rectObj):
 
     '''
 

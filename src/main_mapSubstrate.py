@@ -30,7 +30,7 @@
 from funcs_common import *
 
 from class_rectObj import rectObj
-from class_mapObj import mapObj
+from class_mapSubstrateObj import mapSubObj
 
 #===============================================================================
 def map_master_func(humFile='',
@@ -109,7 +109,7 @@ def map_master_func(humFile='',
     # Create a mapObj instance from pickle files
     sonObjs = []
     for meta in metaFiles:
-        son = mapObj(meta) # Initialize mapObj()
+        son = mapSubObj(meta) # Initialize mapObj()
         sonObjs.append(son) # Store mapObj() in mapObjs[]
     del meta, metaFiles
 
