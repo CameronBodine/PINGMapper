@@ -28,6 +28,7 @@
 
 
 from funcs_common import *
+from funcs_model import *
 
 from class_rectObj import rectObj
 from class_mapSubstrateObj import mapSubObj
@@ -229,3 +230,46 @@ def map_master_func(humFile='',
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()
         printUsage()
+
+    ############################################################################
+    # For Substrate Mapping                                                    #
+    ############################################################################
+
+    if not smthTrk:
+        printUsage()
+
+    start_time = time.time()
+
+    if map_sub > 0:
+        print('\n\nAutomatically segmenting substrates...')
+
+        # Get chunk id for mapping substrate
+        for son in mapObjs:
+            son._loadSonMeta()
+            sonMetaDF = son.sonMetaDF
+
+            # Remove chunks completely filled with NoData
+            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+            chunks = pd.unique(df['chunk_id']).astype(int)
+
+            # # Store chunks in object
+            # son.chunkProc = c
+
+            del sonMetaDF, df
+
+            # Prepare model
+            if map_sub ==1:
+                # Load model weights
+                weights = r'./models/substrate/substrate_202211219_v1.h5'
+                configfile = weights.replace('.h5', '.json')
+
+                # Initialize model
+                model = initModel(weights, configfile, USE_GPU)
+                son.substrateModel = model
+                del model
+
+            # Do prediction (make parallel later)
+            for c in chunks:
+                son._detectSubstrate(map_sub, c)
+
+        del son

@@ -27,6 +27,7 @@
 # SOFTWARE.
 
 from funcs_common import *
+from funcs_model import *
 from class_rectObj import rectObj
 
 class mapSubObj(rectObj):
@@ -44,3 +45,91 @@ class mapSubObj(rectObj):
                  metaFile):
 
         rectObj.__init__(self, metaFile)
+
+        return
+
+    ############################################################################
+    # Substrate Prediction                                                     #
+    ############################################################################
+
+    #=======================================================================
+    def _detectSubstrate(self,
+                         method,
+                         i):
+        '''
+        Main function to automatically predict substrate.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+
+        if method == 1:
+            substratePred, i = self._predSubstrate(i)
+
+
+        gc.collect()
+        return
+
+    #=======================================================================
+    def _predSubstrate(self,
+                       i):
+        '''
+        Predict substrate type from sonogram.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+        # Load sonar
+        self._getScanChunkSingle(i)
+
+        # Get original sonDat dimesions
+        R, W = self.sonDat.shape
+
+        #################################################
+        # Get depth for water column removal and cropping
+
+        # Get sonMeta to get depth
+        self._loadSonMeta()
+        df = self.sonMetaDF
+
+        # Get depth/ pix scaler for given chunk
+        df = df.loc[df['chunk_id'] == i, ['dep_m', 'pix_m']]
+
+        # Crop water column and crop to min depth
+        sonMinDep = self._WCR_crop(df)
+
+        #################################################
+        # Crop shadow
+        self._SHW_crop(i, 2)
+
+        ###############
+        # Do prediction
+
+
+        return 1, 2

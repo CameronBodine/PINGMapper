@@ -799,6 +799,13 @@ def read_master_func(humFile='',
     ## 2: Remove only contiguous shadows touching max range extent. May be
     ## useful for locating river banks...
 
+    # Need to detect shadows if mapping substrate
+    if map_sub:
+        if remShadow == 0:
+            print('\n\nSubstrate mapping requires shadow removal')
+            print('Setting remShadow==2...')
+            remShadow = 2
+
     if remShadow > 0:
         start_time = time.time()
         print('\n\nAutomatically detecting shadows for', len(chunks), 'chunks:')

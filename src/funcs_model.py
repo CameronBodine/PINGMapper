@@ -51,6 +51,80 @@ tf.get_logger().setLevel('ERROR')
 Utilities provided courtesy Dr. Dan Buscombe from segmentation_gym
 https://github.com/Doodleverse/segmentation_gym
 '''
+
+#=======================================================================
+def initModel(weights, configfile, USE_GPU=False):
+    '''
+    Compiles a Tensorflow model for bedpicking. Developed following:
+    https://github.com/Doodleverse/segmentation_gym
+
+    ----------
+    Parameters
+    ----------
+    None
+
+    ----------------------------
+    Required Pre-processing step
+    ----------------------------
+    self.__init__()
+
+    -------
+    Returns
+    -------
+    self.bedpickModel containing compiled model.
+
+    --------------------
+    Next Processing Step
+    --------------------
+    self._detectDepth()
+    '''
+    SEED=42
+    np.random.seed(SEED)
+    AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+    tf.random.set_seed(SEED)
+
+    if USE_GPU == True:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+    else:
+
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+
+    #suppress tensorflow warnings
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+    #suppress tensorflow warnings
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+    # Open model configuration file
+    with open(configfile) as f:
+        config = json.load(f)
+    globals().update(config)
+
+
+    ########################################################################
+    ########################################################################
+
+    model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
+                    FILTERS,
+                    nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
+                    kernel_size=(KERNEL,KERNEL),
+                    strides=STRIDE,
+                    dropout=DROPOUT,#0.1,
+                    dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
+                    dropout_type=DROPOUT_TYPE,#"standard",
+                    use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
+                    )
+
+    try:
+        model = tf.keras.models.load_model(weights)
+    except:
+        model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+        model.load_weights(weights)
+
+    return model
+
+
 ### Model for custom res-unet ###
 
 #=======================================================================
