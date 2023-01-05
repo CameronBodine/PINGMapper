@@ -122,8 +122,7 @@ def map_master_func(humFile='',
         if beam == "ss_port" or beam == "ss_star":
             mapObjs.append(son)
         else:
-            del son
-            # pass # Don't add non-port/star objects since they can't be rectified
+            pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, sonObjs
 
     #############################################
@@ -252,24 +251,24 @@ def map_master_func(humFile='',
             df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
             chunks = pd.unique(df['chunk_id']).astype(int)
 
-            # # Store chunks in object
-            # son.chunkProc = c
+            # Doing moving window prediction, so remove first and last chunk
+            chunks = chunks[1:-1]
 
             del sonMetaDF, df
 
             # Prepare model
             if map_sub ==1:
                 # Load model weights
-                weights = r'./models/substrate/substrate_202211219_v1.h5'
-                configfile = weights.replace('.h5', '.json')
+                son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+                son.configfile = son.weights.replace('.h5', '.json')
 
-                # Initialize model
-                model = initModel(weights, configfile, USE_GPU)
-                son.substrateModel = model
-                del model
+                # # Initialize model
+                # model = initModel(weights, configfile, USE_GPU)
+                # son.substrateModel = model
+                # del model
 
             # Do prediction (make parallel later)
             for c in chunks:
-                son._detectSubstrate(map_sub, c)
+                son._detectSubstrate(map_sub, c, USE_GPU)
 
         del son
