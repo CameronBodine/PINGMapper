@@ -126,7 +126,6 @@ def initModel(weights, configfile, USE_GPU=False):
 
 
 ### Model for custom res-unet ###
-
 #=======================================================================
 def custom_resunet(sz,
     f,
@@ -594,3 +593,23 @@ def label_to_colors(
         )
     else:
         return cimg
+
+#=======================================================================
+def doPredict(model, arr):
+
+    '''
+    '''
+
+    # Read array into a cropped and resized tensor
+    image, w, h, bigimage = seg_file2tensor(arr, TARGET_SIZE)
+
+    # Standardize
+    image = standardize(image.numpy()).squeeze()
+
+    # Do prediction
+    est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
+
+    print('\n\n\n', est_label.shape, '\n', est_label)
+
+
+    return 1, 2
