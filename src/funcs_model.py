@@ -607,9 +607,17 @@ def doPredict(model, arr):
     image = standardize(image.numpy()).squeeze()
 
     # Do prediction
-    est_label = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
+    softmax_score = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
 
-    print('\n\n\n', est_label.shape, '\n', est_label)
+    # softmax_score cannot be float16 so convert to float32
+    softmax_score = softmax_score.astype('float32')
+
+    # Resize to original dimensions
+    softmax_score = resize(softmax_score, (w, h))
+
+    return softmax_score
+
+
 
 
     return 1, 2
