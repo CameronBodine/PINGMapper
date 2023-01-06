@@ -606,6 +606,7 @@ class portstarObj(object):
                 model = self._initModel(USE_GPU)
                 self.bedpickModel = model
             portDepPixCrop, starDepPixCrop, i = self._depthZheng(i, tileFile)
+            del self.bedpickModel
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
@@ -1607,6 +1608,7 @@ class portstarObj(object):
         port_pix = self._getShadowPix(port_label, remShadow)
         star_pix = self._getShadowPix(star_label, remShadow)
 
+        del self.shadowModel, model
         gc.collect()
         return i, port_pix, star_pix
 
