@@ -28,7 +28,7 @@
 
 
 from funcs_common import *
-from funcs_model import *
+# from funcs_model import *
 
 from class_rectObj import rectObj
 from class_mapSubstrateObj import mapSubObj
@@ -142,6 +142,7 @@ def map_master_func(humFile='',
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
 
+    smthTrk = True
     if smthTrk:
         print("\nUsing existing smoothed trackline.")
     else:

@@ -92,7 +92,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i):
+    def _predSubstrate(self, i, winO=1/3):
         '''
         Predict substrate type from sonogram.
 
@@ -139,6 +139,9 @@ class mapSubObj(rectObj):
         # # model = self.substrateModel
         # label, prob = doPredict(self.substrateModel, self.sonDat)
 
+        # Get chunk size
+        nchunk = self.nchunk
+
         #################################################
         # Get depth for water column removal and cropping
         # Get sonMeta to get depth
@@ -147,13 +150,129 @@ class mapSubObj(rectObj):
         ############
         # Load Sonar
         # Get current chunk, left & right chunk's sonDat and concatenate
-        son3Chunk = self._getSon3Chunk(i)
+        # Pad is tuple with current chunk H, W and water column pix crop
+        son3Chunk, pad = self._getSon3Chunk(i)
+        # Get dims
+        H, W = son3Chunk.shape
 
-        # Current chunk
+        ###########################
+        # Get moving window indices
+        movWinInd = self._getMovWinInd(winO, son3Chunk)
 
+        #################################
+        # Make prediction for each window
+        # Expand softmax_score to dims of son3Chunk filled with nan's
+        # Ensure softmax_score in correct location (win offset) in larger array
+        # store each softmax in a list labels=[]
+        # np.nanmean(labels, axis=2)
 
+        # Store each window's softmax
+        winSoftMax = []
+        # Iterate each window
+        for w in movWinInd:
+            # Slice son3Chunk by index
+            # Return son slice, begin and end index
+            sonWin, wStart, wEnd = self._getSonDatWin(w, son3Chunk)
+
+            # Get the model
+            model = self.substrateModel
+
+            # Do prediction, return softmax_score for each class
+            softmax_score = doPredict(model, sonWin)
+
+            # Expand softmax_score to son3Chunk dims, filled with nan's
+            softmax_score = self._expandWin(H, W, wStart, wEnd, softmax_score)
+
+            # Store expanded softmax_score
+            winSoftMax.append(softmax_score)
+
+            del sonWin, wStart, wEnd, softmax_score
+
+        # Take mean across all windows to get one final softmax_score array
+        fSoftmax = np.nanmean(np.stack(winSoftMax, axis=0), axis=0)
+
+        # Crop fSoftmax to current chunk
+        fSoftmax = fSoftmax[:, nchunk:nchunk+pad[1], :]
+
+        # Recover fSoftmax to original dimensions
+        h, w = pad[:-1] # original chunk dimensions
+        p = pad[-1] # amount of water column cropped
+        sh, sw = fSoftmax.shape[:-1] # softmax dimensions
+        c = fSoftmax.shape[-1] # number of classes
+
+        fArr = np.zeros((h, w, c))
+        fArr[p:p+sh, :, :] = fSoftmax
+
+        print(fArr.shape, np.min(fArr), np.max(fArr))
 
         return 1, 2
+
+    #=======================================================================
+    def _expandWin(self, H, W, w1, w2, arr):
+        '''
+        Generate new array of size (H, W, arr.shape[2]) filled with nan's. Place
+        arr in new arr at index [:, w1:w2]
+        '''
+
+        # Number of classes
+        nclass = arr.shape[2]
+
+        # Create new array filled with nan's
+        a = np.zeros((H, W, nclass))
+        a.fill(np.nan)
+
+        # Insert arr into a
+        a[:, w1:w2, :] = arr
+
+        return a
+
+
+    #=======================================================================
+    def _getSonDatWin(self, w, arr):
+        '''
+        Get slice of son3Chunk using index (w) and nchunk
+        '''
+        # Chunk size
+        nchunk = self.nchunk
+
+        # End index
+        e = w+nchunk
+
+        # Slice by columns
+        son = arr[:, w:e]
+
+        return son, w, e
+
+
+
+    #=======================================================================
+    def _getMovWinInd(self, o, arr):
+        '''
+        Get moving window indices based on window overlap (o) and arr size
+        '''
+
+        # Get array dims
+        H, W = arr.shape
+
+        # Chunk size
+        c = self.nchunk
+
+        # Calculate stride
+        s = c * o
+
+        # Calculate total windows
+        tWin = (int(1 / o)*2) - 1
+
+        # Calculate first window index
+        i = (c + s) - c
+
+        # Get all indices
+        winInd = np.arange(i,W,s, dtype=int)
+
+        # Only need tWin values
+        winInd = winInd[:tWin]
+
+        return winInd
 
     #=======================================================================
     def _getSon3Chunk(self, i):
@@ -186,6 +305,9 @@ class mapSubObj(rectObj):
         # Center
         # Get sonDat
         self._getScanChunkSingle(i)
+
+        # Get dimensions
+        H, W = self.sonDat.shape
 
         # Crop shadows first
         self._SHW_crop(i, True)
@@ -296,7 +418,7 @@ class mapSubObj(rectObj):
         # self.sonDat = fSonDat
         # self._writeTiles(i, 'test')
 
-        return fSonDat
+        return fSonDat, (H, W, minDep)
 
 
 
