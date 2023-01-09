@@ -142,7 +142,7 @@ def map_master_func(humFile='',
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
 
-    smthTrk = True
+    smthTrk = True # For debugging
     if smthTrk:
         print("\nUsing existing smoothed trackline.")
     else:
@@ -232,44 +232,131 @@ def map_master_func(humFile='',
         printUsage()
 
     ############################################################################
-    # For Substrate Mapping                                                    #
+    # For Substrate Prediction                                                 #
     ############################################################################
 
-    if not smthTrk:
-        printUsage()
+    # if not smthTrk:
+    #     printUsage()
+    #
+    # start_time = time.time()
+    #
+    # if map_sub > 0:
+    #     print('\n\nAutomatically predicting substrate liklihoods...')
+    #
+    #     # Get chunk id for mapping substrate
+    #     for son in mapObjs:
+    #         son.mapSub = map_sub
+    #         son._loadSonMeta()
+    #         sonMetaDF = son.sonMetaDF
+    #
+    #         # Remove chunks completely filled with NoData
+    #         df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+    #         chunks = pd.unique(df['chunk_id']).astype(int)
+    #
+    #         # Doing moving window prediction, so remove first and last chunk
+    #         chunks = chunks[1:-1]
+    #
+    #         del sonMetaDF, df
+    #
+    #         # Prepare output dir
+    #         outDir = os.path.join(son.projDir, 'substrate')
+    #         try:
+    #             os.mkdir(outDir)
+    #         except:
+    #             pass
+    #         son.substrateDir = outDir
+    #
+    #         # Prepare model
+    #         if map_sub ==1:
+    #             # Load model weights
+    #             son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+    #             son.configfile = son.weights.replace('.h5', '.json')
+    #
+    #         # Do prediction (make parallel later)
+    #         print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+    #         # for c in chunks:
+    #         #     son._detectSubstrate(map_sub, c, USE_GPU)
+    #         #     # sys.exit()
+    #         #     break
+    #         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
+    #
+    #         son._cleanup()
+    #         del chunks
+    #
+    #
+    #     del son
+    #     gc.collect()
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+    ############################################################################
+    # For Substrate Classification Tile Export (????)                          #
+    ############################################################################
+
+
+    ############################################################################
+    # For Substrate Mapping                                                    #
+    ############################################################################
+    printUsage()
 
     start_time = time.time()
 
     if map_sub > 0:
-        print('\n\nAutomatically segmenting substrates...')
+        print('\n\nMapping substrate classification...')
 
         # Get chunk id for mapping substrate
         for son in mapObjs:
+            son.rect_wcr = True
             son._loadSonMeta()
-            sonMetaDF = son.sonMetaDF
+            # sonMetaDF = son.sonMetaDF
+            #
+            # # Remove chunks completely filled with NoData
+            # df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+            # chunks = pd.unique(df['chunk_id']).astype(int)
+            #
+            # # Doing moving window prediction, so remove first and last chunk
+            # chunks = chunks[1:-1]
+            #
+            # del sonMetaDF, df
 
-            # Remove chunks completely filled with NoData
-            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-            chunks = pd.unique(df['chunk_id']).astype(int)
+            # Find softmax npz's
+            npzDir = os.path.join(son.substrateDir, 'softmax')
+            npzs = sorted(glob(os.path.join(npzDir, '*'+son.beamName+'*.npz')))
 
-            # Doing moving window prediction, so remove first and last chunk
-            chunks = chunks[1:-1]
+            # Store chunk and filepath in dictionary
+            toMap = defaultdict()
 
-            del sonMetaDF, df
-
-            # Prepare model
-            if map_sub ==1:
-                # Load model weights
-                son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-                son.configfile = son.weights.replace('.h5', '.json')
-
-                # # Initialize model
-                # model = initModel(weights, configfile, USE_GPU)
-                # son.substrateModel = model
-                # del model
+            chunkCnt = 0
+            for n in npzs:
+                c = os.path.basename(n)
+                c = c.split('.')[0]
+                c = int(c.split('_')[-1])
+                toMap[c] = n
+                chunkCnt += 1
 
             # Do prediction (make parallel later)
-            for c in chunks:
-                son._detectSubstrate(map_sub, c, USE_GPU)
+            print('\n\tMapping substrate classification for', chunkCnt, 'sonograms for', son.beamName)
+            for c, f in toMap.items():
+                son._mapSubstrate(map_sub, c, f)
+                # sys.exit()
+            # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
 
+            son.rect_wcr = rect_wcr
+
+
+
+            son._cleanup()
+            del toMap
         del son
+
+    ##############################################
+    # Let's pickle sonObj so we can reload later #
+    ##############################################
+
+    for son in mapObjs:
+        outFile = son.sonMetaFile.replace(".csv", ".meta")
+        son.sonMetaPickle = outFile
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(son, sonFile)
+    gc.collect()
+    printUsage()
