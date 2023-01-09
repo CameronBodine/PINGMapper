@@ -833,7 +833,8 @@ class rectObj(sonObj):
     def _rectSonParallel(self,
                          chunk,
                          filt=50,
-                         wgs=False):
+                         wgs=False,
+                         son=True):
         '''
         This function will georectify sonar tiles with water column present
         (rect_wcp) OR water column removed and slant range corrected (rect_wcr).
@@ -935,8 +936,12 @@ class rectObj(sonObj):
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
-        # Open image to rectify
-        self._loadSonChunk()
+        if son:
+            # Open image to rectify
+            self._loadSonChunk()
+        else:
+            # Rectifying substrate classification
+            pass
         if filterIntensity:
             self._doPPDRC()
 
