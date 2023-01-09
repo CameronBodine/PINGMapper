@@ -85,14 +85,65 @@ class mapSubObj(rectObj):
                 self.substrateModel = model
 
             # Do prediction
-            substratePred, i = self._predSubstrate(i)
+            substratePred = self._predSubstrate(i)
 
 
+        # Save predictions to npz
+        self._saveSubstrateNpz(substratePred, i)
+
+        del self.substrateModel, substratePred
         gc.collect()
+
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, winO=1/3):
+    def _saveSubstrateNpz(self, arr, k):
+        '''
+        Save substrate prediction to npz
+        '''
+
+        ###################
+        # Prepare File Name
+        # File name zero padding
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        # Out directory
+        outDir = os.path.join(self.substrateDir, 'softmax')
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        #projName_substrate_beam_chunk.npz
+        channel = self.beamName #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+
+        # Prepare file name
+        f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'.npz'
+        f = os.path.join(outDir, f)
+
+        # Save compressed npz
+        np.savez_compressed(f, arr)
+
+        # # Save non_compressed npz
+        # f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_noncompress.npz'
+        # f = os.path.join(outDir, f)
+        # np.savez(f, arr)
+
+        del arr
+        return
+
+    #=======================================================================
+    def _predSubstrate(self, i, winO=1/2):
         '''
         Predict substrate type from sonogram.
 
@@ -112,32 +163,6 @@ class mapSubObj(rectObj):
         Next Processing Step
         --------------------
         '''
-        # # Load sonar
-        # self._getScanChunkSingle(i)
-        #
-        # # Get original sonDat dimesions
-        # R, W = self.sonDat.shape
-        #
-        # #################################################
-        # # Get depth for water column removal and cropping
-        # # Get sonMeta to get depth
-        # self._loadSonMeta()
-        # df = self.sonMetaDF
-        #
-        # # Get depth/ pix scaler for given chunk
-        # df = df.loc[df['chunk_id'] == i, ['dep_m', 'pix_m']]
-        #
-        # # Crop water column and crop to min depth
-        # sonMinDep = self._WCR_crop(df)
-        #
-        # #################################################
-        # # Crop shadow
-        # self._SHW_crop(i, False)
-        #
-        # ###############
-        # # Do prediction
-        # # model = self.substrateModel
-        # label, prob = doPredict(self.substrateModel, self.sonDat)
 
         # Get chunk size
         nchunk = self.nchunk
@@ -203,9 +228,11 @@ class mapSubObj(rectObj):
         fArr = np.zeros((h, w, c))
         fArr[p:p+sh, :, :] = fSoftmax
 
-        print(fArr.shape, np.min(fArr), np.max(fArr))
+        # print(fArr.shape, np.min(fArr), np.max(fArr))
+        del fSoftmax, son3Chunk
+        gc.collect()
 
-        return 1, 2
+        return fArr
 
     #=======================================================================
     def _expandWin(self, H, W, w1, w2, arr):
@@ -422,53 +449,41 @@ class mapSubObj(rectObj):
 
 
 
-    # #=======================================================================
-    # def _predSubstrate(self, i):
-    #     '''
-    #     Predict substrate type from sonogram.
-    #
-    #     ----------
-    #     Parameters
-    #     ----------
-    #
-    #     ----------------------------
-    #     Required Pre-processing step
-    #     ----------------------------
-    #
-    #     -------
-    #     Returns
-    #     -------
-    #
-    #     --------------------
-    #     Next Processing Step
-    #     --------------------
-    #     '''
-    #     # Load sonar
-    #     self._getScanChunkSingle(i)
-    #
-    #     # Get original sonDat dimesions
-    #     R, W = self.sonDat.shape
-    #
-    #     #################################################
-    #     # Get depth for water column removal and cropping
-    #     # Get sonMeta to get depth
-    #     self._loadSonMeta()
-    #     df = self.sonMetaDF
-    #
-    #     # Get depth/ pix scaler for given chunk
-    #     df = df.loc[df['chunk_id'] == i, ['dep_m', 'pix_m']]
-    #
-    #     # Crop water column and crop to min depth
-    #     sonMinDep = self._WCR_crop(df)
-    #
-    #     #################################################
-    #     # Crop shadow
-    #     self._SHW_crop(i, 2)
-    #
-    #     ###############
-    #     # Do prediction
-    #     # model = self.substrateModel
-    #     label, prob = doPredict(self.substrateModel, self.sonDat)
-    #
-    #
-    #     return 1, 2
+    ############################################################################
+    # Substrate Mapping                                                        #
+    ############################################################################
+
+    #=======================================================================
+    def _mapSubstrate(self, method, i, npz):
+        '''
+        Main function to map substrate classification
+        '''
+
+        # Open softmax scores
+        npz = np.load(npz)
+        softmax = npz['arr_0'].astype('float32')
+
+        # Determine final classification
+        label = self._classifySoftmax(softmax, 1)
+
+        # Store label as sonDat for rectification
+        self.sonDat = label
+
+        # Try rectifying
+        self._rectSonParallel(i, son=False)
+
+
+
+
+    #=======================================================================
+    def _classifySoftmax(self, arr, method=1):
+        '''
+        Classify pixels from softmax values
+        '''
+
+        # Take max softmax as class
+        if method == 1:
+            label = np.argmax(arr, -1)
+            label = label + 1
+
+        return label
