@@ -34,8 +34,8 @@ callouts:
   important:
     title: Important
     color: blue
-  new:
-    title: New
+  g2k:
+    title: Good to Know!
     color: green
   note:
     title: Note
