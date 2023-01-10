@@ -26,12 +26,12 @@
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
 ## Documentation
-### Website 
+### Website
 Check out PING-Mapper's [website!](https://cameronbodine.github.io/PINGMapper/)
 
 ### Paper
 
-Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469 
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
 
 PrePrint: [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
@@ -67,30 +67,7 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 4. So much more...
 
 ## Installation
-1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (preferred) or [Anaconda](https://www.anaconda.com).
-
-2. Open Anaconda Prompt and navigate to where you would like to save PING-Mapper:
-```
-cd C:\users\Cam\MyPythonRepos
-```
-
-3. Clone the repo:
-```
-git clone --depth 1 https://github.com/CameronBodine/PINGMapper
-```
-
-4. Change directory into PINGMapper folder:
-```
-cd PINGMapper
-```
-
-5. Create a conda environment called `ping` and activate it:
-```
-conda env create --file conda/PINGMapper.yml
-conda activate ping
-```
-
-**NOTE:** *Installation may take some time, please be patient.*
+To install PING-Mapper, visit the [website](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
 
 ## Testing PING Mapper (small dataset)
 A quick test can be made to ensure PING-Mapper is working properly.
