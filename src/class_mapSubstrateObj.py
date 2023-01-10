@@ -143,7 +143,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, winO=1/2):
+    def _predSubstrate(self, i, winO=1/3):
         '''
         Predict substrate type from sonogram.
 
