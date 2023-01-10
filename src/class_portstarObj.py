@@ -30,7 +30,8 @@
 from funcs_common import *
 from funcs_model import *
 
-import gdal
+# import gdal
+from osgeo import gdal
 from scipy.signal import savgol_filter
 
 import matplotlib
@@ -606,7 +607,7 @@ class portstarObj(object):
                 model = self._initModel(USE_GPU)
                 self.bedpickModel = model
             portDepPixCrop, starDepPixCrop, i = self._depthZheng(i, tileFile)
-            del self.bedpickModel
+
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
