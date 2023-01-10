@@ -1192,6 +1192,17 @@ class portstarObj(object):
                 portInstDepth += adjBy
                 starInstDepth += adjBy
 
+            # Set negatives to 0
+            portInstDepth = np.asarray(portInstDepth)
+            starInstDepth = np.asarray(starInstDepth)
+
+            portInstDepth = np.where(portInstDepth<0, 0, portInstDepth)
+            starInstDepth = np.where(starInstDepth<0, 0, starInstDepth)
+
+            portInstDepth = portInstDepth.tolist()
+            starInstDepth = starInstDepth.tolist()
+
+            # Add depth to df
             portDF['dep_m'] = portInstDepth
             starDF['dep_m'] = starInstDepth
 
@@ -1243,6 +1254,10 @@ class portstarObj(object):
                 portFinal = savgol_filter(portFinal, 51, 3)
                 starFinal = savgol_filter(starFinal, 51, 3)
 
+            # Convert pix to depth [m]
+            portDF['dep_m'] = portFinal * portDF['pix_m']
+            starDF['dep_m'] = starFinal * starDF['pix_m']
+
             # Set negatives to 0
             portFinal = np.asarray(portFinal)
             starFinal = np.asarray(starFinal)
@@ -1252,10 +1267,6 @@ class portstarObj(object):
 
             portFinal = portFinal.tolist()
             starFinal = starFinal.tolist()
-
-            # Convert pix to depth [m]
-            portDF['dep_m'] = portFinal * portDF['pix_m']
-            starDF['dep_m'] = starFinal * starDF['pix_m']
 
             if adjDep != 0:
                 adjBy = portDF['pix_m'][0]*adjDep
