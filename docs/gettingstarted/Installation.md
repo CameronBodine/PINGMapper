@@ -9,12 +9,42 @@ nav_exclude: false
 ---
 
 # Installation
-1. Install [Anaconda](https://www.anaconda.com) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) _(preferred)_ or [Anaconda](https://www.anaconda.com).
 
-2. Open Anaconda Prompt and navigate to where you would like to save PING Mapper:
+2. Open Anaconda Powershell Prompt or Anaconda Prompt.
+
+{: .g2k }
+> Windows Users: Go to the start menu and search for 'Anaconda'.
+
+3. Update conda:
+```
+conda update -n base conda
+```
+
+4. Conda has released a new environment solver called [libmamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community) that is _considerably_ faster then installing environments with the classic installer. Install `libmamba` with:
+```
+conda install -n base conda-libmamba-solver
+```
+
+5. Set `libmamba` as the default solver:
+```
+conda config --set solver libmamba
+```
+
+{: .g2k }
+> You can revert to the classic installer by running:
+> ```
+> conda config --set solver classic
+> ```
+
+2. Now navigate to where you would like to save PING Mapper:
 ```
 cd C:\users\Cam\MyPythonRepos
 ```
+
+{: .note }
+> If you haven't navigated through your file system with the command prompt, here is a video to explain how!
+> <iframe width="560" height="315" src="https://www.youtube.com/embed/9zMWXD-xoxc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 3. Clone the repo:
 ```
