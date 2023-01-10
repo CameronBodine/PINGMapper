@@ -30,7 +30,8 @@
 from funcs_common import *
 from funcs_model import *
 
-import gdal
+# import gdal
+from osgeo import gdal
 from scipy.signal import savgol_filter
 
 import matplotlib
