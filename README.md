@@ -70,26 +70,7 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 To install PING-Mapper, visit the [website](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
 
 ## Testing PING Mapper (small dataset)
-A quick test can be made to ensure PING-Mapper is working properly.
-1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
-
-2. Enter the following into the prompt:  
-```
-python test_PINGMapper.py 1
-```
-
-Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Small-DS`.
-
-## Testing PING Mapper (large dataset)
-A test on a large (~0.5 GB; 1:00:06 duration) dataset can also be made.
-1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
-
-2. Enter the following into the prompt:  
-```
-python test_PINGMapper.py 2
-```
-
-Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
+To determine if PING-Mapper is functioning as expected, run the [test scripts](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html) with example recordings shipped with the software.
 
 ## Running PING Mapper on your own data
 1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
