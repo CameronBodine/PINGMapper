@@ -59,7 +59,8 @@ def map_master_func(humFile='',
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
-                     map_sub_tile=False):
+                     map_sub_tile=False,
+                     map_class_method='max'):
 
     '''
     Main script to map substrates from side scan sonar imagery.
@@ -240,25 +241,20 @@ def map_master_func(humFile='',
     # if not smthTrk:
     #     printUsage()
     #
-    # start_time = time.time()
-    #
+    start_time = time.time()
+
     # if map_sub > 0:
     #     print('\n\nAutomatically predicting substrate liklihoods...')
     #
     #     # Get chunk id for mapping substrate
     #     for son in mapObjs:
     #         son.mapSub = map_sub
-    #         son._loadSonMeta()
-    #         sonMetaDF = son.sonMetaDF
     #
-    #         # Remove chunks completely filled with NoData
-    #         df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-    #         chunks = pd.unique(df['chunk_id']).astype(int)
+    #         # Get chunk id's
+    #         chunks = son._getChunkID()
     #
     #         # Doing moving window prediction, so remove first and last chunk
     #         chunks = chunks[1:-1]
-    #
-    #         del sonMetaDF, df
     #
     #         # Prepare output dir
     #         outDir = os.path.join(son.outDir, 'substrate')
@@ -295,7 +291,13 @@ def map_master_func(humFile='',
     # For Substrate Classification Tile Export (????)                          #
     ############################################################################
 
+    if map_sub_tile:
+        print('\n\nExporting substrate tiles...')
 
+        # Get chunk id for mapping substrate
+        for son in mapObjs:
+
+            # Get Substraight npz's
 
 
 
