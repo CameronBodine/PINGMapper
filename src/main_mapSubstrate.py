@@ -58,7 +58,8 @@ def map_master_func(humFile='',
                      rect_wcp=False,
                      rect_wcr=False,
                      mosaic=False,
-                     map_sub=0):
+                     map_sub=0,
+                     map_sub_tile=False):
 
     '''
     Main script to map substrates from side scan sonar imagery.
@@ -143,7 +144,7 @@ def map_master_func(humFile='',
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
 
-    # smthTrk = True # For debugging
+    smthTrk = True # For debugging
     if smthTrk:
         print("\nUsing existing smoothed trackline.")
     else:
@@ -236,64 +237,69 @@ def map_master_func(humFile='',
     # For Substrate Prediction                                                 #
     ############################################################################
 
-    if not smthTrk:
-        printUsage()
-
-    start_time = time.time()
-
-    if map_sub > 0:
-        print('\n\nAutomatically predicting substrate liklihoods...')
-
-        # Get chunk id for mapping substrate
-        for son in mapObjs:
-            son.mapSub = map_sub
-            son._loadSonMeta()
-            sonMetaDF = son.sonMetaDF
-
-            # Remove chunks completely filled with NoData
-            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-            chunks = pd.unique(df['chunk_id']).astype(int)
-
-            # Doing moving window prediction, so remove first and last chunk
-            chunks = chunks[1:-1]
-
-            del sonMetaDF, df
-
-            # Prepare output dir
-            outDir = os.path.join(son.projDir, 'substrate')
-            try:
-                os.mkdir(outDir)
-            except:
-                pass
-            son.substrateDir = outDir
-
-            # Prepare model
-            if map_sub ==1:
-                # Load model weights
-                son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-                son.configfile = son.weights.replace('.h5', '.json')
-
-            # Do prediction (make parallel later)
-            print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
-            # for c in chunks:
-            #     son._detectSubstrate(map_sub, c, USE_GPU)
-            #     # sys.exit()
-            #     break
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
-
-            son._cleanup()
-            del chunks
-
-
-        del son
-        gc.collect()
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
+    # if not smthTrk:
+    #     printUsage()
+    #
+    # start_time = time.time()
+    #
+    # if map_sub > 0:
+    #     print('\n\nAutomatically predicting substrate liklihoods...')
+    #
+    #     # Get chunk id for mapping substrate
+    #     for son in mapObjs:
+    #         son.mapSub = map_sub
+    #         son._loadSonMeta()
+    #         sonMetaDF = son.sonMetaDF
+    #
+    #         # Remove chunks completely filled with NoData
+    #         df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+    #         chunks = pd.unique(df['chunk_id']).astype(int)
+    #
+    #         # Doing moving window prediction, so remove first and last chunk
+    #         chunks = chunks[1:-1]
+    #
+    #         del sonMetaDF, df
+    #
+    #         # Prepare output dir
+    #         outDir = os.path.join(son.outDir, 'substrate')
+    #         try:
+    #             os.mkdir(outDir)
+    #         except:
+    #             pass
+    #         son.substrateDir = outDir
+    #
+    #         # Prepare model
+    #         if map_sub ==1:
+    #             # Load model weights
+    #             son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+    #             son.configfile = son.weights.replace('.h5', '.json')
+    #
+    #         # Do prediction (make parallel later)
+    #         print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+    #         # for c in chunks:
+    #         #     son._detectSubstrate(map_sub, c, USE_GPU)
+    #         #     # sys.exit()
+    #         #     break
+    #         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
+    #
+    #         son._cleanup()
+    #         del chunks
+    #
+    #
+    #     del son
+    #     gc.collect()
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # For Substrate Classification Tile Export (????)                          #
     ############################################################################
 
+
+
+
+
+    sys.exit()
 
     ############################################################################
     # For Substrate Mapping                                                    #
