@@ -25,21 +25,7 @@
 
 <img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
 
-## Documentation
-### Website
-Check out PING-Mapper's [website!](https://cameronbodine.github.io/PINGMapper/)
-
-### Paper
-
-Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
-
-PrePrint: [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
-
-
-### Code that made the paper
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
-
-### Overview
+# Overview
 Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
 
 1. Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onix).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
@@ -60,17 +46,37 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
 
-### Workflows in the Pipeline
+## Workflows in the Pipeline
 1. Automatic substrate classification
 2. GUI front-end, either as standalone software, or QGIS plugin
 3. Imagery corrections (radiometric, attenuation, etc.)
 4. So much more...
 
-## Installation
-To install PING-Mapper, visit the [website](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
+# Software Documentation
+## Website
+Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for more information.
 
-## Testing PING Mapper
+## PING-Mapper v1.0.0
+An overview of PING-Mapper v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use PING-Mapper for your work, please cite the article!
+
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
+
+A Preprint of the above article was first made available here:
+
+[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+
+
+### Code that made the paper and v1.0.0
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
+
+## PING-Mapper v2.0.0
+The second version of PING-Mapper is under development. Scientific articles documenting the new functionality will be posted here when available.
+
+# Installation
+View the [installation instructions](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
+
+# Testing PING-Mapper
 To determine if PING-Mapper is functioning as expected, run the [test scripts](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html) with example recordings shipped with the software.
 
-## Running PING Mapper on your own data
-For information on processing your own data with PING-Mapper, see the [website](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Running.html).
+## Running PING-Mapper on your own data
+Learn how to use PING-Mapper to [process your own data](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Running.html).
