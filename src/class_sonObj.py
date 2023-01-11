@@ -1845,6 +1845,22 @@ class sonObj(object):
         self.sonMetaDF = meta
         return self
 
+    # ======================================================================
+    def _getChunkID(self):
+        '''
+        Utility to load unique chunk ID's from son obj and return in a list
+        '''
+
+        # Load son metadata csv to df
+        self._loadSonMeta()
+
+        # Get unique chunk id's
+        df = self.sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+        chunks = pd.unique(df['chunk_id']).astype(int)
+
+        del self.sonMetaDF, df
+        return chunks
+
 
     # ======================================================================
     def _cleanup(self):
