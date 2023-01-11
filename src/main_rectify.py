@@ -59,7 +59,9 @@ def rectify_master_func(humFile='',
                      rect_wcp=False,
                      rect_wcr=False,
                      mosaic=False,
-                     map_sub=0):
+                     map_sub=0,
+                     map_sub_tile=False,
+                     map_class_method='max'):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -307,13 +309,12 @@ def rectify_master_func(humFile='',
 
     if rect_wcp or rect_wcr:
         for son in portstar:
-            son._loadSonMeta()
 
-            # Remove chunks completely filled with NoData
-            sonMetaDF = son.sonMetaDF
-            df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-            chunks = pd.unique(df['chunk_id'])
-            del sonMetaDF, df
+            # Get chunk id's
+            chunks = son._getChunkID()
+
+            # Load sonMetaDF
+            son._loadSonMeta()
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)

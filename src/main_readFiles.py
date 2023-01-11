@@ -55,7 +55,9 @@ def read_master_func(humFile='',
                      rect_wcp=False,
                      rect_wcr=False,
                      mosaic=False,
-                     map_sub=0):
+                     map_sub=0,
+                     map_sub_tile=False,
+                     map_class_method='max'):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
@@ -694,15 +696,11 @@ def read_master_func(humFile='',
 
     chunks = []
     for son in portstar:
-        son._loadSonMeta()
-        sonMetaDF = son.sonMetaDF
+        # Get chunk id's, ignoring those with nodata
+        c = son._getChunkID()
 
-        # Remove chunks completely filled with NoData
-        df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-        c = pd.unique(df['chunk_id'])
         chunks.extend(c)
-
-        del sonMetaDF, df, c
+        del c
     del son
 
     chunks = np.unique(chunks).astype(int)
@@ -758,7 +756,7 @@ def read_master_func(humFile='',
             sonDF = pd.concat([sonDF, depDF], axis=1)
 
             sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
-            del sonDF
+            del sonDF, son.sonMetaDF
             son._cleanup()
 
     del depDF
@@ -864,23 +862,25 @@ def read_master_func(humFile='',
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
             if son.wcp or son.wcr_src:
-                son._loadSonMeta()
-                sonMetaDF = son.sonMetaDF
 
                 # Determine what chunks to process
-                df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-                chunks = pd.unique(df['chunk_id']).astype(int)
+                chunks = son._getChunkID()
                 if son.wcr_src and son.wcp:
                     chunkCnt = len(chunks)*2
                 else:
                     chunkCnt = len(chunks)
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
+                # Load sonMetaDF
+                son._loadSonMeta()
+
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
-                del df
+
+            # Tidy up
             son._cleanup()
             gc.collect()
-        del son, sonMetaDF
+
+        del son
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
@@ -897,14 +897,15 @@ def read_master_func(humFile='',
         print("\n\n\nWARNING: Exporting substrate tiles for labeling (main_readFiles.py line 886):\n")
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                son._loadSonMeta()
-                sonMetaDF = son.sonMetaDF
 
-                df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-                chunks = pd.unique(df['chunk_id']).astype(int)
+                # Determine what chunks to process
+                chunks = son._getChunkID()
                 chunkCnt = len(chunks)
 
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
+
+                # Load sonMetaDF
+                son._loadSonMeta()
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
                 son._cleanup()
