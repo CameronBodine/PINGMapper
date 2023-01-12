@@ -30,6 +30,10 @@ from funcs_common import *
 from funcs_model import *
 from class_rectObj import rectObj
 
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
 class mapSubObj(rectObj):
 
     '''
@@ -53,10 +57,8 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _detectSubstrate(self,
-                         method,
-                         i,
-                         USE_GPU):
+    def _detectSubstrate(self, method, i, USE_GPU):
+
         '''
         Main function to automatically predict substrate.
 
@@ -94,52 +96,6 @@ class mapSubObj(rectObj):
         del self.substrateModel, substratePred
         gc.collect()
 
-        return
-
-    #=======================================================================
-    def _saveSubstrateNpz(self, arr, k):
-        '''
-        Save substrate prediction to npz
-        '''
-
-        ###################
-        # Prepare File Name
-        # File name zero padding
-        if k < 10:
-            addZero = '0000'
-        elif k < 100:
-            addZero = '000'
-        elif k < 1000:
-            addZero = '00'
-        elif k < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
-
-        # Out directory
-        outDir = os.path.join(self.substrateDir, 'softmax')
-        try:
-            os.mkdir(outDir)
-        except:
-            pass
-
-        #projName_substrate_beam_chunk.npz
-        channel = self.beamName #ss_port, ss_star, etc.
-        projName = os.path.split(self.projDir)[-1] #to append project name to filename
-
-        # Prepare file name
-        f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'.npz'
-        f = os.path.join(outDir, f)
-
-        # Save compressed npz
-        np.savez_compressed(f, arr)
-
-        # # Save non_compressed npz
-        # f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_noncompress.npz'
-        # f = os.path.join(outDir, f)
-        # np.savez(f, arr)
-
-        del arr
         return
 
     #=======================================================================
@@ -228,6 +184,13 @@ class mapSubObj(rectObj):
         fArr = np.zeros((h, w, c))
         fArr[p:p+sh, :, :] = fSoftmax
 
+        # Make sure softmax is 1.0 for areas definately water and shadow
+        # Shadow second to last class
+        fArr[p+sh, :, -2] = 1.0
+
+        # Water last class
+        fArr[:p, :, -1] = 1.0
+
         # print(fArr.shape, np.min(fArr), np.max(fArr))
         del fSoftmax, son3Chunk
         gc.collect()
@@ -235,74 +198,8 @@ class mapSubObj(rectObj):
         return fArr
 
     #=======================================================================
-    def _expandWin(self, H, W, w1, w2, arr):
-        '''
-        Generate new array of size (H, W, arr.shape[2]) filled with nan's. Place
-        arr in new arr at index [:, w1:w2]
-        '''
-
-        # Number of classes
-        nclass = arr.shape[2]
-
-        # Create new array filled with nan's
-        a = np.zeros((H, W, nclass))
-        a.fill(np.nan)
-
-        # Insert arr into a
-        a[:, w1:w2, :] = arr
-
-        return a
-
-
-    #=======================================================================
-    def _getSonDatWin(self, w, arr):
-        '''
-        Get slice of son3Chunk using index (w) and nchunk
-        '''
-        # Chunk size
-        nchunk = self.nchunk
-
-        # End index
-        e = w+nchunk
-
-        # Slice by columns
-        son = arr[:, w:e]
-
-        return son, w, e
-
-
-
-    #=======================================================================
-    def _getMovWinInd(self, o, arr):
-        '''
-        Get moving window indices based on window overlap (o) and arr size
-        '''
-
-        # Get array dims
-        H, W = arr.shape
-
-        # Chunk size
-        c = self.nchunk
-
-        # Calculate stride
-        s = c * o
-
-        # Calculate total windows
-        tWin = (int(1 / o)*2) - 1
-
-        # Calculate first window index
-        i = (c + s) - c
-
-        # Get all indices
-        winInd = np.arange(i,W,s, dtype=int)
-
-        # Only need tWin values
-        winInd = winInd[:tWin]
-
-        return winInd
-
-    #=======================================================================
     def _getSon3Chunk(self, i):
+
         '''
         Get current (i), left (i-1) & right (i+1) chunk's sonDat.
         Concatenate into one array.
@@ -367,6 +264,8 @@ class mapSubObj(rectObj):
         rSonDat = self.sonDat.copy()
         # print(rSonDat.shape)
 
+        del self.sonDat
+
         #############################
         # Merge left, center, & right
 
@@ -383,6 +282,8 @@ class mapSubObj(rectObj):
 
             # Make new zero array w/ pad added in
             newArr = np.zeros((pad+r, c))
+            # Fill with nan to prevent unneeded prediction
+            newArr.fill(np.nan)
 
             # Fill sonDat in appropriate location
             newArr[pad:,:] = lSonDat
@@ -398,6 +299,8 @@ class mapSubObj(rectObj):
 
             # Make new zero array w/ pad added in
             newArr = np.zeros((pad+r, c))
+            # Fill with nan to prevent unneeded prediction
+            newArr.fill(np.nan)
 
             # Fill sonDat in appropriate location
             newArr[pad:,:] = cSonDat
@@ -413,6 +316,8 @@ class mapSubObj(rectObj):
 
             # Make new zero array w/ pad added in
             newArr = np.zeros((pad+r, c))
+            # Fill with nan to prevent unneeded prediction
+            newArr.fill(np.nan)
 
             # Fill sonDat in appropriate location
             newArr[pad:,:] = rSonDat
@@ -427,6 +332,8 @@ class mapSubObj(rectObj):
 
         # Create final array of appropriate size
         fSonDat = np.zeros((maxR, maxC))
+        # Fill with nan to prevent unneeded prediction
+        fSonDat.fill(np.nan)
 
         # Add left sonDat into fSonDat
         fSonDat[:lSonDat.shape[0],:nchunk] = lSonDat
@@ -446,6 +353,193 @@ class mapSubObj(rectObj):
         # self._writeTiles(i, 'test')
 
         return fSonDat, (H, W, minDep)
+
+    #=======================================================================
+    def _expandWin(self, H, W, w1, w2, arr):
+
+        '''
+        Generate new array of size (H, W, arr.shape[2]) filled with nan's. Place
+        arr in new arr at index [:, w1:w2]
+        '''
+
+        # Number of classes
+        nclass = arr.shape[2]
+
+        # Create new array filled with nan's
+        a = np.zeros((H, W, nclass))
+        a.fill(np.nan)
+
+        # Insert arr into a
+        a[:, w1:w2, :] = arr
+
+        return a
+
+    #=======================================================================
+    def _getSonDatWin(self, w, arr):
+
+        '''
+        Get slice of son3Chunk using index (w) and nchunk
+        '''
+        # Chunk size
+        nchunk = self.nchunk
+
+        # End index
+        e = w+nchunk
+
+        # Slice by columns
+        son = arr[:, w:e]
+
+        return son, w, e
+
+    #=======================================================================
+    def _getMovWinInd(self, o, arr):
+
+        '''
+        Get moving window indices based on window overlap (o) and arr size
+        '''
+
+        # Get array dims
+        H, W = arr.shape
+
+        # Chunk size
+        c = self.nchunk
+
+        # Calculate stride
+        s = c * o
+
+        # Calculate total windows
+        tWin = (int(1 / o)*2) - 1
+
+        # Calculate first window index
+        i = (c + s) - c
+
+        # Get all indices
+        winInd = np.arange(i,W,s, dtype=int)
+
+        # Only need tWin values
+        winInd = winInd[:tWin]
+
+        return winInd
+
+    #=======================================================================
+    def _saveSubstrateNpz(self, arr, k):
+        '''
+        Save substrate prediction to npz
+        '''
+
+        ###################
+        # Prepare File Name
+        # File name zero padding
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        # Out directory
+        outDir = os.path.join(self.substrateDir, 'softmax')
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        #projName_substrate_beam_chunk.npz
+        channel = self.beamName #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+
+        # Prepare file name
+        f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'.npz'
+        f = os.path.join(outDir, f)
+
+        # Save compressed npz
+        np.savez_compressed(f, arr)
+
+        # # Save non_compressed npz
+        # f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_noncompress.npz'
+        # f = os.path.join(outDir, f)
+        # np.savez(f, arr)
+
+        del arr
+        return
+
+    ############################################################################
+    # Plot Substrate Classification                                            #
+    ############################################################################
+
+    #=======================================================================
+    def _pltSubClass(self, method, i, npz):
+
+        '''
+        '''
+
+        ###################
+        # Prepare File Name
+        # File name zero padding
+        k = i
+        if k < 10:
+            addZero = '0000'
+        elif k < 100:
+            addZero = '000'
+        elif k < 1000:
+            addZero = '00'
+        elif k < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        # Out directory
+        outDir = os.path.join(self.substrateDir, 'plots')
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        #projName_substrate_beam_chunk.npz
+        channel = self.beamName #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+
+        # Open substrate softmax scores
+        npz = np.load(npz)
+        softmax = npz['arr_0'].astype('float32')
+
+        # Load sonDat
+        self._getScanChunkSingle(i)
+        son = self.sonDat
+
+        # Set colormap
+        class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
+
+
+        if method == 'max':
+            # Get final classification
+            label = self._classifySoftmax(softmax)
+            label = label - 1
+
+            # Recover original dimensions
+
+            # Prepare plt file name/path
+            # Prepare file name
+            f = projName+'_'+'pltSub_'+method+'_'+channel+'_'+addZero+str(k)+'.png'
+            f = os.path.join(outDir, f)
+
+            # Convert labels to colors
+            color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+
+            # Plot overlay
+            plt.imshow(son, cmap='gray')
+            plt.imshow(color_label, alpha=0.5)
+            plt.axis('off')
+            plt.savefig(f, dpi=200, bbox_inches='tight')
+
+
+
+        # elif method == 'all'
+            # Export liklihood plots for each class
 
 
 
@@ -472,9 +566,6 @@ class mapSubObj(rectObj):
         # Try rectifying
         self._rectSonParallel(i, son=False)
 
-
-
-
     #=======================================================================
     def _classifySoftmax(self, arr, method=1):
         '''
@@ -487,3 +578,34 @@ class mapSubObj(rectObj):
             label = label + 1
 
         return label
+
+
+    ############################################################################
+    # General mapSubObj Utilities                                              #
+    ############################################################################
+
+    #=======================================================================
+    def _getSubstrateNpz(self):
+        '''
+        Locate previously saved substrate npz files and return dictionary:
+        npzs = {chunkID:NPZFilePath}
+        '''
+
+        # Get npz dir
+        npzDir = os.path.join(self.substrateDir, 'softmax')
+
+        # Get npz files belonging to current son
+        npzs = sorted(glob(os.path.join(npzDir, '*.npz')))
+
+        # Dictionary to store {chunkID:NPZFilePath}
+        toMap = defaultdict()
+
+        # Extract chunkID from filename and store in dict
+        for n in npzs:
+            c = os.path.basename(n)
+            c = c.split('.')[0]
+            c = int(c.split('_')[-1])
+            toMap[c] = n
+
+        del npzDir, npzs, n, c
+        return toMap

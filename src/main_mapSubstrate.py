@@ -59,7 +59,7 @@ def map_master_func(humFile='',
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
-                     map_sub_tile=False,
+                     pltSubClass=False,
                      map_class_method='max'):
 
     '''
@@ -238,71 +238,78 @@ def map_master_func(humFile='',
     # For Substrate Prediction                                                 #
     ############################################################################
 
-    # if not smthTrk:
-    #     printUsage()
-    #
+    if not smthTrk:
+        printUsage()
+
     start_time = time.time()
 
-    # if map_sub > 0:
-    #     print('\n\nAutomatically predicting substrate liklihoods...')
-    #
-    #     # Get chunk id for mapping substrate
-    #     for son in mapObjs:
-    #         son.mapSub = map_sub
-    #
-    #         # Get chunk id's
-    #         chunks = son._getChunkID()
-    #
-    #         # Doing moving window prediction, so remove first and last chunk
-    #         chunks = chunks[1:-1]
-    #
-    #         # Prepare output dir
-    #         outDir = os.path.join(son.outDir, 'substrate')
-    #         try:
-    #             os.mkdir(outDir)
-    #         except:
-    #             pass
-    #         son.substrateDir = outDir
-    #
-    #         # Prepare model
-    #         if map_sub ==1:
-    #             # Load model weights
-    #             son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-    #             son.configfile = son.weights.replace('.h5', '.json')
-    #
-    #         # Do prediction (make parallel later)
-    #         print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
-    #         # for c in chunks:
-    #         #     son._detectSubstrate(map_sub, c, USE_GPU)
-    #         #     # sys.exit()
-    #         #     break
-    #         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
-    #
-    #         son._cleanup()
-    #         del chunks
-    #
-    #
-    #     del son
-    #     gc.collect()
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    if map_sub > 0:
+        print('\n\nAutomatically predicting substrate liklihoods...')
+
+        # Get chunk id for mapping substrate
+        for son in mapObjs:
+            son.mapSub = map_sub
+
+            # Get chunk id's
+            chunks = son._getChunkID()
+
+            # Doing moving window prediction, so remove first and last chunk
+            chunks = chunks[1:-1]
+
+            # Prepare output dir
+            outDir = os.path.join(son.outDir, 'substrate')
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+            son.substrateDir = outDir
+
+            # Prepare model
+            if map_sub ==1:
+                # Load model weights
+                son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+                son.configfile = son.weights.replace('.h5', '.json')
+
+            # Do prediction (make parallel later)
+            print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+            # for c in chunks:
+            #     son._detectSubstrate(map_sub, c, USE_GPU)
+            #     # sys.exit()
+            #     break
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
+
+            son._cleanup()
+            del chunks
+
+
+        del son
+        gc.collect()
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
-    # For Substrate Classification Tile Export (????)                          #
+    # Plot Substrate Classification                                            #
     ############################################################################
 
-    if map_sub_tile:
+    if pltSubClass:
         print('\n\nExporting substrate tiles...')
 
         # Get chunk id for mapping substrate
         for son in mapObjs:
 
-            # Get Substraight npz's
+            # Get Substrate npz's
+            toMap = son._getSubstrateNpz()
+
+            # Plot substrate classification
+            for c, f in toMap.items():
+                son._pltSubClass(map_class_method, c, f)
+
+
+
 
 
 
     sys.exit()
-
     ############################################################################
     # For Substrate Mapping                                                    #
     ############################################################################
@@ -316,32 +323,10 @@ def map_master_func(humFile='',
         # Get chunk id for mapping substrate
         for son in mapObjs:
             son.rect_wcr = True
-            son._loadSonMeta()
-            # sonMetaDF = son.sonMetaDF
-            #
-            # # Remove chunks completely filled with NoData
-            # df = sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
-            # chunks = pd.unique(df['chunk_id']).astype(int)
-            #
-            # # Doing moving window prediction, so remove first and last chunk
-            # chunks = chunks[1:-1]
-            #
-            # del sonMetaDF, df
+            # son._loadSonMeta()
 
-            # Find softmax npz's
-            npzDir = os.path.join(son.substrateDir, 'softmax')
-            npzs = sorted(glob(os.path.join(npzDir, '*'+son.beamName+'*.npz')))
-
-            # Store chunk and filepath in dictionary
-            toMap = defaultdict()
-
-            chunkCnt = 0
-            for n in npzs:
-                c = os.path.basename(n)
-                c = c.split('.')[0]
-                c = int(c.split('_')[-1])
-                toMap[c] = n
-                chunkCnt += 1
+            # Get Substrate npz's
+            toMap = son._getSubstrateNpz()
 
             # Do prediction (make parallel later)
             print('\n\tMapping substrate classification for', chunkCnt, 'sonograms for', son.beamName)
