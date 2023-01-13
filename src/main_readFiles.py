@@ -56,7 +56,7 @@ def read_master_func(humFile='',
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
-                     map_sub_tile=False,
+                     pltSubClass=False,
                      map_class_method='max'):
 
     '''

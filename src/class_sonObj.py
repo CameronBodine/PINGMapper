@@ -668,8 +668,8 @@ class sonObj(object):
             83:[48, 1, 1, "unknown_83"], #Unknown (number of satellites???)
             84:[50, 1, 1, "unknown_84"], #Unknown
             149:[52, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
-            86:[57, 1, 1, 'unknown_86'], #Unknown (+-X error)
-            87:[59, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            86:[57, 1, 1, 'e_err_m'], #Easting variance (+-X error)
+            87:[59, 1, 1, 'n_err_m'], #Northing variance (+-Y error)
             160:[61, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
             }
 
@@ -692,8 +692,8 @@ class sonObj(object):
             83:[53, 1, 1, "unknown_83"], #Unknown (number of satellites???)
             84:[55, 1, 1, "unknown_84"], #Unknown
             149:[57, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
-            86:[62, 1, 1, 'unknown_86'], #Unknown (+-X error)
-            87:[64, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            86:[62, 1, 1, 'e_err_m'], #Easting variance (+-X error)
+            87:[64, 1, 1, 'n_err_m'], #Northing variance (+-Y error)
             160:[66, 1, 4, 'ping_cnt'] #Number of ping values (in bytes)
             }
 
@@ -724,8 +724,8 @@ class sonObj(object):
             83:[93, 1, 1, "unknown_83"], #Unknown (number of satellites???)
             84:[95, 1, 1, "unknown_84"], #Unknown
             149:[97, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
-            86:[102, 1, 1, 'unknown_86'], #Unknown (+-X error)
-            87:[104, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            86:[102, 1, 1, 'e_err_m'], #Easting variance (+-X error)
+            87:[104, 1, 1, 'n_err_m'], #Northing variance (+-Y error)
             152:[106, 1, 4, 'unknown_152'], #Unknown
             153:[111, 1, 4, 'f_min'], #Frequency Range (min)
             154:[116, 1, 4, 'f_max'], #Frequency Range (max)
@@ -876,8 +876,8 @@ class sonObj(object):
             83:[-1, 1, 1, "unknown_83"], #Unknown (number of satellites???)
             84:[-1, 1, 1, "unknown_84"], #Unknown
             149:[-1, 1, 4, "unknown_149"], #Unknown (magnetic deviation???)
-            86:[-1, 1, 1, 'unknown_86'], #Unknown (+-X error)
-            87:[-1, 1, 1, 'unknown_87'], #Unknown (+-Y error)
+            86:[-1, 1, 1, 'e_err_m'], #Easting variance (+-X error)
+            87:[-1, 1, 1, 'n_err_m'], #Northing variance (+-Y error)
             152:[-1, 1, 4, 'unknown_152'], #Unknown
             153:[-1, 1, 4, 'unknown_153'], #Unknown
             154:[-1, 1, 4, 'unknown_154'], #Unknown
@@ -1127,6 +1127,14 @@ class sonObj(object):
             self._getEPSG(sonHead['utm_e'], sonHead['utm_n'])
 
         # Make necessary conversions
+        # Easting and northing variances appear to be stored in the file
+        ## They are reported in cm's so need to convert
+        sonHead['e_err_m'] = np.abs(sonHead['e_err_m'])/100
+        sonHead['n_err_m'] = np.abs(sonHead['n_err_m'])/100
+
+        # Now calculate hdop from n/e variances
+        sonHead['hdop'] = np.round(np.sqrt(sonHead['e_err_m']+sonHead['n_err_m']), 2)
+
         # Convert eastings/northings to latitude/longitude
         lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_n']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
         lon = (sonHead['utm_e'] * 57.295779513082302) / 6378388.0
