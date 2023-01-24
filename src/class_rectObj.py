@@ -924,6 +924,9 @@ class rectObj(sonObj):
         ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
         # Filter sonMetaDF by chunk
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
         sonMetaAll = self.sonMetaDF
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
@@ -1136,7 +1139,13 @@ class rectObj(sonObj):
             beamName = self.beamName # Determine which sonar beam we are working with
             imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
 
-            gtiff = os.path.join(outDir, imgName) # Output file name
+            if son:
+                gtiff = os.path.join(outDir, imgName) # Output file name
+            else:
+                outDir = os.path.join(self.substrateDir, 'map')
+                if not os.path.exists(outDir):
+                    os.mkdir(outDir)
+                gtiff = os.path.join(outDir, imgName) # Output file name
 
 
             # Export georectified image
