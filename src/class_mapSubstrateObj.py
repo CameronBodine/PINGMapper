@@ -442,11 +442,20 @@ class mapSubObj(rectObj):
             addZero = ''
 
         # Out directory
+        if not os.path.exists(self.outDir):
+            os.mkdir(self.outDir)
+        if not os.path.exists(self.substrateDir):
+            os.mkdir(self.substrateDir)
+
         outDir = os.path.join(self.substrateDir, 'softmax')
-        try:
+        if not os.path.exists(outDir):
             os.mkdir(outDir)
-        except:
-            pass
+
+        # outDir = os.path.join(self.substrateDir, 'softmax')
+        # try:
+        #     os.mkdir(outDir)
+        # except:
+        #     pass
 
         #projName_substrate_beam_chunk.npz
         channel = self.beamName #ss_port, ss_star, etc.
@@ -503,13 +512,21 @@ class mapSubObj(rectObj):
         channel = self.beamName #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
 
+        # Load sonDat
+        self._getScanChunkSingle(i)
+        son = self.sonDat
+
         # Open substrate softmax scores
         npz = np.load(npz)
         softmax = npz['arr_0'].astype('float32')
 
-        # Load sonDat
-        self._getScanChunkSingle(i)
-        son = self.sonDat
+        # Get water column and shadow masks
+        self._WC_mask(i)
+        wc_mask = self.wcMask
+
+        self._SHW_mask(i)
+        shw_mask = self.shadowMask
+
 
         # Set colormap
         class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
@@ -518,6 +535,20 @@ class mapSubObj(rectObj):
         if method == 'max':
             # Get final classification
             label = self._classifySoftmax(softmax)
+            # label = label - 1
+
+            # Mask water column and shadow
+            label = (label*wc_mask).astype('uint8') # Zero-out water column
+            wc_mask = np.where(wc_mask==0,8,wc_mask) # Set water column mask value to 8
+            wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
+            label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+            label = (label*shw_mask).astype('uint8')
+            shw_mask = np.where(shw_mask==0,7,shw_mask) # Set water column mask value to 7
+            shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
+            label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+
             label = label - 1
 
             # Recover original dimensions
