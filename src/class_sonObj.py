@@ -1456,6 +1456,49 @@ class sonObj(object):
         return self
 
     # ======================================================================
+    def _WC_mask(self, i):
+        '''
+
+        '''
+        # Get sonMeta
+        self._loadSonMeta()
+
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==i
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+
+        # Update class attributes based on current chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+        # Load depth (in real units) and convert to pixels
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        minDep = min(bedPick)
+
+        del sonMeta, self.sonMetaDF
+
+        # Load sonardata
+        self._loadSonChunk()
+
+        # Make zero mask
+        wc_mask = np.zeros((self.sonDat.shape))
+
+        # Fill non-wc pixels with 1
+        for p, s in enumerate(bedPick):
+            wc_mask[s:, p] = 1
+
+        del bedPick
+
+        self.wcMask = wc_mask
+        self.minDep = minDep
+
+        return
+
+
+
+
+    # ======================================================================
     def _WCR_SRC(self,
              sonMeta):
         '''
@@ -1541,7 +1584,25 @@ class sonObj(object):
         sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
+
         return minDep
+
+        # # Get chunk
+        # c = np.unique(sonMeta['chunk_id'])[0]
+        #
+        # # Get water column mask
+        # # wc_mask, minDep = self._WC_mask(c)
+        # self._WC_mask(c)
+        #
+        # # Zero out water column
+        # sonDat = self.sonDat * self.wcMask
+        #
+        # # Crop to min depth
+        # sonDat = sonDat[self.minDep:,]
+        #
+        # self.sonDat = sonDat
+        #
+        # return
 
     # ======================================================================
     def _SHW_mask(self, i):
