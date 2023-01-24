@@ -480,7 +480,7 @@ class portstarObj(object):
                         )
 
         try:
-            model = tf.keras.models.load_model(weights)
+            model = tf.keras.models.load_model(self.weights)
         except:
             model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
             model.load_weights(self.weights)
