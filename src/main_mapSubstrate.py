@@ -145,7 +145,7 @@ def map_master_func(humFile='',
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
 
-    smthTrk = True # For debugging
+    # smthTrk = True # For debugging
     if smthTrk:
         print("\nUsing existing smoothed trackline.")
     else:
@@ -300,16 +300,13 @@ def map_master_func(humFile='',
             # Get Substrate npz's
             toMap = son._getSubstrateNpz()
 
+            print('\n\tExporting substrate tiles for', len(toMap), 'sonograms for', son.beamName)
+
             # Plot substrate classification
-            for c, f in toMap.items():
-                son._pltSubClass(map_class_method, c, f)
+            # for c, f in toMap.items():
+            #     son._pltSubClass(map_class_method, c, f)
+            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f) for c, f in toMap.items())
 
-
-
-
-
-
-    sys.exit()
     ############################################################################
     # For Substrate Mapping                                                    #
     ############################################################################
@@ -329,11 +326,11 @@ def map_master_func(humFile='',
             toMap = son._getSubstrateNpz()
 
             # Do prediction (make parallel later)
-            print('\n\tMapping substrate classification for', chunkCnt, 'sonograms for', son.beamName)
-            for c, f in toMap.items():
-                son._mapSubstrate(map_sub, c, f)
+            print('\n\tMapping substrate classification for', len(toMap), 'sonograms for', son.beamName)
+            # for c, f in toMap.items():
+            #     son._mapSubstrate(map_sub, c, f)
                 # sys.exit()
-            # Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(map_sub, i, USE_GPU) for i in chunks)
+            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._mapSubstrate)(map_sub, c, f) for c, f in toMap.items())
 
             son.rect_wcr = rect_wcr
 
@@ -347,17 +344,17 @@ def map_master_func(humFile='',
     # For Substrate Mapping                                                    #
     ############################################################################
 
-    overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if map_sub > 0:
-        start_time = time.time()
-        print("\nMosaicing GeoTiffs...")
-        psObj = portstarObj(mapObjs)
-        psObj._createMosaic(mosaic, overview, threadCnt)
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
-        gc.collect()
-        printUsage()
+    # overview = True # False will reduce overall file size, but reduce performance in a GIS
+    # if map_sub > 0:
+    #     start_time = time.time()
+    #     print("\nMosaicing GeoTiffs...")
+    #     psObj = portstarObj(mapObjs)
+    #     psObj._createMosaic(mosaic, overview, threadCnt)
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     del psObj
+    #     gc.collect()
+    #     printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #
