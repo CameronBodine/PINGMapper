@@ -190,13 +190,12 @@ class rectObj(sonObj):
             df.drop_duplicates(subset=[xlon, ylat], inplace=True)
 
         # Extract every `filt` record, including last value
-        if filt>0:
+        if (filt>0) and (len(df)>filt):
             lastRow = df.iloc[-1].to_frame().T
             dfFilt = df.iloc[::filt]
             dfFilt = pd.concat([dfFilt, lastRow]).reset_index(drop=True)
         else:
             dfFilt = df.reset_index(drop=False)
-
 
         # Try smoothing trackline
         x=dfFilt[xlon].to_numpy(dtype='float64') # Store longitude coordinates in numpy array
