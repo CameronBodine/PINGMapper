@@ -1255,8 +1255,8 @@ class portstarObj(object):
                 starFinal = savgol_filter(starFinal, 51, 3)
 
             # Convert pix to depth [m]
-            portDF['dep_m'] = portFinal * portDF['pix_m']
-            starDF['dep_m'] = starFinal * starDF['pix_m']
+            portFinal = portFinal * portDF['pix_m']
+            starFinal = starFinal * starDF['pix_m']
 
             # Set negatives to 0
             portFinal = np.asarray(portFinal)
@@ -1267,6 +1267,9 @@ class portstarObj(object):
 
             portFinal = portFinal.tolist()
             starFinal = starFinal.tolist()
+
+            portDF['dep_m'] = portFinal
+            starDF['dep_m'] = starFinal
 
             if adjDep != 0:
                 adjBy = portDF['pix_m'][0]*adjDep
