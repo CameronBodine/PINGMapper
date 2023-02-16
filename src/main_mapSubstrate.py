@@ -35,7 +35,9 @@ from class_mapSubstrateObj import mapSubObj
 from class_portstarObj import portstarObj
 
 #===============================================================================
-def map_master_func(humFile='',
+def map_master_func(
+                     script='',
+                     humFile='',
                      sonFiles='',
                      projDir='',
                      tempC=10,

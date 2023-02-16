@@ -30,9 +30,11 @@
 from funcs_common import *
 from class_sonObj import sonObj
 from class_portstarObj import portstarObj
+import shutil
 
 #===========================================
-def read_master_func(humFile='',
+def read_master_func(script='',
+                     humFile='',
                      sonFiles='',
                      projDir='',
                      tempC=10,
@@ -242,6 +244,7 @@ def read_master_func(humFile='',
     printUsage()
     start_time = time.time()
     print("\nGetting DAT Metadata...")
+    print(humFile)
     # Create sonObj to store sonar attributes, access processing functions,
     ## and access sonar data.  We will use the first sonar beam to make an
     ## initial sonar object, then create a copy for each beam.
@@ -269,6 +272,10 @@ def read_master_func(humFile='',
     except:
         pass
     son.metaDir = metaDir #Store metadata directory in sonObj
+
+    # Save main script to metaDir
+    outScript = os.path.join(metaDir, script[1])
+    shutil.copy(script[0], outScript)
 
     # Save DAT metadata to file (csv)
     outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name

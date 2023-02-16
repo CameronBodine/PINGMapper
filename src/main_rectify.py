@@ -36,7 +36,9 @@ from class_portstarObj import portstarObj
 import inspect
 
 #===============================================================================
-def rectify_master_func(humFile='',
+def rectify_master_func(
+                     script='',
+                     humFile='',
                      sonFiles='',
                      projDir='',
                      tempC=10,

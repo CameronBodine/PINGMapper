@@ -34,6 +34,12 @@ from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
 
+# Get processing script's dir so we can save it to file
+scriptDir = os.getcwd()
+copied_script_name = os.path.basename(__file__)+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+script = os.path.join(scriptDir, os.path.basename(__file__))
+
+
 start_time = time.time()
 
 #============================================
@@ -91,6 +97,7 @@ print(sonFiles)
 #============================================
 
 params = {
+    'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,
     'projDir':projDir,
