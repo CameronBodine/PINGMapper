@@ -598,6 +598,13 @@ def read_master_func(script='',
                 chunks = chunks[:-rdr]
 
             df['chunk_id'] = chunks
+
+            # Make sure last chunk is long enough
+            c=df['chunk_id'].max() # Get last chunk value
+            lastChunk=df[df['chunk_id']==c] # Get last chunk rows
+            if len(lastChunk) <= (nchunk/2):
+                df.loc[df['chunk_id']==c, 'chunk_id'] = c-1
+
             df.drop(columns = ['beam'], inplace=True)
 
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
