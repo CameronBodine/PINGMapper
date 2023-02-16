@@ -680,6 +680,8 @@ def read_master_func(script='',
     print("\nDone!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
+    sys.exit()
+
     ############################################################################
     # For Depth Detection                                                      #
     ############################################################################
@@ -833,7 +835,7 @@ def read_master_func(script='',
         psObj = portstarObj(portstar)
 
         # Model weights and config file
-        psObj.configfile = r'./models/shadow/shadow_20220817_v1.json'
+        psObj.configfile = r'./models/shadow/shadow_20230204_fold_4.json'
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
 
         psObj.port.shadow = defaultdict()

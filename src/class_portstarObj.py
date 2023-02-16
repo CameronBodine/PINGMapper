@@ -1574,6 +1574,10 @@ class portstarObj(object):
         port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
         star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
 
+        # Set shadow to 0, else 1
+        port_label = np.where(port_label==0,1,0)
+        star_label = np.where(star_label==0,1,0)
+
         ##############################################
         # Recover original dimensions for shadow label
         pMask = np.zeros((pR, pW))
