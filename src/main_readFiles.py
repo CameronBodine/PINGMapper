@@ -687,8 +687,6 @@ def read_master_func(script='',
     print("\nDone!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
-    sys.exit()
-
     ############################################################################
     # For Depth Detection                                                      #
     ############################################################################
