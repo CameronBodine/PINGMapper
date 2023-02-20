@@ -1394,14 +1394,14 @@ class sonObj(object):
                 # self._doPPDRC()
                 self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
 
-            try:
-                # Export water column removed and cropped imagery
-                # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
-                if self.wcr_crop:
-                    _ = self._WCR_crop(sonMeta)
-                    self._writeTiles(chunk, imgOutPrefix='wcr_crop', tileFile=tileFile)
-            except:
-                pass
+            # try:
+            #     # Export water column removed and cropped imagery
+            #     # if self.wcr_crop and (self.beamName=='ss_port' or self.beamName=='ss_star'):
+            #     if self.wcr_crop:
+            #         _ = self._WCR_crop(sonMeta)
+            #         self._writeTiles(chunk, imgOutPrefix='wcr_crop', tileFile=tileFile)
+            # except:
+            #     pass
 
             gc.collect()
         return self
