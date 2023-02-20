@@ -1557,8 +1557,8 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         # Get depth/ pix scaler for given chunk
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']]
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']]
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
 
         # Load sonar
         self.port._getScanChunkSingle(i)
@@ -1583,11 +1583,26 @@ class portstarObj(object):
 
         ##############################################
         # Recover original dimensions for shadow label
-        pMask = np.zeros((pR, pW))
-        sMask = np.zeros((sR, sW))
+        # pMask = np.zeros((pR, pW))
+        # sMask = np.zeros((sR, sW))
+        pMask = np.ones((pR, pW))
+        sMask = np.ones((sR, sW))
 
         pMask[pMinDep:,] = port_label
         sMask[sMinDep:,] = star_label
+
+        ###########################################
+        # Remove shadow predictions in water column
+        bedpickPort = round(portDF['dep_m'] / portDF['pix_m'], 0).astype(int)
+        bedpickStar = round(starDF['dep_m'] / starDF['pix_m'], 0).astype(int)
+
+        for j in range(pMask.shape[1]):
+            depth = bedpickPort[j]
+            pMask[:depth, j] = 1
+
+        for j in range(sMask.shape[1]):
+            depth = bedpickStar[j]
+            sMask[:depth, j] = 1
 
         ####################
         # Filter predictions
