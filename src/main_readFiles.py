@@ -476,26 +476,17 @@ def read_master_func(humFile='',
     for son in sonObjs:
         beam = son.beamName
 
-        if wcp > 0:
-            if wcp == 2:
-                son.wcp = True
-            else:
-                if beam == "ss_port" or beam == "ss_star":
-                    son.wcp = True
-                else:
-                    son.wcp = False
+        if wcp:
+            son.wcp = True
         else:
             son.wcp = False
 
 
-        if wcr > 0:
-            if wcr == 2:
+        if wcr:
+            if beam == "ss_port" or beam == "ss_star":
                 son.wcr_src = True
             else:
-                if beam == "ss_port" or beam == "ss_star":
-                    son.wcr_src = True
-                else:
-                    son.wcr_src = False
+                son.wcr_src = False
 
         else:
             son.wcr_src = False
@@ -837,6 +828,8 @@ def read_master_func(humFile='',
         psObj.star.shadow = defaultdict()
 
         r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
+        # for chunk in chunks:
+        #     psObj._detectShadow(remShadow, int(chunk), USE_GPU, False, tileFile)
 
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
