@@ -1,12 +1,11 @@
 name: ping
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python
   - pandas
   - rasterio
-  - tensorflow-gpu
   - pyproj
   - scikit-image
   - joblib
@@ -15,3 +14,4 @@ dependencies:
   - pip
   - pip:
       - psutil
+      - tensorflow
