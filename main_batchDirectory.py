@@ -52,8 +52,8 @@ threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total thre
 
 # Sonogram Exports
 tileFile = '.jpg'
-wcp = True #Export tiles with water column present
-wcr = True #Export Tiles with water column removed (and slant range corrected)
+wcp = 2 #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = 2 #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
