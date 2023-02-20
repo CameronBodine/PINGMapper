@@ -817,10 +817,13 @@ def read_master_func(humFile='',
         # Determine which sonObj is port/star
         portstar = []
         for son in sonObjs:
-            son.remShadow = True
             beam = son.beamName
             if beam == "ss_port" or beam == "ss_star":
+                son.remShadow = True
                 portstar.append(son)
+            # Don't remove shadows from down scans
+            else:
+                son.remShadow = False
         del son
 
         # Create portstarObj
