@@ -8,8 +8,6 @@ exampleData/Test-Large-DS*
 
 main_batch.py
 main_batchFolder.py
-main_batchDirectory_csb.py
-main_csb.py
-test_PINGMapper_csb.py
+*csb*.py
 
 !procData/OutputsHere.txt
