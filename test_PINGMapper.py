@@ -37,7 +37,7 @@ from main_rectify import rectify_master_func
 
 # Get processing script's dir so we can save it to file
 scriptDir = os.getcwd()
-copied_script_name = os.path.basename(__file__)+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
 script = os.path.join(scriptDir, os.path.basename(__file__))
 
 
