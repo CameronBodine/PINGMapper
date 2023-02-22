@@ -1141,10 +1141,11 @@ class rectObj(sonObj):
             if son:
                 gtiff = os.path.join(outDir, imgName) # Output file name
             else:
-                outDir = os.path.join(self.substrateDir, 'map')
+                outDir = os.path.join(self.substrateDir, 'map_sub')
                 if not os.path.exists(outDir):
                     os.mkdir(outDir)
                 gtiff = os.path.join(outDir, imgName) # Output file name
+                gtiff = gtiff.replace(imgOutPrefix, 'sub_map')
 
 
             # Export georectified image

@@ -43,5 +43,15 @@
     "SET_PCI_BUS_ID": true,
     "WRITE_MODELMETADATA": true,
     "OTSU_THRESHOLD": true,
-    "MODE": "all"
+    "MODE": "all",
+    "REMAP_CLASSES": {"0": 0, "1": 1, "2": 2, "3":3, "4":4, "5":5, "6":6, "7":7, "8":8},
+    "MY_CLASS_NAMES": {"0": "NoData",
+                       "1": "Fines Ripple",
+                       "2": "Fines Flat",
+                       "3": "Cobble Boulder",
+                       "4": "Hard Bottom",
+                       "5": "Wood",
+                       "6": "Other",
+                       "7": "Shadow",
+                       "8": "Water"}
 }

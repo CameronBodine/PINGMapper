@@ -196,7 +196,8 @@ class portstarObj(object):
     def _createMosaic(self,
                       mosaic=1,
                       overview=True,
-                      threadCnt=cpu_count()):
+                      threadCnt=cpu_count(),
+                      son=True):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -266,18 +267,45 @@ class portstarObj(object):
             else:
                 srcToMosaic = [port + star]
 
+        # print('\n\n\n\n')
+        # print(self)
+        # sys.exit()
+        if not son:
+            if self.port.mapSub:
+                # Locate port files
+                portPath = os.path.join(self.port.substrateDir, 'map_sub')
+                port = sorted(glob(os.path.join(portPath, '*.tif')))
+
+                # Locate starboard files
+                starPath = os.path.join(self.star.substrateDir, 'map_sub')
+                star = sorted(glob(os.path.join(starPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if len(port) > maxChunk:
+                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    subToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                else:
+                    subToMosaic = [port + star]
+
         # Create geotiff
         if mosaic == 1:
             if self.port.rect_wcp:
                 _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
+            if not son:
+                if self.port.mapSub:
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i) for i, sub in enumerate(subToMosaic))
         # Create vrt
         elif mosaic == 2:
             if self.port.rect_wcp:
                 _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
             if self.port.rect_wcr:
                 _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
+            if not son:
+                if self.port.mapSub:
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i) for i, sub in enumerate(subToMosaic))
 
         return self
 

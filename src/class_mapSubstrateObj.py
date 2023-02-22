@@ -83,15 +83,20 @@ class mapSubObj(rectObj):
         if method == 1:
             # Initialize the model
             if not hasattr(self, 'substrateModel'):
-                model = initModel(self.weights, self.configfile, USE_GPU)
+                model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
                 self.substrateModel = model
 
+            # Open model configuration file
+            with open(self.configfile) as f:
+                config = json.load(f)
+            globals().update(config)
+
             # Do prediction
-            substratePred = self._predSubstrate(i)
+            substratePred = self._predSubstrate(i, model_name, n_data_bands)
 
 
         # Save predictions to npz
-        self._saveSubstrateNpz(substratePred, i)
+        self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
 
         del self.substrateModel, substratePred
         gc.collect()
@@ -99,7 +104,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, winO=1/3):
+    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
         '''
         Predict substrate type from sonogram.
 
@@ -136,6 +141,19 @@ class mapSubObj(rectObj):
         # Get dims
         H, W = son3Chunk.shape
 
+        # #########################
+        # # Convert array to tensor
+        # son3Chunk, w, h, bigimage = seg_file2tensor(son3Chunk, TARGET_SIZE)
+        # son3Chunk = standardize(son3Chunk.numpy()).squeeze()
+        #
+        #
+        # ############################
+        # # For segformer architecture
+        # if model_name == 'segformer':
+        #     if n_data_bands == 1:
+        #         son3Chunk = np.dstack((son3Chunk, son3Chunk, son3Chunk))
+        #     son3Chunk = tf.transpose(son3Chunk, (2, 0, 1))
+
         ###########################
         # Get moving window indices
         movWinInd = self._getMovWinInd(winO, son3Chunk)
@@ -150,16 +168,16 @@ class mapSubObj(rectObj):
         # Store each window's softmax
         winSoftMax = []
         # Iterate each window
-        for w in movWinInd:
+        for m in movWinInd:
             # Slice son3Chunk by index
             # Return son slice, begin and end index
-            sonWin, wStart, wEnd = self._getSonDatWin(w, son3Chunk)
+            sonWin, wStart, wEnd = self._getSonDatWin(m, son3Chunk)
 
             # Get the model
             model = self.substrateModel
 
             # Do prediction, return softmax_score for each class
-            softmax_score = doPredict(model, sonWin)
+            softmax_score = doPredict(model, MODEL, sonWin, N_DATA_BANDS, NCLASSES, TARGET_SIZE)
 
             # Expand softmax_score to son3Chunk dims, filled with nan's
             softmax_score = self._expandWin(H, W, wStart, wEnd, softmax_score)
@@ -177,7 +195,7 @@ class mapSubObj(rectObj):
 
         # Recover fSoftmax to original dimensions
         h, w = pad[:-1] # original chunk dimensions
-        p = pad[-1] # amount of water column cropped
+        p = pad[-1]-1 # amount of water column cropped
         sh, sw = fSoftmax.shape[:-1] # softmax dimensions
         c = fSoftmax.shape[-1] # number of classes
 
@@ -233,8 +251,8 @@ class mapSubObj(rectObj):
         # Get dimensions
         H, W = self.sonDat.shape
 
-        # Crop shadows first
-        self._SHW_crop(i, True)
+        # # Crop shadows first
+        # self._SHW_crop(i, True)
 
         # Get sonMetaDF
         cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m', 'pix_m']].copy()
@@ -251,8 +269,8 @@ class mapSubObj(rectObj):
         # Get sonDat
         self._getScanChunkSingle(i+1)
 
-        # Crop shadows first
-        self._SHW_crop(i+1, True)
+        # # Crop shadows first
+        # self._SHW_crop(i+1, True)
 
         # Get sonMetaDF
         rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m', 'pix_m']].copy()
@@ -352,6 +370,8 @@ class mapSubObj(rectObj):
         # self.sonDat = fSonDat
         # self._writeTiles(i, 'test')
 
+        # fSonDat = standardize(fSonDat)
+
         return fSonDat, (H, W, minDep)
 
     #=======================================================================
@@ -399,7 +419,7 @@ class mapSubObj(rectObj):
         '''
 
         # Get array dims
-        H, W = arr.shape
+        H, W = arr.shape[:2]
 
         # Chunk size
         c = self.nchunk
@@ -422,7 +442,7 @@ class mapSubObj(rectObj):
         return winInd
 
     #=======================================================================
-    def _saveSubstrateNpz(self, arr, k):
+    def _saveSubstrateNpz(self, arr, k, classes):
         '''
         Save substrate prediction to npz
         '''
@@ -465,8 +485,14 @@ class mapSubObj(rectObj):
         f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'.npz'
         f = os.path.join(outDir, f)
 
+        # Create dict to store output
+        datadict = dict()
+        datadict['substrate'] = arr
+
+        datadict['classes'] = list(classes.values())
+
         # Save compressed npz
-        np.savez_compressed(f, arr)
+        np.savez_compressed(f, **datadict)
 
         # # Save non_compressed npz
         # f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_noncompress.npz'
@@ -518,7 +544,7 @@ class mapSubObj(rectObj):
 
         # Open substrate softmax scores
         npz = np.load(npz)
-        softmax = npz['arr_0'].astype('float32')
+        softmax = npz['substrate'].astype('float32')
 
         # Get water column and shadow masks
         self._WC_mask(i)
@@ -527,8 +553,11 @@ class mapSubObj(rectObj):
         self._SHW_mask(i)
         shw_mask = self.shadowMask
 
+        # Get classes
+        classes = npz['classes']
 
         # Set colormap
+        # class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
         class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
 
 
@@ -539,12 +568,12 @@ class mapSubObj(rectObj):
 
             # Mask water column and shadow
             label = (label*wc_mask).astype('uint8') # Zero-out water column
-            wc_mask = np.where(wc_mask==0,8,wc_mask) # Set water column mask value to 8
+            wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
             wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
             label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
 
             label = (label*shw_mask).astype('uint8')
-            shw_mask = np.where(shw_mask==0,7,shw_mask) # Set water column mask value to 7
+            shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
             shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
             label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
 
@@ -561,10 +590,27 @@ class mapSubObj(rectObj):
             # Convert labels to colors
             color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
 
+            fig = plt.figure()
+            ax = plt.subplot(111)
+
             # Plot overlay
-            plt.imshow(son, cmap='gray')
-            plt.imshow(color_label, alpha=0.5)
-            plt.axis('off')
+            ax.imshow(son, cmap='gray')
+            ax.imshow(color_label, alpha=0.5)
+            ax.axis('off')
+
+            # Shrink plot
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+
+            # Legend
+            colors = class_label_colormap[:len(classes)]
+            l=dict()
+            for i, (n, c) in enumerate(zip(classes,colors)):
+                l[str(i)+' '+n]=c
+
+            markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
+            ax.legend(markers, l.keys(), numpoints=1, ncol=2, markerscale=0.5, prop={'size': 4}, loc='upper center', bbox_to_anchor=(0.5, -0.05))
+
             plt.savefig(f, dpi=200, bbox_inches='tight')
 
 
@@ -586,10 +632,30 @@ class mapSubObj(rectObj):
 
         # Open softmax scores
         npz = np.load(npz)
-        softmax = npz['arr_0'].astype('float32')
+        softmax = npz['substrate'].astype('float32')
 
-        # Determine final classification
+        # Get water column and shadow masks
+        self._WC_mask(i)
+        wc_mask = self.wcMask
+
+        self._SHW_mask(i)
+        shw_mask = self.shadowMask
+
+        # Convert softmax to classification
         label = self._classifySoftmax(softmax, 1)
+
+        # Mask water column and shadow
+        label = (label*wc_mask).astype('uint8') # Zero-out water column
+        wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
+        wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
+        label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+        label = (label*shw_mask).astype('uint8')
+        shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
+        shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
+        label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+        label = label - 1
 
         # Store label as sonDat for rectification
         self.sonDat = label

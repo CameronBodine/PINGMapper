@@ -62,7 +62,7 @@ def rectify_master_func(
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
-                     map_sub_tile=False,
+                     pltSubClass=False,
                      map_class_method='max'):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
