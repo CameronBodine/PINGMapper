@@ -1783,6 +1783,74 @@ class sonObj(object):
         except:
             pass
 
+        # # Filter sonMetaDF by chunk
+        # isChunk = self.sonMetaDF['chunk_id']==chunk
+        # sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        #
+        # # Update class attributes based on current chunk
+        # self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        # self.headIdx = sonMeta['index'] # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+        #
+        # if ~np.isnan(self.pingMax):
+        #     # Load chunk's sonar data into memory
+        #     self._loadSonChunk()
+        #
+        #     # Remove shadows and crop
+        #     if self.remShadow and (lbl_set==2):
+        #         self._SHW_crop(chunk, maxCrop)
+        #     sonDat = self.sonDat
+        #
+        #     # Remove water column and crop
+        #     if (lbl_set==2):
+        #         _ = self._WCR_crop(sonMeta)
+        #     sonDat = self.sonDat
+        #
+        #     if spdCor == 0:
+        #         # Don't do speed correction
+        #         pass
+        #     elif spdCor == 1:
+        #
+        #         # Distance (in meters)
+        #         d = sonMeta['trk_dist'].to_numpy()
+        #         d = np.max(d) - np.min(d)
+        #
+        #         # Distance in pix
+        #         d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
+        #
+        #         sonDat = resize(sonDat,
+        #                         (sonDat.shape[0], d),
+        #                         mode='constant',
+        #                         cval=np.nan,
+        #                         clip=False, preserve_range=True)
+        #
+        #     else:
+        #         # Add along-track stretch x spdCor
+        #         sonDat = resize(sonDat,
+        #                         (sonDat.shape[0], sonDat.shape[1]*spdCor),
+        #                         mode='constant',
+        #                         cval=np.nan,
+        #                         clip=False, preserve_range=True)#.astype('uint8')
+        #
+        #     self.sonDat = sonDat.astype('uint8')
+
+        self._doSpdCor(self, chunk, lbl_set, spdCor, maxCrop)
+
+        if ~np.isnan(self.sonDat):
+            self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
+        else:
+            pass
+
+        gc.collect()
+        return self
+
+
+    # ======================================================================
+    def _doSpdCor(self, chunk, lbl_set=1, spdCor=1, maxCrop=0, son=True, integer=True):
+
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
@@ -1794,15 +1862,16 @@ class sonObj(object):
 
         if ~np.isnan(self.pingMax):
             # Load chunk's sonar data into memory
-            self._loadSonChunk()
+            if son:
+                self._loadSonChunk()
 
             # Remove shadows and crop
-            if self.remShadow and (lbl_set==2):
+            if self.remShadow and (lbl_set==2) and (maxCrop>0):
                 self._SHW_crop(chunk, maxCrop)
             sonDat = self.sonDat
 
             # Remove water column and crop
-            if (lbl_set==2):
+            if (lbl_set==2) and (maxCrop>0):
                 _ = self._WCR_crop(sonMeta)
             sonDat = self.sonDat
 
@@ -1832,11 +1901,15 @@ class sonObj(object):
                                 cval=np.nan,
                                 clip=False, preserve_range=True)#.astype('uint8')
 
-            self.sonDat = sonDat.astype('uint8')
+            if integer:
+                self.sonDat = sonDat.astype('uint8')
+            else:
+                self.sonDat = sonDat
 
-            self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
-        gc.collect()
-        return self
+        else:
+            self.sonDat = np.nan
+
+        return
 
     ############################################################################
     # Miscellaneous                                                            #

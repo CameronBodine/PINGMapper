@@ -29,6 +29,7 @@
 from funcs_common import *
 from funcs_model import *
 from class_rectObj import rectObj
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import matplotlib
 matplotlib.use('agg')
@@ -57,7 +58,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _detectSubstrate(self, method, i, USE_GPU):
+    def _detectSubstrate(self, i, USE_GPU):
 
         '''
         Main function to automatically predict substrate.
@@ -80,20 +81,18 @@ class mapSubObj(rectObj):
         '''
 
 
-        if method == 1:
-            # Initialize the model
-            if not hasattr(self, 'substrateModel'):
-                model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
-                self.substrateModel = model
+        # Initialize the model
+        if not hasattr(self, 'substrateModel'):
+            model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
+            self.substrateModel = model
 
-            # Open model configuration file
-            with open(self.configfile) as f:
-                config = json.load(f)
-            globals().update(config)
+        # Open model configuration file
+        with open(self.configfile) as f:
+            config = json.load(f)
+        globals().update(config)
 
-            # Do prediction
-            substratePred = self._predSubstrate(i, model_name, n_data_bands)
-
+        # Do prediction
+        substratePred = self._predSubstrate(i, model_name, n_data_bands)
 
         # Save predictions to npz
         self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
@@ -104,7 +103,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
+    def _predSubstrate(self, i, model_name, n_data_bands, winO=1):
         '''
         Predict substrate type from sonogram.
 
@@ -200,7 +199,10 @@ class mapSubObj(rectObj):
         c = fSoftmax.shape[-1] # number of classes
 
         fArr = np.zeros((h, w, c))
-        fArr[p:p+sh, :, :] = fSoftmax
+        if p > 0:
+            fArr[p:p+sh, :, :] = fSoftmax
+        else:
+            fArr = fSoftmax
 
         # Make sure softmax is 1.0 for areas definately water and shadow
         # Shadow second to last class
@@ -507,7 +509,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _pltSubClass(self, method, i, npz):
+    def _pltSubClass(self, map_class_method, chunk, npz, spdCor=1, maxCrop=0):
 
         '''
         '''
@@ -515,7 +517,7 @@ class mapSubObj(rectObj):
         ###################
         # Prepare File Name
         # File name zero padding
-        k = i
+        k = chunk
         if k < 10:
             addZero = '0000'
         elif k < 100:
@@ -539,85 +541,172 @@ class mapSubObj(rectObj):
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
 
         # Load sonDat
-        self._getScanChunkSingle(i)
+        self._getScanChunkSingle(chunk)
         son = self.sonDat
+
+        # Speed correct son
+        if spdCor>0:
+            # Do sonar first
+            self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop)
+            son = self.sonDat.copy()
 
         # Open substrate softmax scores
         npz = np.load(npz)
         softmax = npz['substrate'].astype('float32')
 
-        # Get water column and shadow masks
-        self._WC_mask(i)
-        wc_mask = self.wcMask
-
-        self._SHW_mask(i)
-        shw_mask = self.shadowMask
-
         # Get classes
         classes = npz['classes']
 
+
+        #####################
+        # Plot Classification
+
+        # Get final classification
+        label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
+
+        # Do speed correction
+        if spdCor>0:
+            # Now do label
+            self.sonDat = label
+            self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop, son=False)
+            label = self.sonDat.copy()
+
+            # Store sonar back in sonDat just in case
+            self.sonDat = son
+
+        # Prepare plt file name/path
+        f = projName+'_'+'pltSub_'+'classified_'+map_class_method+'_'+channel+'_'+addZero+str(k)+'.png'
+        f = os.path.join(outDir, f)
+
         # Set colormap
-        # class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
         class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
 
+        # Convert labels to colors
+        color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
 
-        if method == 'max':
-            # Get final classification
-            label = self._classifySoftmax(softmax)
-            # label = label - 1
+        # Do plot`
+        fig = plt.figure()
+        ax = plt.subplot(111)
 
-            # Mask water column and shadow
-            label = (label*wc_mask).astype('uint8') # Zero-out water column
-            wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
-            wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
-            label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
+        # Plot overlay
+        ax.imshow(son, cmap='gray')
+        ax.imshow(color_label, alpha=0.5)
+        ax.axis('off')
 
-            label = (label*shw_mask).astype('uint8')
-            shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
-            shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
-            label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
+        # Shrink plot
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+
+        # Legend
+        colors = class_label_colormap[:len(classes)]
+        l=dict()
+        for i, (n, c) in enumerate(zip(classes,colors)):
+            l[str(i)+' '+n]=c
+
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
+        ax.legend(markers, l.keys(), numpoints=1, ncol=int(len(colors)/3),
+                  markerscale=0.5, prop={'size': 5}, loc='upper center',
+                  bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
+                  columnspacing=0.75, handletextpad=0.25)
+
+        plt.savefig(f, dpi=200, bbox_inches='tight')
+        plt.close()
 
 
-            label = label - 1
+        ##############
+        # Plot Softmax
 
-            # Recover original dimensions
+        # Number of rows
+        rows=len(classes)
 
-            # Prepare plt file name/path
-            # Prepare file name
-            f = projName+'_'+'pltSub_'+method+'_'+channel+'_'+addZero+str(k)+'.png'
-            f = os.path.join(outDir, f)
+        # Create subplots
+        # plt.figure(figsize=(10,16))
+        plt.figure(figsize=(16,12))
+        plt.subplots_adjust(hspace=0.25)
+        # ncols = 2
+        # nrows = int(np.ceil((softmax.shape[-1]+2)/ncols))
+        nrows = 3
+        ncols = int(np.ceil((softmax.shape[-1]+2)/nrows))
+        plt.suptitle('Substrate Probabilities', fontsize=18, y=0.95)
 
-            # Convert labels to colors
-            color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+        # Plot substrate in first position
+        ax = plt.subplot(nrows, ncols, 1)
+        ax.set_title('Sonar')
+        ax.imshow(son, cmap='gray')
+        ax.axis('off')
 
-            fig = plt.figure()
-            ax = plt.subplot(111)
+        # Plot classification in second position
+        ax = plt.subplot(nrows, ncols, 2)
+        ax.set_title('Classification: '+ map_class_method)
+        # Plot overlay
+        ax.imshow(son, cmap='gray')
+        ax.imshow(color_label, alpha=0.5)
+        ax.axis('off')
 
-            # Plot overlay
+        # # Shrink plot
+        # box = ax.get_position()
+        # ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+        #
+        # # Legend
+        # colors = class_label_colormap[:len(classes)]
+        # l=dict()
+        # for i, (n, c) in enumerate(zip(classes,colors)):
+        #     l[str(i)+' '+n]=c
+        #
+        # markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
+        # ax.legend(markers, l.keys(), numpoints=1, ncol=int(len(colors)/3),
+        #           markerscale=0.5, prop={'size': 5}, loc='upper center',
+        #           bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
+        #           columnspacing=0.75, handletextpad=0.25)
+
+        # Convert softmax to probability
+        softmax = tf.nn.softmax(softmax).numpy()
+        minSoft = np.nanmin(softmax)
+        maxSoft = np.nanmax(softmax)
+
+
+        # Loop through axes
+        for i in range(softmax.shape[-1]):
+
+            # Get class
+            cname=classes[i]
+            c = softmax[:,:,i]
+
+            # # Convert logit to probability
+            # c = tf.nn.softmax(c).numpy()
+
+            # Do speed correction
+            if spdCor>0:
+                # Now do label
+                self.sonDat = c
+                self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop, son=False, integer=False)
+                c = self.sonDat.copy()
+
+                # Store sonar back in sonDat just in case
+                self.sonDat = son
+
+            # Do plot
+            ax = plt.subplot(nrows, ncols, i+3)
+            ax.set_title(cname, backgroundcolor=class_label_colormap[i], color='white')
+
             ax.imshow(son, cmap='gray')
-            ax.imshow(color_label, alpha=0.5)
+            im = ax.imshow(c, cmap='magma', alpha=0.5, vmin=minSoft, vmax=maxSoft)
+            # im = ax.imshow(c, cmap='magma', alpha=0.5)
             ax.axis('off')
 
-            # Shrink plot
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-
             # Legend
-            colors = class_label_colormap[:len(classes)]
-            l=dict()
-            for i, (n, c) in enumerate(zip(classes,colors)):
-                l[str(i)+' '+n]=c
+            # box = ax.get_position()
+            # ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-            markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
-            ax.legend(markers, l.keys(), numpoints=1, ncol=2, markerscale=0.5, prop={'size': 4}, loc='upper center', bbox_to_anchor=(0.5, -0.05))
-
-            plt.savefig(f, dpi=200, bbox_inches='tight')
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            plt.colorbar(im, cax=cax)
 
 
-
-        # elif method == 'all'
-            # Export liklihood plots for each class
-
+        f = f.replace('classified_'+map_class_method, 'softmax')
+        plt.savefig(f, dpi=200, bbox_inches='tight')
+        plt.close()
 
 
     ############################################################################
@@ -625,7 +714,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _mapSubstrate(self, method, i, npz):
+    def _mapSubstrate(self, map_class_method, i, npz):
         '''
         Main function to map substrate classification
         '''
@@ -634,28 +723,8 @@ class mapSubObj(rectObj):
         npz = np.load(npz)
         softmax = npz['substrate'].astype('float32')
 
-        # Get water column and shadow masks
-        self._WC_mask(i)
-        wc_mask = self.wcMask
-
-        self._SHW_mask(i)
-        shw_mask = self.shadowMask
-
         # Convert softmax to classification
-        label = self._classifySoftmax(softmax, 1)
-
-        # Mask water column and shadow
-        label = (label*wc_mask).astype('uint8') # Zero-out water column
-        wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
-        wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
-        label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
-
-        label = (label*shw_mask).astype('uint8')
-        shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
-        shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
-        label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
-
-        label = label - 1
+        label = self._classifySoftmax(i, softmax, map_class_method, mask_wc=True, mask_shw=True)
 
         # Store label as sonDat for rectification
         self.sonDat = label
@@ -664,16 +733,44 @@ class mapSubObj(rectObj):
         self._rectSonParallel(i, son=False)
 
     #=======================================================================
-    def _classifySoftmax(self, arr, method=1):
+    def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True):
         '''
         Classify pixels from softmax values
         '''
 
-        # Take max softmax as class
-        if method == 1:
-            label = np.argmax(arr, -1)
-            label = label + 1
+        #################################
+        # Classify substrate from softmax
 
+        # Take max softmax as class
+        if map_class_method == 'max':
+            label = np.argmax(arr, -1)
+            label += 1
+
+        ##################
+        # Mask predictions
+
+        # Mask Water column
+        if mask_wc:
+            self._WC_mask(i)
+            wc_mask = self.wcMask
+
+            label = (label*wc_mask).astype('uint8') # Zero-out water column
+            wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
+            wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
+            label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+        # Mask Shadows
+        if mask_shw:
+            self._SHW_mask(i)
+            shw_mask = self.shadowMask
+
+            label = (label*shw_mask).astype('uint8')
+            shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
+            shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
+            label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
+
+
+        label -= 1
         return label
 
 
