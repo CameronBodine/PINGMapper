@@ -1834,9 +1834,9 @@ class sonObj(object):
         #
         #     self.sonDat = sonDat.astype('uint8')
 
-        self._doSpdCor(self, chunk, lbl_set, spdCor, maxCrop)
+        self._doSpdCor(chunk, lbl_set=lbl_set, spdCor=spdCor, maxCrop=maxCrop)
 
-        if ~np.isnan(self.sonDat):
+        if self.sonDat is not np.nan:
             self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
         else:
             pass
