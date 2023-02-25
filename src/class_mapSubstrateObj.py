@@ -746,6 +746,41 @@ class mapSubObj(rectObj):
             label = np.argmax(arr, -1)
             label += 1
 
+        elif map_class_method == 'thresh':
+            thresh = {0: 1,
+                      1: 1,
+                      2: 1,
+                      3: 0.15,
+                      4: 0.15,
+                      5: 1,
+                      6: 1}
+
+            for c, t in thresh.items():
+                # Get logits
+                s = arr[:,:,c]
+
+                # Convert to probability
+                # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
+                p = tf.round(tf.nn.sigmoid(s))
+
+                # Set softmax to w if > t
+                w = 100
+                p = np.where(p>t, True, False)
+
+                # Add weight to logit value
+                s[p] = w
+                # s = np.where(s[p==1], s+w, s)
+
+                # Update softmax
+                arr[:,:,c] = s
+
+            label = np.argmax(arr, -1)
+            label += 1
+
+        else:
+            print('Invalid map_class_method provided:', map_class_method)
+            sys.exit()
+
         ##################
         # Mask predictions
 

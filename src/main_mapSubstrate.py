@@ -240,56 +240,56 @@ def map_master_func(
     # For Substrate Prediction                                                 #
     ############################################################################
 
-    if not smthTrk:
-        printUsage()
-
-    start_time = time.time()
-
-    if map_sub > 0:
-        print('\n\nAutomatically predicting substrate liklihoods...')
-
-        # Get chunk id for mapping substrate
-        for son in mapObjs:
-            son.mapSub = map_sub
-
-            # Get chunk id's
-            chunks = son._getChunkID()
-
-            # Doing moving window prediction, so remove first and last chunk
-            chunks = chunks[1:-1]
-
-            # Prepare output dir
-            outDir = os.path.join(son.outDir, 'substrate')
-            try:
-                os.mkdir(outDir)
-            except:
-                pass
-            son.substrateDir = outDir
-
-            # Prepare model
-            if map_sub ==1:
-                # Load model weights
-                # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-                # son.configfile = son.weights.replace('.h5', '.json')
-                son.weights = r'./models/substrate/fold_3/weights/fold_3_fullmodel.h5'
-                son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
-
-            # Do prediction (make parallel later)
-            print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
-            # for c in chunks:
-            #     son._detectSubstrate(c, USE_GPU)
-            #     # sys.exit()
-            #     break
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
-
-            son._cleanup()
-            del chunks
-
-
-        del son
-        gc.collect()
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
+    # if not smthTrk:
+    #     printUsage()
+    #
+    # start_time = time.time()
+    #
+    # if map_sub > 0:
+    #     print('\n\nAutomatically predicting substrate liklihoods...')
+    #
+    #     # Get chunk id for mapping substrate
+    #     for son in mapObjs:
+    #         son.mapSub = map_sub
+    #
+    #         # Get chunk id's
+    #         chunks = son._getChunkID()
+    #
+    #         # Doing moving window prediction, so remove first and last chunk
+    #         chunks = chunks[1:-1]
+    #
+    #         # Prepare output dir
+    #         outDir = os.path.join(son.outDir, 'substrate')
+    #         try:
+    #             os.mkdir(outDir)
+    #         except:
+    #             pass
+    #         son.substrateDir = outDir
+    #
+    #         # Prepare model
+    #         if map_sub ==1:
+    #             # Load model weights
+    #             # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+    #             # son.configfile = son.weights.replace('.h5', '.json')
+    #             son.weights = r'./models/substrate/fold_3/weights/fold_3_fullmodel.h5'
+    #             son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+    #
+    #         # Do prediction (make parallel later)
+    #         print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+    #         # for c in chunks:
+    #         #     son._detectSubstrate(c, USE_GPU)
+    #         #     # sys.exit()
+    #         #     break
+    #         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+    #
+    #         son._cleanup()
+    #         del chunks
+    #
+    #
+    #     del son
+    #     gc.collect()
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
 
     ############################################################################
     # Plot Substrate Plotting                                                  #
@@ -315,64 +315,64 @@ def map_master_func(
     ############################################################################
     # For Substrate Mapping                                                    #
     ############################################################################
-    printUsage()
-
-    start_time = time.time()
-
-    if map_sub > 0:
-        print('\n\nMapping substrate classification...')
-
-        # Get chunk id for mapping substrate
-        for son in mapObjs:
-            son.rect_wcr = True
-            # son._loadSonMeta()
-
-            # Get Substrate npz's
-            toMap = son._getSubstrateNpz()
-
-            # Do prediction (make parallel later)
-            print('\n\tMapping substrate classification for', len(toMap), 'sonograms for', son.beamName)
-            # for c, f in toMap.items():
-            #     son._mapSubstrate(map_class_method, map_sub, c, f)
-            #     sys.exit()
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._mapSubstrate)(map_class_method, map_sub, c, f) for c, f in toMap.items())
-
-            son.rect_wcr = rect_wcr
-
-
-
-            son._cleanup()
-            del toMap
-        del son
+    # printUsage()
+    #
+    # start_time = time.time()
+    #
+    # if map_sub > 0:
+    #     print('\n\nMapping substrate classification...')
+    #
+    #     # Get chunk id for mapping substrate
+    #     for son in mapObjs:
+    #         son.rect_wcr = True
+    #         # son._loadSonMeta()
+    #
+    #         # Get Substrate npz's
+    #         toMap = son._getSubstrateNpz()
+    #
+    #         # Do prediction (make parallel later)
+    #         print('\n\tMapping substrate classification for', len(toMap), 'sonograms for', son.beamName)
+    #         # for c, f in toMap.items():
+    #         #     son._mapSubstrate(map_class_method, map_sub, c, f)
+    #         #     sys.exit()
+    #         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._mapSubstrate)(map_class_method, map_sub, c, f) for c, f in toMap.items())
+    #
+    #         son.rect_wcr = rect_wcr
+    #
+    #
+    #
+    #         son._cleanup()
+    #         del toMap
+    #     del son
 
     ############################################################################
     # For Substrate Mosaic                                                     #
     ############################################################################
 
-    overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if map_sub > 0:
-        start_time = time.time()
-        print("\nMosaicing GeoTiffs...")
-
-        # Create portstar object
-        psObj = portstarObj(mapObjs)
-
-        # Switch off rect_wcp and rect_wcr
-        psObj.port.rect_wcp = False
-        psObj.port.rect_wcr = False
-
-        # Create the mosaic
-        psObj._createMosaic(mosaic, overview, threadCnt, False)
-
-        # Revert rect_wcp and rect_wcr
-        psObj.port.rect_wcp = rect_wcp
-        psObj.port.rect_wcr = rect_wcr
-
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
-        gc.collect()
-        printUsage()
+    # overview = True # False will reduce overall file size, but reduce performance in a GIS
+    # if map_sub > 0:
+    #     start_time = time.time()
+    #     print("\nMosaicing GeoTiffs...")
+    #
+    #     # Create portstar object
+    #     psObj = portstarObj(mapObjs)
+    #
+    #     # Switch off rect_wcp and rect_wcr
+    #     psObj.port.rect_wcp = False
+    #     psObj.port.rect_wcr = False
+    #
+    #     # Create the mosaic
+    #     psObj._createMosaic(mosaic, overview, threadCnt, False)
+    #
+    #     # Revert rect_wcp and rect_wcr
+    #     psObj.port.rect_wcp = rect_wcp
+    #     psObj.port.rect_wcr = rect_wcr
+    #
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     del psObj
+    #     gc.collect()
+    #     printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #
