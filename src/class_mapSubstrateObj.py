@@ -619,6 +619,25 @@ class mapSubObj(rectObj):
         # Number of rows
         rows=len(classes)
 
+        # Convert to probabilities????
+        softmax = tf.nn.softmax(softmax).numpy()
+
+        # Calculate stats and prepare labels
+        meanSoft = round(np.nanmean(softmax), 1)
+        stdSoft = np.nanstd(softmax)
+        # minSoft = round(meanSoft-(2*stdSoft), 1)
+        # maxSoft = round(meanSoft+(2*stdSoft), 1)
+        minSoft = 0
+        maxSoft = 1
+
+        # minL = '-2$\sigma$'+' ('+str(minSoft)+')'
+        # meanL = '$\mu$' +' ('+str(meanSoft)+')'
+        # maxL = '2$\sigma$'+' ('+str(maxSoft)+')'
+
+        minL = str(minSoft)
+        meanL = str(meanSoft)
+        maxL = str(maxSoft)
+
         # Create subplots
         # plt.figure(figsize=(10,16))
         plt.figure(figsize=(16,12))
@@ -627,7 +646,9 @@ class mapSubObj(rectObj):
         # nrows = int(np.ceil((softmax.shape[-1]+2)/ncols))
         nrows = 3
         ncols = int(np.ceil((softmax.shape[-1]+2)/nrows))
-        plt.suptitle('Substrate Probabilities', fontsize=18, y=0.95)
+        # title = 'Substrate Logits\n'+minL + '$\leq$' + meanL + '$\leq$' + maxL
+        title = 'Substrate Probabilities\n'+minL + '$\leq$' + meanL + '$\leq$' + maxL
+        plt.suptitle(title, fontsize=18, y=0.95)
 
         # Plot substrate in first position
         ax = plt.subplot(nrows, ncols, 1)
@@ -659,11 +680,19 @@ class mapSubObj(rectObj):
         #           bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
         #           columnspacing=0.75, handletextpad=0.25)
 
-        # Convert softmax to probability
-        softmax = tf.nn.softmax(softmax).numpy()
-        minSoft = np.nanmin(softmax)
-        maxSoft = np.nanmax(softmax)
+        # # Below calculates probability across all classes
+        # # Convert softmax to probability
+        # softmax = tf.nn.softmax(softmax).numpy()
+        # For plotting at same scale
+        # minSoft = 0
+        # maxSoft = 1
 
+        # For plotting logits instead of probability
+        # For plotting at same scale
+        # minSoft = np.nanmin(softmax)
+        # maxSoft = np.nanmax(softmax)
+        # minSoft = -20
+        # maxSoft = 20
 
         # Loop through axes
         for i in range(softmax.shape[-1]):
@@ -672,8 +701,9 @@ class mapSubObj(rectObj):
             cname=classes[i]
             c = softmax[:,:,i]
 
-            # # Convert logit to probability
+            # Convert logit to probability
             # c = tf.nn.softmax(c).numpy()
+            # c = tf.round(tf.nn.sigmoid(c)).numpy()
 
             # Do speed correction
             if spdCor>0:
@@ -690,7 +720,12 @@ class mapSubObj(rectObj):
             ax.set_title(cname, backgroundcolor=class_label_colormap[i], color='white')
 
             ax.imshow(son, cmap='gray')
-            im = ax.imshow(c, cmap='magma', alpha=0.5, vmin=minSoft, vmax=maxSoft)
+
+            # Prepare color map
+            color_map = plt.cm.get_cmap('viridis')
+            # color_map = color_map.reversed()
+
+            im = ax.imshow(c, cmap=color_map, alpha=0.5, vmin=minSoft, vmax=maxSoft)
             # im = ax.imshow(c, cmap='magma', alpha=0.5)
             ax.axis('off')
 
@@ -701,7 +736,14 @@ class mapSubObj(rectObj):
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='5%', pad=0.05)
-            plt.colorbar(im, cax=cax)
+            cbar = plt.colorbar(im, ticks=[minSoft, meanSoft, maxSoft], cax=cax)
+            # minL = '-2$\sigma$'+' ('+str(minSoft)+')'
+            # meanL = '$\mu$' +' ('+str(meanSoft)+')'
+            # maxL = '2$\sigma$'+' ('+str(maxSoft)+')'
+            minL = '-2$\sigma$'
+            meanL = '$\mu$'
+            maxL = '2$\sigma$'
+            cbar.ax.set_yticklabels([minL, meanL, maxL])
 
 
         f = f.replace('classified_'+map_class_method, 'softmax')
