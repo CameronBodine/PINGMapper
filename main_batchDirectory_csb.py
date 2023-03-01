@@ -43,8 +43,11 @@ copied_script_name = os.path.basename(__file__)+'_'+time.strftime("%Y-%m-%d_%H%M
 script = os.path.join(scriptDir, os.path.basename(__file__))
 
 
-inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
-outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
+# inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
+# outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
+
+inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Mosaics/AutoDepth'
 
 inDir = os.path.normpath(inDir)
 outDir = os.path.normpath(outDir)
@@ -111,6 +114,7 @@ for root, dirs, files in os.walk(inDir):
 #             inFiles.append(os.path.join(root, file))
 
 inFiles = sorted(inFiles, reverse=False)
+inFiles = inFiles[6:]
 
 for i, f in enumerate(inFiles):
     print(i, ":", f)
@@ -201,38 +205,39 @@ for i, datFile in enumerate(inFiles):
         'map_class_method':map_class_method
         }
 
-    print('sonPath',sonPath)
-    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-    print('+++++++++++++++++++++++++++++++++++++++++++')
-    print('***** Working On *****')
-    print('Index:', i)
-    print('Output Director:', projDir)
-    print('Input File:', humFile)
-    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+    try:
+        print('sonPath',sonPath)
+        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+        print('+++++++++++++++++++++++++++++++++++++++++++')
+        print('***** Working On *****')
+        print('Index:', i)
+        print('Output Director:', projDir)
+        print('Input File:', humFile)
+        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-    print('\n===========================================')
-    print('===========================================')
-    print('***** READING *****')
-    # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
-    read_master_func(**params)
-
-    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** RECTIFYING *****')
-        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
-        rectify_master_func(**params)
+        print('***** READING *****')
+        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+        read_master_func(**params)
 
-    #==================================================
-    if map_sub:
-        print('\n===========================================')
-        print('===========================================')
-        print('***** MAPPING SUBSTRATE *****')
-        print("working on "+projDir)
-        map_master_func(**params)
+        if rect_wcp or rect_wcr:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** RECTIFYING *****')
+            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+            rectify_master_func(**params)
 
-    # except:
-    #     print('Could not process:', datFile)
+        #==================================================
+        if map_sub:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
+
+    except:
+        print('Could not process:', datFile)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
