@@ -43,7 +43,7 @@ copied_script_name = os.path.basename(__file__)+'_'+time.strftime("%Y-%m-%d_%H%M
 script = os.path.join(scriptDir, os.path.basename(__file__))
 
 
-inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
+inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220301_USM1'
 outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
 
 inDir = os.path.normpath(inDir)
