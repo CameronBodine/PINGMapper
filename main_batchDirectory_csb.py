@@ -114,7 +114,6 @@ for root, dirs, files in os.walk(inDir):
 #             inFiles.append(os.path.join(root, file))
 
 inFiles = sorted(inFiles, reverse=False)
-inFiles = inFiles[6:]
 
 for i, f in enumerate(inFiles):
     print(i, ":", f)
