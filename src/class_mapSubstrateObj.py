@@ -35,6 +35,8 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+from skimage.filters import threshold_otsu
+
 class mapSubObj(rectObj):
 
     '''
@@ -103,7 +105,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, model_name, n_data_bands, winO=1):
+    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/5):
         '''
         Predict substrate type from sonogram.
 
@@ -616,38 +618,58 @@ class mapSubObj(rectObj):
         ##############
         # Plot Softmax
 
+        probs = False # True=Plot Probabilities, False=Plot Logits
+
+        if probs:
+            sigma = 1 # Number of standard deviations to plot
+        else:
+            sigma = 2
+
         # Number of rows
         rows=len(classes)
 
         # Convert to probabilities????
-        softmax = tf.nn.softmax(softmax).numpy()
+        if probs:
+            softmax = tf.nn.softmax(softmax).numpy()
 
         # Calculate stats and prepare labels
         meanSoft = round(np.nanmean(softmax), 1)
         stdSoft = np.nanstd(softmax)
-        # minSoft = round(meanSoft-(2*stdSoft), 1)
-        # maxSoft = round(meanSoft+(2*stdSoft), 1)
-        minSoft = 0
-        maxSoft = 1
+        minSoft = round(meanSoft-(sigma*stdSoft), 1)
+        maxSoft = round(meanSoft+(sigma*stdSoft), 1)
 
-        # minL = '-2$\sigma$'+' ('+str(minSoft)+')'
-        # meanL = '$\mu$' +' ('+str(meanSoft)+')'
-        # maxL = '2$\sigma$'+' ('+str(maxSoft)+')'
+        # Prepare subtitle
+        meanL = '$\mu$' +' ('+str(meanSoft)+')'
+        if probs:
+            if minSoft < 0:
+                minSoft = 0
+                minL = '('+str(minSoft)+')'
+            else:
+                minL = '-'+str(sigma)+'$\sigma$'+' ('+str(minSoft)+')'
 
-        minL = str(minSoft)
-        meanL = str(meanSoft)
-        maxL = str(maxSoft)
+            if maxSoft > 1:
+                maxSoft = 1
+                maxL = '('+str(maxSoft)+')'
+            else:
+                maxL = str(sigma)+'$\sigma$'+' ('+str(maxSoft)+')'
+
+        else:
+            minL = '-'+str(sigma)+'$\sigma$'+' ('+str(minSoft)+')'
+            meanL = '$\mu$' +' ('+str(meanSoft)+')'
+            maxL = str(sigma)+'$\sigma$'+' ('+str(maxSoft)+')'
 
         # Create subplots
-        # plt.figure(figsize=(10,16))
         plt.figure(figsize=(16,12))
         plt.subplots_adjust(hspace=0.25)
-        # ncols = 2
-        # nrows = int(np.ceil((softmax.shape[-1]+2)/ncols))
         nrows = 3
         ncols = int(np.ceil((softmax.shape[-1]+2)/nrows))
-        # title = 'Substrate Logits\n'+minL + '$\leq$' + meanL + '$\leq$' + maxL
-        title = 'Substrate Probabilities\n'+minL + '$\leq$' + meanL + '$\leq$' + maxL
+
+        # Prepare Title
+        if probs:
+            title = 'Substrate Probabilities\n'
+        else:
+            title = 'Substrate Logits\n'
+        title = title+minL + '$\leq$' + meanL + '$\leq$' + maxL
         plt.suptitle(title, fontsize=18, y=0.95)
 
         # Plot substrate in first position
@@ -664,46 +686,12 @@ class mapSubObj(rectObj):
         ax.imshow(color_label, alpha=0.5)
         ax.axis('off')
 
-        # # Shrink plot
-        # box = ax.get_position()
-        # ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-        #
-        # # Legend
-        # colors = class_label_colormap[:len(classes)]
-        # l=dict()
-        # for i, (n, c) in enumerate(zip(classes,colors)):
-        #     l[str(i)+' '+n]=c
-        #
-        # markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
-        # ax.legend(markers, l.keys(), numpoints=1, ncol=int(len(colors)/3),
-        #           markerscale=0.5, prop={'size': 5}, loc='upper center',
-        #           bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
-        #           columnspacing=0.75, handletextpad=0.25)
-
-        # # Below calculates probability across all classes
-        # # Convert softmax to probability
-        # softmax = tf.nn.softmax(softmax).numpy()
-        # For plotting at same scale
-        # minSoft = 0
-        # maxSoft = 1
-
-        # For plotting logits instead of probability
-        # For plotting at same scale
-        # minSoft = np.nanmin(softmax)
-        # maxSoft = np.nanmax(softmax)
-        # minSoft = -20
-        # maxSoft = 20
-
         # Loop through axes
         for i in range(softmax.shape[-1]):
 
             # Get class
             cname=classes[i]
             c = softmax[:,:,i]
-
-            # Convert logit to probability
-            # c = tf.nn.softmax(c).numpy()
-            # c = tf.round(tf.nn.sigmoid(c)).numpy()
 
             # Do speed correction
             if spdCor>0:
@@ -740,13 +728,34 @@ class mapSubObj(rectObj):
             # minL = '-2$\sigma$'+' ('+str(minSoft)+')'
             # meanL = '$\mu$' +' ('+str(meanSoft)+')'
             # maxL = '2$\sigma$'+' ('+str(maxSoft)+')'
-            minL = '-2$\sigma$'
+            # minL = '-2$\sigma$'
+            # meanL = '$\mu$'
+            # maxL = str(sigma)+'$\sigma$'
+
+            # Prepare colorbar labels
             meanL = '$\mu$'
-            maxL = '2$\sigma$'
+            if probs:
+                if minSoft == 0:
+                    minL = str(minSoft)
+                else:
+                    minL = '-'+str(sigma)+'$\sigma$'
+
+                if maxSoft == 1:
+                    maxL = str(maxSoft)
+                else:
+                    maxL = str(sigma)+'$\sigma$'
+
+            else:
+                minL = '-'+str(sigma)+'$\sigma$'
+                meanL = '$\mu$'
+                maxL = str(sigma)+'$\sigma$'
+
             cbar.ax.set_yticklabels([minL, meanL, maxL])
 
-
-        f = f.replace('classified_'+map_class_method, 'softmax')
+        if probs:
+            f = f.replace('classified_'+map_class_method, 'probability')
+        else:
+            f = f.replace('classified_'+map_class_method, 'logits')
         plt.savefig(f, dpi=200, bbox_inches='tight')
         plt.close()
 
@@ -783,41 +792,118 @@ class mapSubObj(rectObj):
         #################################
         # Classify substrate from softmax
 
-        # Take max softmax as class
+        # Take max logit as class
         if map_class_method == 'max':
             label = np.argmax(arr, -1)
             label += 1
 
         elif map_class_method == 'thresh':
+            # Class: ProbThresh 1==no thresh
             thresh = {0: 1,
                       1: 1,
                       2: 1,
-                      3: 0.15,
-                      4: 0.15,
+                      3: .075,
+                      4: .075,
                       5: 1,
-                      6: 1}
+                      6: 1,
+                      7: 1}
 
-            for c, t in thresh.items():
-                # Get logits
-                s = arr[:,:,c]
+            # Least to most important
+            class_order = [0, 6, 7, 5, 1, 4, 3, 2]
 
-                # Convert to probability
-                # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
-                p = tf.round(tf.nn.sigmoid(s))
+            # Convert logits to probability
+            arr = tf.nn.softmax(arr).numpy()
 
-                # Set softmax to w if > t
-                w = 100
-                p = np.where(p>t, True, False)
+            # # Iterate classes least to most important
+            # for k, t in thresh.items():
+            #
+            #     # If t == 1, use softmax directly
+            #     # Else t<1, set prob > t to 1
+            #     if t < 1:
+            #         s = softmax[:,:,k]
+            #         s = np.where(s>t, 1, s)
+            #
+            #         # Update softmax
+            #         softmax[:,:,k] = s
 
-                # Add weight to logit value
-                s[p] = w
-                # s = np.where(s[p==1], s+w, s)
+            # Zero array to store label
+            label = np.zeros((arr.shape[0], arr.shape[1]))
+            for k in class_order:
+                # # Convert to probability
+                # # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
+                # p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
 
-                # Update softmax
-                arr[:,:,c] = s
+                # Get threshold
+                t = thresh[k]
 
-            label = np.argmax(arr, -1)
+                # IF t==1, use otsu to set threshold
+                if t==1:
+                    t = threshold_otsu(arr[:,:,k])
+                    # t = threshold_otsu(p)
+
+                label[arr[:,:,k]>t]=k
+                # label[p>t]=k
+
             label += 1
+
+        elif map_class_method == 'pref':
+            # Class: pref 1==give pref, 0==don't
+            pref = {0: 0,
+                    1: 0,
+                    2: 1,
+                    3: 1,
+                    4: 1,
+                    5: 0,
+                    6: 0,
+                    7: 0}
+
+            # Least to most important
+            class_order = [0, 6, 7, 5, 1, 2, 4, 3]
+
+            # First get label the normal way
+            label = np.argmax(arr, -1)
+
+            # Now iterate each class, if pref==1, do binary class, then mask
+            ## label with updated class
+            for k in class_order:
+                if pref[k] == 1:
+                    # Get binary classification
+                    p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
+                    # Update label
+                    label[p==1]=k
+            label += 1
+
+
+        # elif map_class_method == 'thresh':
+        #     thresh = {0: 1,
+        #               1: 1,
+        #               2: 1,
+        #               3: 0.15,
+        #               4: 0.15,
+        #               5: 1,
+        #               6: 1}
+        #
+        #     for c, t in thresh.items():
+        #         # Get logits
+        #         s = arr[:,:,c]
+        #
+        #         # Convert to probability
+        #         # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
+        #         p = tf.round(tf.nn.sigmoid(s))
+        #
+        #         # Set softmax to w if > t
+        #         w = 100
+        #         p = np.where(p>t, True, False)
+        #
+        #         # Add weight to logit value
+        #         s[p] = w
+        #         # s = np.where(s[p==1], s+w, s)
+        #
+        #         # Update softmax
+        #         arr[:,:,c] = s
+        #
+        #     label = np.argmax(arr, -1)
+        #     label += 1
 
         else:
             print('Invalid map_class_method provided:', map_class_method)

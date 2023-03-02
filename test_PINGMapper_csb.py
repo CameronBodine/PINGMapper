@@ -106,7 +106,7 @@ maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
 # Segmentation Parameters
 remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal

@@ -879,12 +879,13 @@ class rectObj(sonObj):
         '''
         filterIntensity = False
 
-        # Create output directory if it doesn't exist
-        outDir = self.outDir # Parent directory
-        try:
-            os.mkdir(outDir)
-        except:
-            pass
+        if son:
+            # Create output directory if it doesn't exist
+            outDir = self.outDir # Parent directory
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
 
         # Get trackline/range extent file path
         trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")

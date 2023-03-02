@@ -33,7 +33,7 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
-# from main_mapSubstrate import map_master_func
+from main_mapSubstrate import map_master_func
 
 start_time = time.time()
 
@@ -105,17 +105,17 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # projDir = projDir[-1]
 # projDir = os.path.join(r'./procData/', projDir)
 
-# humFile = r'E:\SynologyDrive\ExampleHumFiles\20230204_SandraBond_Klamath\Test_scans_Klamath\2022_bad\Rec00005.DAT'
-# sonPath = humFile.split('.')[0]
-# projDir = os.path.dirname(humFile)
-# projDir = projDir+ os.sep+ 'Bedpicks'
-
-humFile = r'E:\SynologyDrive\ExampleHumFiles\20230220_MichealDikun\R00001'
+humFile = r'E:\SynologyDrive\ExampleHumFiles\20230204_SandraBond_Klamath\Test_scans_Klamath\2019\Rec00015.DAT'
 sonPath = humFile.split('.')[0]
-projDir = sonPath.split(os.sep)[-2:]
-projDir = projDir[0]+'_'+projDir[1]
-# projDir = projDir[-1]
-projDir = os.path.join(r'./procData/', projDir)
+projDir = os.path.dirname(humFile)
+projDir = projDir+ os.sep+ 'Substrate_Segformer'
+
+# humFile = r'E:\SynologyDrive\ExampleHumFiles\20230220_MichealDikun\R00001'
+# sonPath = humFile.split('.')[0]
+# projDir = sonPath.split(os.sep)[-2:]
+# projDir = projDir[0]+'_'+projDir[1]
+# # projDir = projDir[-1]
+# projDir = os.path.join(r'./procData/', projDir)
 print(projDir)
 
 
@@ -131,10 +131,10 @@ threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total thre
 
 # Sonogram Exports
 tileFile = '.jpg'
-wcp = True #Export tiles with water column present
-wcr = True #Export Tiles with water column removed (and slant range corrected)
+wcp = False #Export tiles with water column present
+wcr = False #Export Tiles with water column removed (and slant range corrected)
 
-lbl_set = 1 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
@@ -146,7 +146,7 @@ detectDep = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 202
 
 smthDep = True #Smooth depth before water column removal
 adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
-pltBedPick = True #Plot bedpick on sonogram
+pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
@@ -156,7 +156,7 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-map_sub=0
+map_sub=1
 pltSubClass=True
 map_class_method='max'
 
@@ -197,14 +197,14 @@ params = {
     'mosaic':mosaic,
     'map_sub':map_sub,
     'pltSubClass':pltSubClass,
-    'map_class_method':'max'
+    'map_class_method':map_class_method
     }
 #==================================================
 print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-read_master_func(**params)
+# read_master_func(**params)
 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
