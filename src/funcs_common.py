@@ -57,6 +57,7 @@ import datetime
 from skimage.io import imsave
 from skimage.transform import resize
 from skimage.measure import label, regionprops
+from skimage.segmentation import watershed
 
 import psutil
 

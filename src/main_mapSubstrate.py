@@ -295,22 +295,23 @@ def map_master_func(
     # Plot Substrate Plotting                                                  #
     ############################################################################
 
-    if pltSubClass:
-        print('\n\nExporting substrate plots...')
-
-        # Get chunk id for mapping substrate
-        for son in mapObjs:
-
-            # Get Substrate npz's
-            toMap = son._getSubstrateNpz()
-
-            print('\n\tExporting substrate plots for', len(toMap), son.beamName, 'chunks:')
-
-            # Plot substrate classification
-            # for c, f in toMap.items():
-            #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
-            #     sys.exit()
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop) for c, f in toMap.items())
+    # if pltSubClass:
+    #     print('\n\nExporting substrate plots...')
+    #
+    #     # Get chunk id for mapping substrate
+    #     for son in mapObjs:
+    #
+    #         # Get Substrate npz's
+    #         toMap = son._getSubstrateNpz()
+    #
+    #         print('\n\tExporting substrate plots for', len(toMap), son.beamName, 'chunks:')
+    #
+    #         # Plot substrate classification
+    #         # for c, f in toMap.items():
+    #         #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
+    #         # #     sys.exit()
+    #         # sys.exit()
+    #         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop) for c, f in toMap.items())
 
     # ############################################################################
     # # For Substrate Mapping                                                    #

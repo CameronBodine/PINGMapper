@@ -784,7 +784,7 @@ class mapSubObj(rectObj):
         self._rectSonParallel(i, son=False)
 
     #=======================================================================
-    def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True):
+    def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True, do_filt=True):
         '''
         Classify pixels from softmax values
         '''
@@ -932,8 +932,21 @@ class mapSubObj(rectObj):
             shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
             label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
 
-
         label -= 1
+        # Filter small regions
+        if do_filt:
+            # Set minimum patch size (in meters)
+            min_size = 28
+
+            # Filter small regions and holes
+            print(np.unique(label, return_counts=True))
+            print(np.count_nonzero(np.isnan(label)))
+            label = self._filterLabel(label, min_size)
+            print(np.unique(label, return_counts=True))
+            print(np.count_nonzero(np.isnan(label)))
+
+
+
         return label
 
 
@@ -966,3 +979,77 @@ class mapSubObj(rectObj):
 
         del npzDir, npzs, n, c
         return toMap
+
+
+    #=======================================================================
+    def _filterLabel(self, l, min_size):
+        '''
+        '''
+        # Get pixel size (in meters)
+        pix_m = self.pixM
+
+        # Convert min size to pixels
+        min_size = int(min_size/pix_m)
+
+        # Set nan's to zero
+        l = np.nan_to_num(l, nan=0).astype('uint8')
+
+        # Label all regions
+        lbl = label(l)
+
+        # First set small objects to background value (0)
+        noSmall = remove_small_objects(lbl, min_size)
+
+        # Punch holes in original label
+        holes = ~(noSmall==0)
+
+        l = l*holes
+
+        # Remove small holes
+        # Convert l to binary
+        binary_objects = l.astype(bool)
+        # Remove the holes
+        binary_filled = remove_small_holes(binary_objects, min_size)
+        # Recover classification with holes filled
+        objects_filled = watershed(binary_filled, l, mask=binary_filled)
+
+        # Get rid of 0's
+        # Iterate each ping
+
+        for p in range(l.shape[1]):
+            # Get depth
+            d = self.bedPick[p]
+
+            # Get ping returns
+            ping = objects_filled[:, p]
+
+            # Get water column
+            wc = ping[:d]
+
+            # Remove water column
+            ping = ping[d:]
+
+            # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
+            zero = np.where(ping==0)
+
+            if len(zero[0])>0:
+                for z in zero:
+                    # Get index of first and last zero
+                    f, l = z[0], z[-1]
+
+                    # Get classification of next pixel
+                    c = ping[l+1]
+
+                    # Fill zero region with c
+                    ping[f:l+1] = c
+
+                # Add water column back in
+                ping = list(wc)+list(ping)
+
+                # Update objects filled with ping
+                objects_filled[:, p] = ping
+
+        return objects_filled
+
+
+        sys.exit()

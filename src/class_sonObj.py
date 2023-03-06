@@ -1489,10 +1489,11 @@ class sonObj(object):
         for p, s in enumerate(bedPick):
             wc_mask[s:, p] = 1
 
-        del bedPick
+        # del bedPick
 
         self.wcMask = wc_mask
         self.minDep = minDep
+        self.bedPick = bedPick
 
         return
 
@@ -1965,6 +1966,8 @@ class sonObj(object):
 
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+
+        self.pixM = np.max(sonMeta['pix_m']) # Store pixel conversion factor (Pix size in meters)
 
         # Load chunk's sonar data into memory
         self._loadSonChunk()
