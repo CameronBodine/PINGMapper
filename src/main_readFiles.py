@@ -58,6 +58,7 @@ def read_master_func(script='',
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
+                     export_poly=False,
                      pltSubClass=False,
                      map_class_method='max'):
 
@@ -473,7 +474,10 @@ def read_master_func(script='',
 
     # Get metadata for each beam in parallel.
     if len(toProcess) > 0:
-        Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        # Store pix_m in object
+        for son, pix_m in zip(sonObjs, r):
+            son.pixM = pix_m
         del toProcess
 
     metaDir = sonObjs[0].metaDir # Get path to metadata directory

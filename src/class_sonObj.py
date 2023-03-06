@@ -1046,7 +1046,8 @@ class sonObj(object):
                     chunk+=1
 
         sonMetaAll = pd.DataFrame.from_dict(head, orient="index").T # Store header metadata in dataframe
-        sonMetaAll = self._getPixSize(sonMetaAll) # Calculate pixel size
+        # sonMetaAll = self._getPixSize(sonMetaAll) # Calculate pixel size
+        pix_m = self._getPixSize(sonMetaAll)
         # Update last chunk size if last chunk too small (for rectification)
         lastChunk = sonMetaAll[sonMetaAll['chunk_id']==chunk]
         if len(lastChunk) <= (nchunk/2):
@@ -1067,6 +1068,8 @@ class sonObj(object):
         sonMetaAll = self._calcTrkDistTS(sonMetaAll)
 
         self._saveSonMeta(sonMetaAll)
+
+        return pix_m
 
     # ======================================================================
     def _getHeader(self,
@@ -1227,9 +1230,9 @@ class sonObj(object):
         ft = (np.pi/2)*(1/theta3dB)
         # size of pixel in meters
         pix_m = (1/ft)
-        df['pix_m'] = pix_m
+        # df['pix_m'] = pix_m
 
-        return df
+        return pix_m[0]
 
     #=======================================================================
     def _calcTrkDistTS(self,
@@ -1474,7 +1477,8 @@ class sonObj(object):
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         # Load depth (in real units) and convert to pixels
-        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
         minDep = min(bedPick)
 
         del sonMeta, self.sonMetaDF
@@ -1535,7 +1539,8 @@ class sonObj(object):
         self._getScanChunkSingle()
         '''
         # Load depth (in real units) and convert to pixels
-        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
 
         # Initialize 2d array to store relocated sonar records
         srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
@@ -1574,7 +1579,8 @@ class sonObj(object):
     def _WCR_crop(self,
                   sonMeta):
         # Load depth (in real units) and convert to pixels
-        bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
         minDep = min(bedPick)
 
         sonDat = self.sonDat
@@ -1886,7 +1892,8 @@ class sonObj(object):
                 d = np.max(d) - np.min(d)
 
                 # Distance in pix
-                d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
+                # d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
+                d = round(d / self.pixM, 0).astype(int)
 
                 sonDat = resize(sonDat,
                                 (sonDat.shape[0], d),
@@ -1967,7 +1974,7 @@ class sonObj(object):
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
-        self.pixM = np.max(sonMeta['pix_m']) # Store pixel conversion factor (Pix size in meters)
+        # self.pixM = np.max(sonMeta['pix_m']) # Store pixel conversion factor (Pix size in meters)
 
         # Load chunk's sonar data into memory
         self._loadSonChunk()

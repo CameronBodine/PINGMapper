@@ -1040,7 +1040,8 @@ class portstarObj(object):
             # Get chunks sonar metadata and instrument depth
             isChunk = son.sonMetaDF['chunk_id']==1
             sonMeta = son.sonMetaDF[isChunk].reset_index()
-            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            # acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
+            acousticBed = round(sonMeta['inst_dep_m'] / self.pixM, 0).astype(int)
 
             ##################################
             # Step 1 : Acoustic Bedpick Filter
@@ -1217,7 +1218,8 @@ class portstarObj(object):
 
             if adjDep != 0:
                 # print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
-                adjBy = portDF['pix_m'][0]*adjDep
+                # adjBy = portDF['pix_m'][0]*adjDep
+                adjBy = self.port.pixM*adjDep
                 portInstDepth += adjBy
                 starInstDepth += adjBy
 
@@ -1284,8 +1286,10 @@ class portstarObj(object):
                 starFinal = savgol_filter(starFinal, 51, 3)
 
             # Convert pix to depth [m]
-            portFinal = portFinal * portDF['pix_m']
-            starFinal = starFinal * starDF['pix_m']
+            # portFinal = portFinal * portDF['pix_m']
+            # starFinal = starFinal * starDF['pix_m']
+            portFinal = portFinal * self.port.pixM
+            starFinal = starFinal * self.star.pixM
 
             # Set negatives to 0
             portFinal = np.asarray(portFinal)
@@ -1301,7 +1305,8 @@ class portstarObj(object):
             starDF['dep_m'] = starFinal
 
             if adjDep != 0:
-                adjBy = portDF['pix_m'][0]*adjDep
+                # adjBy = portDF['pix_m'][0]*adjDep
+                adjBy = self.port.pixM*adjDep
                 portDF['dep_m'] += adjBy
                 starDF['dep_m'] += adjBy
 
@@ -1400,15 +1405,21 @@ class portstarObj(object):
         #     portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
         #     starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
 
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
 
         # Convert depth in meters to pixels
-        portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        #
+        # starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
 
-        starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        portInst = (portDF['inst_dep_m'] / self.port.pixM).to_numpy(dtype=np.int, copy=True)
+        portAuto = (portDF['dep_m'] / self.port.pixM).to_numpy(dtype=np.int, copy=True)
+
+        starInst = (starDF['inst_dep_m'] / self.star.pixM).to_numpy(dtype=np.int, copy=True)
+        starAuto = (starDF['dep_m'] / self.star.pixM).to_numpy(dtype=np.int, copy=True)
 
         # if autoBank:
         #     portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
@@ -1585,8 +1596,10 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         # Get depth/ pix scaler for given chunk
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
+        # portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
+        # starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m']].reset_index()
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m']].reset_index()
 
         # Load sonar
         self.port._getScanChunkSingle(i)
@@ -1621,8 +1634,10 @@ class portstarObj(object):
 
         ###########################################
         # Remove shadow predictions in water column
-        bedpickPort = round(portDF['dep_m'] / portDF['pix_m'], 0).astype(int)
-        bedpickStar = round(starDF['dep_m'] / starDF['pix_m'], 0).astype(int)
+        # bedpickPort = round(portDF['dep_m'] / portDF['pix_m'], 0).astype(int)
+        # bedpickStar = round(starDF['dep_m'] / starDF['pix_m'], 0).astype(int)
+        bedpickPort = round(portDF['dep_m'] / self.port.pixM, 0).astype(int)
+        bedpickStar = round(starDF['dep_m'] / self.star.pixM, 0).astype(int)
 
         for j in range(pMask.shape[1]):
             depth = bedpickPort[j]
