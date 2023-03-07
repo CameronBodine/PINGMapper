@@ -1107,6 +1107,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
@@ -1116,10 +1117,11 @@ class rectObj(sonObj):
             imgOutPrefix = 'rect_wcr'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
-            try:
-                os.mkdir(outDir)
-            except:
-                pass
+            if son:
+                try:
+                    os.mkdir(outDir)
+                except:
+                    pass
 
             self._WCR_SRC(sonMeta)
             img = self.sonDat
@@ -1134,6 +1136,30 @@ class rectObj(sonObj):
                        cval=np.nan,
                        clip=False,
                        preserve_range=True)
+
+            # Warping substrate classification adds anomlies which must be removed
+            if not son:
+                # Set minSize
+                min_size = 1500
+
+                # Label all regions
+                lbl = label(out)
+
+                # First set small objects to background value (0)
+                noSmall = remove_small_objects(lbl, min_size)
+
+                # Punch holes in original label
+                holes = ~(noSmall==0)
+
+                l = out*holes
+
+                # Remove small holes
+                # Convert l to binary
+                binary_objects = l.astype(bool)
+                # Remove the holes
+                binary_filled = remove_small_holes(binary_objects, min_size)
+                # Recover classification with holes filled
+                out = watershed(binary_filled, l, mask=binary_filled)
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
@@ -1168,6 +1194,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
                     # dst.update_tags(ns='rio_overview', resampling='nearest')

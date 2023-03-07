@@ -28,6 +28,7 @@
 
 
 # Imports
+from funcs_common import *
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import json
@@ -35,9 +36,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.python.client import device_lib
-from skimage.transform import resize
-from skimage.filters import threshold_otsu, gaussian
-from skimage.morphology import remove_small_holes, remove_small_objects
 
 import itertools
 

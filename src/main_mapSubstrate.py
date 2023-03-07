@@ -61,6 +61,7 @@ def map_master_func(
                      rect_wcr=False,
                      mosaic=False,
                      map_sub=0,
+                     export_poly=False,
                      pltSubClass=False,
                      map_class_method='max'):
 
@@ -259,11 +260,12 @@ def map_master_func(
     #         chunks = chunks[1:-1]
     #
     #         # Prepare output dir
-    #         outDir = os.path.join(son.outDir, 'substrate')
-    #         try:
-    #             os.mkdir(outDir)
-    #         except:
-    #             pass
+    #         outDir = os.path.join(son.projDir, 'substrate')
+    #         # outDir = os.path.join(son.outDir, 'substrate')
+    #         # try:
+    #         #     os.mkdir(outDir)
+    #         # except:
+    #         #     pass
     #         son.substrateDir = outDir
     #
     #         # Prepare model
@@ -323,57 +325,112 @@ def map_master_func(
     if map_sub > 0:
         print('\n\nMapping substrate classification...')
 
-        # Get chunk id for mapping substrate
-        for son in mapObjs:
-            son.rect_wcr = True
-            # son._loadSonMeta()
+        # # Get chunk id for mapping substrate
+        # for son in mapObjs:
+        #     son.rect_wcr = True
+        #     # son._loadSonMeta()
+        #
+        #     # Get Substrate npz's
+        #     toMap = son._getSubstrateNpz()
+        #
+        #     # Do mapping (make parallel later)
+        #     print('\n\tMapping substrate classification for', len(toMap), 'sonograms for', son.beamName)
+        #     # for c, f in toMap.items():
+        #     #     son._mapSubstrate(map_class_method, c, f, export_poly)
+        #     #     sys.exit()
+        #     Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._mapSubstrate)(map_class_method, c, f, export_poly) for c, f in toMap.items())
+        #
+        #     son.rect_wcr = rect_wcr
+        #
+        #     son._cleanup()
+        #     del toMap
 
-            # Get Substrate npz's
-            toMap = son._getSubstrateNpz()
 
-            # Do prediction (make parallel later)
-            print('\n\tMapping substrate classification for', len(toMap), 'sonograms for', son.beamName)
-            # for c, f in toMap.items():
-            #     son._mapSubstrate(map_class_method, map_sub, c, f)
-            #     sys.exit()
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+        # # Get each son's npz's
+        # for son in mapObjs:
+        #     npz = son._getSubstrateNpz()
+        #
+        #     if not 'toMap' in locals():
+        #         toMap = npz
+        #     else:
+        #         for k, v in npz.items():
+        #             # Get existing npz file
+        #             e = toMap[k]
+        #
+        #             # Add existing and new npz as list. Add port as first element
+        #             if 'port' in e:
+        #                 toMap[k] = [e, v]
+        #             else:
+        #                 toMap[k] = [v, e]
+        #
+        # # Do rectification as portstarObj to eliminate NoData at NADIR
+        # print('\n\tMapping substrate classification. Processing', len(toMap), 'port and starboard pairs...')
+        # # Create portstarObj
+        # psObj = portstarObj(mapObjs)
+        #
+        # # for c, f in toMap.items():
+        # #     psObj._mapSubstrate(map_class_method, c, f)
+        # #     sys.exit()
+        #
+        # Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
 
-            son.rect_wcr = rect_wcr
 
+        # del son
 
-
-            son._cleanup()
-            del toMap
-        del son
-
+    # ############################################################################
+    # # For Substrate Mosaic                                                     #
+    # ############################################################################
+    #
+    # overview = True # False will reduce overall file size, but reduce performance in a GIS
+    # if map_sub > 0 and mosaic > 0:
+    #     start_time = time.time()
+    #     print("\nMosaicing GeoTiffs...")
+    #
+    #     # Create portstar object
+    #     psObj = portstarObj(mapObjs)
+    #
+    #     # Switch off rect_wcp and rect_wcr
+    #     psObj.port.rect_wcp = False
+    #     psObj.port.rect_wcr = False
+    #
+    #     # Create the mosaic
+    #     psObj._createMosaic(mosaic, overview, threadCnt, False)
+    #
+    #     # Revert rect_wcp and rect_wcr
+    #     psObj.port.rect_wcp = rect_wcp
+    #     psObj.port.rect_wcr = rect_wcr
+    #
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     del psObj
+    #     gc.collect()
+    #     printUsage()
+    #
     ############################################################################
-    # For Substrate Mosaic                                                     #
+    # For Substrate Polygon                                                    #
     ############################################################################
 
-    overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if map_sub > 0:
-        start_time = time.time()
-        print("\nMosaicing GeoTiffs...")
+    if export_poly:
+         start_time = time.time()
+         print("\nConverting substrate rasters into shapefile...")
 
-        # Create portstar object
-        psObj = portstarObj(mapObjs)
+         # Create portstar object
+         psObj = portstarObj(mapObjs)
 
-        # Switch off rect_wcp and rect_wcr
-        psObj.port.rect_wcp = False
-        psObj.port.rect_wcr = False
+         # Switch off rect_wcp and rect_wcr
+         psObj.port.rect_wcp = False
+         psObj.port.rect_wcr = False
 
-        # Create the mosaic
-        psObj._createMosaic(mosaic, overview, threadCnt, False)
+         psObj._rasterToPoly(mosaic, threadCnt)
 
-        # Revert rect_wcp and rect_wcr
-        psObj.port.rect_wcp = rect_wcp
-        psObj.port.rect_wcr = rect_wcr
+         # Revert rect_wcp and rect_wcr
+         psObj.port.rect_wcp = rect_wcp
+         psObj.port.rect_wcr = rect_wcr
 
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
-        gc.collect()
-        printUsage()
+         print("Done!")
+         print("Time (s):", round(time.time() - start_time, ndigits=1))
+         gc.collect()
+         printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

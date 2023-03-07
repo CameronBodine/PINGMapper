@@ -36,6 +36,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 from skimage.filters import threshold_otsu
+from osgeo import gdal, ogr, osr
 
 class mapSubObj(rectObj):
 
@@ -105,7 +106,7 @@ class mapSubObj(rectObj):
         return
 
     #=======================================================================
-    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/5):
+    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
         '''
         Predict substrate type from sonogram.
 
@@ -238,7 +239,7 @@ class mapSubObj(rectObj):
         self._SHW_crop(i-1, True)
 
         # Get sonMetaDF
-        lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m', 'pix_m']].copy()
+        lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m']].copy()
 
         # Remove water column and crop
         lMinDep = self._WCR_crop(lMetaDF)
@@ -259,7 +260,7 @@ class mapSubObj(rectObj):
         # self._SHW_crop(i, True)
 
         # Get sonMetaDF
-        cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m', 'pix_m']].copy()
+        cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m']].copy()
 
         # Remove water column and crop
         cMinDep = self._WCR_crop(cMetaDF)
@@ -277,7 +278,7 @@ class mapSubObj(rectObj):
         # self._SHW_crop(i+1, True)
 
         # Get sonMetaDF
-        rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m', 'pix_m']].copy()
+        rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m']].copy()
 
         # Remove water column and crop
         rMinDep = self._WCR_crop(rMetaDF)
@@ -471,7 +472,7 @@ class mapSubObj(rectObj):
         if not os.path.exists(self.substrateDir):
             os.mkdir(self.substrateDir)
 
-        outDir = os.path.join(self.substrateDir, 'softmax')
+        outDir = os.path.join(self.substrateDir, 'predict_npz')
         if not os.path.exists(outDir):
             os.mkdir(outDir)
 
@@ -764,24 +765,26 @@ class mapSubObj(rectObj):
     # Substrate Mapping                                                        #
     ############################################################################
 
-    #=======================================================================
-    def _mapSubstrate(self, map_class_method, i, npz):
-        '''
-        Main function to map substrate classification
-        '''
-
-        # Open softmax scores
-        npz = np.load(npz)
-        softmax = npz['substrate'].astype('float32')
-
-        # Convert softmax to classification
-        label = self._classifySoftmax(i, softmax, map_class_method, mask_wc=True, mask_shw=True)
-
-        # Store label as sonDat for rectification
-        self.sonDat = label
-
-        # Try rectifying
-        self._rectSonParallel(i, son=False)
+    # #=======================================================================
+    # def _mapSubstrate(self, map_class_method, i, npz, export_poly):
+    #     '''
+    #     Main function to map substrate classification
+    #     '''
+    #
+    #     # Open softmax scores
+    #     npz = np.load(npz)
+    #     softmax = npz['substrate'].astype('float32')
+    #
+    #     # Convert softmax to classification
+    #     label = self._classifySoftmax(i, softmax, map_class_method, mask_wc=True, mask_shw=True)
+    #
+    #     # Store label as sonDat for rectification
+    #     self.sonDat = label
+    #
+    #     # Try rectifying
+    #     self._rectSonParallel(i, son=False)
+    #
+    #     return
 
     #=======================================================================
     def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True, do_filt=True):
@@ -939,12 +942,7 @@ class mapSubObj(rectObj):
             min_size = 28
 
             # Filter small regions and holes
-            print(np.unique(label, return_counts=True))
-            print(np.count_nonzero(np.isnan(label)))
             label = self._filterLabel(label, min_size)
-            print(np.unique(label, return_counts=True))
-            print(np.count_nonzero(np.isnan(label)))
-
 
 
         return label
@@ -962,10 +960,10 @@ class mapSubObj(rectObj):
         '''
 
         # Get npz dir
-        npzDir = os.path.join(self.substrateDir, 'softmax')
+        npzDir = os.path.join(self.substrateDir, 'predict_npz')
 
         # Get npz files belonging to current son
-        npzs = sorted(glob(os.path.join(npzDir, '*.npz')))
+        npzs = sorted(glob(os.path.join(npzDir, '*'+self.beamName+'*.npz')))
 
         # Dictionary to store {chunkID:NPZFilePath}
         toMap = defaultdict()
@@ -990,6 +988,7 @@ class mapSubObj(rectObj):
 
         # Convert min size to pixels
         min_size = int(min_size/pix_m)
+        print(min_size)
 
         # Set nan's to zero
         l = np.nan_to_num(l, nan=0).astype('uint8')
@@ -1029,6 +1028,8 @@ class mapSubObj(rectObj):
             # Remove water column
             ping = ping[d:]
 
+            ##############
+            # Remove zeros
             # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
             zero = np.where(ping==0)
 
@@ -1049,7 +1050,5 @@ class mapSubObj(rectObj):
                 # Update objects filled with ping
                 objects_filled[:, p] = ping
 
+
         return objects_filled
-
-
-        sys.exit()

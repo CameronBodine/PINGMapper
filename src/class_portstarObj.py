@@ -31,8 +31,12 @@ from funcs_common import *
 from funcs_model import *
 
 # import gdal
-from osgeo import gdal
+from osgeo import gdal, ogr, osr
 from scipy.signal import savgol_filter
+from skimage.transform import PiecewiseAffineTransform, warp
+from rasterio.transform import from_origin
+# from rasterio.enums import Resampling
+# from PIL import Image
 
 import matplotlib
 matplotlib.use('agg')
@@ -273,20 +277,21 @@ class portstarObj(object):
         if not son:
             if self.port.mapSub:
                 # Locate port files
-                portPath = os.path.join(self.port.substrateDir, 'map_sub')
+                portPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
                 port = sorted(glob(os.path.join(portPath, '*.tif')))
 
-                # Locate starboard files
-                starPath = os.path.join(self.star.substrateDir, 'map_sub')
-                star = sorted(glob(os.path.join(starPath, '*.tif')))
+                # # Locate starboard files
+                # starPath = os.path.join(self.star.substrateDir, 'map_substrate_raster')
+                # star = sorted(glob(os.path.join(starPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if len(port) > maxChunk:
                     port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                    subToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                    # star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    # subToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                    subToMosaic = [list(itertools.chain(*i)) for i in port]
                 else:
-                    subToMosaic = [port + star]
+                    subToMosaic = [port]
 
         # Create geotiff
         if mosaic == 1:
@@ -437,6 +442,8 @@ class portstarObj(object):
 
         gc.collect()
         return outMosaic
+
+
 
     ############################################################################
     # General Model Functions                                                  #
@@ -1688,6 +1695,403 @@ class portstarObj(object):
         del self.shadowModel, model
         gc.collect()
         return i, port_pix, star_pix
+
+    ############################################################################
+    # For Substrate Mapping                                                    #
+    ############################################################################
+
+    #=======================================================================
+    def _mapSubstrate(self, map_class_method, chunk, npzs):
+        '''
+        '''
+        outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+        self.outDir = outDir
+
+
+        # # Test on sonar first...easier to check
+        # self.port._getScanChunkSingle(chunk)
+        # self.star._getScanChunkSingle(chunk)
+        # portSub = self.port.sonDat
+        # starSub = self.star.sonDat
+
+        # Load npz's
+        # Port is always first
+        portSub = np.load(npzs[0])
+        starSub = np.load(npzs[1])
+
+        self.port.sonDat = portSub['substrate'].astype('float32')
+        self.star.sonDat = starSub['substrate'].astype('float32')
+
+        ####################################
+        # Do shadow and water column removal
+
+        # Need to update sonObj attributes based on chunk
+        # Store in list to process in for loop
+        sonObjs = [self.port, self.star]
+
+        for son in sonObjs:
+
+            # Load sonMetaDF
+            if not hasattr(son, 'sonMetaDF'):
+                son._loadSonMeta()
+
+            sonMetaAll = son.sonMetaDF
+            isChunk = sonMetaAll['chunk_id']==chunk
+            sonMeta = sonMetaAll[isChunk].reset_index()
+
+            son.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+            son.headIdx = sonMeta['index'] # store byte offset per ping
+            son.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+            # Do classification
+            label = son._classifySoftmax(chunk, son.sonDat, map_class_method, mask_wc=True, mask_shw=True)
+
+            # Get rid of zeros along water column area
+            for p in range(label.shape[1]):
+                # Get depth
+                d = son.bedPick[p]
+
+                # Get ping classification
+                ping = label[:, p]
+
+                # Get water column
+                wc = ping[:d]
+
+                # Remove water column
+                ping = ping[d:]
+
+                ##############
+                # Remove zeros
+                # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
+                zero = np.where(ping==0)
+
+                if len(zero[0])>0:
+                    for z in zero:
+                        # Get index of first and last zero
+                        f, l = z[0], z[-1]
+
+                        # Get classification of next pixel
+                        c = ping[l+1]
+
+                        # Fill zero region with c
+                        ping[f:l+1] = c
+
+                    # Add water column back in
+                    ping = list(wc)+list(ping)
+
+                    # Update objects filled with ping
+                    label[:, p] = ping
+
+            son.sonDat = label
+
+            # Remove shadows
+            # if son.remShadow:
+            # Get mask
+            son._SHW_mask(chunk)
+
+            # Mask out shadows
+            son.sonDat = son.sonDat*son.shadowMask
+
+            # Remove water column
+            son._WCR_SRC(sonMeta)
+        del sonObjs
+
+        portSub = self.port.sonDat
+        starSub = self.star.sonDat
+
+
+        ###############################################################
+        # Merge arrays (may need to add a size check, skipping for now)
+        # Left start ping, right end ping, top port, bottom star
+        portSub = np.rot90(portSub, k=2, axes=(1,0))
+        portSub = np.fliplr(portSub)
+        mergeSub = np.concatenate((portSub, starSub), axis=0)
+
+        # Do rectification
+        self._rectify(mergeSub, chunk, 'map_substrate')
+
+    #=======================================================================
+    def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False):
+        '''
+        '''
+
+        # Get trackline/range extent file path
+        portTrkMetaFile = os.path.join(self.port.metaDir, "Trackline_Smth_"+self.port.beamName+".csv")
+        starTrkMetaFile = os.path.join(self.star.metaDir, "Trackline_Smth_"+self.star.beamName+".csv")
+
+        # What coordinates should be used?
+        ## Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.port.humDat['wgs']
+            xRange = 'range_lons'
+            yRange = 'range_lats'
+            # xTrk = 'trk_lons'
+            # yTrk = 'trk_lats'
+        ## Use projected coordinates and set variables as needed
+        else:
+            epsg = self.port.humDat['epsg']
+            xRange = 'range_es'
+            yRange = 'range_ns'
+            # xTrk = 'trk_utm_es'
+            # yTrk = 'trk_utm_ns'
+
+        # Determine leading zeros to match naming convention
+        if chunk < 10:
+            addZero = '0000'
+        elif chunk < 100:
+            addZero = '000'
+        elif chunk < 1000:
+            addZero = '00'
+        elif chunk < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        #################################
+        # Prepare pixel (pix) coordinates
+        ## Pix coordinates describe the size of the coordinates in pixels
+        ## Coordinate Order
+        ## top left of dat == port(range, 0)
+        ## bot left of dat == star(range, 0)
+        ## top next == port(range, 0+filt)
+        ## bottom next == star(range, 0+filt)
+        ## ....
+        rows, cols = dat.shape # Determine number rows/cols
+        pix_cols = np.arange(0, cols) # Create array of column indices
+        pix_rows = np.linspace(0, rows, 2).astype('int') # Create array of two row indices (0 for points at ping origin, `rows` for max range)
+        pix_rows, pix_cols = np.meshgrid(pix_rows, pix_cols) # Create grid arrays that we can stack together
+        pixAll = np.dstack([pix_rows.flat, pix_cols.flat])[0] # Stack arrays to get final map of pix pixel coordinats [[row1, col1], [row2, col1], [row1, col2], [row2, col2]...]
+
+        # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
+        ## more efficient
+        mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
+        mask[0::filt] = 1 # Filter row coordinates
+        mask[1::filt] = 1 # Filter column coordinates
+        mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
+
+        # Filter pix
+        pix = pixAll[mask]
+
+        #######################################
+        # Prepare destination (dst) coordinates
+        ## Destination coordinates describe the geographic location in lat/lon
+        ## or easting/northing that directly map to the pix coordinates.
+
+        ###
+        # Get top (port range) coordinates
+        trkMeta = pd.read_csv(portTrkMetaFile)
+        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+
+        # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
+        xTop, yTop = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
+        xyTop = np.vstack((xTop, yTop)).T # Stack the arrays
+
+        ###
+        # Get bottom (star range) coordinates
+        trkMeta = pd.read_csv(starTrkMetaFile)
+        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+
+        # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
+        xBot, yBot = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
+        xyBot = np.vstack((xBot, yBot)).T # Stack the arrays
+
+        # Stack the coordinates (port[0,0], star[0,0], port[1,1]...) following
+        ## pattern of pix coordinates
+        dstAll = np.empty([len(xyTop)+len(xyBot), 2]) # Initialize appropriately sized np array
+        dstAll[0::2] = xyTop # Add port range coordinates
+        dstAll[1::2] = xyBot # Add star range coordinates
+
+        # Filter dst using previously made mask
+        dst = dstAll[mask]
+
+        ##################
+        ## Before applying a geographic projection to the image, the image
+        ## must be warped to conform to the shape specified by the geographic
+        ## coordinates.  We don't want to warp the image to real-world dimensions,
+        ## so we will normalize and rescale the dst coordinates to give the
+        ## top-left coordinate a value of (0,0)
+
+        # Get pixel size
+        pix_m = self.port.pixM
+
+        # Determine min/max for rescaling
+        xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
+        yMin, yMax = dst[:,1].min(), dst[:,1].max() # Min/Max of y coordinates
+
+        # Determine output shape dimensions
+        outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
+        outShape=[0,0]
+        # Divide by pixel size to arrive at output shape of warped image
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+
+        # Rescale destination coordinates
+        # X values
+        xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
+        xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
+        dst[:,0] = xScaled # Store rescaled x coordinates
+
+        # Y values
+        yStd = (dst[:,1]-yMin) / (yMax-yMin) # Standardize
+        yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
+        dst[:,1] = yScaled # Store rescaled y coordinates
+
+        ########################
+        # Perform transformation
+        # PiecewiseAffineTransform
+        tform = PiecewiseAffineTransform()
+        tform.estimate(pix, dst) # Calculate H matrix
+
+        ##############
+        # Save Geotiff
+        ## In order to visualize the warped image in a GIS at the appropriate
+        ## spatial extent, the pixel coordinates of the warped image must be
+        ## mapped to spatial coordinates. This is accomplished by calculating
+        ## the transformation matrix using rasterio.transform.from_origin
+
+        # First get the min/max values for x,y geospatial coordinates
+        xMin, xMax = dstAll[:,0].min(), dstAll[:,0].max()
+        yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
+
+        # Calculate x,y resolution of a single pixel
+        xres = (xMax - xMin) / outShape[0]
+        yres = (yMax - yMin) / outShape[1]
+
+        # Calculate transformation matrix by providing geographic coordinates
+        ## of upper left corner of the image and the pixel size
+        transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
+
+        # Warp image from the input shape to output shape
+        out = warp(dat.T,
+                   tform.inverse,
+                   output_shape=(outShape[1], outShape[0]),
+                   mode='constant',
+                   cval=np.nan,
+                   clip=False,
+                   preserve_range=True)
+
+        # Rotate 180 and flip
+        # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+        out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+
+        ###
+        # Do filtering here
+        ###
+        # Set minimum patch size (in meters)
+        min_size = 28
+        # out = self.port._filterLabel(out, min_size)
+
+        min_size = int(min_size/pix_m)
+        print(min_size)
+
+        min_size = int((out.shape[0] + out.shape[1])/2)
+        print(min_size)
+
+        # Set nan's to zero
+        out = np.nan_to_num(out, nan=0).astype('uint8')
+
+        # Label all regions
+        lbl = label(out)
+
+        # First set small objects to background value (0)
+        noSmall = remove_small_objects(lbl, min_size)
+
+        # Punch holes in original label
+        holes = ~(noSmall==0)
+
+        l = out*holes
+
+        # Remove small holes
+        # Convert l to binary
+        binary_objects = l.astype(bool)
+        # Remove the holes
+        binary_filled = remove_small_holes(binary_objects, min_size+100)
+        # Recover classification with holes filled
+        out = watershed(binary_filled, l, mask=binary_filled)
+
+        out = out.astype('uint8')
+
+        #########################
+        # Export Rectified Raster
+        # Set output name
+        projName = os.path.split(self.port.projDir)[-1] # Get project name
+        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
+        gtiff = os.path.join(self.outDir, imgName)
+
+        # Export georectified image
+        with rasterio.open(
+            gtiff,
+            'w',
+            driver='GTiff',
+            height=out.shape[0],
+            width=out.shape[1],
+            count=1,
+            dtype=out.dtype,
+            crs=epsg,
+            transform=transform,
+            compress='lzw'
+            ) as dst:
+                dst.nodata=0
+                dst.write(out,1)
+                dst=None
+
+        return
+
+
+    #=======================================================================
+    def _rasterToPoly(self, mosaic, threadCnt):
+        '''
+        '''
+
+        if mosaic != 2:
+            self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
+
+        inDir = self.port.projDir
+        rasterFiles = glob(os.path.join(inDir, '*map_sub*vrt'))
+
+        for rasterFile in rasterFiles:
+            # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
+            # Open raster
+            src_ds = gdal.Open(rasterFile)
+
+
+            ####################
+            # Polygon Conversion
+            # Set spatial reference
+            srs = osr.SpatialReference()
+            srs.ImportFromWkt(src_ds.GetProjection())
+
+            # Prepare layerfile
+            dst_layername = rasterFile.replace('.vrt', '')
+            dst_layername = dst_layername.replace('_mosaic', '')
+            srcband = src_ds.GetRasterBand(1)
+            drv = ogr.GetDriverByName("ESRI Shapefile")
+            dst_ds = drv.CreateDataSource(dst_layername+'.shp')
+            dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
+            newField = ogr.FieldDefn('Substrate', ogr.OFTReal)
+            dst_layer.CreateField(newField)
+            gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+
+            # Calculate Area
+            # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
+
+
+
+            # Delete NoData Polygon
+            # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
+            layer = dst_ds.GetLayer()
+            layer.SetAttributeFilter("Substrate = 0")
+
+            for feat in layer:
+                layer.DeleteFeature(feat.GetFID())
+
+
+            dst_ds.SyncToDisk()
+            dst_ds=None
+            os.remove(rasterFile)
+
+        return
 
     #=======================================================================
     def _cleanup(self):
