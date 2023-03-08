@@ -297,41 +297,41 @@ def rectify_master_func(
     gc.collect()
     printUsage()
 
-    ############################################################################
-    # Rectify sonar imagery                                                    #
-    ############################################################################
-    start_time = time.time()
-    print("\nRectifying and exporting GeoTiffs:\n")
-
-    if rect_wcp:
-        for son in portstar:
-            son.rect_wcp = True
-    if rect_wcr:
-        for son in portstar:
-            son.rect_wcr = True
-
-    if rect_wcp or rect_wcr:
-        for son in portstar:
-
-            # Get chunk id's
-            chunks = son._getChunkID()
-
-            # Load sonMetaDF
-            son._loadSonMeta()
-
-            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
-            gc.collect()
-
-    if rect_wcp or rect_wcr:
-        for son in portstar:
-            del son.sonMetaDF
-            del son.smthTrk
-        del son
-    print("Done!")
-    print("Time (s):", round(time.time() - start_time, ndigits=1))
-    gc.collect()
-    printUsage()
+    # ############################################################################
+    # # Rectify sonar imagery                                                    #
+    # ############################################################################
+    # start_time = time.time()
+    # print("\nRectifying and exporting GeoTiffs:\n")
+    #
+    # if rect_wcp:
+    #     for son in portstar:
+    #         son.rect_wcp = True
+    # if rect_wcr:
+    #     for son in portstar:
+    #         son.rect_wcr = True
+    #
+    # if rect_wcp or rect_wcr:
+    #     for son in portstar:
+    #
+    #         # Get chunk id's
+    #         chunks = son._getChunkID()
+    #
+    #         # Load sonMetaDF
+    #         son._loadSonMeta()
+    #
+    #         print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+    #         Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+    #         gc.collect()
+    #
+    # if rect_wcp or rect_wcr:
+    #     for son in portstar:
+    #         del son.sonMetaDF
+    #         del son.smthTrk
+    #     del son
+    # print("Done!")
+    # print("Time (s):", round(time.time() - start_time, ndigits=1))
+    # gc.collect()
+    # printUsage()
 
     ############################################################################
     # Mosaic imagery                                                           #

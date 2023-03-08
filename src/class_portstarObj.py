@@ -271,27 +271,18 @@ class portstarObj(object):
             else:
                 srcToMosaic = [port + star]
 
-        # print('\n\n\n\n')
-        # print(self)
-        # sys.exit()
         if not son:
             if self.port.mapSub:
-                # Locate port files
-                portPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
-                port = sorted(glob(os.path.join(portPath, '*.tif')))
-
-                # # Locate starboard files
-                # starPath = os.path.join(self.star.substrateDir, 'map_substrate_raster')
-                # star = sorted(glob(os.path.join(starPath, '*.tif')))
+                # Locate map files
+                mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+                map = sorted(glob(os.path.join(mapPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if len(port) > maxChunk:
-                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                    # star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                    # subToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-                    subToMosaic = [list(itertools.chain(*i)) for i in port]
+                if len(map) > maxChunk:
+                    map = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                    subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
-                    subToMosaic = [port]
+                    subToMosaic = [map]
 
         # Create geotiff
         if mosaic == 1:
@@ -353,11 +344,26 @@ class portstarObj(object):
         outMosaic = []
         for imgs in imgsToMosaic:
 
+            # # Set output file names
+            # filePrefix = os.path.split(self.port.projDir)[-1]
+            # fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
+            # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
+            # outTIF = outVRT.replace('.vrt', '.tif')
+
             # Set output file names
-            filePrefix = os.path.split(self.port.projDir)[-1]
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
-            outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
+            filePrefix = os.path.split(self.port.projDir)[-1]
+            if 'substrate' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
+                # outVRT = os.path.join(outDir, fileSuffix)
+            else:
+                # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
+                outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
+            outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
+
+            if not os.path.exists(outDir):
+                os.mkdir(outDir)
 
             # First built a vrt
             vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
@@ -424,21 +430,29 @@ class portstarObj(object):
         for imgs in imgsToMosaic:
 
             # Set output file names
-            filePrefix = os.path.split(self.port.projDir)[-1]
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
-            outFile = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
+            filePrefix = os.path.split(self.port.projDir)[-1]
+            if 'substrate' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
+                # outVRT = os.path.join(outDir, fileSuffix)
+            else:
+                # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
+                outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
+            outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
 
+            if not os.path.exists(outDir):
+                os.mkdir(outDir)
             # Build VRT
             vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
-            gdal.BuildVRT(outFile, imgs, options=vrt_options)
+            gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
             if overview:
-                dest = gdal.Open(outFile)
+                dest = gdal.Open(outVRT)
                 gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
                 dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
             i+=1
-            outMosaic.append(outFile)
+            outMosaic.append(outVRT)
 
         gc.collect()
         return outMosaic
@@ -1762,6 +1776,9 @@ class portstarObj(object):
                 # Remove water column
                 ping = ping[d:]
 
+                # If any water column pics remain, set to zero
+                ping = np.where(ping==8, 0, ping)
+
                 ##############
                 # Remove zeros
                 # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
@@ -2047,8 +2064,12 @@ class portstarObj(object):
         if mosaic != 2:
             self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
 
-        inDir = self.port.projDir
+        inDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
         rasterFiles = glob(os.path.join(inDir, '*map_sub*vrt'))
+
+        outDir = os.path.join(self.port.substrateDir, 'map_substrate_polygon')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
 
         for rasterFile in rasterFiles:
             # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
@@ -2063,8 +2084,11 @@ class portstarObj(object):
             srs.ImportFromWkt(src_ds.GetProjection())
 
             # Prepare layerfile
-            dst_layername = rasterFile.replace('.vrt', '')
-            dst_layername = dst_layername.replace('_mosaic', '')
+            # dst_layername = rasterFile.replace('.vrt', '')
+            dst_layername = os.path.basename(rasterFile).replace('.vrt', '')
+            dst_layername = dst_layername.replace('_raster_mosaic', '')
+            dst_layername = os.path.join(outDir, dst_layername)
+
             srcband = src_ds.GetRasterBand(1)
             drv = ogr.GetDriverByName("ESRI Shapefile")
             dst_ds = drv.CreateDataSource(dst_layername+'.shp')
@@ -2075,8 +2099,6 @@ class portstarObj(object):
 
             # Calculate Area
             # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
-
-
 
             # Delete NoData Polygon
             # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
@@ -2089,7 +2111,7 @@ class portstarObj(object):
 
             dst_ds.SyncToDisk()
             dst_ds=None
-            os.remove(rasterFile)
+            # os.remove(rasterFile)
 
         return
 

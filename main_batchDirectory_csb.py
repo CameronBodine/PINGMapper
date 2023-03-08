@@ -47,7 +47,7 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
 
 inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
-outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Mosaics/AutoDepth'
+outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
 
 inDir = os.path.normpath(inDir)
 outDir = os.path.normpath(outDir)
@@ -85,13 +85,14 @@ pltBedPick = True #Plot bedpick on sonogram
 
 
 # Rectification Parameters
-rect_wcp = True #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcp = False #Export rectified tiles with water column present
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
-map_sub=0
+map_sub=1
+export_poly=True
 pltSubClass=True
 map_class_method='max'
 
@@ -200,43 +201,44 @@ for i, datFile in enumerate(inFiles):
         'rect_wcr':rect_wcr,
         'mosaic':mosaic,
         'map_sub':map_sub,
+        'export_poly':export_poly,
         'pltSubClass':pltSubClass,
         'map_class_method':map_class_method
         }
 
-    try:
-        print('sonPath',sonPath)
-        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-        print('+++++++++++++++++++++++++++++++++++++++++++')
-        print('***** Working On *****')
-        print('Index:', i)
-        print('Output Director:', projDir)
-        print('Input File:', humFile)
-        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
-
-        print('\n===========================================')
-        print('===========================================')
-        print('***** READING *****')
-        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
-        read_master_func(**params)
-
-        if rect_wcp or rect_wcr:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** RECTIFYING *****')
-            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
-            rectify_master_func(**params)
-
-        #==================================================
-        if map_sub:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** MAPPING SUBSTRATE *****')
-            print("working on "+projDir)
-            map_master_func(**params)
-
-    except:
-        print('Could not process:', datFile)
+    # try:
+    #     print('sonPath',sonPath)
+    #     print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+    #     print('+++++++++++++++++++++++++++++++++++++++++++')
+    #     print('***** Working On *****')
+    #     print('Index:', i)
+    #     print('Output Director:', projDir)
+    #     print('Input File:', humFile)
+    #     print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+    #
+    #     print('\n===========================================')
+    #     print('===========================================')
+    #     print('***** READING *****')
+    #     # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+    #     read_master_func(**params)
+    #
+    #     if rect_wcp or rect_wcr:
+    #         print('\n===========================================')
+    #         print('===========================================')
+    #         print('***** RECTIFYING *****')
+    #         # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+    #         rectify_master_func(**params)
+    #
+    #     #==================================================
+    #     if map_sub:
+    #         print('\n===========================================')
+    #         print('===========================================')
+    #         print('***** MAPPING SUBSTRATE *****')
+    #         print("working on "+projDir)
+    #         map_master_func(**params)
+    #
+    # except:
+    #     print('Could not process:', datFile)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
