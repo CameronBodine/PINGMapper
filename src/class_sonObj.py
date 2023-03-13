@@ -1465,16 +1465,17 @@ class sonObj(object):
 
         '''
         # Get sonMeta
-        self._loadSonMeta()
+        # self._loadSonMeta()
+        self._getScanChunkSingle(i)
 
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==i
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
 
-        # Update class attributes based on current chunk
-        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
-        self.headIdx = sonMeta['index'] # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+        # # Update class attributes based on current chunk
+        # self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        # self.headIdx = sonMeta['index'] # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         # Load depth (in real units) and convert to pixels
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
@@ -1484,7 +1485,8 @@ class sonObj(object):
         del sonMeta, self.sonMetaDF
 
         # Load sonardata
-        self._loadSonChunk()
+        # self._loadSonChunk()
+        print(i, self.sonDat.shape)
 
         # Make zero mask
         wc_mask = np.zeros((self.sonDat.shape))
@@ -1619,6 +1621,7 @@ class sonObj(object):
         '''
 
         # Get sonar data and shadow pix coordinates
+        self._getScanChunkSingle(i)
         sonDat = self.sonDat
         shw_pix = self.shadow[i]
 
@@ -1709,7 +1712,8 @@ class sonObj(object):
 
         self.sonDat = sonDat
         del mask, reg
-        return self
+        
+        return max_r
 
     # ======================================================================
     def _writeTiles(self,
@@ -1864,13 +1868,14 @@ class sonObj(object):
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
-        self.headIdx = sonMeta['index'] # store byte offset per ping
-        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+        # self.headIdx = sonMeta['index'] # store byte offset per ping
+        # self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         if ~np.isnan(self.pingMax):
             # Load chunk's sonar data into memory
             if son:
-                self._loadSonChunk()
+                # self._loadSonChunk()
+                self._getScanChunkSingle(chunk)
 
             # Remove shadows and crop
             if self.remShadow and (lbl_set==2) and (maxCrop>0):

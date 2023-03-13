@@ -183,6 +183,7 @@ class mapSubObj(rectObj):
 
             # Expand softmax_score to son3Chunk dims, filled with nan's
             softmax_score = self._expandWin(H, W, wStart, wEnd, softmax_score)
+            # print('softmax_score', softmax_score.shape)
 
             # Store expanded softmax_score
             winSoftMax.append(softmax_score)
@@ -192,33 +193,221 @@ class mapSubObj(rectObj):
         # Take mean across all windows to get one final softmax_score array
         fSoftmax = np.nanmean(np.stack(winSoftMax, axis=0), axis=0)
 
-        # Crop fSoftmax to current chunk
-        fSoftmax = fSoftmax[:, nchunk:nchunk+pad[1], :]
+        # # Recover fSoftmax to original dimensions
+        # h, w = pad[:-1] # original chunk dimensions
+        # p = pad[-1]-1 # amount of water column cropped
+        # sh, sw = fSoftmax.shape[:-1] # softmax dimensions
+        # c = fSoftmax.shape[-1] # number of classes
+        #
+        # print('Softmax', fSoftmax.shape)
+        # print('Pad', pad)
+        #
+        # if fSoftmax.shape[0] == h:
+        #     fArr = fSoftmax
+        # # elif fSoftmax.shape[0] < h:
+        # #     fArr = np.zeros((h, w, c))
+        # #     fArr[p:p+sh, :, :] = fSoftmax
+        # else:
+        #     fArr = np.zeros((h, w, c))
+        #
+        #     # Check if need to trim softmax
+        #     # if (p+sh) > h:
+        #     # 2091 to 1967
+        #     print(sh, h-p)
+        #     if sh > (h-p):
+        #         fSoftmax = fSoftmax[:-p, :, :]
+        #         sh = fSoftmax.shape[0]
+        #     fArr[p:p+sh, :, :] = fSoftmax
 
-        # Recover fSoftmax to original dimensions
-        h, w = pad[:-1] # original chunk dimensions
-        p = pad[-1]-1 # amount of water column cropped
-        sh, sw = fSoftmax.shape[:-1] # softmax dimensions
-        c = fSoftmax.shape[-1] # number of classes
+        # Recover fSoftmax to original vertical dimensions
+        h, w = pad[0], pad[1] # original chunk dimensions
+        wc_crop = pad[2] # amount of water column cropped
+        r_crop = pad[3] # amount of range cropped
+        sh, sw = fSoftmax.shape[0], fSoftmax.shape[1] # softmax dimensions
+        c = fSoftmax.shape[2] # number of classes
+
+        print('\n\n\n\nGut Check')
+        print('Orig Dims:', h, w)
+        print('WC cropped:', wc_crop)
+        print('Range Cropped:', r_crop)
+        print('Softmax Shape', fSoftmax.shape)
+
+        # Crop fSoftmax to current chunk
+        # fSoftmax = fSoftmax[:, nchunk:nchunk+pad[1], :]
+        fSoftmax = fSoftmax[:, nchunk:2*nchunk, :]
+        # print('fSoftmax', fSoftmax.shape, nchunk, pad[1])
 
         fArr = np.zeros((h, w, c))
-        if p > 0:
-            fArr[p:p+sh, :, :] = fSoftmax
+
+        # fArr[wc_crop:wc_crop+h, :, :] = fSoftmax[:h, :, :]
+
+        # Determine top offset
+        if wc_crop > 0:
+            topOff = wc_crop
+        else:
+            topOff = 0 # No offset necessary
+
+        # Determine if softmax or fArr needs to be sliced on bottom to get correct dims
+        bottomOff = sh - (fArr.shape[0] - wc_crop)
+        print('bottomOff:', bottomOff)
+
+        # If bottomOff < 0: Need to slice bottom of fArr to fit smaller softmax dims
+        if bottomOff < 0:
+            bottomOff = fArr.shape[0] + bottomOff
+            fArr[wc_crop:bottomOff, :, :] = fSoftmax
+
+            # Set definate shadows to 1.0
+            # Shadow second to last class
+            fArr[bottomOff:, :, -2] = 1.0
+
+        # Need to slice softmax bottom to fit in fArr
+        elif bottomOff > 0:
+            # bottomOff = fSoftmax.shape[0] - bottomOff
+            # fArr[:bottomOff] = fSoftmax[:bottomOff, :, :]
+
+            bottomOff = fArr.shape[0] - wc_crop
+            fArr[wc_crop:, :, :] = fSoftmax[:bottomOff, :, :]
+
+        # No slicing necessary
         else:
             fArr = fSoftmax
+        print('bottomOff:', bottomOff, '\n\n\n')
+
+        # # Determine if softmax bottom needs to be cropped
+        # if (fArr.shape[0] - wc_crop) > sh:
+        #     # fArr with offset larger then softmax
+        #     # Need to slice fArr to compensate
+        #     bottomOff = sh - (fArr.shape[0] - wc_crop) # This should be negative ???
+        #
+        # elif (fArr.shape[0] - wc_crop) < sh:
+        #     # fArr with offset smaller then softmax
+        #     # Need to slice softmax to compensate
+        #     bottomOff = sh - (fArr.shape[0] - wc_crop)
+        #
+        # else:
+        #     bottomOff = 0 # Bottom alread aligned
 
         # Make sure softmax is 1.0 for areas definately water and shadow
         # Shadow second to last class
-        fArr[p+sh, :, -2] = 1.0
+        # fArr[p+sh, :, -2] = 1.0
+        # fArr[p+sh-1:, :, -2] = 1.0
 
+        # Make sure softmax is 1.0 for areas definately water
         # Water last class
-        fArr[:p, :, -1] = 1.0
+        fArr[:wc_crop, :, -1] = 1.0
 
         # print(fArr.shape, np.min(fArr), np.max(fArr))
         del fSoftmax, son3Chunk
         gc.collect()
 
+        print('fArr FINAL:', fArr.shape)
+
         return fArr
+
+    #=======================================================================
+    # def _getSon3Chunk(self, i):
+    #
+    #     '''
+    #     Get current (i), left (i-1) & right (i+1) chunk's sonDat.
+    #     Concatenate into one array.
+    #
+    #     Crop to min(minDepths)
+    #     Crop to max(maxRanges)
+    #
+    #     Return cropped 3 chunk img
+    #     Return original dims of center chunk
+    #     Return amount of depth cropped on center chunk
+    #     '''
+    #
+    #     nchunk = self.nchunk
+    #     df = self.sonMetaDF
+    #
+    #
+    #     minDepths = [] # Store each chunks min depths
+    #     maxRanges = [] # Store max range after cropping (?)
+    #
+    #     ######
+    #     # Left
+    #     # Get sonDat
+    #     self._getScanChunkSingle(i-1)
+    #
+    #     # Make copy of sonDat orig
+    #     lSonDatOrig = self.sonDat.copy()
+    #
+    #     # Crop shadows
+    #     self._SHW_crop(i-1, False)
+    #
+    #     # Store how much was cropped in case
+    #     lBotCrop = lSonDatOrig.shape[0] - self.sonDat.shape[0]
+    #
+    #     # Get sonMetaDF
+    #     lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m']].copy()
+    #
+    #     # Remove water column and crop
+    #     lMinDep = self._WCR_crop(lMetaDF)
+    #
+    #     # Create copy of sonar data
+    #     lSonDat = self.sonDat.copy()
+    #
+    #     # print(lSonDatOrig.shape)
+    #     # print(lSonDat.shape)
+    #     # print(lBotCrop, lMinDep)
+    #
+    #
+    #     ########
+    #     # Center
+    #     # Get sonDat
+    #     self._getScanChunkSingle(i)
+    #
+    #     # Make copy of sonDat orig
+    #     cSonDatOrig = self.sonDat.copy()
+    #
+    #     # H W original dimensions
+    #     H, W = cSonDatOrig.shape
+    #
+    #     # Crop shadows
+    #     self._SHW_crop(i, False)
+    #
+    #     # Store how much was cropped in case
+    #     cBotCrop = cSonDatOrig.shape[0] - self.sonDat.shape[0]
+    #
+    #     # Get sonMetaDF
+    #     cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m']].copy()
+    #
+    #     # Remove water column and crop
+    #     cMinDep = self._WCR_crop(cMetaDF)
+    #
+    #     # Create copy of sonar data
+    #     cSonDat = self.sonDat.copy()
+    #
+    #
+    #     #######
+    #     # Right
+    #     # Get sonDat
+    #     self._getScanChunkSingle(i+1)
+    #
+    #     # Make copy of sonDat orig
+    #     rSonDatOrig = self.sonDat.copy()
+    #
+    #     # Crop shadows
+    #     self._SHW_crop(i+1, False)
+    #
+    #     # Store how much was cropped in case
+    #     rBotCrop = rSonDatOrig.shape[0] - self.sonDat.shape[0]
+    #
+    #     # Get sonMetaDF
+    #     rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m']].copy()
+    #
+    #     # Remove water column and crop
+    #     rMinDep = self._WCR_crop(rMetaDF)
+    #
+    #     # Create copy of sonar data
+    #     rSonDat = self.sonDat.copy()
+    #
+    #     print(lSonDat.shape, cSonDat.shape, rSonDat.shape)
+    #     sys.exit()
+
+
 
     #=======================================================================
     def _getSon3Chunk(self, i):
@@ -230,13 +419,19 @@ class mapSubObj(rectObj):
         nchunk = self.nchunk
         df = self.sonMetaDF
 
+
         ######
         # Left
         # Get sonDat
         self._getScanChunkSingle(i-1)
+        # # Image dimensions
+        # h, w = self.sonDat.shape
+        # if h > H:
+        #     H = h
+        #     W = w
 
         # Crop shadows first
-        self._SHW_crop(i-1, True)
+        _ = self._SHW_crop(i-1, False)
 
         # Get sonMetaDF
         lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m']].copy()
@@ -253,11 +448,12 @@ class mapSubObj(rectObj):
         # Get sonDat
         self._getScanChunkSingle(i)
 
-        # Get dimensions
+        # Original image dimensions
         H, W = self.sonDat.shape
 
-        # # Crop shadows first
-        # self._SHW_crop(i, True)
+        # Crop shadows first
+        max_r = self._SHW_crop(i, False)
+        print('\n\n\nmax_r', max_r)
 
         # Get sonMetaDF
         cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m']].copy()
@@ -269,13 +465,22 @@ class mapSubObj(rectObj):
         cSonDat = self.sonDat.copy()
         # print(cSonDat.shape)
 
+        # Cropped dims (??)
+        h, w = cSonDat.shape
+
         ########
         # Right
         # Get sonDat
         self._getScanChunkSingle(i+1)
 
-        # # Crop shadows first
-        # self._SHW_crop(i+1, True)
+        # # Image dimensions
+        # h, w = self.sonDat.shape
+        # if h > H:
+        #     H = h
+        #     W = w
+
+        # Crop shadows first
+        _ = self._SHW_crop(i+1, False)
 
         # Get sonMetaDF
         rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m']].copy()
@@ -292,6 +497,8 @@ class mapSubObj(rectObj):
         #############################
         # Merge left, center, & right
 
+        # Align arrays based on wc_crops
+
         # Find min depth
         minDep = min(lMinDep, cMinDep, rMinDep)
 
@@ -300,7 +507,8 @@ class mapSubObj(rectObj):
         if lMinDep > minDep:
             # Get current sonDat shape
             r, c = lSonDat.shape
-            # Determine pad size
+
+            # Determine pad size (actual offset from top)
             pad = lMinDep - minDep
 
             # Make new zero array w/ pad added in
@@ -317,6 +525,7 @@ class mapSubObj(rectObj):
         if cMinDep > minDep:
             # Get current sonDat shape
             r, c = cSonDat.shape
+
             # Determine pad size
             pad = cMinDep - minDep
 
@@ -329,6 +538,11 @@ class mapSubObj(rectObj):
             newArr[pad:,:] = cSonDat
             cSonDat = newArr.copy()
             del newArr
+
+            # Return cpad to recover original dims
+            cpad = pad
+        else:
+            cpad = cMinDep
 
         # Right
         if rMinDep > minDep:
@@ -346,6 +560,13 @@ class mapSubObj(rectObj):
             newArr[pad:,:] = rSonDat
             rSonDat = newArr.copy()
             del newArr
+
+        # If range of center chunk < other chunks, slice other chunks
+        if h < lSonDat.shape[0]:
+            lSonDat = lSonDat[:H,:]
+
+        if h < rSonDat.shape[0]:
+            rSonDat = rSonDat[:H,:]
 
         # Find max rows across each chunk
         maxR = max(lSonDat.shape[0], cSonDat.shape[0], rSonDat.shape[0])
@@ -367,17 +588,22 @@ class mapSubObj(rectObj):
         # Add right sonDat into fSonDat
         fSonDat[:rSonDat.shape[0], nchunk*2:] = rSonDat
 
-        # # Export image check
-        # try:
-        #     os.mkdir(self.outDir)
-        # except:
-        #     pass
-        # self.sonDat = fSonDat
-        # self._writeTiles(i, 'test')
+        # Export image check
+        try:
+            os.mkdir(self.outDir)
+        except:
+            pass
+        self.sonDat = fSonDat
+        self._writeTiles(i, 'test')
+        print(self.outDir)
 
         # fSonDat = standardize(fSonDat)
 
-        return fSonDat, (H, W, minDep)
+        print('fSonDat', fSonDat.shape)
+        print('pad', H, W, cpad)
+
+        # return fSonDat, (H, W, minDep)
+        return fSonDat, (H, W, cpad, max_r)
 
     #=======================================================================
     def _expandWin(self, H, W, w1, w2, arr):
@@ -547,6 +773,8 @@ class mapSubObj(rectObj):
         self._getScanChunkSingle(chunk)
         son = self.sonDat
 
+        print('Son Dims:', son.shape)
+
         # Speed correct son
         if spdCor>0:
             # Do sonar first
@@ -556,6 +784,8 @@ class mapSubObj(rectObj):
         # Open substrate softmax scores
         npz = np.load(npz)
         softmax = npz['substrate'].astype('float32')
+
+        print('Softmax Dims:', softmax.shape)
 
         # Get classes
         classes = npz['classes']
@@ -919,6 +1149,7 @@ class mapSubObj(rectObj):
         if mask_wc:
             self._WC_mask(i)
             wc_mask = self.wcMask
+            print(i, wc_mask.shape)
 
             label = (label*wc_mask).astype('uint8') # Zero-out water column
             wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
@@ -929,6 +1160,7 @@ class mapSubObj(rectObj):
         if mask_shw:
             self._SHW_mask(i)
             shw_mask = self.shadowMask
+            print(shw_mask.shape)
 
             label = (label*shw_mask).astype('uint8')
             shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
@@ -988,7 +1220,6 @@ class mapSubObj(rectObj):
 
         # Convert min size to pixels
         min_size = int(min_size/pix_m)
-        print(min_size)
 
         # Set nan's to zero
         l = np.nan_to_num(l, nan=0).astype('uint8')
@@ -1033,10 +1264,16 @@ class mapSubObj(rectObj):
             # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
             zero = np.where(ping==0)
 
-            if len(zero[0])>0:
+            # zero is range of values (1101, 1102, 1103...)
+            if len(zero[0])>1:
                 for z in zero:
                     # Get index of first and last zero
                     f, l = z[0], z[-1]
+
+                    # So we don't go off the edge
+                    # print(ping.shape, z)
+                    if l == ping.shape[0]-1:
+                        l -= 1
 
                     # Get classification of next pixel
                     c = ping[l+1]
@@ -1050,5 +1287,25 @@ class mapSubObj(rectObj):
                 # Update objects filled with ping
                 objects_filled[:, p] = ping
 
+            # Only one value
+            elif len(zero[0]) == 1:
+                # Get index
+                f = zero[0][0]
+
+                # at end of array, get previous value
+                if f == ping.shape[0]-1:
+                    c = ping[f-1]
+                # get next value
+                else:
+                    c = ping[f+1]
+
+                # Fill zero with c
+                ping[f] = c
+
+                # Add water column back in
+                ping = list(wc)+list(ping)
+
+                # Update objects filled with ping
+                objects_filled[:, p] = ping
 
         return objects_filled
