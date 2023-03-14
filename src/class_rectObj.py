@@ -425,7 +425,18 @@ class rectObj(sonObj):
         # Calculate max range for each chunk to ensure none of the sonar image
         ## is cut off due to changing the range setting during the survey.
         chunk = sDF.groupby(chunk_id) # Group dataframe by chunk_id
-        maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
+
+        # Old method
+        # maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
+        # New method to find maxPing based on most numerous ping count
+        maxPing = []
+        for name, group in sDF.groupby(chunk_id):
+            rangeCnt = np.unique(group[ping_cnt], return_counts=True)
+            pingMaxi = np.argmax(rangeCnt[1])
+            maxPing.append(int(rangeCnt[0][pingMaxi]))
+        # Convert maxPing i to pd series
+        maxPing = pd.Series(maxPing)
+
         # pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
         pix_m = self.pixM # Get pixel size for each chunk
         for i in maxPing.index: # Calculate range (in meters) for each chunk
