@@ -131,6 +131,18 @@ def map_master_func(
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, sonObjs
 
+    ################################################
+    # Prepare output directory and update attributes
+    for son in mapObjs:
+        son.substrateDir = os.path.join(son.projDir, 'substrate')
+        son.mapSub = map_sub
+
+    outDir = son.substrateDir
+    if not os.path.exists(outDir):
+        os.mkdir(outDir)
+
+    del son
+
     #############################################
     # Determine if smoothed trackline was created
     if hasattr(mapObjs[0], 'smthTrkFile'):
@@ -148,7 +160,7 @@ def map_master_func(
     # Adapted from:
     # https://github.com/remisalmon/gpx_interpolate
 
-    smthTrk = True # For debugging
+    # smthTrk = True # For debugging
     if smthTrk:
         print("\nUsing existing smoothed trackline.")
     else:
@@ -251,7 +263,6 @@ def map_master_func(
 
         # Get chunk id for mapping substrate
         for son in mapObjs:
-            son.mapSub = map_sub
 
             # Get chunk id's
             chunks = son._getChunkID()
@@ -259,18 +270,9 @@ def map_master_func(
             # Doing moving window prediction, so remove first and last chunk
             chunks = chunks[1:-1]
 
-            # For testing
-            chunks = chunks[209:]
-            # chunks = [chunks[209]]
-
-            # Prepare output dir
-            outDir = os.path.join(son.projDir, 'substrate')
-            # outDir = os.path.join(son.outDir, 'substrate')
-            # try:
-            #     os.mkdir(outDir)
-            # except:
-            #     pass
-            son.substrateDir = outDir
+            # # For testing
+            # chunks = chunks[209:]
+            # # chunks = [chunks[209]]
 
             # Prepare model
             if map_sub ==1:
@@ -286,7 +288,7 @@ def map_master_func(
             #     print('\n\n\n\n****Chunk', c)
             #     son._detectSubstrate(c, USE_GPU)
             #     # sys.exit()
-            #     # break
+            #     break
             Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
 
             son._cleanup()
@@ -308,8 +310,6 @@ def map_master_func(
 
         # Get chunk id for mapping substrate
         for son in mapObjs:
-
-            son.substrateDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate/BOU_022_003_20210402_USM1_Rec00005/substrate'
 
             # Get Substrate npz's
             toMap = son._getSubstrateNpz()
@@ -353,8 +353,6 @@ def map_master_func(
                         toMap[k] = [v, e]
         del son
 
-        for c, f in toMap.items():
-            print(c, f)
 
         # Do rectification as portstarObj to eliminate NoData at NADIR
         print('\n\tMapping substrate classification. Processing', len(toMap), 'port and starboard pairs...')

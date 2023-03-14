@@ -96,8 +96,8 @@ threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total thre
 
 # Sonogram Exports
 tileFile = '.jpg'
-wcp = True #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
-wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 lbl_set = 1 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
@@ -115,8 +115,8 @@ pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
-rect_wcp = True #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcp = False #Export rectified tiles with water column present
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 

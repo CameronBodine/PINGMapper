@@ -1460,13 +1460,14 @@ class sonObj(object):
         return self
 
     # ======================================================================
-    def _WC_mask(self, i):
+    def _WC_mask(self, i, son=True):
         '''
 
         '''
         # Get sonMeta
-        # self._loadSonMeta()
-        self._getScanChunkSingle(i)
+        if son:
+            # self._loadSonMeta()
+            self._getScanChunkSingle(i)
 
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==i
@@ -1486,7 +1487,6 @@ class sonObj(object):
 
         # Load sonardata
         # self._loadSonChunk()
-        print(i, self.sonDat.shape)
 
         # Make zero mask
         wc_mask = np.zeros((self.sonDat.shape))
@@ -1615,13 +1615,14 @@ class sonObj(object):
         # return
 
     # ======================================================================
-    def _SHW_mask(self, i):
+    def _SHW_mask(self, i, son=True):
         '''
 
         '''
 
         # Get sonar data and shadow pix coordinates
-        self._getScanChunkSingle(i)
+        if son:
+            self._getScanChunkSingle(i)
         sonDat = self.sonDat
         shw_pix = self.shadow[i]
 
@@ -1712,7 +1713,7 @@ class sonObj(object):
 
         self.sonDat = sonDat
         del mask, reg
-        
+
         return max_r
 
     # ======================================================================

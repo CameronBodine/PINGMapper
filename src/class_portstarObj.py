@@ -279,8 +279,8 @@ class portstarObj(object):
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if len(map) > maxChunk:
-                    map = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
-                    subToMosaic = [list(itertools.chain(*i)) for i in map]
+                    subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                    # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
                     subToMosaic = [map]
 
@@ -1806,13 +1806,14 @@ class portstarObj(object):
             # Remove shadows
             # if son.remShadow:
             # Get mask
-            son._SHW_mask(chunk)
+            son._SHW_mask(chunk, son=False)
 
             # Mask out shadows
             son.sonDat = son.sonDat*son.shadowMask
 
             # Remove water column
             son._WCR_SRC(sonMeta)
+            
         del sonObjs
 
         portSub = self.port.sonDat

@@ -220,13 +220,13 @@ for i, datFile in enumerate(inFiles):
     print('\n===========================================')
     print('===========================================')
     print('***** READING *****')
-    # read_master_func(**params)
+    read_master_func(**params)
 
     if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
         print('***** RECTIFYING *****')
-        # rectify_master_func(**params)
+        rectify_master_func(**params)
 
     #==================================================
     if map_sub:
