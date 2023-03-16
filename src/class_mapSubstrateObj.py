@@ -478,9 +478,10 @@ class mapSubObj(rectObj):
             addZero = ''
 
         # Out directory
-        outDir = os.path.join(self.substrateDir, 'predict_npz')
-        if not os.path.exists(outDir):
-            os.mkdir(outDir)
+        outDir = self.outDir
+        # outDir = os.path.join(self.substrateDir, 'predict_npz')
+        # if not os.path.exists(outDir):
+        #     os.mkdir(outDir)
 
         #projName_substrate_beam_chunk.npz
         channel = self.beamName #ss_port, ss_star, etc.
@@ -533,10 +534,10 @@ class mapSubObj(rectObj):
             addZero = ''
 
         # Out directory
-        outDir = os.path.join(self.substrateDir, 'plots')
-
-        if not os.path.exists(outDir):
-            os.mkdir(outDir)
+        outDir = self.outDir
+        # outDir = os.path.join(self.substrateDir, 'plots')
+        # if not os.path.exists(outDir):
+        #     os.mkdir(outDir)
 
         #projName_substrate_beam_chunk.npz
         channel = self.beamName #ss_port, ss_star, etc.

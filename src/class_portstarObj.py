@@ -237,41 +237,42 @@ class portstarObj(object):
         maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
-        if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
-            # Locate port files
-            portPath = os.path.join(self.port.outDir, 'rect_wcp')
-            port = sorted(glob(os.path.join(portPath, '*.tif')))
+        if son:
+            if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
+                # Locate port files
+                portPath = os.path.join(self.port.outDir, 'rect_wcp')
+                port = sorted(glob(os.path.join(portPath, '*.tif')))
 
-            # Locate starboard files
-            starPath = os.path.join(self.star.outDir, 'rect_wcp')
-            star = sorted(glob(os.path.join(starPath, '*.tif')))
+                # Locate starboard files
+                starPath = os.path.join(self.star.outDir, 'rect_wcp')
+                star = sorted(glob(os.path.join(starPath, '*.tif')))
 
-            # Make multiple mosaics if number of input sonograms is greater than maxChunk
-            if len(port) > maxChunk:
-                port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-            else:
-                wcpToMosaic = [port + star]
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if len(port) > maxChunk:
+                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                else:
+                    wcpToMosaic = [port + star]
 
-        if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
-            # Locate port files
-            portPath = os.path.join(self.port.outDir, 'rect_wcr')
-            port = sorted(glob(os.path.join(portPath, '*.tif')))
+            if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
+                # Locate port files
+                portPath = os.path.join(self.port.outDir, 'rect_wcr')
+                port = sorted(glob(os.path.join(portPath, '*.tif')))
 
-            # Locate starboard files
-            starPath = os.path.join(self.star.outDir, 'rect_wcr')
-            star = sorted(glob(os.path.join(starPath, '*.tif')))
+                # Locate starboard files
+                starPath = os.path.join(self.star.outDir, 'rect_wcr')
+                star = sorted(glob(os.path.join(starPath, '*.tif')))
 
-            # Make multiple mosaics if number of input sonograms is greater than maxChunk
-            if len(port) > maxChunk:
-                port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-            else:
-                srcToMosaic = [port + star]
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if len(port) > maxChunk:
+                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                else:
+                    srcToMosaic = [port + star]
 
-        if not son:
+        else:
             if self.port.mapSub:
                 # Locate map files
                 mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
@@ -286,20 +287,22 @@ class portstarObj(object):
 
         # Create geotiff
         if mosaic == 1:
-            if self.port.rect_wcp:
-                _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
-            if self.port.rect_wcr:
-                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
-            if not son:
+            if son:
+                if self.port.rect_wcp:
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                if self.port.rect_wcr:
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
+            else:
                 if self.port.mapSub:
                     _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i) for i, sub in enumerate(subToMosaic))
         # Create vrt
         elif mosaic == 2:
-            if self.port.rect_wcp:
-                _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
-            if self.port.rect_wcr:
-                _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
-            if not son:
+            if son:
+                if self.port.rect_wcp:
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                if self.port.rect_wcr:
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
+            else:
                 if self.port.mapSub:
                     _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i) for i, sub in enumerate(subToMosaic))
 
@@ -1718,10 +1721,12 @@ class portstarObj(object):
     def _mapSubstrate(self, map_class_method, chunk, npzs):
         '''
         '''
-        outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
-        if not os.path.exists(outDir):
-            os.mkdir(outDir)
-        self.outDir = outDir
+        # Set output directory
+        # outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+        # if not os.path.exists(outDir):
+        #     os.mkdir(outDir)
+        # self.outDir = outDir
+        self.outDir = self.port.outDir
 
 
         # # Test on sonar first...easier to check
@@ -1813,7 +1818,7 @@ class portstarObj(object):
 
             # Remove water column
             son._WCR_SRC(sonMeta)
-            
+
         del sonObjs
 
         portSub = self.port.sonDat
@@ -1999,12 +2004,9 @@ class portstarObj(object):
         # Set minimum patch size (in meters)
         min_size = 28
         # out = self.port._filterLabel(out, min_size)
-
-        min_size = int(min_size/pix_m)
-        print(min_size)
+        # min_size = int(min_size/pix_m)
 
         min_size = int((out.shape[0] + out.shape[1])/2)
-        print(min_size)
 
         # Set nan's to zero
         out = np.nan_to_num(out, nan=0).astype('uint8')

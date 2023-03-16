@@ -259,10 +259,16 @@ def map_master_func(
     start_time = time.time()
 
     if map_sub > 0:
-        print('\n\nAutomatically predicting substrate liklihoods...')
+        print('\n\nAutomatically segmenting substrate...')
+
+        outDir = os.path.join(mapObjs[0].substrateDir, 'predict_npz')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
 
         # Get chunk id for mapping substrate
         for son in mapObjs:
+            # Set outDir
+            son.outDir = outDir
 
             # Get chunk id's
             chunks = son._getChunkID()
@@ -308,8 +314,15 @@ def map_master_func(
     if pltSubClass:
         print('\n\nExporting substrate plots...')
 
+        # Out directory
+        outDir = os.path.join(mapObjs[0].substrateDir, 'plots')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
         # Get chunk id for mapping substrate
         for son in mapObjs:
+            # Set outDir
+            son.outDir = outDir
 
             # Get Substrate npz's
             toMap = son._getSubstrateNpz()
@@ -335,11 +348,20 @@ def map_master_func(
     if map_sub > 0:
         print('\n\nMapping substrate classification...')
 
+        # Set output directory
+        outDir = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
         # Get each son's npz's
         for son in mapObjs:
-            npz = son._getSubstrateNpz()
+            # Set outDir
+            son.outDir = outDir
 
+            # Create dictionary to store port/star pairs
             if not 'toMap' in locals():
+                # Store substrate npz filenames
+                npz = son._getSubstrateNpz()
                 toMap = npz
             else:
                 for k, v in npz.items():
