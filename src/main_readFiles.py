@@ -59,6 +59,7 @@ def read_master_func(script='',
                      mosaic=False,
                      map_sub=0,
                      export_poly=False,
+                     map_predict=0,
                      pltSubClass=False,
                      map_class_method='max'):
 
@@ -645,6 +646,10 @@ def read_master_func(script='',
                 attMin = np.round(np.nanmin(df[att]), 3)
                 attMax = np.round(np.nanmax(df[att]), 3)
                 attAvg = np.round(np.nanmean(df[att]), 3)
+
+                # Store number of chunks
+                if (att == 'chunk_id'):
+                    son.chunkMax = attMax
 
             # Check if data are valid.
             if (att == "date") or (att == "time"):

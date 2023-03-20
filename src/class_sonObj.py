@@ -1507,8 +1507,7 @@ class sonObj(object):
 
 
     # ======================================================================
-    def _WCR_SRC(self,
-             sonMeta):
+    def _WCR_SRC(self, sonMeta, son=True):
         '''
         Slant range correction is the process of relocating sonar returns after
         water column removal by converting slant range distances to the bed into
@@ -1545,14 +1544,14 @@ class sonObj(object):
         bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
 
         # Initialize 2d array to store relocated sonar records
-        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(int)
+        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(np.float32)#.astype(int)
 
         #Iterate each ping
         for j in range(self.sonDat.shape[1]):
             depth = bedPick[j] # Get depth (in pixels) at nadir
-            # Create 1d array to store relocated bed pixels.  Set to -1 so we
+            # Create 1d array to store relocated bed pixels.  Set to -100 so we
             ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -1
+            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -100
             dataExtent = 0
             #Iterate each sonar/ping return
             for i in range(self.sonDat.shape[0]):
@@ -1567,14 +1566,17 @@ class sonObj(object):
 
             # Process of relocating bed pixels will introduce across track gaps
             ## in the array so we will interpolate over gaps to fill them.
-            pingDat[pingDat==-1] = np.nan
+            pingDat[pingDat==-100] = np.nan
             nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
             pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
 
             # Store relocated ping in output array
-            srcDat[:,j] = np.around(pingDat, 0).astype(int)
+            srcDat[:,j] = np.around(pingDat, 0)#.astype(int)
 
-        self.sonDat = srcDat # Store in class attribute for later use
+        if son:
+            self.sonDat = srcDat.astype(int) # Store in class attribute for later use
+        else:
+            self.sonDat = srcDat
         return self
 
     # ======================================================================
@@ -1627,7 +1629,8 @@ class sonObj(object):
         shw_pix = self.shadow[i]
 
         # Create a mask and work on that first, then mask sonDat
-        mask = np.where(sonDat>0, 1, 0)
+        # mask = np.where(sonDat>0, 1, 0)
+        mask = np.where(sonDat!=0, 1, 0)
 
         for k, val in shw_pix.items():
             for v in val:
@@ -1752,16 +1755,7 @@ class sonObj(object):
         data = self.sonDat.astype('uint8') # Get the sonar data
 
         # File name zero padding
-        if k < 10:
-            addZero = '0000'
-        elif k < 100:
-            addZero = '000'
-        elif k < 1000:
-            addZero = '00'
-        elif k < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        addZero = self._addZero(chunk)
 
         # Prepare output directory if it doesn't exist
         outDir = os.path.join(self.outDir, imgOutPrefix)
@@ -2019,6 +2013,22 @@ class sonObj(object):
 
         del self.sonMetaDF, df
         return chunks
+
+    # ======================================================================
+    def _addZero(self, chunk):
+        # Determine leading zeros to match naming convention
+        if chunk < 10:
+            addZero = '0000'
+        elif chunk < 100:
+            addZero = '000'
+        elif chunk < 1000:
+            addZero = '00'
+        elif chunk < 10000:
+            addZero = '0'
+        else:
+            addZero = ''
+
+        return addZero
 
 
     # ======================================================================

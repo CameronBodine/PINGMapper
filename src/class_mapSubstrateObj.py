@@ -218,23 +218,33 @@ class mapSubObj(rectObj):
         # Get sonar chunks, remove shadows and crop, remove water column and crop
         ######
         # Left
+        # if i==0, use i for left also
+        if i == 0:
+            l = i
+        else:
+            l = i-1
+
         # Get sonDat
-        self._getScanChunkSingle(i-1)
+        self._getScanChunkSingle(l)
 
         # Store left offset for left corner of center chunk, i.e. width of first chunk
         lOffL = self.sonDat.shape[1]
 
         # Crop shadows
-        _ = self._SHW_crop(i-1, False)
+        _ = self._SHW_crop(l, False)
 
         # Get sonMetaDF
-        lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m']].copy()
+        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy()
 
         # Remove water column and crop
         lMinDep = self._WCR_crop(lMetaDF)
 
         # Create copy of sonar data
         lSonDat = self.sonDat.copy()
+
+        # If using first chunk, flip horizontally
+        if l == 0:
+            lSonDat = np.fliplr(lSonDat)
 
         ########
         # Center
@@ -261,20 +271,29 @@ class mapSubObj(rectObj):
 
         ########
         # Right
+        # if i is last chunk, use i for right also
+        if i == self.chunkMax:
+            r = i
+        else:
+            r = i+1
         # Get sonDat
-        self._getScanChunkSingle(i+1)
+        self._getScanChunkSingle(r)
 
         # Crop shadows first
-        _ = self._SHW_crop(i+1, False)
+        _ = self._SHW_crop(r, False)
 
         # Get sonMetaDF
-        rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m']].copy()
+        rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy()
 
         # Remove water column and crop
         rMinDep = self._WCR_crop(rMetaDF)
 
         # Create copy of sonar data
         rSonDat = self.sonDat.copy()
+
+        # If using first chunk, flip horizontally
+        if r == self.pingMax:
+            rSonDat = np.fliplr(rSonDat)
 
         del self.sonDat
 

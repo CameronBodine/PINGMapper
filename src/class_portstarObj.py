@@ -1714,7 +1714,7 @@ class portstarObj(object):
         return i, port_pix, star_pix
 
     ############################################################################
-    # For Substrate Mapping                                                    #
+    # For Substrate & Prediction Mapping                                       #
     ############################################################################
 
     #=======================================================================
@@ -1835,8 +1835,161 @@ class portstarObj(object):
         # Do rectification
         self._rectify(mergeSub, chunk, 'map_substrate')
 
+
     #=======================================================================
-    def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False):
+    def _mapPredictions(self, imgOutPrefix, chunk, npzs):
+        '''
+        '''
+        # Set output directory
+        # outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+        # if not os.path.exists(outDir):
+        #     os.mkdir(outDir)
+        # self.outDir = outDir
+        self.outDir = self.port.outDir
+
+        # Get leading zeros for output name
+        addZero = self.port._addZero(chunk)
+
+
+        # # Test on sonar first...easier to check
+        # self.port._getScanChunkSingle(chunk)
+        # self.star._getScanChunkSingle(chunk)
+        # portSub = self.port.sonDat
+        # starSub = self.star.sonDat
+
+        # Load npz's
+        # Port is always first
+        portSub = np.load(npzs[0])
+        starSub = np.load(npzs[1])
+
+        self.port.sonDat = portSub['substrate'].astype('float32')
+        self.star.sonDat = starSub['substrate'].astype('float32')
+
+        # Store number of bands, i.e. classes
+        classes = self.port.sonDat.shape[2]
+
+        # Need to update sonObj attributes based on chunk
+        # Store in list to process in for loop
+        sonObjs = [self.port, self.star]
+
+        for son in sonObjs:
+
+            # Load sonMetaDF
+            if not hasattr(son, 'sonMetaDF'):
+                son._loadSonMeta()
+
+            sonMetaAll = son.sonMetaDF
+            isChunk = sonMetaAll['chunk_id']==chunk
+            sonMeta = sonMetaAll[isChunk].reset_index()
+
+            son.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+            son.headIdx = sonMeta['index'] # store byte offset per ping
+            son.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+
+            # ####################################
+            # # Do shadow and water column removal
+            #
+            # # if son.remShadow:
+            # # Get mask
+            # son._SHW_mask(chunk, son=False)
+            #
+            # # Mask out shadows
+            # son.sonDat = son.sonDat*son.shadowMask
+            #
+            # # Remove water column
+            # son._WCR_SRC(sonMeta)
+            #
+            # del sonObjs
+            #
+            # portSub = self.port.sonDat
+            # starSub = self.star.sonDat
+
+            # Store pred stack in variable
+            predStack = son.sonDat
+
+            # Iterate each classification layer
+            for c in range(classes):
+                print(c)
+                # Get class prediction
+                son.sonDat = predStack[:,:,c]
+
+                # Remove shadows
+                # Get mask
+                son._SHW_mask(chunk, son=False)
+
+                # Mask out shadows
+                son.sonDat = son.sonDat*son.shadowMask
+
+                # Remove Water Column
+                son._WCR_SRC(sonMeta)
+
+                # Update predStack
+                predStack[:,:,c] = son.sonDat
+
+            # Store in son.sonDat
+            son.sonDat = predStack
+
+        # Iterate each class again and:
+        for c in range(classes):
+            print(c)
+            # Get the pred stack
+            port = self.port.sonDat
+            star = self.star.sonDat
+            print('port shape', port.shape)
+
+            # Merge #
+            port = np.rot90(port[:,:,c], k=2, axes=(1,0))
+            port = np.fliplr(port)
+            merge = np.concatenate((port, star[:,:,c]), axis=0)
+
+            # Rectify #
+            rect_pred, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
+
+            # Stack #
+            if 'out' not in locals():
+                out = rect_pred
+            else:
+                out = np.dstack((out, rect_pred))
+
+        # Reorder so band count is first
+        # out = np.moveaxis(out, [0,1,2], [1,2,0])
+        out = np.rollaxis(out, axis=2)
+
+        # Check dtype #
+        
+        print(out.shape, np.nanmax(out), out)
+
+        #########################
+        # Export Rectified Raster
+        # Set output name
+        projName = os.path.split(self.port.projDir)[-1] # Get project name
+        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
+        gtiff = os.path.join(self.outDir, imgName)
+
+        # Export georectified image
+        with rasterio.open(
+            gtiff,
+            'w',
+            driver='GTiff',
+            height=out.shape[1],
+            width=out.shape[2],
+            count=classes,
+            dtype=out.dtype,
+            crs=epsg,
+            transform=transform,
+            compress='lzw'
+            ) as dst:
+                dst.nodata=np.nan
+                dst.write(out)
+                dst=None
+
+        return
+
+
+
+    #=======================================================================
+    def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False, return_rect=False):
         '''
         '''
 
@@ -1861,16 +2014,7 @@ class portstarObj(object):
             # yTrk = 'trk_utm_ns'
 
         # Determine leading zeros to match naming convention
-        if chunk < 10:
-            addZero = '0000'
-        elif chunk < 100:
-            addZero = '000'
-        elif chunk < 1000:
-            addZero = '00'
-        elif chunk < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        addZero = self.port._addZero(chunk)
 
         #################################
         # Prepare pixel (pix) coordinates
@@ -1986,6 +2130,7 @@ class portstarObj(object):
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
         # Warp image from the input shape to output shape
+        print('dat', np.nanmax(dat), dat)
         out = warp(dat.T,
                    tform.inverse,
                    output_shape=(outShape[1], outShape[0]),
@@ -1993,10 +2138,11 @@ class portstarObj(object):
                    cval=np.nan,
                    clip=False,
                    preserve_range=True)
+        print('out', np.nanmax(out), out)
 
         # Rotate 180 and flip
         # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-        out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+        out = np.flip(np.flip(np.flip(out,1),0),1)#.astype('uint8')
 
         ###
         # Do filtering here
@@ -2009,7 +2155,7 @@ class portstarObj(object):
         min_size = int((out.shape[0] + out.shape[1])/2)
 
         # Set nan's to zero
-        out = np.nan_to_num(out, nan=0).astype('uint8')
+        out = np.nan_to_num(out, nan=0)#.astype('uint8')
 
         # Label all regions
         lbl = label(out)
@@ -2030,33 +2176,38 @@ class portstarObj(object):
         # Recover classification with holes filled
         out = watershed(binary_filled, l, mask=binary_filled)
 
-        out = out.astype('uint8')
+        # Export geotiff or return rectified array
+        if return_rect:
+            return out, epsg, transform
 
-        #########################
-        # Export Rectified Raster
-        # Set output name
-        projName = os.path.split(self.port.projDir)[-1] # Get project name
-        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
-        gtiff = os.path.join(self.outDir, imgName)
+        else:
+            out = out.astype('uint8')
 
-        # Export georectified image
-        with rasterio.open(
-            gtiff,
-            'w',
-            driver='GTiff',
-            height=out.shape[0],
-            width=out.shape[1],
-            count=1,
-            dtype=out.dtype,
-            crs=epsg,
-            transform=transform,
-            compress='lzw'
-            ) as dst:
-                dst.nodata=0
-                dst.write(out,1)
-                dst=None
+            #########################
+            # Export Rectified Raster
+            # Set output name
+            projName = os.path.split(self.port.projDir)[-1] # Get project name
+            imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
+            gtiff = os.path.join(self.outDir, imgName)
 
-        return
+            # Export georectified image
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=out.shape[0],
+                width=out.shape[1],
+                count=1,
+                dtype=out.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw'
+                ) as dst:
+                    dst.nodata=0
+                    dst.write(out,1)
+                    dst=None
+
+            return
 
 
     #=======================================================================

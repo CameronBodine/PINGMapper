@@ -920,17 +920,18 @@ class rectObj(sonObj):
             xTrk = 'trk_utm_es'
             yTrk = 'trk_utm_ns'
 
-        # Determine leading zeros to match naming convention
-        if chunk < 10:
-            addZero = '0000'
-        elif chunk < 100:
-            addZero = '000'
-        elif chunk < 1000:
-            addZero = '00'
-        elif chunk < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        # # Determine leading zeros to match naming convention
+        # if chunk < 10:
+        #     addZero = '0000'
+        # elif chunk < 100:
+        #     addZero = '000'
+        # elif chunk < 1000:
+        #     addZero = '00'
+        # elif chunk < 10000:
+        #     addZero = '0'
+        # else:
+        #     addZero = ''
+        addZero = self._addZero(chunk)
 
         #################################
         # Prepare pixel (pix) coordinates

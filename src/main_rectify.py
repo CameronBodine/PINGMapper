@@ -63,6 +63,7 @@ def rectify_master_func(
                      mosaic=False,
                      map_sub=0,
                      export_poly=False,
+                     map_predict=0,
                      pltSubClass=False,
                      map_class_method='max'):
     '''
