@@ -492,9 +492,6 @@ def map_master_func(
                         toMap[k] = [v, e]
         del son
 
-        for k, v in toMap.items():
-            print('\n\n\n', k, v)
-
 
         # Do rectification as portstarObj to eliminate NoData at NADIR
         print('\n\tMapping substrate predictions. Processing', len(toMap), 'port and starboard pairs...')

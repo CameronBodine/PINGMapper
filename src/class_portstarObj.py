@@ -2015,6 +2015,9 @@ class portstarObj(object):
         # out = np.moveaxis(out, [0,1,2], [1,2,0])
         out = np.rollaxis(out, axis=2)
 
+        # Reduce to halft precision to limit file size
+        out = out.astype('float16')
+
         #########################
         # Export Rectified Raster
         # Set output name
