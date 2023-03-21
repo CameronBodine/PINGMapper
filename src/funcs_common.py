@@ -54,7 +54,7 @@ import datetime
 
 # from skimage.filters import median
 # from skimage.morphology import square
-from skimage.io import imsave
+from skimage.io import imsave, imread
 from skimage.measure import label, regionprops
 from skimage.segmentation import watershed
 from skimage.transform import resize

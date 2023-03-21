@@ -33,6 +33,7 @@ from funcs_model import *
 # import gdal
 from osgeo import gdal, ogr, osr
 from scipy.signal import savgol_filter
+from scipy import stats
 from skimage.transform import PiecewiseAffineTransform, warp
 from rasterio.transform import from_origin
 # from rasterio.enums import Resampling
@@ -273,7 +274,7 @@ class portstarObj(object):
                     srcToMosaic = [port + star]
 
         else:
-            if self.port.mapSub:
+            if self.port.map_sub:
                 # Locate map files
                 mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
                 map = sorted(glob(os.path.join(mapPath, '*.tif')))
@@ -285,6 +286,22 @@ class portstarObj(object):
                 else:
                     subToMosaic = [map]
 
+            if self.port.map_predict:
+                # Locate map files
+                if self.port.map_predict == 1:
+                    mapPath = os.path.join(self.port.substrateDir, 'map_probability_raster')
+                elif self.port.map_predict == 2:
+                    mapPath = os.path.join(self.port.substrateDir, 'map_logit_raster')
+                map = sorted(glob(os.path.join(mapPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if len(map) > maxChunk:
+                    predictToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                    # subToMosaic = [list(itertools.chain(*i)) for i in map]
+                else:
+                    predictToMosaic = [map]
+
+
         # Create geotiff
         if mosaic == 1:
             if son:
@@ -293,8 +310,15 @@ class portstarObj(object):
                 if self.port.rect_wcr:
                     _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
             else:
-                if self.port.mapSub:
+                if self.port.map_sub:
                     _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i) for i, sub in enumerate(subToMosaic))
+
+                if self.port.map_predict:
+                    # Determine number of bands, i.e. substrate classes
+                    bands = self._getBandCount(predictToMosaic[0][0])
+                    for i, pred in enumerate(predictToMosaic):
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], resampleAlg="lanczos") for c in range(1,bands+1))
+
         # Create vrt
         elif mosaic == 2:
             if son:
@@ -303,8 +327,14 @@ class portstarObj(object):
                 if self.port.rect_wcr:
                     _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
             else:
-                if self.port.mapSub:
+                if self.port.map_sub:
                     _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i) for i, sub in enumerate(subToMosaic))
+
+                if self.port.map_predict:
+                    # Determine number of bands, i.e. substrate classes
+                    bands = self._getBandCount(predictToMosaic[0][0])
+                    for i, pred in enumerate(predictToMosaic):
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], resampleAlg="lanczos") for c in range(1,bands+1))
 
         return self
 
@@ -313,7 +343,9 @@ class portstarObj(object):
     def _mosaicGtiff(self,
                      imgsToMosaic,
                      overview=True,
-                     i=0):
+                     i=0,
+                     bands=[1],
+                     resampleAlg='nearest'):
         '''
         Function to mosaic sonograms into a GeoTiff.
 
@@ -358,18 +390,24 @@ class portstarObj(object):
             filePrefix = os.path.split(self.port.projDir)[-1]
             if 'substrate' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
-                # outVRT = os.path.join(outDir, fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+            elif 'probablity' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_probability_mosaic')
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+            elif 'logit' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
             else:
                 # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
-            outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
 
             if not os.path.exists(outDir):
                 os.mkdir(outDir)
 
             # First built a vrt
-            vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Create GeoTiff from vrt
@@ -397,7 +435,9 @@ class portstarObj(object):
     def _mosaicVRT(self,
                    imgsToMosaic,
                    overview=True,
-                   i=0):
+                   i=0,
+                   bands=[1],
+                   resampleAlg='nearest'):
         '''
         Function to mosaic sonograms into a VRT (virtual raster table, see
         https://gdal.org/drivers/raster/vrt.html for more information).
@@ -437,16 +477,22 @@ class portstarObj(object):
             filePrefix = os.path.split(self.port.projDir)[-1]
             if 'substrate' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
-                # outVRT = os.path.join(outDir, fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+            elif 'probablity' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_probability_mosaic')
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+            elif 'logit' in fileSuffix:
+                outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
             else:
                 # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
-            outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
 
             if not os.path.exists(outDir):
                 os.mkdir(outDir)
             # Build VRT
-            vrt_options = gdal.BuildVRTOptions(resampleAlg='nearest')
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
@@ -460,7 +506,14 @@ class portstarObj(object):
         gc.collect()
         return outMosaic
 
-
+    #=======================================================================
+    def _getBandCount(self, img_file):
+        '''
+        '''
+        img = imread(img_file)
+        bands = img.shape[2]
+        del img
+        return bands
 
     ############################################################################
     # General Model Functions                                                  #
@@ -1837,7 +1890,7 @@ class portstarObj(object):
 
 
     #=======================================================================
-    def _mapPredictions(self, imgOutPrefix, chunk, npzs):
+    def _mapPredictions(self, map_predict, imgOutPrefix, chunk, npzs):
         '''
         '''
         # Set output directory
@@ -1864,6 +1917,11 @@ class portstarObj(object):
 
         self.port.sonDat = portSub['substrate'].astype('float32')
         self.star.sonDat = starSub['substrate'].astype('float32')
+
+        # Calculate probability
+        if map_predict == 1:
+            self.port.sonDat = tf.nn.softmax(self.port.sonDat).numpy()
+            self.star.sonDat = tf.nn.softmax(self.star.sonDat).numpy()
 
         # Store number of bands, i.e. classes
         classes = self.port.sonDat.shape[2]
@@ -1910,9 +1968,11 @@ class portstarObj(object):
 
             # Iterate each classification layer
             for c in range(classes):
-                print(c)
                 # Get class prediction
                 son.sonDat = predStack[:,:,c]
+
+                # # Do gaussian blur to smooth between prediction windows
+                # son.sonDat = gaussian(son.sonDat, sigma=3, preserve_range=True)
 
                 # Remove shadows
                 # Get mask
@@ -1922,7 +1982,7 @@ class portstarObj(object):
                 son.sonDat = son.sonDat*son.shadowMask
 
                 # Remove Water Column
-                son._WCR_SRC(sonMeta)
+                son._WCR_SRC(sonMeta, son=False)
 
                 # Update predStack
                 predStack[:,:,c] = son.sonDat
@@ -1932,11 +1992,10 @@ class portstarObj(object):
 
         # Iterate each class again and:
         for c in range(classes):
-            print(c)
+
             # Get the pred stack
             port = self.port.sonDat
             star = self.star.sonDat
-            print('port shape', port.shape)
 
             # Merge #
             port = np.rot90(port[:,:,c], k=2, axes=(1,0))
@@ -1955,10 +2014,6 @@ class portstarObj(object):
         # Reorder so band count is first
         # out = np.moveaxis(out, [0,1,2], [1,2,0])
         out = np.rollaxis(out, axis=2)
-
-        # Check dtype #
-        
-        print(out.shape, np.nanmax(out), out)
 
         #########################
         # Export Rectified Raster
@@ -2130,7 +2185,6 @@ class portstarObj(object):
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
         # Warp image from the input shape to output shape
-        print('dat', np.nanmax(dat), dat)
         out = warp(dat.T,
                    tform.inverse,
                    output_shape=(outShape[1], outShape[0]),
@@ -2138,49 +2192,48 @@ class portstarObj(object):
                    cval=np.nan,
                    clip=False,
                    preserve_range=True)
-        print('out', np.nanmax(out), out)
 
         # Rotate 180 and flip
         # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
         out = np.flip(np.flip(np.flip(out,1),0),1)#.astype('uint8')
-
-        ###
-        # Do filtering here
-        ###
-        # Set minimum patch size (in meters)
-        min_size = 28
-        # out = self.port._filterLabel(out, min_size)
-        # min_size = int(min_size/pix_m)
-
-        min_size = int((out.shape[0] + out.shape[1])/2)
-
-        # Set nan's to zero
-        out = np.nan_to_num(out, nan=0)#.astype('uint8')
-
-        # Label all regions
-        lbl = label(out)
-
-        # First set small objects to background value (0)
-        noSmall = remove_small_objects(lbl, min_size)
-
-        # Punch holes in original label
-        holes = ~(noSmall==0)
-
-        l = out*holes
-
-        # Remove small holes
-        # Convert l to binary
-        binary_objects = l.astype(bool)
-        # Remove the holes
-        binary_filled = remove_small_holes(binary_objects, min_size+100)
-        # Recover classification with holes filled
-        out = watershed(binary_filled, l, mask=binary_filled)
 
         # Export geotiff or return rectified array
         if return_rect:
             return out, epsg, transform
 
         else:
+            ###
+            # Do filtering here
+            ###
+            # Set minimum patch size (in meters)
+            # min_size = 28
+            # out = self.port._filterLabel(out, min_size)
+            # min_size = int(min_size/pix_m)
+
+            min_size = int((out.shape[0] + out.shape[1])/2)
+
+            # Set nan's to zero
+            out = np.nan_to_num(out, nan=0)#.astype('uint8')
+
+            # Label all regions
+            lbl = label(out)
+
+            # First set small objects to background value (0)
+            noSmall = remove_small_objects(lbl, min_size)
+
+            # Punch holes in original label
+            holes = ~(noSmall==0)
+
+            l = out*holes
+
+            # Remove small holes
+            # Convert l to binary
+            binary_objects = l.astype(bool)
+            # Remove the holes
+            binary_filled = remove_small_holes(binary_objects, min_size+100)
+            # Recover classification with holes filled
+            out = watershed(binary_filled, l, mask=binary_filled)
+
             out = out.astype('uint8')
 
             #########################

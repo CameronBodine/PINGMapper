@@ -136,7 +136,7 @@ def map_master_func(
     # Prepare output directory and update attributes
     for son in mapObjs:
         son.substrateDir = os.path.join(son.projDir, 'substrate')
-        son.mapSub = map_sub
+        son.map_sub = map_sub
 
     outDir = son.substrateDir
     if not os.path.exists(outDir):
@@ -279,7 +279,7 @@ def map_master_func(
     #
     #         # For testing
     #         # chunks = chunks[209:]
-    #         chunks = [chunks[-1]]
+    #         # chunks = [chunks[-1]]
     #
     #         # Prepare model
     #         if map_sub ==1:
@@ -307,7 +307,7 @@ def map_master_func(
     #     gc.collect()
     #     print("Done!")
     #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-
+    #
     # ############################################################################
     # # Fot Substrate Plotting                                                   #
     # ############################################################################
@@ -387,6 +387,7 @@ def map_master_func(
     #     #     sys.exit()
     #
     #     Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+    #     del toMap
     #
     # ############################################################################
     # # For Substrate Mosaic                                                     #
@@ -442,90 +443,103 @@ def map_master_func(
     #      print("Time (s):", round(time.time() - start_time, ndigits=1))
     #      gc.collect()
     #      printUsage()
-
+    #
     # del psObj
-
-    ############################################################################
-    # For Prediction Mapping                                                   #
-    ############################################################################
-    printUsage()
-
-    start_time = time.time()
-
-    if map_predict > 0:
-        if map_predict == 1:
-            a = 'probablity'
-        else:
-            a = 'logit'
-        print('\n\nMapping substrate prediction ***{}***...'.format(a.upper()))
-
-        # Set output directory
-        outDir = os.path.join(mapObjs[0].substrateDir, 'map_'+a+'_raster')
-        if not os.path.exists(outDir):
-            os.mkdir(outDir)
-
-        # Get each son's npz's
-        for son in mapObjs:
-            # Set outDir
-            son.outDir = outDir
-
-            # Create dictionary to store port/star pairs
-            if not 'toMap' in locals():
-                # Store substrate npz filenames
-                npz = son._getSubstrateNpz()
-                toMap = npz
-            else:
-                for k, v in npz.items():
-                    # Get existing npz file
-                    e = toMap[k]
-
-                    # Add existing and new npz as list. Add port as first element
-                    if 'port' in e:
-                        toMap[k] = [e, v]
-                    else:
-                        toMap[k] = [v, e]
-        del son
-
-
-        # Do rectification as portstarObj to eliminate NoData at NADIR
-        print('\n\tMapping substrate predictions. Processing', len(toMap), 'port and starboard pairs...')
-        # Create portstarObj
-        psObj = portstarObj(mapObjs)
-
-        # for c, f in toMap.items():
-        #     psObj._mapSubstrate(map_class_method, c, f)
-        #     sys.exit()
-
-        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)('map_'+a, c, f) for c, f in toMap.items())
-
-    # ############################################################################
-    # # For Substrate Mosaic                                                     #
-    # ############################################################################
     #
-    # overview = True # False will reduce overall file size, but reduce performance in a GIS
-    # if map_sub > 0 and mosaic > 0:
-    #     start_time = time.time()
-    #     print("\nMosaicing GeoTiffs...")
+    # ############################################################################
+    # # For Prediction Mapping                                                   #
+    # ############################################################################
+    # printUsage()
     #
-    #     # Create portstar object
+    # start_time = time.time()
+    #
+    # if map_predict > 0:
+    #     if map_predict == 1:
+    #         a = 'probablity'
+    #     else:
+    #         a = 'logit'
+    #     print('\n\nMapping substrate prediction as ***{}***...'.format(a.upper()))
+    #
+    #     # Set output directory
+    #     outDir = os.path.join(mapObjs[0].substrateDir, 'map_'+a+'_raster')
+    #     if not os.path.exists(outDir):
+    #         os.mkdir(outDir)
+    #
+    #     # Get each son's npz's
+    #     for son in mapObjs:
+    #         # Set outDir
+    #         son.outDir = outDir
+    #
+    #         # Create dictionary to store port/star pairs
+    #         if not 'toMap' in locals():
+    #             # Store substrate npz filenames
+    #             npz = son._getSubstrateNpz()
+    #             toMap = npz
+    #         else:
+    #             for k, v in npz.items():
+    #                 # Get existing npz file
+    #                 e = toMap[k]
+    #
+    #                 # Add existing and new npz as list. Add port as first element
+    #                 if 'port' in e:
+    #                     toMap[k] = [e, v]
+    #                 else:
+    #                     toMap[k] = [v, e]
+    #     del son
+    #
+    #     for k, v in toMap.items():
+    #         print('\n\n\n', k, v)
+    #
+    #
+    #     # Do rectification as portstarObj to eliminate NoData at NADIR
+    #     print('\n\tMapping substrate predictions. Processing', len(toMap), 'port and starboard pairs...')
+    #     # Create portstarObj
     #     psObj = portstarObj(mapObjs)
     #
-    #     # Switch off rect_wcp and rect_wcr
-    #     psObj.port.rect_wcp = False
-    #     psObj.port.rect_wcr = False
+    #     # for c, f in toMap.items():
+    #     #     psObj._mapSubstrate(map_class_method, c, f)
+    #     #     sys.exit()
     #
-    #     # Create the mosaic
-    #     psObj._createMosaic(mosaic, overview, threadCnt, False)
-    #
-    #     # Revert rect_wcp and rect_wcr
-    #     psObj.port.rect_wcp = rect_wcp
-    #     psObj.port.rect_wcr = rect_wcr
-    #
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     del psObj
-    #     gc.collect()
-    #     printUsage()
+    #     Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in toMap.items())
+
+
+
+
+    # Needs to go in above
+    for son in mapObjs:
+        son.map_predict = map_predict
+
+
+    ############################################################################
+    # For Substrate Mosaic                                                     #
+    ############################################################################
+
+    overview = True # False will reduce overall file size, but reduce performance in a GIS
+    if map_predict > 0 and mosaic > 0:
+        start_time = time.time()
+        print("\nMosaicing GeoTiffs...")
+
+        # Create portstar object
+        psObj = portstarObj(mapObjs)
+
+        # Switch off rect_wcp, rect_wcr, and mapSub
+        psObj.port.rect_wcp = False
+        psObj.port.rect_wcr = False
+        psObj.port.map_sub = False
+
+        # Create the mosaic
+        psObj._createMosaic(1, overview, threadCnt, False)
+
+        # Revert rect_wcp, rect_wcr, mapSub
+        psObj.port.rect_wcp = rect_wcp
+        psObj.port.rect_wcr = rect_wcr
+        psObj.port.map_sub = map_sub
+
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        del psObj
+        gc.collect()
+        printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

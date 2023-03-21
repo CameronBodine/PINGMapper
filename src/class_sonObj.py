@@ -1549,9 +1549,9 @@ class sonObj(object):
         #Iterate each ping
         for j in range(self.sonDat.shape[1]):
             depth = bedPick[j] # Get depth (in pixels) at nadir
-            # Create 1d array to store relocated bed pixels.  Set to -100 so we
+            # Create 1d array to store relocated bed pixels.  Set to -9999 so we
             ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -100
+            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -9999
             dataExtent = 0
             #Iterate each sonar/ping return
             for i in range(self.sonDat.shape[0]):
@@ -1566,12 +1566,15 @@ class sonObj(object):
 
             # Process of relocating bed pixels will introduce across track gaps
             ## in the array so we will interpolate over gaps to fill them.
-            pingDat[pingDat==-100] = np.nan
+            pingDat[pingDat==-9999] = np.nan
             nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
             pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
 
             # Store relocated ping in output array
-            srcDat[:,j] = np.around(pingDat, 0)#.astype(int)
+            if son:
+                srcDat[:,j] = np.around(pingDat, 0)#.astype(int)
+            else:
+                srcDat[:,j] = pingDat
 
         if son:
             self.sonDat = srcDat.astype(int) # Store in class attribute for later use
