@@ -88,12 +88,13 @@ pltBedPick = False #Plot bedpick on sonogram
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
 rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
 map_sub=1
 export_poly=True
+map_predict=1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
 pltSubClass=True
 map_class_method='max'
 
@@ -120,7 +121,7 @@ inFiles = sorted(inFiles, reverse=False)
 for i, f in enumerate(inFiles):
     print(i, ":", f)
 
-
+errorRecording = []
 for i, datFile in enumerate(inFiles):
     # try:
     start_time = time.time()
@@ -203,41 +204,48 @@ for i, datFile in enumerate(inFiles):
         'mosaic':mosaic,
         'map_sub':map_sub,
         'export_poly':export_poly,
+        'map_predict':map_predict,
         'pltSubClass':pltSubClass,
         'map_class_method':map_class_method
         }
 
-    # try:
-    print('sonPath',sonPath)
-    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-    print('+++++++++++++++++++++++++++++++++++++++++++')
-    print('***** Working On *****')
-    print('Index:', i)
-    print('Output Director:', projDir)
-    print('Input File:', humFile)
-    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+    try:
+        print('sonPath',sonPath)
+        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+        print('+++++++++++++++++++++++++++++++++++++++++++')
+        print('***** Working On *****')
+        print('Index:', i)
+        print('Output Director:', projDir)
+        print('Input File:', humFile)
+        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-    print('\n===========================================')
-    print('===========================================')
-    print('***** READING *****')
-    read_master_func(**params)
-
-    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** RECTIFYING *****')
-        rectify_master_func(**params)
+        print('***** READING *****')
+        # read_master_func(**params)
 
-    #==================================================
-    if map_sub:
-        print('\n===========================================')
-        print('===========================================')
-        print('***** MAPPING SUBSTRATE *****')
-        print("working on "+projDir)
-        map_master_func(**params)
+        if rect_wcp or rect_wcr:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** RECTIFYING *****')
+            rectify_master_func(**params)
 
-    # except:
-    #     print('Could not process:', datFile)
+        #==================================================
+        if map_sub:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
+
+    except:
+        print('Could not process:', datFile)
+        errorRecording.append(projDir)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+if len(errorRecording) > 0:
+    print('\n\nUnable to process the following:')
+    for d in errorRecording:
+        print('\n',d)
