@@ -393,10 +393,10 @@ class portstarObj(object):
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             elif 'probablity' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_probability_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             elif 'logit' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
                 # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
@@ -480,10 +480,10 @@ class portstarObj(object):
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             elif 'probablity' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_probability_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             elif 'logit' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0])+'_'+fileSuffix)
+                outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
                 # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')

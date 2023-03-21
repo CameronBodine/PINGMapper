@@ -359,10 +359,11 @@ def map_master_func(
     #         # Set outDir
     #         son.outDir = outDir
     #
+    #         # Store substrate npz filenames
+    #         npz = son._getSubstrateNpz()
+    #
     #         # Create dictionary to store port/star pairs
     #         if not 'toMap' in locals():
-    #             # Store substrate npz filenames
-    #             npz = son._getSubstrateNpz()
     #             toMap = npz
     #         else:
     #             for k, v in npz.items():
@@ -473,10 +474,11 @@ def map_master_func(
             # Store map_predict
             son.map_predict = map_predict
 
+            # Store substrate npz filenames
+            npz = son._getSubstrateNpz()
+
             # Create dictionary to store port/star pairs
             if not 'toMap' in locals():
-                # Store substrate npz filenames
-                npz = son._getSubstrateNpz()
                 toMap = npz
             else:
                 for k, v in npz.items():
