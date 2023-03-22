@@ -1633,7 +1633,8 @@ class sonObj(object):
 
         # Create a mask and work on that first, then mask sonDat
         # mask = np.where(sonDat>0, 1, 0)
-        mask = np.where(sonDat!=0, 1, 0)
+        # mask = np.where(sonDat!=0, 1, 0)
+        mask = np.ones(sonDat.shape)
 
         for k, val in shw_pix.items():
             for v in val:

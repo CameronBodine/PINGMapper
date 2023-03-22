@@ -456,7 +456,7 @@ def map_master_func(
 
     if map_predict > 0:
         if map_predict == 1:
-            a = 'probablity'
+            a = 'probability'
         else:
             a = 'logit'
         print('\n\nMapping substrate prediction as ***{}***...'.format(a.upper()))
@@ -499,20 +499,27 @@ def map_master_func(
         psObj = portstarObj(mapObjs)
 
         # for c, f in toMap.items():
-        #     psObj._mapSubstrate(map_class_method, c, f)
+        #     psObj._mapPredictions(map_predict, 'map_'+a, c, f)
         #     sys.exit()
 
         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in toMap.items())
+        del toMap
 
 
     ############################################################################
     # For Substrate Mosaic                                                     #
     ############################################################################
 
+    # For debug
+    map_predict = 1
+
     overview = True # False will reduce overall file size, but reduce performance in a GIS
     if map_predict > 0 and mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
+
+        for son in mapObjs:
+            son.map_predict = map_predict
 
         # Create portstar object
         psObj = portstarObj(mapObjs)

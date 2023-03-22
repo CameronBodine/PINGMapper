@@ -293,6 +293,7 @@ class portstarObj(object):
                 elif self.port.map_predict == 2:
                     mapPath = os.path.join(self.port.substrateDir, 'map_logit_raster')
                 map = sorted(glob(os.path.join(mapPath, '*.tif')))
+                print(mapPath)
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if len(map) > maxChunk:
@@ -300,7 +301,6 @@ class portstarObj(object):
                     # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
                     predictToMosaic = [map]
-
 
         # Create geotiff
         if mosaic == 1:
@@ -391,7 +391,7 @@ class portstarObj(object):
             if 'substrate' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
-            elif 'probablity' in fileSuffix:
+            elif 'probability' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_probability_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             elif 'logit' in fileSuffix:
@@ -1918,10 +1918,36 @@ class portstarObj(object):
         self.port.sonDat = portSub['substrate'].astype('float32')
         self.star.sonDat = starSub['substrate'].astype('float32')
 
-        # Calculate probability
+        # For debugging
+        # self.port.sonDat = portSub['substrate'].astype('float32')[:,:,1:3]
+        # self.star.sonDat = starSub['substrate'].astype('float32')[:,:,1:3]
+
+        # Calculate probability, rescale by constant multiplyer, and change dtype
         if map_predict == 1:
-            self.port.sonDat = tf.nn.softmax(self.port.sonDat).numpy()
-            self.star.sonDat = tf.nn.softmax(self.star.sonDat).numpy()
+            # Set data type and nodata value
+            data_type = 'uint16'
+            # bg_val = np.iinfo(data_type).max # background value (masked portions of sonar)
+            no_data = 0 # no data value (square area around rect data)
+
+            # Calculate probablity
+            port = tf.nn.softmax(self.port.sonDat).numpy()
+            star = tf.nn.softmax(self.star.sonDat).numpy()
+
+            # Rescale to digital number
+            dn = 10000
+            port = port * dn
+            star = star * dn
+
+            # Round to whole number
+            port = np.around(port, 0)
+            star = np.around(star, 0)
+
+            # port = np.nan_to_num(port, nan=no_data)
+            # star = np.nan_to_num(star, nan=no_data)
+
+            # Convert and store data
+            self.port.sonDat = port.astype(data_type)
+            self.star.sonDat = star.astype(data_type)
 
         # Store number of bands, i.e. classes
         classes = self.port.sonDat.shape[2]
@@ -2003,7 +2029,24 @@ class portstarObj(object):
             merge = np.concatenate((port, star[:,:,c]), axis=0)
 
             # Rectify #
-            rect_pred, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
+            # rect_pred, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
+            # Try only passing first class to _rectify() to attempt speedup
+            if 'transform' not in locals():
+                rect_pred, tform, outShape, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
+            else:
+                # Use existing tranformation matrix to rectify remaining classes
+                # Warp image from the input shape to output shape
+                rect_pred = warp(merge.T,
+                                 tform.inverse,
+                                 output_shape=(outShape[1], outShape[0]),
+                                 mode='constant',
+                                 cval=np.nan,
+                                 clip=False,
+                                 preserve_range=True)
+
+                # Rotate 180 and flip
+                # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+                rect_pred = np.flip(np.flip(np.flip(rect_pred,1),0),1)#.astype('uint8')
 
             # Stack #
             if 'out' not in locals():
@@ -2015,8 +2058,10 @@ class portstarObj(object):
         # out = np.moveaxis(out, [0,1,2], [1,2,0])
         out = np.rollaxis(out, axis=2)
 
-        # Reduce to halft precision to limit file size
-        out = out.astype('float16')
+        # Ensure output is right data type and nan's converted to no_data
+        # out = np.nan_to_num(out, nan=bg_val)
+        out = out.astype(data_type)
+        # out = np.nan_to_num(out, nan=no_data)
 
         #########################
         # Export Rectified Raster
@@ -2038,7 +2083,7 @@ class portstarObj(object):
             transform=transform,
             compress='lzw'
             ) as dst:
-                dst.nodata=np.nan
+                dst.nodata=no_data
                 dst.write(out)
                 dst=None
 
@@ -2202,7 +2247,7 @@ class portstarObj(object):
 
         # Export geotiff or return rectified array
         if return_rect:
-            return out, epsg, transform
+            return out, tform, outShape, epsg, transform
 
         else:
             ###

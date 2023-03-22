@@ -118,6 +118,8 @@ for root, dirs, files in os.walk(inDir):
 
 inFiles = sorted(inFiles, reverse=False)
 
+inFiles = inFiles[1:]
+
 for i, f in enumerate(inFiles):
     print(i, ":", f)
 
