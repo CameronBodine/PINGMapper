@@ -47,8 +47,11 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
 # outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
 
-inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
-outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
+inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\WBL'
+outDir = r'Z:\MAISRC_zebra mussel project\Phase III\SideScanMapping\Processed_Data_csb\AutoSubstrate'
+
+# inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+# outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
 
 inDir = os.path.normpath(inDir)
 outDir = os.path.normpath(outDir)
@@ -94,7 +97,7 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 # Substrate Mapping
 map_sub=1
 export_poly=True
-map_predict=1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+map_predict=0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
 pltSubClass=True
 map_class_method='max'
 
@@ -117,8 +120,6 @@ for root, dirs, files in os.walk(inDir):
 #             inFiles.append(os.path.join(root, file))
 
 inFiles = sorted(inFiles, reverse=False)
-
-inFiles = inFiles[1:]
 
 for i, f in enumerate(inFiles):
     print(i, ":", f)
@@ -150,31 +151,31 @@ for i, datFile in enumerate(inFiles):
     # location = os.path.dirname(humFile).split(os.sep)[-1]
     # projName = location+'_'+recName
 
-    # # WBL
-    # recName = os.path.basename(humFile).split('.')[0]
-    # date = os.path.dirname(humFile).split(os.sep)[-1]
-    # date = date.replace('-', '')
-    # location = os.path.dirname(humFile).split(os.sep)[-2]
-    # projName = location+'_'+date+'_'+recName
+    # WBL
+    recName = os.path.basename(humFile).split('.')[0]
+    date = os.path.dirname(humFile).split(os.sep)[-1]
+    date = date.replace('-', '')
+    location = os.path.dirname(humFile).split(os.sep)[-2]
+    projName = location+'_'+date+'_'+recName
 
-    # GS Exports
-    recName = os.path.basename(humFile.split('.')[0])
-    try:
-        upRKM = recName.split('_')[0]
-        dnRKM = recName.split('_')[1]
-        recNum = recName.split('_')[2]
-    except:
-        upRKM = 'XXX'
-        dnRKM = 'XXX'
-        recNum = recName
-
-    riverDate = os.path.dirname(humFile).split(os.sep)[-1]
-    river = riverDate.split('_')[0]
-    date = riverDate.split('_')[1]
-    unit = riverDate.split('_')[2]
-
-    projName = river+'_'+upRKM+'_'+dnRKM+'_'+date+'_'+unit+'_'+recNum
-    print(projName)
+    # # GS Exports
+    # recName = os.path.basename(humFile.split('.')[0])
+    # try:
+    #     upRKM = recName.split('_')[0]
+    #     dnRKM = recName.split('_')[1]
+    #     recNum = recName.split('_')[2]
+    # except:
+    #     upRKM = 'XXX'
+    #     dnRKM = 'XXX'
+    #     recNum = recName
+    #
+    # riverDate = os.path.dirname(humFile).split(os.sep)[-1]
+    # river = riverDate.split('_')[0]
+    # date = riverDate.split('_')[1]
+    # unit = riverDate.split('_')[2]
+    #
+    # projName = river+'_'+upRKM+'_'+dnRKM+'_'+date+'_'+unit+'_'+recNum
+    # print(projName)
 
     projDir = os.path.join(outDir, projName)
 
@@ -245,7 +246,7 @@ for i, datFile in enumerate(inFiles):
         errorRecording.append(projDir)
 
     gc.collect()
-    print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+    print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)), '\n\n\n')
 
 if len(errorRecording) > 0:
     print('\n\nUnable to process the following:')
