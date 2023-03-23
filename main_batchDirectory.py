@@ -32,6 +32,7 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
 import time
 import datetime
@@ -81,6 +82,14 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
+# Substrate Mapping
+map_sub = 1 # Automatically map substrate: 0==False; 1==True
+export_poly = True # Convert substrate maps to shapefile
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions
+map_class_method = 'max' # 'max' only current option
+
+
 # Find all DAT and SON files in all subdirectories of inDir
 inFiles=[]
 for root, dirs, files in os.walk(inDir):
@@ -128,7 +137,12 @@ for datFile in inFiles:
             'pltBedPick':pltBedPick,
             'rect_wcp':rect_wcp,
             'rect_wcr':rect_wcr,
-            'mosaic':mosaic
+            'mosaic':mosaic,
+            'map_sub':map_sub,
+            'export_poly':export_poly,
+            'map_predict':map_predict,
+            'pltSubClass':pltSubClass,
+            'map_class_method':map_class_method
             }
 
         print('sonPath',sonPath)
@@ -150,6 +164,14 @@ for datFile in inFiles:
             print('***** RECTIFYING *****')
             rectify_master_func(**params)
             # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+
+        #==================================================
+        if map_sub:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
 
     except:
         print('Could not process:', datFile)

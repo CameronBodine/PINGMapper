@@ -33,6 +33,7 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
 # Get processing script's dir so we can save it to file
 scriptDir = os.getcwd()
@@ -86,6 +87,14 @@ rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
+
+# Substrate Mapping
+map_sub = 1 # Automatically map substrate: 0==False; 1==True
+export_poly = True # Convert substrate maps to shapefile
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions
+map_class_method = 'max' # 'max' only current option
+
 #################
 #################
 
@@ -120,7 +129,12 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
-    'mosaic':mosaic
+    'mosaic':mosaic,
+    'map_sub':map_sub,
+    'export_poly':export_poly,
+    'map_predict':map_predict,
+    'pltSubClass':pltSubClass,
+    'map_class_method':map_class_method
     }
 #==================================================
 print('\n===========================================')

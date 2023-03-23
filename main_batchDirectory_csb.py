@@ -95,11 +95,11 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-map_sub=1
-export_poly=True
-map_predict=0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
-pltSubClass=True
-map_class_method='max'
+map_sub = 1 # Automatically map substrate: 0==False; 1==True
+export_poly = True # Convert substrate maps to shapefile
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions
+map_class_method = 'max' # 'max' only current option
 
 
 # Find all DAT and SON files in all subdirectories of inDir

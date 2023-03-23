@@ -118,6 +118,14 @@ rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
+
+# Substrate Mapping
+map_sub = 1 # Automatically map substrate: 0==False; 1==True
+export_poly = True # Convert substrate maps to shapefile
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions
+map_class_method = 'max' # 'max' only current option
+
 #################
 #################
 
@@ -152,7 +160,12 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
-    'mosaic':mosaic
+    'mosaic':mosaic,
+    'map_sub':map_sub,
+    'export_poly':export_poly,
+    'map_predict':map_predict,
+    'pltSubClass':pltSubClass,
+    'map_class_method':map_class_method
     }
 #==================================================
 print('\n===========================================')
@@ -170,6 +183,14 @@ if rect_wcp or rect_wcr:
     print("working on "+projDir)
     rectify_master_func(**params)
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+
+#==================================================
+if map_sub:
+    print('\n===========================================')
+    print('===========================================')
+    print('***** MAPPING SUBSTRATE *****')
+    print("working on "+projDir)
+    map_master_func(**params)
 
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

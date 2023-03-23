@@ -156,9 +156,12 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-map_sub=1
-pltSubClass=True
-map_class_method='max'
+map_sub = 1 # Automatically map substrate: 0==False; 1==True
+export_poly = True # Convert substrate maps to shapefile
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions
+map_class_method = 'max' # 'max' only current option
+
 
 #################
 #################
@@ -196,6 +199,8 @@ params = {
     'rect_wcr':rect_wcr,
     'mosaic':mosaic,
     'map_sub':map_sub,
+    'export_poly':export_poly,
+    'map_predict':map_predict,
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method
     }
@@ -204,7 +209,7 @@ print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-# read_master_func(**params)
+read_master_func(**params)
 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
