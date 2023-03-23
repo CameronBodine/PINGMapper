@@ -1759,7 +1759,7 @@ class sonObj(object):
         data = self.sonDat.astype('uint8') # Get the sonar data
 
         # File name zero padding
-        addZero = self._addZero(chunk)
+        addZero = self._addZero(k)
 
         # Prepare output directory if it doesn't exist
         outDir = os.path.join(self.outDir, imgOutPrefix)

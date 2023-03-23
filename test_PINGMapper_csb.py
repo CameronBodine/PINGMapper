@@ -99,13 +99,13 @@ tileFile = '.jpg'
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
 wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
-lbl_set = 1 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
-remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
@@ -123,6 +123,7 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 # Substrate Mapping
 map_sub=1
 export_poly=True
+map_predict=1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
 pltSubClass=True
 map_class_method='max'
 
@@ -163,6 +164,7 @@ params = {
     'mosaic':mosaic,
     'map_sub':map_sub,
     'export_poly':export_poly,
+    'map_predict':map_predict,
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method
     }
@@ -171,7 +173,7 @@ print('\n===========================================')
 print('===========================================')
 print('***** READING *****')
 print("working on "+projDir)
-# read_master_func(**params)
+read_master_func(**params)
 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
@@ -180,7 +182,7 @@ if rect_wcp or rect_wcr:
     print('===========================================')
     print('***** RECTIFYING *****')
     print("working on "+projDir)
-    # rectify_master_func(**params)
+    rectify_master_func(**params)
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
 #==================================================

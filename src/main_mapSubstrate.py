@@ -250,145 +250,145 @@ def map_master_func(
         gc.collect()
         printUsage()
 
-    # ############################################################################
-    # # For Substrate Prediction                                                 #
-    # ############################################################################
-    #
-    # if not smthTrk:
-    #     printUsage()
-    #
-    # start_time = time.time()
-    #
-    # if map_sub > 0:
-    #     print('\n\nAutomatically segmenting substrate...')
-    #
-    #     outDir = os.path.join(mapObjs[0].substrateDir, 'predict_npz')
-    #     if not os.path.exists(outDir):
-    #         os.mkdir(outDir)
-    #
-    #     # Get chunk id for mapping substrate
-    #     for son in mapObjs:
-    #         # Set outDir
-    #         son.outDir = outDir
-    #
-    #         # Get chunk id's
-    #         chunks = son._getChunkID()
-    #
-    #         # Doing moving window prediction, so remove first and last chunk
-    #         # chunks = chunks[1:-1]
-    #
-    #         # For testing
-    #         # chunks = chunks[209:]
-    #         # chunks = [chunks[-1]]
-    #
-    #         # Prepare model
-    #         if map_sub ==1:
-    #             # Load model weights
-    #             # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-    #             # son.configfile = son.weights.replace('.h5', '.json')
-    #             son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
-    #             son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
-    #
-    #         # Do prediction (make parallel later)
-    #         print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
-    #         # for c in chunks:
-    #         #     print('\n\n\n\n****Chunk', c)
-    #         #     son._detectSubstrate(c, USE_GPU)
-    #         #     # sys.exit()
-    #         #     break
-    #         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
-    #
-    #         son._cleanup()
-    #         del chunks
-    #         # break
-    #
-    #
-    #     del son
-    #     gc.collect()
-    #     print("Done!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #
-    # ############################################################################
-    # # Fot Substrate Plotting                                                   #
-    # ############################################################################
-    #
-    # if pltSubClass:
-    #     print('\n\nExporting substrate plots...')
-    #
-    #     # Out directory
-    #     outDir = os.path.join(mapObjs[0].substrateDir, 'plots')
-    #     if not os.path.exists(outDir):
-    #         os.mkdir(outDir)
-    #
-    #     # Get chunk id for mapping substrate
-    #     for son in mapObjs:
-    #         # Set outDir
-    #         son.outDir = outDir
-    #
-    #         # Get Substrate npz's
-    #         toMap = son._getSubstrateNpz()
-    #
-    #         print('\n\tExporting substrate plots for', len(toMap), son.beamName, 'chunks:')
-    #
-    #         # Plot substrate classification
-    #         # for c, f in toMap.items():
-    #         #     print('\n\n\n\n****Chunk', c)
-    #         #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
-    #         # #     sys.exit()
-    #         # sys.exit()
-    #         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop) for c, f in toMap.items())
-    #         del toMap
-    #
-    # ############################################################################
-    # # For Substrate Mapping                                                    #
-    # ############################################################################
-    # printUsage()
-    #
-    # start_time = time.time()
-    #
-    # if map_sub > 0:
-    #     print('\n\nMapping substrate classification...')
-    #
-    #     # Set output directory
-    #     outDir = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
-    #     if not os.path.exists(outDir):
-    #         os.mkdir(outDir)
-    #
-    #     # Get each son's npz's
-    #     for son in mapObjs:
-    #         # Set outDir
-    #         son.outDir = outDir
-    #
-    #         # Store substrate npz filenames
-    #         npz = son._getSubstrateNpz()
-    #
-    #         # Create dictionary to store port/star pairs
-    #         if not 'toMap' in locals():
-    #             toMap = npz
-    #         else:
-    #             for k, v in npz.items():
-    #                 # Get existing npz file
-    #                 e = toMap[k]
-    #
-    #                 # Add existing and new npz as list. Add port as first element
-    #                 if 'port' in e:
-    #                     toMap[k] = [e, v]
-    #                 else:
-    #                     toMap[k] = [v, e]
-    #     del son
-    #
-    #
-    #     # Do rectification as portstarObj to eliminate NoData at NADIR
-    #     print('\n\tMapping substrate classification. Processing', len(toMap), 'port and starboard pairs...')
-    #     # Create portstarObj
-    #     psObj = portstarObj(mapObjs)
-    #
-    #     # for c, f in toMap.items():
-    #     #     psObj._mapSubstrate(map_class_method, c, f)
-    #     #     sys.exit()
-    #
-    #     Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
-    #     del toMap
+    ############################################################################
+    # For Substrate Prediction                                                 #
+    ############################################################################
+
+    if not smthTrk:
+        printUsage()
+
+    start_time = time.time()
+
+    if map_sub > 0:
+        print('\n\nAutomatically segmenting substrate...')
+
+        outDir = os.path.join(mapObjs[0].substrateDir, 'predict_npz')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
+        # Get chunk id for mapping substrate
+        for son in mapObjs:
+            # Set outDir
+            son.outDir = outDir
+
+            # Get chunk id's
+            chunks = son._getChunkID()
+
+            # Doing moving window prediction, so remove first and last chunk
+            # chunks = chunks[1:-1]
+
+            # For testing
+            # chunks = chunks[209:]
+            # chunks = [chunks[-1]]
+
+            # Prepare model
+            if map_sub ==1:
+                # Load model weights
+                # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
+                # son.configfile = son.weights.replace('.h5', '.json')
+                son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
+                son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+
+            # Do prediction (make parallel later)
+            print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+            # for c in chunks:
+            #     print('\n\n\n\n****Chunk', c)
+            #     son._detectSubstrate(c, USE_GPU)
+            #     # sys.exit()
+            #     break
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+
+            son._cleanup()
+            del chunks
+            # break
+
+
+        del son
+        gc.collect()
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+    ############################################################################
+    # Fot Substrate Plotting                                                   #
+    ############################################################################
+
+    if pltSubClass:
+        print('\n\nExporting substrate plots...')
+
+        # Out directory
+        outDir = os.path.join(mapObjs[0].substrateDir, 'plots')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
+        # Get chunk id for mapping substrate
+        for son in mapObjs:
+            # Set outDir
+            son.outDir = outDir
+
+            # Get Substrate npz's
+            toMap = son._getSubstrateNpz()
+
+            print('\n\tExporting substrate plots for', len(toMap), son.beamName, 'chunks:')
+
+            # Plot substrate classification
+            # for c, f in toMap.items():
+            #     print('\n\n\n\n****Chunk', c)
+            #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
+            # #     sys.exit()
+            # sys.exit()
+            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop) for c, f in toMap.items())
+            del toMap
+
+    ############################################################################
+    # For Substrate Mapping                                                    #
+    ############################################################################
+    printUsage()
+
+    start_time = time.time()
+
+    if map_sub > 0:
+        print('\n\nMapping substrate classification...')
+
+        # Set output directory
+        outDir = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
+        # Get each son's npz's
+        for son in mapObjs:
+            # Set outDir
+            son.outDir = outDir
+
+            # Store substrate npz filenames
+            npz = son._getSubstrateNpz()
+
+            # Create dictionary to store port/star pairs
+            if not 'toMap' in locals():
+                toMap = npz
+            else:
+                for k, v in npz.items():
+                    # Get existing npz file
+                    e = toMap[k]
+
+                    # Add existing and new npz as list. Add port as first element
+                    if 'port' in e:
+                        toMap[k] = [e, v]
+                    else:
+                        toMap[k] = [v, e]
+        del son
+
+
+        # Do rectification as portstarObj to eliminate NoData at NADIR
+        print('\n\tMapping substrate classification. Processing', len(toMap), 'port and starboard pairs...')
+        # Create portstarObj
+        psObj = portstarObj(mapObjs)
+
+        # for c, f in toMap.items():
+        #     psObj._mapSubstrate(map_class_method, c, f)
+        #     sys.exit()
+
+        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+        del toMap
 
     ############################################################################
     # For Substrate Mosaic                                                     #
@@ -435,12 +435,14 @@ def map_master_func(
          # Switch off rect_wcp and rect_wcr
          psObj.port.rect_wcp = False
          psObj.port.rect_wcr = False
+         psObj.port.map_predict = False
 
          psObj._rasterToPoly(mosaic, threadCnt)
 
          # Revert rect_wcp and rect_wcr
          psObj.port.rect_wcp = rect_wcp
          psObj.port.rect_wcr = rect_wcr
+         psObj.port.map_predict = map_predict
 
          print("Done!")
          print("Time (s):", round(time.time() - start_time, ndigits=1))

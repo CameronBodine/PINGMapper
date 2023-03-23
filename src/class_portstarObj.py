@@ -1926,7 +1926,6 @@ class portstarObj(object):
         if map_predict == 1:
             # Set data type and nodata value
             data_type = 'uint16'
-            # bg_val = np.iinfo(data_type).max # background value (masked portions of sonar)
             no_data = 0 # no data value (square area around rect data)
 
             # Calculate probablity
@@ -1942,12 +1941,29 @@ class portstarObj(object):
             port = np.around(port, 0)
             star = np.around(star, 0)
 
-            # port = np.nan_to_num(port, nan=no_data)
-            # star = np.nan_to_num(star, nan=no_data)
+            # Convert and store data
+            self.port.sonDat = port.astype(data_type)
+            self.star.sonDat = star.astype(data_type)
+
+        # Logit: rescale by constant multiplyer, and change dtype
+        elif map_predict == 2:
+            # Set data type and nodata value
+            data_type = 'int16'
+            no_data = 0 # no data value (square area around rect data)
+
+            # Rescale to digital number
+            dn = 100 # Convert XX.XX... to XXXX
+            port = self.port.sonDat * dn
+            star = self.star.sonDat * dn
+
+            # Round to whole number
+            port = np.around(port, 0)
+            star = np.around(star, 0)
 
             # Convert and store data
             self.port.sonDat = port.astype(data_type)
             self.star.sonDat = star.astype(data_type)
+
 
         # Store number of bands, i.e. classes
         classes = self.port.sonDat.shape[2]

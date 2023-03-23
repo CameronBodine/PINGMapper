@@ -47,7 +47,7 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
 # outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
 
-inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\WBL'
+inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\StC'
 outDir = r'Z:\MAISRC_zebra mussel project\Phase III\SideScanMapping\Processed_Data_csb\AutoSubstrate'
 
 # inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
@@ -146,17 +146,17 @@ for i, datFile in enumerate(inFiles):
     # river = os.path.dirname(humFile).split(os.sep)[-2]
     # projName = river+'_'+dateBoat+'_'+recName
 
-    # # StC
-    # recName = os.path.basename(humFile).split('.')[0]
-    # location = os.path.dirname(humFile).split(os.sep)[-1]
-    # projName = location+'_'+recName
-
-    # WBL
+    # StC
     recName = os.path.basename(humFile).split('.')[0]
-    date = os.path.dirname(humFile).split(os.sep)[-1]
-    date = date.replace('-', '')
-    location = os.path.dirname(humFile).split(os.sep)[-2]
-    projName = location+'_'+date+'_'+recName
+    location = os.path.dirname(humFile).split(os.sep)[-1]
+    projName = location+'_'+recName
+
+    # # WBL
+    # recName = os.path.basename(humFile).split('.')[0]
+    # date = os.path.dirname(humFile).split(os.sep)[-1]
+    # date = date.replace('-', '')
+    # location = os.path.dirname(humFile).split(os.sep)[-2]
+    # projName = location+'_'+date+'_'+recName
 
     # # GS Exports
     # recName = os.path.basename(humFile.split('.')[0])
@@ -225,7 +225,7 @@ for i, datFile in enumerate(inFiles):
         print('\n===========================================')
         print('===========================================')
         print('***** READING *****')
-        # read_master_func(**params)
+        read_master_func(**params)
 
         if rect_wcp or rect_wcr:
             print('\n===========================================')
