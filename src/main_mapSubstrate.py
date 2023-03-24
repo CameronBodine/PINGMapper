@@ -254,13 +254,10 @@ def map_master_func(
     # For Substrate Prediction                                                 #
     ############################################################################
 
-    if not smthTrk:
-        printUsage()
-
-    start_time = time.time()
-
     if map_sub > 0:
-        print('\n\nAutomatically segmenting substrate...')
+        start_time = time.time()
+
+        print('\n\nAutomatically predicting and segmenting substrate...')
 
         outDir = os.path.join(mapObjs[0].substrateDir, 'predict_npz')
         if not os.path.exists(outDir):
@@ -274,13 +271,6 @@ def map_master_func(
             # Get chunk id's
             chunks = son._getChunkID()
 
-            # Doing moving window prediction, so remove first and last chunk
-            # chunks = chunks[1:-1]
-
-            # For testing
-            # chunks = chunks[209:]
-            # chunks = [chunks[-1]]
-
             # Prepare model
             if map_sub ==1:
                 # Load model weights
@@ -291,29 +281,42 @@ def map_master_func(
 
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+
+            # For debug
             # for c in chunks:
             #     print('\n\n\n\n****Chunk', c)
             #     son._detectSubstrate(c, USE_GPU)
             #     # sys.exit()
             #     break
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
 
             son._cleanup()
             del chunks
-            # break
-
 
         del son
-        gc.collect()
-        print("Done!")
+        print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
 
     ############################################################################
     # Fot Substrate Plotting                                                   #
     ############################################################################
 
     if pltSubClass:
+        start_time = time.time()
+
         print('\n\nExporting substrate plots...')
+
+        # Determine if probabilities or logits are plotted
+        if map_predict == 1:
+            probs = True
+        elif map_predict == 2:
+            probs = False
+        else:
+            probs = True
+
 
         # Out directory
         outDir = os.path.join(mapObjs[0].substrateDir, 'plots')
@@ -336,17 +339,23 @@ def map_master_func(
             #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
             # #     sys.exit()
             # sys.exit()
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop) for c, f in toMap.items())
+            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop, probs=probs) for c, f in toMap.items())
             del toMap
+
+        del son
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
+
 
     ############################################################################
     # For Substrate Mapping                                                    #
     ############################################################################
-    printUsage()
-
-    start_time = time.time()
 
     if map_sub > 0:
+        start_time = time.time()
+
         print('\n\nMapping substrate classification...')
 
         # Set output directory
@@ -383,12 +392,18 @@ def map_master_func(
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
+        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+
+        # For debug
         # for c, f in toMap.items():
         #     psObj._mapSubstrate(map_class_method, c, f)
         #     sys.exit()
 
-        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
         del toMap
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
 
     ############################################################################
     # For Substrate Mosaic                                                     #
@@ -415,9 +430,9 @@ def map_master_func(
         psObj.port.rect_wcr = rect_wcr
         psObj.port.map_predict = map_predict
 
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()
         printUsage()
 
@@ -444,21 +459,20 @@ def map_master_func(
          psObj.port.rect_wcr = rect_wcr
          psObj.port.map_predict = map_predict
 
-         print("Done!")
+         del psObj
+         print("\nDone!")
          print("Time (s):", round(time.time() - start_time, ndigits=1))
          gc.collect()
          printUsage()
 
-    del psObj
-
     ############################################################################
     # For Prediction Mapping                                                   #
     ############################################################################
-    printUsage()
 
-    start_time = time.time()
 
     if map_predict > 0:
+        start_time = time.time()
+
         if map_predict == 1:
             a = 'probability'
         else:
@@ -507,7 +521,12 @@ def map_master_func(
         #     sys.exit()
 
         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in toMap.items())
-        del toMap
+
+        del toMap, psObj
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
 
 
     ############################################################################
@@ -521,6 +540,7 @@ def map_master_func(
 
         for son in mapObjs:
             son.map_predict = map_predict
+        del son
 
         # Create portstar object
         psObj = portstarObj(mapObjs)
@@ -538,9 +558,9 @@ def map_master_func(
         psObj.port.rect_wcr = rect_wcr
         psObj.port.map_sub = map_sub
 
+        del psObj
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
         gc.collect()
         printUsage()
 

@@ -288,7 +288,7 @@ def read_master_func(script='',
     # Cleanup
     son._cleanup()
 
-    print("Done!")
+    print("\nDone!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     printUsage()
 
@@ -520,7 +520,6 @@ def read_master_func(script='',
     # Locating missing pings                                                   #
     ############################################################################
 
-    printUsage()
     if fixNoDat:
         ## Open each beam df, store beam name in new field, then concatenate df's into one
         print("\nLocating missing pings and adding NoData...")
@@ -778,7 +777,7 @@ def read_master_func(script='',
     # Cleanup
     psObj._cleanup()
 
-    print("Done!")
+    print("\nDone!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
     printUsage()
 
@@ -790,7 +789,7 @@ def read_master_func(script='',
         print(tileFile)
         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
 
-        print("Done!")
+        print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
@@ -859,6 +858,9 @@ def read_master_func(script='',
             del ret
 
         del r
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
     else:
@@ -900,7 +902,7 @@ def read_master_func(script='',
             gc.collect()
 
         del son
-        print("Done!")
+        print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
@@ -913,7 +915,6 @@ def read_master_func(script='',
 
     if lbl_set:
         start_time = time.time()
-        print("\n\n\nWARNING: Exporting substrate tiles for labeling (main_readFiles.py line 886):\n")
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
 
@@ -929,7 +930,7 @@ def read_master_func(script='',
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
                 son._cleanup()
             gc.collect()
-        print("Done!")
+        print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 

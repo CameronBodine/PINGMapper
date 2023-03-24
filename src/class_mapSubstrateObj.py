@@ -109,6 +109,26 @@ class mapSubObj(rectObj):
     #=======================================================================
     def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
         '''
+        Function to predict substrate, called from _detectSubstrate(). Performs
+        a moving window, the size of which specified by winO. Each window's
+        predictions are stored in a list, then the average is taken across all
+        window's predictions to arrive at final prediction.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         #################################################
@@ -186,10 +206,6 @@ class mapSubObj(rectObj):
             bOff = fArr.shape[0] + bOff
             fArr[tO:bOff, :, :] = fSoftmax
 
-            # # Set definate shadows to 1.0
-            # # Shadow second to last class
-            # fArr[bOff:, :, -2] = 10.0
-
         elif bOff > 0:
             bOff = fArr.shape[0] - tO
             fArr[tO:, :, :] = fSoftmax[:bOff, :, :]
@@ -197,11 +213,6 @@ class mapSubObj(rectObj):
         else:
             fArr[tO:, :, :] = fSoftmax
 
-        # # Make sure softmax is 1.0 for areas definately water
-        # # Water last class
-        # fArr[:tO, :, -1] = 10.0
-
-        # print(fArr.shape, np.min(fArr), np.max(fArr))
         del fSoftmax, son3Chunk
         gc.collect()
 
@@ -210,6 +221,29 @@ class mapSubObj(rectObj):
     #=======================================================================
     def _getSon3Chunk(self, i):
         '''
+        Substrate predictions are done using a moving window to avoid classification
+        issues between chunks. For the given chunk, the chunk before and after are
+        merged into a single array. The substrate model was trained with the water column
+        and shadows cropped to the minimum extent, therefore special care is required to
+        ensure the arrays are aligned correctly. The merged array, original dims of
+        center chunk, and offsets are returned to _predSubstrate() so final prediction
+        can be restored to the original chunk's dimensions.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         # Get sonMeta df
@@ -411,10 +445,25 @@ class mapSubObj(rectObj):
 
     #=======================================================================
     def _expandWin(self, H, W, w1, w2, arr):
-
         '''
         Generate new array of size (H, W, arr.shape[2]) filled with nan's. Place
         arr in new arr at index [:, w1:w2]
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         # Number of classes
@@ -433,7 +482,24 @@ class mapSubObj(rectObj):
     def _getSonDatWin(self, w, arr):
 
         '''
-        Get slice of son3Chunk using index (w) and nchunk
+        Get slice of son3Chunk using index (w) and nchunk which will be used
+        for prediction.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
         # Chunk size
         nchunk = self.nchunk
@@ -451,6 +517,22 @@ class mapSubObj(rectObj):
 
         '''
         Get moving window indices based on window overlap (o) and arr size
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         # Get array dims
@@ -480,27 +562,31 @@ class mapSubObj(rectObj):
     def _saveSubstrateNpz(self, arr, k, classes):
         '''
         Save substrate prediction to npz
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         ###################
         # Prepare File Name
         # File name zero padding
-        if k < 10:
-            addZero = '0000'
-        elif k < 100:
-            addZero = '000'
-        elif k < 1000:
-            addZero = '00'
-        elif k < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        addZero = self._addZero(k)
 
         # Out directory
         outDir = self.outDir
-        # outDir = os.path.join(self.substrateDir, 'predict_npz')
-        # if not os.path.exists(outDir):
-        #     os.mkdir(outDir)
 
         #projName_substrate_beam_chunk.npz
         channel = self.beamName #ss_port, ss_star, etc.
@@ -519,11 +605,6 @@ class mapSubObj(rectObj):
         # Save compressed npz
         np.savez_compressed(f, **datadict)
 
-        # # Save non_compressed npz
-        # f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_noncompress.npz'
-        # f = os.path.join(outDir, f)
-        # np.savez(f, arr)
-
         del arr
         return
 
@@ -532,31 +613,37 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _pltSubClass(self, map_class_method, chunk, npz, spdCor=1, maxCrop=0):
+    def _pltSubClass(self, map_class_method, chunk, npz, spdCor=1, maxCrop=0, probs=True):
 
         '''
+        Generate plots of substrate classification including predictions as
+        probabilities or logits for each possible class.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         ###################
         # Prepare File Name
         # File name zero padding
         k = chunk
-        if k < 10:
-            addZero = '0000'
-        elif k < 100:
-            addZero = '000'
-        elif k < 1000:
-            addZero = '00'
-        elif k < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        addZero = self._addZero(k)
 
         # Out directory
         outDir = self.outDir
-        # outDir = os.path.join(self.substrateDir, 'plots')
-        # if not os.path.exists(outDir):
-        #     os.mkdir(outDir)
 
         #projName_substrate_beam_chunk.npz
         channel = self.beamName #ss_port, ss_star, etc.
@@ -585,7 +672,6 @@ class mapSubObj(rectObj):
 
         # Get final classification
         label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
-        # label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True, do_filt=False)
 
         # Do speed correction
         if spdCor>0:
@@ -607,7 +693,7 @@ class mapSubObj(rectObj):
         # Convert labels to colors
         color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
 
-        # Do plot`
+        # Do plot
         fig = plt.figure()
         ax = plt.subplot(111)
 
@@ -638,8 +724,6 @@ class mapSubObj(rectObj):
 
         ##############
         # Plot Softmax
-
-        probs = False # True=Plot Probabilities, False=Plot Logits
 
         if probs:
             sigma = 1 # Number of standard deviations to plot
@@ -735,23 +819,11 @@ class mapSubObj(rectObj):
             # color_map = color_map.reversed()
 
             im = ax.imshow(c, cmap=color_map, alpha=0.5, vmin=minSoft, vmax=maxSoft)
-            # im = ax.imshow(c, cmap='magma', alpha=0.5)
             ax.axis('off')
-
-            # Legend
-            # box = ax.get_position()
-            # ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
-            # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='5%', pad=0.05)
             cbar = plt.colorbar(im, ticks=[minSoft, meanSoft, maxSoft], cax=cax)
-            # minL = '-2$\sigma$'+' ('+str(minSoft)+')'
-            # meanL = '$\mu$' +' ('+str(meanSoft)+')'
-            # maxL = '2$\sigma$'+' ('+str(maxSoft)+')'
-            # minL = '-2$\sigma$'
-            # meanL = '$\mu$'
-            # maxL = str(sigma)+'$\sigma$'
 
             # Prepare colorbar labels
             meanL = '$\mu$'
@@ -788,7 +860,23 @@ class mapSubObj(rectObj):
     #=======================================================================
     def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True, do_filt=True):
         '''
-        Classify pixels from softmax values
+        Classify pixels from softmax values.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         #################################
@@ -796,116 +884,84 @@ class mapSubObj(rectObj):
 
         # Take max logit as class
         if map_class_method == 'max':
+            # Take argmax to get classification
             label = np.argmax(arr, -1)
-            # label = np.nanargmax(arr, -1)
             label += 1
-
-        elif map_class_method == 'thresh':
-            # Class: ProbThresh 1==no thresh
-            thresh = {0: 1,
-                      1: 1,
-                      2: 1,
-                      3: .075,
-                      4: .075,
-                      5: 1,
-                      6: 1,
-                      7: 1}
-
-            # Least to most important
-            class_order = [0, 6, 7, 5, 1, 4, 3, 2]
-
-            # Convert logits to probability
-            arr = tf.nn.softmax(arr).numpy()
-
-            # # Iterate classes least to most important
-            # for k, t in thresh.items():
-            #
-            #     # If t == 1, use softmax directly
-            #     # Else t<1, set prob > t to 1
-            #     if t < 1:
-            #         s = softmax[:,:,k]
-            #         s = np.where(s>t, 1, s)
-            #
-            #         # Update softmax
-            #         softmax[:,:,k] = s
-
-            # Zero array to store label
-            label = np.zeros((arr.shape[0], arr.shape[1]))
-            for k in class_order:
-                # # Convert to probability
-                # # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
-                # p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
-
-                # Get threshold
-                t = thresh[k]
-
-                # IF t==1, use otsu to set threshold
-                if t==1:
-                    t = threshold_otsu(arr[:,:,k])
-                    # t = threshold_otsu(p)
-
-                label[arr[:,:,k]>t]=k
-                # label[p>t]=k
-
-            label += 1
-
-        elif map_class_method == 'pref':
-            # Class: pref 1==give pref, 0==don't
-            pref = {0: 0,
-                    1: 0,
-                    2: 1,
-                    3: 1,
-                    4: 1,
-                    5: 0,
-                    6: 0,
-                    7: 0}
-
-            # Least to most important
-            class_order = [0, 6, 7, 5, 1, 2, 4, 3]
-
-            # First get label the normal way
-            label = np.argmax(arr, -1)
-
-            # Now iterate each class, if pref==1, do binary class, then mask
-            ## label with updated class
-            for k in class_order:
-                if pref[k] == 1:
-                    # Get binary classification
-                    p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
-                    # Update label
-                    label[p==1]=k
-            label += 1
-
 
         # elif map_class_method == 'thresh':
+        #     # Class: ProbThresh 1==no thresh
         #     thresh = {0: 1,
         #               1: 1,
         #               2: 1,
-        #               3: 0.15,
-        #               4: 0.15,
+        #               3: .075,
+        #               4: .075,
         #               5: 1,
-        #               6: 1}
+        #               6: 1,
+        #               7: 1}
         #
-        #     for c, t in thresh.items():
-        #         # Get logits
-        #         s = arr[:,:,c]
+        #     # Least to most important
+        #     class_order = [0, 6, 7, 5, 1, 4, 3, 2]
         #
-        #         # Convert to probability
-        #         # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
-        #         p = tf.round(tf.nn.sigmoid(s))
+        #     # Convert logits to probability
+        #     arr = tf.nn.softmax(arr).numpy()
         #
-        #         # Set softmax to w if > t
-        #         w = 100
-        #         p = np.where(p>t, True, False)
+        #     # # Iterate classes least to most important
+        #     # for k, t in thresh.items():
+        #     #
+        #     #     # If t == 1, use softmax directly
+        #     #     # Else t<1, set prob > t to 1
+        #     #     if t < 1:
+        #     #         s = softmax[:,:,k]
+        #     #         s = np.where(s>t, 1, s)
+        #     #
+        #     #         # Update softmax
+        #     #         softmax[:,:,k] = s
         #
-        #         # Add weight to logit value
-        #         s[p] = w
-        #         # s = np.where(s[p==1], s+w, s)
+        #     # Zero array to store label
+        #     label = np.zeros((arr.shape[0], arr.shape[1]))
+        #     for k in class_order:
+        #         # # Convert to probability
+        #         # # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
+        #         # p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
         #
-        #         # Update softmax
-        #         arr[:,:,c] = s
+        #         # Get threshold
+        #         t = thresh[k]
         #
+        #         # IF t==1, use otsu to set threshold
+        #         if t==1:
+        #             t = threshold_otsu(arr[:,:,k])
+        #             # t = threshold_otsu(p)
+        #
+        #         label[arr[:,:,k]>t]=k
+        #         # label[p>t]=k
+        #
+        #     label += 1
+        #
+        # elif map_class_method == 'pref':
+        #     # Class: pref 1==give pref, 0==don't
+        #     pref = {0: 0,
+        #             1: 0,
+        #             2: 1,
+        #             3: 1,
+        #             4: 1,
+        #             5: 0,
+        #             6: 0,
+        #             7: 0}
+        #
+        #     # Least to most important
+        #     class_order = [0, 6, 7, 5, 1, 2, 4, 3]
+        #
+        #     # First get label the normal way
         #     label = np.argmax(arr, -1)
+        #
+        #     # Now iterate each class, if pref==1, do binary class, then mask
+        #     ## label with updated class
+        #     for k in class_order:
+        #         if pref[k] == 1:
+        #             # Get binary classification
+        #             p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
+        #             # Update label
+        #             label[p==1]=k
         #     label += 1
 
         else:
@@ -914,7 +970,6 @@ class mapSubObj(rectObj):
 
         ##################
         # Mask predictions
-
         # Mask Water column
         if mask_wc:
             self._WC_mask(i)
@@ -957,6 +1012,22 @@ class mapSubObj(rectObj):
         '''
         Locate previously saved substrate npz files and return dictionary:
         npzs = {chunkID:NPZFilePath}
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
 
         # Get npz dir
@@ -982,6 +1053,25 @@ class mapSubObj(rectObj):
     #=======================================================================
     def _filterLabel(self, l, min_size):
         '''
+        For a classified substrate label, small holes/objects are removed,
+        and pixels classified as NoData are removed and adjecent class is
+        filled in it's place.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
         '''
         # Get pixel size (in meters)
         pix_m = self.pixM
@@ -1085,409 +1175,3 @@ class mapSubObj(rectObj):
                 objects_filled[:, p] = ping
 
         return objects_filled
-
-
-
-
-
-
-
-
-
-
-######
-# Begin Old
-# #=======================================================================
-# def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
-#     '''
-#     Predict substrate type from sonogram.
-#
-#     ----------
-#     Parameters
-#     ----------
-#
-#     ----------------------------
-#     Required Pre-processing step
-#     ----------------------------
-#
-#     -------
-#     Returns
-#     -------
-#
-#     --------------------
-#     Next Processing Step
-#     --------------------
-#     '''
-#
-#     # Get chunk size
-#     nchunk = self.nchunk
-#
-#     #################################################
-#     # Get depth for water column removal and cropping
-#     # Get sonMeta to get depth
-#     self._loadSonMeta()
-#
-#     ############
-#     # Load Sonar
-#     # Get current chunk, left & right chunk's sonDat and concatenate
-#     # Pad is tuple with current chunk H, W and water column pix crop
-#     son3Chunk, pad = self._getSon3Chunk(i)
-#     # Get dims
-#     H, W = son3Chunk.shape
-#
-#     # #########################
-#     # # Convert array to tensor
-#     # son3Chunk, w, h, bigimage = seg_file2tensor(son3Chunk, TARGET_SIZE)
-#     # son3Chunk = standardize(son3Chunk.numpy()).squeeze()
-#     #
-#     #
-#     # ############################
-#     # # For segformer architecture
-#     # if model_name == 'segformer':
-#     #     if n_data_bands == 1:
-#     #         son3Chunk = np.dstack((son3Chunk, son3Chunk, son3Chunk))
-#     #     son3Chunk = tf.transpose(son3Chunk, (2, 0, 1))
-#
-#     ###########################
-#     # Get moving window indices
-#     movWinInd = self._getMovWinInd(winO, son3Chunk)
-#
-#     #################################
-#     # Make prediction for each window
-#     # Expand softmax_score to dims of son3Chunk filled with nan's
-#     # Ensure softmax_score in correct location (win offset) in larger array
-#     # store each softmax in a list labels=[]
-#     # np.nanmean(labels, axis=2)
-#
-#     # Store each window's softmax
-#     winSoftMax = []
-#     # Iterate each window
-#     for m in movWinInd:
-#         # Slice son3Chunk by index
-#         # Return son slice, begin and end index
-#         sonWin, wStart, wEnd = self._getSonDatWin(m, son3Chunk)
-#
-#         # Get the model
-#         model = self.substrateModel
-#
-#         # Do prediction, return softmax_score for each class
-#         softmax_score = doPredict(model, MODEL, sonWin, N_DATA_BANDS, NCLASSES, TARGET_SIZE)
-#
-#         # Expand softmax_score to son3Chunk dims, filled with nan's
-#         softmax_score = self._expandWin(H, W, wStart, wEnd, softmax_score)
-#         # print('softmax_score', softmax_score.shape)
-#
-#         # Store expanded softmax_score
-#         winSoftMax.append(softmax_score)
-#
-#         del sonWin, wStart, wEnd, softmax_score
-#
-#     # Take mean across all windows to get one final softmax_score array
-#     fSoftmax = np.nanmean(np.stack(winSoftMax, axis=0), axis=0)
-#
-#     # # Recover fSoftmax to original dimensions
-#     # h, w = pad[:-1] # original chunk dimensions
-#     # p = pad[-1]-1 # amount of water column cropped
-#     # sh, sw = fSoftmax.shape[:-1] # softmax dimensions
-#     # c = fSoftmax.shape[-1] # number of classes
-#     #
-#     # print('Softmax', fSoftmax.shape)
-#     # print('Pad', pad)
-#     #
-#     # if fSoftmax.shape[0] == h:
-#     #     fArr = fSoftmax
-#     # # elif fSoftmax.shape[0] < h:
-#     # #     fArr = np.zeros((h, w, c))
-#     # #     fArr[p:p+sh, :, :] = fSoftmax
-#     # else:
-#     #     fArr = np.zeros((h, w, c))
-#     #
-#     #     # Check if need to trim softmax
-#     #     # if (p+sh) > h:
-#     #     # 2091 to 1967
-#     #     print(sh, h-p)
-#     #     if sh > (h-p):
-#     #         fSoftmax = fSoftmax[:-p, :, :]
-#     #         sh = fSoftmax.shape[0]
-#     #     fArr[p:p+sh, :, :] = fSoftmax
-#
-#     # Recover fSoftmax to original vertical dimensions
-#     h, w = pad[0], pad[1] # original chunk dimensions
-#     wc_crop = pad[2] # amount of water column cropped
-#     r_crop = pad[3] # amount of range cropped
-#     sh, sw = fSoftmax.shape[0], fSoftmax.shape[1] # softmax dimensions
-#     c = fSoftmax.shape[2] # number of classes
-#
-#     print('\n\n\n\nGut Check')
-#     print('Orig Dims:', h, w)
-#     print('WC cropped:', wc_crop)
-#     print('Range Cropped:', r_crop)
-#     print('Softmax Shape', fSoftmax.shape)
-#
-#     # Crop fSoftmax to current chunk
-#     # fSoftmax = fSoftmax[:, nchunk:nchunk+pad[1], :]
-#     fSoftmax = fSoftmax[:, nchunk:2*nchunk, :]
-#     # print('fSoftmax', fSoftmax.shape, nchunk, pad[1])
-#
-#     fArr = np.zeros((h, w, c))
-#
-#     # fArr[wc_crop:wc_crop+h, :, :] = fSoftmax[:h, :, :]
-#
-#     # Determine top offset
-#     if wc_crop > 0:
-#         topOff = wc_crop
-#     else:
-#         topOff = 0 # No offset necessary
-#
-#     # Determine if softmax or fArr needs to be sliced on bottom to get correct dims
-#     bottomOff = sh - (fArr.shape[0] - wc_crop)
-#
-#     # If bottomOff < 0: Need to slice bottom of fArr to fit smaller softmax dims
-#     if bottomOff < 0:
-#         bottomOff = fArr.shape[0] + bottomOff
-#         fArr[wc_crop:bottomOff, :, :] = fSoftmax
-#
-#         # Set definate shadows to 1.0
-#         # Shadow second to last class
-#         fArr[bottomOff:, :, -2] = 1.0
-#
-#     # Need to slice softmax bottom to fit in fArr
-#     elif bottomOff > 0:
-#         # bottomOff = fSoftmax.shape[0] - bottomOff
-#         # fArr[:bottomOff] = fSoftmax[:bottomOff, :, :]
-#
-#         bottomOff = fArr.shape[0] - wc_crop
-#         fArr[wc_crop:, :, :] = fSoftmax[:bottomOff, :, :]
-#
-#     # No slicing necessary
-#     else:
-#         fArr = fSoftmax
-#
-#     # # Determine if softmax bottom needs to be cropped
-#     # if (fArr.shape[0] - wc_crop) > sh:
-#     #     # fArr with offset larger then softmax
-#     #     # Need to slice fArr to compensate
-#     #     bottomOff = sh - (fArr.shape[0] - wc_crop) # This should be negative ???
-#     #
-#     # elif (fArr.shape[0] - wc_crop) < sh:
-#     #     # fArr with offset smaller then softmax
-#     #     # Need to slice softmax to compensate
-#     #     bottomOff = sh - (fArr.shape[0] - wc_crop)
-#     #
-#     # else:
-#     #     bottomOff = 0 # Bottom alread aligned
-#
-#     # Make sure softmax is 1.0 for areas definately water and shadow
-#     # Shadow second to last class
-#     # fArr[p+sh, :, -2] = 1.0
-#     # fArr[p+sh-1:, :, -2] = 1.0
-#
-#     # Make sure softmax is 1.0 for areas definately water
-#     # Water last class
-#     fArr[:wc_crop, :, -1] = 1.0
-#
-#     # print(fArr.shape, np.min(fArr), np.max(fArr))
-#     del fSoftmax, son3Chunk
-#     gc.collect()
-#
-#     return fArr
-
-
-# #=======================================================================
-# def _getSon3Chunk(self, i):
-#
-#     '''
-#     Get current (i), left (i-1) & right (i+1) chunk's sonDat.
-#     Concatenate into one array.
-#     '''
-#     nchunk = self.nchunk
-#     df = self.sonMetaDF
-#
-#
-#     ######
-#     # Left
-#     # Get sonDat
-#     self._getScanChunkSingle(i-1)
-#     # # Image dimensions
-#     # h, w = self.sonDat.shape
-#     # if h > H:
-#     #     H = h
-#     #     W = w
-#
-#     # Crop shadows first
-#     _ = self._SHW_crop(i-1, False)
-#
-#     # Get sonMetaDF
-#     lMetaDF = df.loc[df['chunk_id'] == i-1, ['dep_m']].copy()
-#
-#     # Remove water column and crop
-#     lMinDep = self._WCR_crop(lMetaDF)
-#
-#     # Create copy of sonar data
-#     lSonDat = self.sonDat.copy()
-#     # print('\n\n\n', lSonDat.shape)
-#
-#     ########
-#     # Center
-#     # Get sonDat
-#     self._getScanChunkSingle(i)
-#
-#     # Original image dimensions
-#     H, W = self.sonDat.shape
-#
-#     # Crop shadows first
-#     max_r = self._SHW_crop(i, False)
-#     print('\n\n\nmax_r', max_r)
-#
-#     # Get sonMetaDF
-#     cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m']].copy()
-#
-#     # Remove water column and crop
-#     cMinDep = self._WCR_crop(cMetaDF)
-#
-#     # Create copy of sonar data
-#     cSonDat = self.sonDat.copy()
-#     # print(cSonDat.shape)
-#
-#     # Cropped dims (??)
-#     h, w = cSonDat.shape
-#
-#     ########
-#     # Right
-#     # Get sonDat
-#     self._getScanChunkSingle(i+1)
-#
-#     # # Image dimensions
-#     # h, w = self.sonDat.shape
-#     # if h > H:
-#     #     H = h
-#     #     W = w
-#
-#     # Crop shadows first
-#     _ = self._SHW_crop(i+1, False)
-#
-#     # Get sonMetaDF
-#     rMetaDF = df.loc[df['chunk_id'] == i+1, ['dep_m']].copy()
-#
-#     # Remove water column and crop
-#     rMinDep = self._WCR_crop(rMetaDF)
-#
-#     # Create copy of sonar data
-#     rSonDat = self.sonDat.copy()
-#     # print(rSonDat.shape)
-#
-#     del self.sonDat
-#
-#     #############################
-#     # Merge left, center, & right
-#
-#     # Align arrays based on wc_crops
-#
-#     # Find min depth
-#     minDep = min(lMinDep, cMinDep, rMinDep)
-#
-#     # Pad arrays if chunk's minDep > minDep and fill with zero's
-#     # Left
-#     if lMinDep > minDep:
-#         # Get current sonDat shape
-#         r, c = lSonDat.shape
-#
-#         # Determine pad size (actual offset from top)
-#         pad = lMinDep - minDep
-#
-#         # Make new zero array w/ pad added in
-#         newArr = np.zeros((pad+r, c))
-#         # Fill with nan to prevent unneeded prediction
-#         newArr.fill(np.nan)
-#
-#         # Fill sonDat in appropriate location
-#         newArr[pad:,:] = lSonDat
-#         lSonDat = newArr.copy()
-#         del newArr
-#
-#     # Center
-#     if cMinDep > minDep:
-#         # Get current sonDat shape
-#         r, c = cSonDat.shape
-#
-#         # Determine pad size
-#         pad = cMinDep - minDep
-#
-#         # Make new zero array w/ pad added in
-#         newArr = np.zeros((pad+r, c))
-#         # Fill with nan to prevent unneeded prediction
-#         newArr.fill(np.nan)
-#
-#         # Fill sonDat in appropriate location
-#         newArr[pad:,:] = cSonDat
-#         cSonDat = newArr.copy()
-#         del newArr
-#
-#         # Return cpad to recover original dims
-#         cpad = pad
-#     else:
-#         cpad = cMinDep
-#
-#     # Right
-#     if rMinDep > minDep:
-#         # Get current sonDat shape
-#         r, c = rSonDat.shape
-#         # Determine pad size
-#         pad = rMinDep - minDep
-#
-#         # Make new zero array w/ pad added in
-#         newArr = np.zeros((pad+r, c))
-#         # Fill with nan to prevent unneeded prediction
-#         newArr.fill(np.nan)
-#
-#         # Fill sonDat in appropriate location
-#         newArr[pad:,:] = rSonDat
-#         rSonDat = newArr.copy()
-#         del newArr
-#
-#     # If range of center chunk < other chunks, slice other chunks
-#     if h < lSonDat.shape[0]:
-#         lSonDat = lSonDat[:H,:]
-#
-#     if h < rSonDat.shape[0]:
-#         rSonDat = rSonDat[:H,:]
-#
-#     # Find max rows across each chunk
-#     maxR = max(lSonDat.shape[0], cSonDat.shape[0], rSonDat.shape[0])
-#
-#     # Find max cols
-#     maxC = lSonDat.shape[1] + cSonDat.shape[1] + rSonDat.shape[1]
-#
-#     # Create final array of appropriate size
-#     fSonDat = np.zeros((maxR, maxC))
-#     # Fill with nan to prevent unneeded prediction
-#     fSonDat.fill(np.nan)
-#
-#     # Add left sonDat into fSonDat
-#     fSonDat[:lSonDat.shape[0],:nchunk] = lSonDat
-#
-#     # Add center sonDat into fSonDat
-#     fSonDat[:cSonDat.shape[0], nchunk:nchunk*2] = cSonDat
-#
-#     # Add right sonDat into fSonDat
-#     fSonDat[:rSonDat.shape[0], nchunk*2:] = rSonDat
-#
-#     # Export image check
-#     try:
-#         os.mkdir(self.outDir)
-#     except:
-#         pass
-#     self.sonDat = fSonDat
-#     self._writeTiles(i, 'test')
-#     print(self.outDir)
-#
-#     # fSonDat = standardize(fSonDat)
-#
-#     print('fSonDat', fSonDat.shape)
-#     print('pad', H, W, cpad)
-#
-#     # return fSonDat, (H, W, minDep)
-#     return fSonDat, (H, W, cpad, max_r)
-
-# End Old
-#########
