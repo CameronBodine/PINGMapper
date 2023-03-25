@@ -281,7 +281,7 @@ adjDep = 0
 ```
 
 
-- Plot bedick(s) on non-rectified sonogram for visual inspection:
+- Plot bedpick(s) on non-rectified sonogram for visual inspection:
 ```
 pltBedPick = True
 ```
