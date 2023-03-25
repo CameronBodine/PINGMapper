@@ -34,6 +34,7 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
 # Get processing script's dir so we can save it to file
 scriptDir = os.getcwd()
@@ -85,6 +86,22 @@ if ds == 2:
     projDir = r'./procData/PINGMapper-Test-Large-DS'
 
 
+# *** IMPORTANT ****: Overwriting project and outputs
+# Export Mode: project_mode
+## 0==NEW PROJECT: Create a new project. [DEFAULT]
+##      If project already exists, program will exit without any project changes.
+##
+## 1==UPDATE PROJECT: Export additional datasets to existing project.
+##      Use this mode to update an existing project.
+##      If selected datasets were previously exported, they will NOT be overwritten.
+##      If project does not exist, program will exit without any project changes.
+##
+## 2==MAYHEM MODE: Create new project, regardless of previous project state.
+##      If project exists, it will be DELETED and reprocessed.
+##      If project does not exist, a new project will be created.
+project_mode = 2
+
+
 # General Parameters
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
@@ -116,14 +133,14 @@ pltBedPick = True #Plot bedpick on sonogram
 # Rectification Parameters
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
 map_sub = 1 # Automatically map substrate: 0==False; 1==True
-export_poly = True # Convert substrate maps to shapefile
-map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
-pltSubClass = True # Export plots of substrate classification and predictions
+export_poly = False # Convert substrate maps to shapefile
+map_predict = 2 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
+pltSubClass = True # Export plots of substrate classification and predictions, as specified by map_predict (if == 0, do probabilities)
 map_class_method = 'max' # 'max' only current option
 
 #################
@@ -137,6 +154,7 @@ print(sonFiles)
 #============================================
 
 params = {
+    'project_mode':project_mode,
     'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,

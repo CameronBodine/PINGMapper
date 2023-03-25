@@ -167,3 +167,41 @@ def printUsage():
 
 
     return
+
+# =========================================================
+def printProjectMode(p):
+    if p == 0:
+        print("\nPROJECT MODE {}: Creating new project.".format(str(p)))
+    elif p == 1:
+        print("\nPROJECT MODE {}: Updating project (Any existing dataset flagged for export will be overwritten).".format(str(p)))
+    elif p == 2:
+        print("\nPROJECT MODE {}: Deleting existing project (if it exists) and creating new project.".format(str(p)))
+    else:
+        print("\nABORTING: Invalid Project Mode!")
+        print("Specify a valid project mode:")
+        print("\tproject_mode = 0: Create new project (exits if project already exists).")
+        print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+        print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+        sys.exit()
+
+# =========================================================
+def projectMode_1_inval():
+    print("\nABORTING: Project Already Exists!")
+    print("\nEither select a different project name, or select from one of the following:")
+    print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+    print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2_inval():
+    print("\nABORTING: Project Does Not Exist!")
+    print("Set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2a_inval():
+    print("\nABORTING: No Son Meta objects exist, unable to update project.")
+    print("Specify a new project name (or delete existing project) and set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
