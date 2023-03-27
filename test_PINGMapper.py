@@ -93,7 +93,8 @@ if ds == 2:
 ##
 ## 1==UPDATE PROJECT: Export additional datasets to existing project.
 ##      Use this mode to update an existing project.
-##      If selected datasets were previously exported, they will NOT be overwritten.
+##      If selected datasets were previously exported, they will be overwritten.
+##      To ensure datasets aren't overwritten, deselect them below.
 ##      If project does not exist, program will exit without any project changes.
 ##
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.

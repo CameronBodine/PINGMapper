@@ -86,6 +86,22 @@ if ds == 2:
     projDir = r'./procData/PINGMapper-Test-Large-DS'
 
 
+# *** IMPORTANT ****: Overwriting project and outputs
+# Export Mode: project_mode
+## 0==NEW PROJECT: Create a new project. [DEFAULT]
+##      If project already exists, program will exit without any project changes.
+##
+## 1==UPDATE PROJECT: Export additional datasets to existing project.
+##      Use this mode to update an existing project.
+##      If selected datasets were previously exported, they will be overwritten.
+##      To ensure datasets aren't overwritten, deselect them below.
+##      If project does not exist, program will exit without any project changes.
+##
+## 2==MAYHEM MODE: Create new project, regardless of previous project state.
+##      If project exists, it will be DELETED and reprocessed.
+##      If project does not exist, a new project will be created.
+project_mode = 0
+
 # General Parameters
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
@@ -138,6 +154,7 @@ print(sonFiles)
 #============================================
 
 params = {
+    'project_mode':project_mode,
     'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,
