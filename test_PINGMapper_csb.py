@@ -100,13 +100,17 @@ if ds == 2:
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 0
+project_mode = 1
 
 # General Parameters
+pix_res_factor = 0.1 # Pixel resampling factor;
+##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
+##                     1.0: Use sonar default resolution;
+##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
@@ -121,8 +125,8 @@ maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
-remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+detectDep = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
@@ -131,7 +135,7 @@ pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
-rect_wcp = False #Export rectified tiles with water column present
+rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
@@ -155,6 +159,7 @@ print(sonFiles)
 
 params = {
     'project_mode':project_mode,
+    'pix_res_factor':pix_res_factor,
     'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,

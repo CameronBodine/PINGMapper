@@ -34,6 +34,7 @@ import shutil
 
 #===========================================
 def read_master_func(project_mode=0,
+                     pix_res_factor=1.0,
                      script='',
                      humFile='',
                      sonFiles='',
@@ -490,7 +491,8 @@ def read_master_func(project_mode=0,
             r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
-                son.pixM = pix_m
+                son.pixM = pix_m # Sonar instrument pixel resolution
+                son.pix_res_factor = pix_res_factor # Factor to downscale/upscale raster resolution
             del toProcess
 
         metaDir = sonObjs[0].metaDir # Get path to metadata directory
@@ -517,6 +519,8 @@ def read_master_func(project_mode=0,
 
             else:
                 son.wcr_src = False
+
+            del beam
         del son
 
         # If Onix, need to store self._trans in object
@@ -655,334 +659,336 @@ def read_master_func(project_mode=0,
 
             son._saveSonMeta(df)
             son._cleanup()
-        del df, rowsToProc, dfAll, son, chunks, rdr
+        del df, rowsToProc, dfAll, son, chunks, rdr, beams
 
         printUsage()
 
-    # ############################################################################
-    # # Print Metadata Summary                                                   #
-    # ############################################################################
-    # # Print a summary of min/max/avg metadata values. At same time, do simple
-    # ## check to make sure data are valid.
-    # print("\nSummary of Ping Metadata:\n")
-    #
-    # invalid = defaultdict() # store invalid values
-    #
-    # for son in sonObjs: # Iterate each sonar object
-    #     print(son.beam, ":", son.beamName)
-    #     son._loadSonMeta()
-    #     df = son.sonMetaDF
-    #     print("Ping Count:", len(df))
-    #     print("______________________________________________________________________________")
-    #     print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
-    #     print("______________________________________________________________________________")
-    #     for att in df.columns:
-    #
-    #         # Find min/max/avg of each column
-    #         if (att == 'date') or (att == 'time'):
-    #             attAvg = '-'
-    #             attMin = df.at[0, att]
-    #             attMax = df.at[df.tail(1).index.item(), att]
-    #             if att == 'time':
-    #                 attMin = str(attMin).split('.')[0]
-    #                 attMax = str(attMax).split('.')[0]
-    #         else:
-    #             attMin = np.round(np.nanmin(df[att]), 3)
-    #             attMax = np.round(np.nanmax(df[att]), 3)
-    #             attAvg = np.round(np.nanmean(df[att]), 3)
-    #
-    #             # Store number of chunks
-    #             if (att == 'chunk_id'):
-    #                 son.chunkMax = attMax
-    #
-    #         # Check if data are valid.
-    #         if (att == "date") or (att == "time"):
-    #             valid=True
-    #         elif (attMax != 0) or ("unknown" in att) or (att =="beam"):
-    #             valid=True
-    #         elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
-    #             valid=False
-    #             invalid[son.beam+"."+att] = False
-    #             detectDep=1
-    #         else:
-    #             valid=False
-    #             invalid[son.beam+"."+att] = False
-    #
-    #         print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format(att, str(attMin), str(attMax), str(attAvg), str(valid)))
-    #
-    #     son._cleanup()
-    #     print("\n")
-    # del son, df, att, attAvg, attMin, attMax, valid
-    #
-    # if len(invalid) > 0:
-    #     print("*******************************\n****WARNING: INVALID VALUES****\n*******************************")
-    #     print("_______________________________")
-    #     print("{:<15s} | {:<15s}".format("Sonar Channel", "Attribute"))
-    #     print("_______________________________")
-    #     for key, val in invalid.items():
-    #         print("{:<15s} | {:<15s}".format(key.split(".")[0], key.split(".")[1]))
-    #     print("\n*******************************\n****WARNING: INVALID VALUES****\n*******************************")
-    #     print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
-    # del invalid, beam
-    # if fixNoDat:
-    #     del beams
-    #
-    #
-    # print("\nDone!")
-    # print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #
-    # ############################################################################
-    # # For Depth Detection                                                      #
-    # ############################################################################
-    # # Automatically detect depth from side scan channels. Two options are avail:
-    # ## Method based on Zheng et al. 2021 using deep learning for segmenting
-    # ## water-bed interface.
-    # ## Second is rule's based binary segmentation (may be deprecated in future..)
-    #
-    # printUsage()
-    # start_time = time.time()
-    #
-    # # Determine which sonObj is port/star
-    # portstar = []
-    # for son in sonObjs:
-    #     beam = son.beamName
-    #     if beam == "ss_port" or beam == "ss_star":
-    #         portstar.append(son)
-    #
-    # # Create portstarObj
-    # psObj = portstarObj(portstar)
-    #
-    # chunks = []
-    # for son in portstar:
-    #     # Get chunk id's, ignoring those with nodata
-    #     c = son._getChunkID()
-    #
-    #     chunks.extend(c)
-    #     del c
-    # del son
-    #
-    # chunks = np.unique(chunks).astype(int)
-    #
-    # # # Automatically estimate depth
-    # if detectDep > 0:
-    #     print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
-    #
-    #     #Dictionary to store chunk : np.array(depth estimate)
-    #     psObj.portDepDetect = {}
-    #     psObj.starDepDetect = {}
-    #
-    #     # Estimate depth using:
-    #     # Zheng et al. 2021
-    #     # Load model weights and configuration file
-    #     if detectDep == 1:
-    #         psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
-    #         psObj.configfile = psObj.weights.replace('.h5', '.json')
-    #         print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
-    #
-    #     # With binary thresholding
-    #     elif detectDep == 2:
-    #         print('\n\tUsing binary thresholding...')
-    #
-    #     # Parallel estimate depth for each chunk using appropriate method
-    #     r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
-    #
-    #     # store the depth predictions in the class
-    #     for ret in r:
-    #         psObj.portDepDetect[ret[2]] = ret[0]
-    #         psObj.starDepDetect[ret[2]] = ret[1]
-    #         del ret
-    #     del r
-    #
-    #     # Flag indicating depth autmatically estimated
-    #     autoBed = True
-    #
-    # # Don't estimate depth, use instrument depth estimate (sonar derived)
-    # else:
-    #     print('\n\nUsing instrument depth:')
-    #     autoBed = False
-    #
-    # # Save detected depth to csv
-    # depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
-    #
-    # # Store depths in downlooking sonar files also
-    # for son in sonObjs:
-    #     beam = son.beamName
-    #     if beam != "ss_port" and beam != "ss_star":
-    #         son._loadSonMeta()
-    #         sonDF = son.sonMetaDF
-    #
-    #         sonDF = pd.concat([sonDF, depDF], axis=1)
-    #
-    #         sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
-    #         del sonDF, son.sonMetaDF
-    #         son._cleanup()
-    #
-    # del depDF
-    #
-    # # Cleanup
-    # psObj._cleanup()
-    #
-    # print("\nDone!")
-    # print("Time (s):", round(time.time() - start_time, ndigits=1))
-    # printUsage()
-    #
-    # # Plot sonar depth and auto depth estimate (if available) on sonogram
-    # if pltBedPick:
-    #     start_time = time.time()
-    #
-    #     print("\n\nExporting bedpick plots...")
-    #     print(tileFile)
-    #     Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
-    #
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # # Cleanup
-    # psObj._cleanup()
-    # del psObj, portstar
-    #
-    # for son in sonObjs:
-    #     son._cleanup()
-    # del son
-    #
-    #
-    # ############################################################################
-    # # For shadow removal                                                       #
-    # ############################################################################
-    # # Use deep learning segmentation algorithms to automatically detect shadows.
-    # ## 1: Remove all shadows (those cause by boulders/objects)
-    # ## 2: Remove only contiguous shadows touching max range extent. May be
-    # ## useful for locating river banks...
-    #
-    # # Need to detect shadows if mapping substrate
-    # if map_sub:
-    #     if remShadow == 0:
-    #         print('\n\nSubstrate mapping requires shadow removal')
-    #         print('Setting remShadow==2...')
-    #         remShadow = 2
-    #
-    # if remShadow > 0:
-    #     start_time = time.time()
-    #     print('\n\nAutomatically detecting shadows for', len(chunks), 'chunks:')
-    #
-    #     if remShadow == 1:
-    #         print('MODE: 1 | Remove all shadows...')
-    #     elif remShadow == 2:
-    #         print('MODE: 2 | Remove shadows in far-field (river bankpick)...')
-    #
-    #     # Determine which sonObj is port/star
-    #     portstar = []
-    #     for son in sonObjs:
-    #         beam = son.beamName
-    #         if beam == "ss_port" or beam == "ss_star":
-    #             son.remShadow = True
-    #             portstar.append(son)
-    #         # Don't remove shadows from down scans
-    #         else:
-    #             son.remShadow = False
-    #     del son
-    #
-    #     # Create portstarObj
-    #     psObj = portstarObj(portstar)
-    #
-    #     # Model weights and config file
-    #     psObj.configfile = r'./models/shadow/shadow_20230204_fold_4.json'
-    #     psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
-    #
-    #     psObj.port.shadow = defaultdict()
-    #     psObj.star.shadow = defaultdict()
-    #
-    #     r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
-    #     # for chunk in chunks:
-    #     #     psObj._detectShadow(remShadow, int(chunk), USE_GPU, False, tileFile)
-    #
-    #     for ret in r:
-    #         psObj.port.shadow[ret[0]] = ret[1]
-    #         psObj.star.shadow[ret[0]] = ret[2]
-    #         del ret
-    #
-    #     del r
-    #
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # else:
-    #     for son in sonObjs:
-    #         son.remShadow = False
-    #
-    # # Cleanup
-    # try:
-    #     psObj._cleanup()
-    #     del psObj, portstar
-    # except:
-    #     pass
-    #
-    # ############################################################################
-    # # Export un-rectified sonar tiles                                          #
-    # ############################################################################
-    #
-    # if wcp or wcr:
-    #     start_time = time.time()
-    #     print("\nExporting sonogram tiles:\n")
-    #     for son in sonObjs:
-    #         if son.wcp or son.wcr_src:
-    #
-    #             # Determine what chunks to process
-    #             chunks = son._getChunkID()
-    #             if son.wcr_src and son.wcp:
-    #                 chunkCnt = len(chunks)*2
-    #             else:
-    #                 chunkCnt = len(chunks)
-    #             print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
-    #
-    #             # Load sonMetaDF
-    #             son._loadSonMeta()
-    #
-    #             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
-    #
-    #         # Tidy up
-    #         son._cleanup()
-    #         gc.collect()
-    #
-    #     del son
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # ############################################################################
-    # # Export imagery for labeling                                              #
-    # ############################################################################
-    # # Export speed corrected or stretched non-rectified imagery for purpose of
-    # ## labeling for subsequent model training. Optionally remove water column
-    # ## and shadows (essentially NoData if interested in substrate related pixels)
-    #
-    # if lbl_set:
-    #     start_time = time.time()
-    #     for son in sonObjs:
-    #         if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-    #
-    #             # Determine what chunks to process
-    #             chunks = son._getChunkID()
-    #             chunkCnt = len(chunks)
-    #
-    #             print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
-    #
-    #             # Load sonMetaDF
-    #             son._loadSonMeta()
-    #
-    #             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
-    #             son._cleanup()
-    #         gc.collect()
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # try:
-    #     del chunkCnt
-    # except:
-    #     pass
+    ############################################################################
+    # Print Metadata Summary                                                   #
+    ############################################################################
+    # Print a summary of min/max/avg metadata values. At same time, do simple
+    ## check to make sure data are valid.
+    print("\nSummary of Ping Metadata:\n")
+
+    invalid = defaultdict() # store invalid values
+
+    if project_mode != 1:
+        for son in sonObjs: # Iterate each sonar object
+            print(son.beam, ":", son.beamName)
+            son._loadSonMeta()
+            df = son.sonMetaDF
+            print("Ping Count:", len(df))
+            print("______________________________________________________________________________")
+            print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
+            print("______________________________________________________________________________")
+            for att in df.columns:
+
+                # Find min/max/avg of each column
+                if (att == 'date') or (att == 'time'):
+                    attAvg = '-'
+                    attMin = df.at[0, att]
+                    attMax = df.at[df.tail(1).index.item(), att]
+                    if att == 'time':
+                        attMin = str(attMin).split('.')[0]
+                        attMax = str(attMax).split('.')[0]
+                else:
+                    attMin = np.round(np.nanmin(df[att]), 3)
+                    attMax = np.round(np.nanmax(df[att]), 3)
+                    attAvg = np.round(np.nanmean(df[att]), 3)
+
+                    # Store number of chunks
+                    if (att == 'chunk_id'):
+                        son.chunkMax = attMax
+
+                # Check if data are valid.
+                if (att == "date") or (att == "time"):
+                    valid=True
+                elif (attMax != 0) or ("unknown" in att) or (att =="beam"):
+                    valid=True
+                elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
+                    valid=False
+                    invalid[son.beam+"."+att] = False
+                    detectDep=1
+                else:
+                    valid=False
+                    invalid[son.beam+"."+att] = False
+
+                print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format(att, str(attMin), str(attMax), str(attAvg), str(valid)))
+
+            son._cleanup()
+            print("\n")
+        del son, df, att, attAvg, attMin, attMax, valid
+
+        if len(invalid) > 0:
+            print("*******************************\n****WARNING: INVALID VALUES****\n*******************************")
+            print("_______________________________")
+            print("{:<15s} | {:<15s}".format("Sonar Channel", "Attribute"))
+            print("_______________________________")
+            for key, val in invalid.items():
+                print("{:<15s} | {:<15s}".format(key.split(".")[0], key.split(".")[1]))
+            print("\n*******************************\n****WARNING: INVALID VALUES****\n*******************************")
+            print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
+        del invalid
+
+
+        try:
+            print("\nDone!")
+            print("Time (s):", round(time.time() - start_time, ndigits=1))
+        except:
+            pass
+
+    ############################################################################
+    # For Depth Detection                                                      #
+    ############################################################################
+    # Automatically detect depth from side scan channels. Two options are avail:
+    ## Method based on Zheng et al. 2021 using deep learning for segmenting
+    ## water-bed interface.
+    ## Second is rule's based binary segmentation (may be deprecated in future..)
+
+    printUsage()
+    start_time = time.time()
+
+    # Determine which sonObj is port/star
+    portstar = []
+    for son in sonObjs:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            portstar.append(son)
+
+    # Create portstarObj
+    psObj = portstarObj(portstar)
+
+    chunks = []
+    for son in portstar:
+        # Get chunk id's, ignoring those with nodata
+        c = son._getChunkID()
+
+        chunks.extend(c)
+        del c
+    del son
+
+    chunks = np.unique(chunks).astype(int)
+
+    # # Automatically estimate depth
+    if detectDep > 0:
+        print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
+
+        #Dictionary to store chunk : np.array(depth estimate)
+        psObj.portDepDetect = {}
+        psObj.starDepDetect = {}
+
+        # Estimate depth using:
+        # Zheng et al. 2021
+        # Load model weights and configuration file
+        if detectDep == 1:
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
+            psObj.configfile = psObj.weights.replace('.h5', '.json')
+            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
+
+        # With binary thresholding
+        elif detectDep == 2:
+            print('\n\tUsing binary thresholding...')
+
+        # Parallel estimate depth for each chunk using appropriate method
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
+
+        # store the depth predictions in the class
+        for ret in r:
+            psObj.portDepDetect[ret[2]] = ret[0]
+            psObj.starDepDetect[ret[2]] = ret[1]
+            del ret
+        del r
+
+        # Flag indicating depth autmatically estimated
+        autoBed = True
+
+    # Don't estimate depth, use instrument depth estimate (sonar derived)
+    else:
+        print('\n\nUsing instrument depth:')
+        autoBed = False
+
+    # Save detected depth to csv
+    depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+
+    # Store depths in downlooking sonar files also
+    for son in sonObjs:
+        beam = son.beamName
+        if beam != "ss_port" and beam != "ss_star":
+            son._loadSonMeta()
+            sonDF = son.sonMetaDF
+
+            sonDF = pd.concat([sonDF, depDF], axis=1)
+
+            sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+            del sonDF, son.sonMetaDF
+            son._cleanup()
+
+    del depDF
+
+    # Cleanup
+    psObj._cleanup()
+
+    print("\nDone!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
+    printUsage()
+
+    # Plot sonar depth and auto depth estimate (if available) on sonogram
+    if pltBedPick:
+        start_time = time.time()
+
+        print("\n\nExporting bedpick plots...")
+        print(tileFile)
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    # Cleanup
+    psObj._cleanup()
+    del psObj, portstar
+
+    for son in sonObjs:
+        son._cleanup()
+    del son
+
+
+    ############################################################################
+    # For shadow removal                                                       #
+    ############################################################################
+    # Use deep learning segmentation algorithms to automatically detect shadows.
+    ## 1: Remove all shadows (those cause by boulders/objects)
+    ## 2: Remove only contiguous shadows touching max range extent. May be
+    ## useful for locating river banks...
+
+    # Need to detect shadows if mapping substrate
+    if map_sub:
+        if remShadow == 0:
+            print('\n\nSubstrate mapping requires shadow removal')
+            print('Setting remShadow==2...')
+            remShadow = 2
+
+    if remShadow > 0:
+        start_time = time.time()
+        print('\n\nAutomatically detecting shadows for', len(chunks), 'chunks:')
+
+        if remShadow == 1:
+            print('MODE: 1 | Remove all shadows...')
+        elif remShadow == 2:
+            print('MODE: 2 | Remove shadows in far-field (river bankpick)...')
+
+        # Determine which sonObj is port/star
+        portstar = []
+        for son in sonObjs:
+            beam = son.beamName
+            if beam == "ss_port" or beam == "ss_star":
+                son.remShadow = True
+                portstar.append(son)
+            # Don't remove shadows from down scans
+            else:
+                son.remShadow = False
+        del son
+
+        # Create portstarObj
+        psObj = portstarObj(portstar)
+
+        # Model weights and config file
+        psObj.configfile = r'./models/shadow/shadow_20230204_fold_4.json'
+        psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
+
+        psObj.port.shadow = defaultdict()
+        psObj.star.shadow = defaultdict()
+
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
+        # for chunk in chunks:
+        #     psObj._detectShadow(remShadow, int(chunk), USE_GPU, False, tileFile)
+
+        for ret in r:
+            psObj.port.shadow[ret[0]] = ret[1]
+            psObj.star.shadow[ret[0]] = ret[2]
+            del ret
+
+        del r
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    else:
+        for son in sonObjs:
+            son.remShadow = False
+
+    # Cleanup
+    try:
+        psObj._cleanup()
+        del psObj, portstar
+    except:
+        pass
+
+    ############################################################################
+    # Export un-rectified sonar tiles                                          #
+    ############################################################################
+
+    if wcp or wcr:
+        start_time = time.time()
+        print("\nExporting sonogram tiles:\n")
+        for son in sonObjs:
+            if son.wcp or son.wcr_src:
+
+                # Determine what chunks to process
+                chunks = son._getChunkID()
+                if son.wcr_src and son.wcp:
+                    chunkCnt = len(chunks)*2
+                else:
+                    chunkCnt = len(chunks)
+                print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
+
+                # Load sonMetaDF
+                son._loadSonMeta()
+
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+
+            # Tidy up
+            son._cleanup()
+            gc.collect()
+
+        del son
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    ############################################################################
+    # Export imagery for labeling                                              #
+    ############################################################################
+    # Export speed corrected or stretched non-rectified imagery for purpose of
+    ## labeling for subsequent model training. Optionally remove water column
+    ## and shadows (essentially NoData if interested in substrate related pixels)
+
+    if lbl_set:
+        start_time = time.time()
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+
+                # Determine what chunks to process
+                chunks = son._getChunkID()
+                chunkCnt = len(chunks)
+
+                print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
+
+                # Load sonMetaDF
+                son._loadSonMeta()
+
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
+                son._cleanup()
+            gc.collect()
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    try:
+        del chunkCnt
+    except:
+        pass
 
 
     ##############################################
@@ -996,6 +1002,3 @@ def read_master_func(project_mode=0,
             pickle.dump(son, sonFile)
     gc.collect()
     printUsage()
-
-
-    sys.exit()

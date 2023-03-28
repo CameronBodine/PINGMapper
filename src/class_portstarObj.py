@@ -1893,11 +1893,10 @@ class portstarObj(object):
     def _mapPredictions(self, map_predict, imgOutPrefix, chunk, npzs):
         '''
         '''
+        # Set pixel down/upscale factor
+        pix_res_factor=self.port.pix_res_factor
+
         # Set output directory
-        # outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
-        # if not os.path.exists(outDir):
-        #     os.mkdir(outDir)
-        # self.outDir = outDir
         self.outDir = self.port.outDir
 
         # Get leading zeros for output name
@@ -2091,8 +2090,8 @@ class portstarObj(object):
             gtiff,
             'w',
             driver='GTiff',
-            height=out.shape[1],
-            width=out.shape[2],
+            height=out.shape[1] * pix_res_factor,
+            width=out.shape[2] * pix_res_factor,
             count=classes,
             dtype=out.dtype,
             crs=epsg,
@@ -2111,6 +2110,9 @@ class portstarObj(object):
     def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False, return_rect=False):
         '''
         '''
+
+        # Rescale by factor
+        pix_res_factor = self.port.pix_res_factor
 
         # Get trackline/range extent file path
         portTrkMetaFile = os.path.join(self.port.metaDir, "Trackline_Smth_"+self.port.beamName+".csv")
@@ -2241,8 +2243,11 @@ class portstarObj(object):
         yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
         # Calculate x,y resolution of a single pixel
-        xres = (xMax - xMin) / outShape[0]
-        yres = (yMax - yMin) / outShape[1]
+        # xres = (xMax - xMin) / outShape[0]
+        # yres = (yMax - yMin) / outShape[1]
+        # Scale by factor for down/upsampling
+        xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
+        yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -2312,8 +2317,8 @@ class portstarObj(object):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
+                height=out.shape[0] * pix_res_factor,
+                width=out.shape[1] * pix_res_factor,
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,

@@ -67,6 +67,10 @@ project_mode = 2
 
 
 # General Parameters
+pix_res_factor = 0.1 # Pixel resampling factor;
+##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
+##                     1.0: Use sonar default resolution;
+##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
@@ -134,6 +138,7 @@ for datFile in inFiles:
 
         params = {
             'project_mode':project_mode,
+            'pix_res_factor':pix_res_factor,
             'humFile':humFile,
             'sonFiles':sonFiles,
             'projDir':projDir,

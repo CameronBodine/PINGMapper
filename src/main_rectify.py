@@ -37,6 +37,7 @@ import inspect
 
 #===============================================================================
 def rectify_master_func(project_mode=0,
+                        pix_res_factor=1.0,
                         script='',
                         humFile='',
                         sonFiles='',
@@ -321,6 +322,9 @@ def rectify_master_func(project_mode=0,
             son._loadSonMeta()
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+            # for i in chunks:
+            #     son._rectSonParallel(i, filter, wgs=False)
+            #     sys.exit()
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
             gc.collect()
 

@@ -40,6 +40,7 @@ from array import array as arr
 
 import pyproj
 import rasterio
+from rasterio.enums import Resampling
 from numpy.lib.stride_tricks import as_strided as ast
 
 import pandas as pd

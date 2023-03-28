@@ -36,6 +36,7 @@ from class_portstarObj import portstarObj
 
 #===============================================================================
 def map_master_func(project_mode=0,
+                    pix_res_factor=1.0,
                     script='',
                     humFile='',
                     sonFiles='',

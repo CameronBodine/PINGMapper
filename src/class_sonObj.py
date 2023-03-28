@@ -1758,6 +1758,14 @@ class sonObj(object):
         '''
         data = self.sonDat.astype('uint8') # Get the sonar data
 
+        # Rescale by factor
+        pix_res_factor = self.pix_res_factor
+        if pix_res_factor != 1:
+            rows = int(data.shape[0] * pix_res_factor)
+            cols = int(data.shape[1] * pix_res_factor)
+
+            data = resize(data,(rows,cols), preserve_range=True, clip=True).astype('uint8')
+
         # File name zero padding
         addZero = self._addZero(k)
 
