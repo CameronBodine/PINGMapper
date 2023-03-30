@@ -1465,6 +1465,9 @@ class sonObj(object):
 
         '''
         # Get sonMeta
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
         if son:
             # self._loadSonMeta()
             self._getScanChunkSingle(i)

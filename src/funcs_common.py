@@ -206,3 +206,25 @@ def projectMode_2a_inval():
     print("Specify a new project name (or delete existing project) and set project mode to:")
     print("\tproject_mode = 0: Create new project.\n\n")
     sys.exit()
+
+# =========================================================
+def error_noSubNpz():
+    print("\nABORTING: No existing substrate npz files.")
+    print("\tSet: pred_sub = 1\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_poly():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to export substrate map to shapefile.")
+    print("\tSet: map_sub = True\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_mosaic():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to mosaic substrate maps.")
+    print("\tSet: map_sub = True")
+    print("\tOR")
+    print("\tSet: mosaic = 0\n\n")
+    sys.exit()

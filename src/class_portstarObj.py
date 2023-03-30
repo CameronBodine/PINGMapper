@@ -293,7 +293,6 @@ class portstarObj(object):
                 elif self.port.map_predict == 2:
                     mapPath = os.path.join(self.port.substrateDir, 'map_logit_raster')
                 map = sorted(glob(os.path.join(mapPath, '*.tif')))
-                print(mapPath)
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if len(map) > maxChunk:
@@ -1280,6 +1279,21 @@ class portstarObj(object):
         portDF = self.port.sonMetaDF
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
+
+        # # If reprocessing, delete existing depth columns
+        # try:
+        #     portDF.drop('dep_m')
+        #     portDF.drop('dep_m_Method')
+        #     portDF.drop('dep_m_smth')
+        #     portDF.drop('dep_m_adjBy')
+        #
+        #     starDF.drop('dep_m')
+        #     starDF.drop('dep_m_Method')
+        #     starDF.drop('dep_m_smth')
+        #     starDF.drop('dep_m_adjBy')
+        # except:
+        #     pass
+
 
         # Get all chunks
         chunks = pd.unique(portDF['chunk_id'])
@@ -2337,8 +2351,8 @@ class portstarObj(object):
         '''
         '''
 
-        if mosaic != 2:
-            self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
+        # if mosaic != 2:
+        self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
 
         inDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
         rasterFiles = glob(os.path.join(inDir, '*map_sub*vrt'))

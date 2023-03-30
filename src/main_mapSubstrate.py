@@ -61,6 +61,7 @@ def map_master_func(project_mode=0,
                     rect_wcp=False,
                     rect_wcr=False,
                     mosaic=False,
+                    pred_sub=0,
                     map_sub=0,
                     export_poly=False,
                     map_predict=0,
@@ -137,13 +138,36 @@ def map_master_func(project_mode=0,
     # Prepare output directory and update attributes
     for son in mapObjs:
         son.substrateDir = os.path.join(son.projDir, 'substrate')
-        son.map_sub = map_sub
+        # son.map_sub = map_sub
 
     outDir = son.substrateDir
     if not os.path.exists(outDir):
         os.mkdir(outDir)
 
     del son
+
+    ##########################################################
+    # If pred_sub == 0, make sure data was previously exported
+    if pred_sub == 0:
+        try:
+            files = mapObjs[0]._getSubstrateNpz()
+        except:
+            error_noSubNpz()
+
+    #########################################################
+    # If map_sub == 0, make sure data was previously exported
+    if not map_sub:
+        # Get directory
+        mapPath = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
+        maps = glob(os.path.join(mapPath, '*.tif'))
+
+        if len(maps) == 0:
+            if export_poly:
+                error_noSubMap_poly()
+            if mosaic:
+                error_noSubMap_mosaic()
+
+
 
     #############################################
     # Determine if smoothed trackline was created
@@ -255,7 +279,7 @@ def map_master_func(project_mode=0,
     # For Substrate Prediction                                                 #
     ############################################################################
 
-    if map_sub > 0:
+    if pred_sub > 0:
         start_time = time.time()
 
         print('\n\nAutomatically predicting and segmenting substrate...')
@@ -273,7 +297,7 @@ def map_master_func(project_mode=0,
             chunks = son._getChunkID()
 
             # Prepare model
-            if map_sub ==1:
+            if pred_sub == 1:
                 # Load model weights
                 # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
                 # son.configfile = son.weights.replace('.h5', '.json')
@@ -366,6 +390,8 @@ def map_master_func(project_mode=0,
 
         # Get each son's npz's
         for son in mapObjs:
+            son.map_sub = map_sub
+
             # Set outDir
             son.outDir = outDir
 
@@ -393,7 +419,7 @@ def map_master_func(project_mode=0,
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
-        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+        # Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
 
         # For debug
         # for c, f in toMap.items():
@@ -411,7 +437,7 @@ def map_master_func(project_mode=0,
     ############################################################################
 
     overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if map_sub > 0 and mosaic > 0:
+    if mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
 
@@ -452,6 +478,10 @@ def map_master_func(project_mode=0,
          psObj.port.rect_wcp = False
          psObj.port.rect_wcr = False
          psObj.port.map_predict = False
+
+         # # Turn on map_sub
+         # psObj.port.map_sub = True
+         print(psObj.port.map_sub)
 
          psObj._rasterToPoly(mosaic, threadCnt)
 

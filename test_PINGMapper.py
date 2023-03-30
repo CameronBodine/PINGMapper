@@ -142,11 +142,13 @@ mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-map_sub = 1 # Automatically map substrate: 0==False; 1==True
-export_poly = False # Convert substrate maps to shapefile
-map_predict = 2 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
-pltSubClass = True # Export plots of substrate classification and predictions, as specified by map_predict (if == 0, do probabilities)
-map_class_method = 'max' # 'max' only current option
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = True # Export plots of substrate classification and predictions
+map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
+map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
+
 
 #################
 #################
@@ -185,6 +187,7 @@ params = {
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
     'mosaic':mosaic,
+    'pred_sub': pred_sub,
     'map_sub':map_sub,
     'export_poly':export_poly,
     'map_predict':map_predict,
@@ -209,7 +212,7 @@ if rect_wcp or rect_wcr:
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
 #==================================================
-if map_sub:
+if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
     print('\n===========================================')
     print('===========================================')
     print('***** MAPPING SUBSTRATE *****')

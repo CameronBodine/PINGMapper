@@ -59,6 +59,7 @@ def read_master_func(project_mode=0,
                      rect_wcp=False,
                      rect_wcr=False,
                      mosaic=False,
+                     pred_sub=0,
                      map_sub=0,
                      export_poly=False,
                      map_predict=0,
@@ -237,20 +238,6 @@ def read_master_func(project_mode=0,
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
-    # ####################################
-    # # Remove project directory if exists
-    # if os.path.exists(projDir):
-    #     shutil.rmtree(projDir)
-    # else:
-    #     pass
-    #
-    # ##############################
-    # # Create the project directory
-    # try:
-    #     os.mkdir(projDir)
-    # except:
-    #     pass
-
     ############################################################################
     # Decode DAT file (varies by model)                                        #
     ############################################################################
@@ -265,6 +252,13 @@ def read_master_func(project_mode=0,
         ## initial sonar object, then create a copy for each beam.
         tempC = float(tempC)/10 # Divide temperature by 10
         son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk) # Initialize sonObj instance from first sonar beam
+
+        #######################################
+        # Store needed parameters as attributes
+        son.pix_res_factor = pix_res_factor
+        son.fixNoDat = fixNoDat
+
+
         son.datLen = os.path.getsize(son.humFile) #Length (in bytes) of .DAT
 
         # Determine .DAT (humDat) structure
@@ -297,6 +291,7 @@ def read_master_func(project_mode=0,
         pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
         son.datMetaFile = outFile # Store metadata file path in sonObj
         del outFile
+
 
         # Cleanup
         son._cleanup()
@@ -492,7 +487,6 @@ def read_master_func(project_mode=0,
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
                 son.pixM = pix_m # Sonar instrument pixel resolution
-                son.pix_res_factor = pix_res_factor # Factor to downscale/upscale raster resolution
             del toProcess
 
         metaDir = sonObjs[0].metaDir # Get path to metadata directory
@@ -505,10 +499,11 @@ def read_master_func(project_mode=0,
         for son in sonObjs:
             beam = son.beamName
 
-            if wcp:
-                son.wcp = True
-            else:
-                son.wcp = False
+            son.wcp = wcp
+            # if wcp:
+            #     son.wcp = True
+            # else:
+            #     son.wcp = False
 
 
             if wcr:
@@ -534,8 +529,6 @@ def read_master_func(project_mode=0,
 
 
     else:
-        # Load existing son chunks
-        sonObjs=[]
 
         ####################################################
         # Check if sonObj pickle exists, append to metaFiles
@@ -546,22 +539,73 @@ def read_master_func(project_mode=0,
             if len(metaFiles) == 0:
                 projectMode_2a_inval()
 
-            for m in metaFiles:
-                # Initialize empty sonObj
-                son = sonObj(sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
-
-                # Open metafile
-                metaFile = pickle.load(open(m, 'rb'))
-
-                # Update sonObj with metadat items
-                for attr, value in metaFile.__dict__.items():
-                    setattr(son, attr, value)
-
-                sonObjs.append(son)
-                del son
         else:
             projectMode_2a_inval()
         del metaDir
+
+        ############################################
+        # Create a sonObj instance from pickle files
+        sonObjs=[]
+        for m in metaFiles:
+            # Initialize empty sonObj
+            son = sonObj(sonFile=None, humFile=None, projDir=None, tempC=None, nchunk=None)
+
+            # Open metafile
+            metaFile = pickle.load(open(m, 'rb'))
+
+            # Update sonObj with metadat items
+            for attr, value in metaFile.__dict__.items():
+                setattr(son, attr, value)
+
+            sonObjs.append(son)
+
+        ##########################################################
+        # Do some checks to see if additional processing is needed
+
+        # If missing pings already located, no need to reprocess.
+        if son.fixNoDat == True:
+            # Missing pings already located, set fixNoDat to False
+            fixNoDat = False
+            print("\nMissing pings detected previously.")
+            print("\tSetting fixNoDat to FALSE.")
+
+
+        if son.detectDep == detectDep:
+            detectDep = -1
+            print("\nUsing previously exported depths.")
+            print("\tSetting detectDep to -1.")
+            if detectDep > 0:
+                autoBed = True
+            else:
+                autoBed = False
+
+
+        if remShadow:
+            for son in sonObjs:
+                if son.beamName == "ss_port":
+                    if son.remShadow == remShadow:
+                        remShadow = 0
+                        print("\nUsing previous shadow settings. No need to re-process.")
+                        print("\tSetting remShadow to 0.")
+                else:
+                    pass
+
+
+        if pred_sub:
+            for son in sonObjs:
+                if son.beamName == "ss_port":
+                    if son.remShadow > 0:
+                        pred_sub = 0
+                        # remShadow = 0
+                        print("\nSetting pred_sub to 0 so shadow settings aren't effected.")
+                        print("\tDon't worry, substrate will still be predicted...")
+                else:
+                    pass
+
+
+
+        del son
+
 
 
     ############################################################################
@@ -569,11 +613,10 @@ def read_master_func(project_mode=0,
     ############################################################################
 
     if fixNoDat:
-        ## Open each beam df, store beam name in new field, then concatenate df's into one
+        # Open each beam df, store beam name in new field, then concatenate df's into one
         print("\nLocating missing pings and adding NoData...")
         frames = []
         for son in sonObjs:
-            son.fixNoDat = True
             son._loadSonMeta()
             df = son.sonMetaDF
             df['beam'] = son.beam
@@ -663,16 +706,22 @@ def read_master_func(project_mode=0,
 
         printUsage()
 
+    # else:
+    #     if project_mode != 1:
+    #         for son in sonObjs:
+    #             son.fixNoDat = fixNoDat
+
     ############################################################################
     # Print Metadata Summary                                                   #
     ############################################################################
     # Print a summary of min/max/avg metadata values. At same time, do simple
     ## check to make sure data are valid.
-    print("\nSummary of Ping Metadata:\n")
-
-    invalid = defaultdict() # store invalid values
 
     if project_mode != 1:
+        print("\nSummary of Ping Metadata:\n")
+
+        invalid = defaultdict() # store invalid values
+
         for son in sonObjs: # Iterate each sonar object
             print(son.beam, ":", son.beamName)
             son._loadSonMeta()
@@ -730,12 +779,9 @@ def read_master_func(project_mode=0,
             print("\nPING-Mapper detected issues with\nthe values stored in the above\nsonar channels and attributes.")
         del invalid
 
-
-        try:
-            print("\nDone!")
-            print("Time (s):", round(time.time() - start_time, ndigits=1))
-        except:
-            pass
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
 
     ############################################################################
     # For Depth Detection                                                      #
@@ -745,7 +791,7 @@ def read_master_func(project_mode=0,
     ## water-bed interface.
     ## Second is rule's based binary segmentation (may be deprecated in future..)
 
-    printUsage()
+
     start_time = time.time()
 
     # Determine which sonObj is port/star
@@ -769,6 +815,15 @@ def read_master_func(project_mode=0,
 
     chunks = np.unique(chunks).astype(int)
 
+    # # Check if it has already been processed
+    # if psObj.port.detectDep == detectDep:
+    #     print('\n\nUsing previously exported depths.')
+    #     if psObj.port.detectDep > 0:
+    #         autoBed = True
+    #     else:
+    #         autoBed = False
+    #
+    # else:
     # # Automatically estimate depth
     if detectDep > 0:
         print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
@@ -802,42 +857,60 @@ def read_master_func(project_mode=0,
         # Flag indicating depth autmatically estimated
         autoBed = True
 
+        saveDepth = True
+
     # Don't estimate depth, use instrument depth estimate (sonar derived)
-    else:
+    elif detectDep == 0:
         print('\n\nUsing instrument depth:')
         autoBed = False
+        saveDepth = True
 
-    # Save detected depth to csv
-    depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+    else:
+        saveDepth = False
 
-    # Store depths in downlooking sonar files also
-    for son in sonObjs:
-        beam = son.beamName
-        if beam != "ss_port" and beam != "ss_star":
-            son._loadSonMeta()
-            sonDF = son.sonMetaDF
+    if saveDepth:
+        # Save detected depth to csv
+        depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
 
-            sonDF = pd.concat([sonDF, depDF], axis=1)
+        # Store depths in downlooking sonar files also
+        for son in sonObjs:
+            # Store detectDep
+            son.detectDep = detectDep
 
-            sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
-            del sonDF, son.sonMetaDF
-            son._cleanup()
+            beam = son.beamName
+            if beam != "ss_port" and beam != "ss_star":
+                son._loadSonMeta()
+                sonDF = son.sonMetaDF
 
-    del depDF
+                # If reprocessing, delete existing depth columns
+                try:
+                    sonDF.drop('dep_m', axis=1, inplace=True)
+                    sonDF.drop('dep_m_Method', axis=1, inplace=True)
+                    sonDF.drop('dep_m_smth', axis=1, inplace=True)
+                    sonDF.drop('dep_m_adjBy', axis=1, inplace=True)
+                except:
+                    pass
 
-    # Cleanup
-    psObj._cleanup()
+                sonDF = pd.concat([sonDF, depDF], axis=1)
 
-    print("\nDone!")
-    print("Time (s):", round(time.time() - start_time, ndigits=1))
-    printUsage()
+                sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+                del sonDF, son.sonMetaDF
+                son._cleanup()
+
+        del depDF
+
+        # Cleanup
+        psObj._cleanup()
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
 
     # Plot sonar depth and auto depth estimate (if available) on sonogram
     if pltBedPick:
         start_time = time.time()
 
-        print("\n\nExporting bedpick plots...")
-        print(tileFile)
+        print("\n\nExporting bedpick plots to {}...".format(tileFile))
         Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
 
         print("\nDone!")
@@ -862,7 +935,7 @@ def read_master_func(project_mode=0,
     ## useful for locating river banks...
 
     # Need to detect shadows if mapping substrate
-    if map_sub:
+    if pred_sub:
         if remShadow == 0:
             print('\n\nSubstrate mapping requires shadow removal')
             print('Setting remShadow==2...')
@@ -882,7 +955,7 @@ def read_master_func(project_mode=0,
         for son in sonObjs:
             beam = son.beamName
             if beam == "ss_port" or beam == "ss_star":
-                son.remShadow = True
+                son.remShadow = remShadow
                 portstar.append(son)
             # Don't remove shadows from down scans
             else:
@@ -915,8 +988,9 @@ def read_master_func(project_mode=0,
         printUsage()
 
     else:
-        for son in sonObjs:
-            son.remShadow = False
+        if project_mode != 1:
+            for son in sonObjs:
+                son.remShadow = False
 
     # Cleanup
     try:
@@ -996,6 +1070,7 @@ def read_master_func(project_mode=0,
     ##############################################
 
     for son in sonObjs:
+        # print('\n\n\n\n', son)
         outFile = son.sonMetaFile.replace(".csv", ".meta")
         son.sonMetaPickle = outFile
         with open(outFile, 'wb') as sonFile:

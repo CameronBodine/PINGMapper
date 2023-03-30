@@ -103,30 +103,31 @@ if ds == 2:
 project_mode = 1
 
 # General Parameters
-pix_res_factor = 0.1 # Pixel resampling factor;
+pix_res_factor = 1.0 # Pixel resampling factor;
 ##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
 ##                     1.0: Use sonar default resolution;
 ##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Sonogram Exports
-tileFile = '.jpg'
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
 wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
+# Speed corrected sonogram Exports
 lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
-spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
+spdCor = 0 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
-# Segmentation Parameters
+# Depth Detection and Shadow Removal Parameters
 remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDep = 0 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
@@ -134,18 +135,20 @@ adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = False #Plot bedpick on sonogram
 
 
-# Rectification Parameters
-rect_wcp = True #Export rectified tiles with water column present
+# Rectification Sonar Map Exports
+rect_wcp = False #Export rectified tiles with water column present
 rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
-map_sub=1
-export_poly=True
-map_predict=1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits
-pltSubClass=True
-map_class_method='max'
+pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = False # Export plots of substrate classification and predictions
+map_sub = False # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_predict = 1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
+map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
+
 
 #################
 #################
@@ -184,6 +187,7 @@ params = {
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
     'mosaic':mosaic,
+    'pred_sub': pred_sub,
     'map_sub':map_sub,
     'export_poly':export_poly,
     'map_predict':map_predict,
@@ -208,7 +212,7 @@ if rect_wcp or rect_wcr:
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
 #==================================================
-if map_sub:
+if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
     print('\n===========================================')
     print('===========================================')
     print('***** MAPPING SUBSTRATE *****')
