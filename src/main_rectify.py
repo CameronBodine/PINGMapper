@@ -321,12 +321,9 @@ def rectify_master_func(project_mode=0,
     start_time = time.time()
     print("\nRectifying and exporting GeoTiffs:\n")
 
-    if rect_wcp:
-        for son in portstar:
-            son.rect_wcp = True
-    if rect_wcr:
-        for son in portstar:
-            son.rect_wcr = True
+    for son in portstar:
+        son.rect_wcp = rect_wcp
+        son.rect_wcr = rect_wcr
 
     if rect_wcp or rect_wcr:
         for son in portstar:

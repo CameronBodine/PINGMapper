@@ -95,7 +95,7 @@ class mapSubObj(rectObj):
         globals().update(config)
 
         # Do prediction
-        substratePred = self._predSubstrate(i, model_name, n_data_bands)
+        substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1)
 
         # Save predictions to npz
         self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
@@ -976,7 +976,7 @@ class mapSubObj(rectObj):
             wc_mask = self.wcMask
 
             label = (label*wc_mask).astype('uint8') # Zero-out water column
-            wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 8
+            wc_mask = np.where(wc_mask==0,9,wc_mask) # Set water column mask value to 9
             wc_mask = np.where(wc_mask==1,0,wc_mask) # Set non-water column mask value to 0
             label = (label+wc_mask).astype('uint8') # Add mask to label to get water column classified in plt
 
@@ -985,10 +985,85 @@ class mapSubObj(rectObj):
             self._SHW_mask(i, son=False)
             shw_mask = self.shadowMask
 
-            label = (label*shw_mask).astype('uint8')
-            shw_mask = np.where(shw_mask==0,8,shw_mask) # Set water column mask value to 7
-            shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-water column mask value to 0
-            label = (label+shw_mask).astype('uint8') # Add mask to label to get water column classified in plt
+            label = (label*shw_mask).astype('uint8') # Zero-out shadows (based on binary shadow model, not substrate model)
+            shw_mask = np.where(shw_mask==0,8,shw_mask) # Set shadow mask value to 8
+            shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-shadow mask value to 0
+            label = (label+shw_mask).astype('uint8') # Add mask to label to get shadows classified in plt
+
+            # # The shadows segmented from the substrate model overestimate the
+            # ## presence of shadows along the range extent. We want to locate
+            # ## shadow regions predicted with substrate model that touch shadows
+            # ## predicted by the binary shadow model, remove those regions, then
+            # ## fill in the hole with adjacent substrate class.
+            # # Iterate each ping
+            # for p in range(label.shape[1]):
+            #     # Get current ping's classification
+            #     ping = label[:, p]
+            #
+            #     # # Get shadows as predicted by substrate model and set to zero
+            #     # ping = np.where(ping==8, 0, ping) # Substrate classification with shadows set to zero
+            #     #
+            #     # # Find zeros (shadows). Should be grouped in contiguous arrays
+            #     # zero = np.where(ping==0)
+            #
+            #     shw = np.where(ping==8) # Return shadow indices
+            #
+            #     if len(shw[0])>0:
+            #         # There are shadows
+            #         shw = shw[0] # Get array as list
+            #         # print("\n\n\n", p, shw)
+            #
+            #         # Get indices where shadow regions aren't continuous
+            #         break_idx = np.where(np.diff(shw) != 1)[0]
+            #         # print(break_idx)
+            #
+            #         if len(break_idx) > 0:
+            #             # There are non-continuous regions, so split into continuous arrays, and get the last continuous region
+            #             last_shadow_reg = np.split(shw, np.where(np.diff(shw) != 1)[0]+1)[-1]
+            #         else:
+            #             # Shadows are continous, so just set to shw
+            #             last_shadow_reg = shw
+            #         # print('last shadow', last_shadow_reg)
+            #
+            #         # Now we want to know if last_shadow_reg touches the shadow mask
+            #         ## If it does, we will fill shadow region with adjacent substrate classification
+            #         p_shw_mask = shw_mask[:, p]
+            #
+            #         p_shw_mask = np.where(p_shw_mask==0)[0]
+            #         if len(p_shw_mask) > 0:
+            #             # If last value in last_shadow_reg+1 is equal to first value in
+            #             ## p_shw_mask, the two regions touch
+            #             l_shw = last_shadow_reg[-1] + 1
+            #             l_shw_mask = p_shw_mask[0]
+            #         else:
+            #             l_shw = last_shadow_reg[-1]
+            #             l_shw_mask = ping.shape
+            #             print(l_shw, l_shw_mask)
+            #
+            #         if l_shw == l_shw_mask:
+            #             # Get last substrate class that touches last_shadow_reg
+            #             f_shw = last_shadow_reg[0] - 1 # Index of beginning of last_shadow_reg
+            #             c = ping[f_shw] # Substrate class
+            #
+            #             # print("Before", ping[f_shw-10:f_shw+10])
+            #             # Fill ping with class in last_shadow_reg
+            #             ping[f_shw+1:l_shw] = c
+            #
+            #             # print("After ", ping[f_shw-10:f_shw+10])
+            #
+            #             # Insert ping back into label
+            #             label[:, p] = ping
+            #
+            #         # sys.exit()
+            #
+            #
+            #     else:
+            #         # There are no shadows
+            #         pass
+
+            # shw_mask = np.where(shw_mask==0,8,shw_mask) # Set shadow mask value to 8
+            # shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-shadow mask value to 0
+            # label = (label+shw_mask).astype('uint8') # Add mask to label to get shadows classified in plt
 
         label -= 1
         # Filter small regions

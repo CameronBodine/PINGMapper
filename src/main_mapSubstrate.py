@@ -414,17 +414,18 @@ def map_master_func(project_mode=0,
         del son
 
 
+
         # Do rectification as portstarObj to eliminate NoData at NADIR
         print('\n\tMapping substrate classification. Processing', len(toMap), 'port and starboard pairs...')
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
-        # Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
 
-        # For debug
+        # # For debug
         # for c, f in toMap.items():
         #     psObj._mapSubstrate(map_class_method, c, f)
-        #     sys.exit()
+        # #     sys.exit()
 
         del toMap
         print("\nDone!")

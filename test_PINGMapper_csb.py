@@ -121,13 +121,13 @@ wcr = False #Export Tiles with water column removed (and slant range corrected):
 
 # Speed corrected sonogram Exports
 lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
-spdCor = 0 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
+spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
 remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 0 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
@@ -143,10 +143,10 @@ mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 # Substrate Mapping
 pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
-pltSubClass = False # Export plots of substrate classification and predictions
+pltSubClass = True # Export plots of substrate classification and predictions
 map_sub = False # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
 export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
-map_predict = 1 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
 

@@ -283,7 +283,10 @@ def read_master_func(project_mode=0,
         son.metaDir = metaDir #Store metadata directory in sonObj
 
         # Save main script to metaDir
-        outScript = os.path.join(metaDir, script[1])
+        scriptDir = os.path.join(metaDir, 'processing_scripts')
+        if not os.path.exists(scriptDir):
+            os.mkdir(scriptDir)
+        outScript = os.path.join(scriptDir, script[1])
         shutil.copy(script[0], outScript)
 
         # Save DAT metadata to file (csv)
@@ -559,6 +562,14 @@ def read_master_func(project_mode=0,
 
             sonObjs.append(son)
 
+        #############################
+        # Save main script to metaDir
+        scriptDir = os.path.join(projDir, 'meta', 'processing_scripts')
+        if not os.path.exists(scriptDir):
+            os.mkdir(scriptDir)
+        outScript = os.path.join(scriptDir, script[1])
+        shutil.copy(script[0], outScript)
+
         ##########################################################
         # Do some checks to see if additional processing is needed
 
@@ -601,6 +612,18 @@ def read_master_func(project_mode=0,
                         print("\tDon't worry, substrate will still be predicted...")
                 else:
                     pass
+
+        for son in sonObjs:
+            son.wcp = wcp
+
+            beam = son.beamName
+            if wcr:
+                if beam == "ss_port" or beam == "ss_star":
+                    son.wcr_src = True
+                else:
+                    son.wcr_src = False
+            else:
+                son.wcr_src = False
 
 
 
@@ -1008,6 +1031,8 @@ def read_master_func(project_mode=0,
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
             if son.wcp or son.wcr_src:
+                # Set outDir
+                son.outDir = os.path.join(son.projDir, son.beamName)
 
                 # Determine what chunks to process
                 chunks = son._getChunkID()
@@ -1042,6 +1067,8 @@ def read_master_func(project_mode=0,
         start_time = time.time()
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                # Set outDir
+                son.outDir = os.path.join(son.projDir, son.beamName)
 
                 # Determine what chunks to process
                 chunks = son._getChunkID()
