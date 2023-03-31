@@ -95,7 +95,7 @@ class mapSubObj(rectObj):
         globals().update(config)
 
         # Do prediction
-        substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1)
+        substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1/3)
 
         # Save predictions to npz
         self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
