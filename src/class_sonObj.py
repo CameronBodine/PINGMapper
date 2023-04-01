@@ -1385,6 +1385,11 @@ class sonObj(object):
             if filterIntensity:
                 self._doPPDRC()
 
+            # Pyhum corrections
+            do_correct = True
+            if do_correct:
+                self.sonDat = doPyhumCorrections(self, sonMeta)
+
             # Remove shadows
             if self.remShadow:
                 # Get mask

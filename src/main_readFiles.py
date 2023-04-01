@@ -1045,7 +1045,12 @@ def read_master_func(project_mode=0,
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+                # Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+
+                if son.beamName == "ss_port":
+                    for i in chunks:
+                        son._exportTiles(i, tileFile)
+                        sys.exit()
 
             # Tidy up
             son._cleanup()

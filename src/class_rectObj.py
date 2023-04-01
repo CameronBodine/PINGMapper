@@ -962,6 +962,11 @@ class rectObj(sonObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
 
+        # Pyhum corrections
+        do_correct = True
+        if do_correct:
+            self.sonDat = doPyhumCorrections(self, sonMeta)
+
         img = self.sonDat
 
         # For each ping, we need the pixel coordinates where the sonar
