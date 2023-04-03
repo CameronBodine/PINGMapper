@@ -402,8 +402,8 @@ class portstarObj(object):
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
 
-            if not os.path.exists(outDir):
-                os.mkdir(outDir)
+            if not os.path.isdir(outDir):
+                os.makedirs(outDir)
 
             # First built a vrt
             vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
@@ -1873,7 +1873,11 @@ class portstarObj(object):
                     # Update objects filled with ping
                     label[:, p] = ping
 
+                del ping
+
             son.sonDat = label
+
+            del label
 
             # Remove shadows
             # if son.remShadow:
@@ -1885,6 +1889,8 @@ class portstarObj(object):
 
             # Remove water column
             son._WCR_SRC(sonMeta)
+
+            del son
 
         del sonObjs
 
@@ -1899,8 +1905,15 @@ class portstarObj(object):
         portSub = np.fliplr(portSub)
         mergeSub = np.concatenate((portSub, starSub), axis=0)
 
+        del portSub, starSub
+
         # Do rectification
         self._rectify(mergeSub, chunk, 'map_substrate')
+
+        del mergeSub
+        gc.collect()
+
+        return
 
 
     #=======================================================================
@@ -2309,6 +2322,8 @@ class portstarObj(object):
 
             l = out*holes
 
+            del holes, lbl
+
             # Remove small holes
             # Convert l to binary
             binary_objects = l.astype(bool)
@@ -2318,6 +2333,7 @@ class portstarObj(object):
             out = watershed(binary_filled, l, mask=binary_filled)
 
             out = out.astype('uint8')
+            del binary_filled, binary_objects, l
 
             #########################
             # Export Rectified Raster
@@ -2342,6 +2358,9 @@ class portstarObj(object):
                     dst.nodata=0
                     dst.write(out,1)
                     dst=None
+
+            del out
+            gc.collect()
 
             return
 
