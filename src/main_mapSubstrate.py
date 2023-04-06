@@ -484,6 +484,9 @@ def map_master_func(project_mode=0,
          psObj.port.rect_wcr = False
          psObj.port.map_predict = False
 
+         # Make sure map_sub is set to true
+         psObj.port.map_sub = True
+
          # # Turn on map_sub
          # psObj.port.map_sub = True
          print(psObj.port.map_sub)
@@ -494,6 +497,7 @@ def map_master_func(project_mode=0,
          psObj.port.rect_wcp = rect_wcp
          psObj.port.rect_wcr = rect_wcr
          psObj.port.map_predict = map_predict
+         psObj.port.map_sub = map_sub
 
          del psObj
          print("\nDone!")

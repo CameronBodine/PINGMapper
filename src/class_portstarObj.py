@@ -403,7 +403,10 @@ class portstarObj(object):
             outTIF = outVRT.replace('.vrt', '.tif')
 
             if not os.path.isdir(outDir):
-                os.makedirs(outDir)
+                try:
+                    os.makedirs(outDir)
+                except:
+                    pass
 
             # First built a vrt
             vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
@@ -488,8 +491,12 @@ class portstarObj(object):
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
 
-            if not os.path.exists(outDir):
-                os.mkdir(outDir)
+            if not os.path.isdir(outDir):
+                try:
+                    os.makedirs(outDir)
+                except:
+                    pass
+
             # Build VRT
             vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
@@ -1861,11 +1868,14 @@ class portstarObj(object):
                         # Get index of first and last zero
                         f, l = z[0], z[-1]
 
-                        # Get classification of next pixel
-                        c = ping[l+1]
+                        # Don't fall off edge
+                        if l+1 < ping.shape[0]:
 
-                        # Fill zero region with c
-                        ping[f:l+1] = c
+                            # Get classification of next pixel
+                            c = ping[l+1]
+
+                            # Fill zero region with c
+                            ping[f:l+1] = c
 
                     # Add water column back in
                     ping = list(wc)+list(ping)
@@ -2371,58 +2381,111 @@ class portstarObj(object):
         '''
 
         # if mosaic != 2:
+        print("\n\tCreating vrt...")
         self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
 
         inDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
         rasterFiles = glob(os.path.join(inDir, '*map_sub*vrt'))
 
         outDir = os.path.join(self.port.substrateDir, 'map_substrate_polygon')
+
         if not os.path.exists(outDir):
             os.mkdir(outDir)
 
-        for rasterFile in rasterFiles:
-            # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
-            # Open raster
-            src_ds = gdal.Open(rasterFile)
+        print("\n\tExporting to shapefile...")
+        _ = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createPolygon)(f, outDir) for f in rasterFiles)
 
-
-            ####################
-            # Polygon Conversion
-            # Set spatial reference
-            srs = osr.SpatialReference()
-            srs.ImportFromWkt(src_ds.GetProjection())
-
-            # Prepare layerfile
-            # dst_layername = rasterFile.replace('.vrt', '')
-            dst_layername = os.path.basename(rasterFile).replace('.vrt', '')
-            dst_layername = dst_layername.replace('_raster_mosaic', '')
-            dst_layername = os.path.join(outDir, dst_layername)
-
-            srcband = src_ds.GetRasterBand(1)
-            drv = ogr.GetDriverByName("ESRI Shapefile")
-            dst_ds = drv.CreateDataSource(dst_layername+'.shp')
-            dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
-            newField = ogr.FieldDefn('Substrate', ogr.OFTReal)
-            dst_layer.CreateField(newField)
-            gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
-
-            # Calculate Area
-            # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
-
-            # Delete NoData Polygon
-            # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
-            layer = dst_ds.GetLayer()
-            layer.SetAttributeFilter("Substrate = 0")
-
-            for feat in layer:
-                layer.DeleteFeature(feat.GetFID())
-
-
-            dst_ds.SyncToDisk()
-            dst_ds=None
-            # os.remove(rasterFile)
+        # for rasterFile in rasterFiles:
+        #     # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
+        #     # Open raster
+        #     src_ds = gdal.Open(rasterFile)
+        #
+        #
+        #     ####################
+        #     # Polygon Conversion
+        #     # Set spatial reference
+        #     srs = osr.SpatialReference()
+        #     srs.ImportFromWkt(src_ds.GetProjection())
+        #
+        #     # Prepare layerfile
+        #     # dst_layername = rasterFile.replace('.vrt', '')
+        #     dst_layername = os.path.basename(rasterFile).replace('.vrt', '')
+        #     dst_layername = dst_layername.replace('_raster_mosaic', '')
+        #     dst_layername = os.path.join(outDir, dst_layername)
+        #
+        #     srcband = src_ds.GetRasterBand(1)
+        #     drv = ogr.GetDriverByName("ESRI Shapefile")
+        #     dst_ds = drv.CreateDataSource(dst_layername+'.shp')
+        #     dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
+        #     newField = ogr.FieldDefn('Substrate', ogr.OFTReal)
+        #     dst_layer.CreateField(newField)
+        #     gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+        #
+        #     # Calculate Area
+        #     # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
+        #
+        #     # Delete NoData Polygon
+        #     # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
+        #     layer = dst_ds.GetLayer()
+        #     layer.SetAttributeFilter("Substrate = 0")
+        #
+        #     for feat in layer:
+        #         layer.DeleteFeature(feat.GetFID())
+        #
+        #
+        #     dst_ds.SyncToDisk()
+        #     dst_ds=None
+        #     # os.remove(rasterFile)
 
         return
+
+    #=======================================================================
+    def _createPolygon(self, f, outDir):
+        '''
+        '''
+        # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
+        # Open raster
+        src_ds = gdal.Open(f)
+
+
+        ####################
+        # Polygon Conversion
+        # Set spatial reference
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(src_ds.GetProjection())
+
+        # Prepare layerfile
+        # dst_layername = rasterFile.replace('.vrt', '')
+        dst_layername = os.path.basename(f).replace('.vrt', '')
+        dst_layername = dst_layername.replace('_raster_mosaic', '')
+        dst_layername = os.path.join(outDir, dst_layername)
+
+        srcband = src_ds.GetRasterBand(1)
+        drv = ogr.GetDriverByName("ESRI Shapefile")
+        dst_ds = drv.CreateDataSource(dst_layername+'.shp')
+        dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
+        newField = ogr.FieldDefn('Substrate', ogr.OFTReal)
+        dst_layer.CreateField(newField)
+        gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+
+        # Calculate Area
+        # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
+
+        # Delete NoData Polygon
+        # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
+        layer = dst_ds.GetLayer()
+        layer.SetAttributeFilter("Substrate = 0")
+
+        for feat in layer:
+            layer.DeleteFeature(feat.GetFID())
+
+
+        dst_ds.SyncToDisk()
+        dst_ds=None
+        # os.remove(rasterFile)
+
+        return
+
 
     #=======================================================================
     def _cleanup(self):
