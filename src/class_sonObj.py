@@ -1386,7 +1386,7 @@ class sonObj(object):
                 self._doPPDRC()
 
             # Pyhum corrections
-            do_correct = True
+            do_correct = False
             if do_correct:
                 self.sonDat = doPyhumCorrections(self, sonMeta)
 

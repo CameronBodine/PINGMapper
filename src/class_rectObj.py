@@ -963,7 +963,7 @@ class rectObj(sonObj):
             self.sonDat = self.sonDat*self.shadowMask
 
         # Pyhum corrections
-        do_correct = True
+        do_correct = False
         if do_correct:
             self.sonDat = doPyhumCorrections(self, sonMeta)
 
