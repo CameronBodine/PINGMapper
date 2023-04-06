@@ -47,8 +47,11 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20220302_USM1'
 # outDir = r'Z:\PINGMapper_Outputs\RKM559_Sill'
 
-inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\StC'
-outDir = r'Z:\MAISRC_zebra mussel project\Phase III\SideScanMapping\Processed_Data_csb\AutoSubstrate'
+# inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\StC'
+# outDir = r'Z:\MAISRC_zebra mussel project\Phase III\SideScanMapping\Processed_Data_csb\AutoSubstrate'
+
+inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
+outDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Mosaics\AutoDepth'
 
 # inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
 # outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
@@ -73,11 +76,11 @@ outDir = os.path.normpath(outDir)
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 2
+project_mode = 0
 
 
 # General Parameters
-pix_res_factor = 0.1 # Pixel resampling factor;
+pix_res_factor = 1.0 # Pixel resampling factor;
 ##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
 ##                     1.0: Use sonar default resolution;
 ##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
@@ -106,21 +109,21 @@ detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 202
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
+adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
-rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+rect_wcp = True #Export rectified tiles with water column present
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
-pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
-pltSubClass = True # Export plots of substrate classification and predictions
-map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
-export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = False # Export plots of substrate classification and predictions
+map_sub = 0 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
 map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
@@ -170,10 +173,10 @@ for i, datFile in enumerate(inFiles):
     # river = os.path.dirname(humFile).split(os.sep)[-2]
     # projName = river+'_'+dateBoat+'_'+recName
 
-    # StC
-    recName = os.path.basename(humFile).split('.')[0]
-    location = os.path.dirname(humFile).split(os.sep)[-1]
-    projName = location+'_'+recName
+    # # StC
+    # recName = os.path.basename(humFile).split('.')[0]
+    # location = os.path.dirname(humFile).split(os.sep)[-1]
+    # projName = location+'_'+recName
 
     # # WBL
     # recName = os.path.basename(humFile).split('.')[0]
@@ -182,24 +185,24 @@ for i, datFile in enumerate(inFiles):
     # location = os.path.dirname(humFile).split(os.sep)[-2]
     # projName = location+'_'+date+'_'+recName
 
-    # # GS Exports
-    # recName = os.path.basename(humFile.split('.')[0])
-    # try:
-    #     upRKM = recName.split('_')[0]
-    #     dnRKM = recName.split('_')[1]
-    #     recNum = recName.split('_')[2]
-    # except:
-    #     upRKM = 'XXX'
-    #     dnRKM = 'XXX'
-    #     recNum = recName
-    #
-    # riverDate = os.path.dirname(humFile).split(os.sep)[-1]
-    # river = riverDate.split('_')[0]
-    # date = riverDate.split('_')[1]
-    # unit = riverDate.split('_')[2]
-    #
-    # projName = river+'_'+upRKM+'_'+dnRKM+'_'+date+'_'+unit+'_'+recNum
-    # print(projName)
+    # GS Exports
+    recName = os.path.basename(humFile.split('.')[0])
+    try:
+        upRKM = recName.split('_')[0]
+        dnRKM = recName.split('_')[1]
+        recNum = recName.split('_')[2]
+    except:
+        upRKM = 'XXX'
+        dnRKM = 'XXX'
+        recNum = recName
+
+    riverDate = os.path.dirname(humFile).split(os.sep)[-1]
+    river = riverDate.split('_')[0]
+    date = riverDate.split('_')[1]
+    unit = riverDate.split('_')[2]
+
+    projName = river+'_'+upRKM+'_'+dnRKM+'_'+date+'_'+unit+'_'+recNum
+    print(projName)
 
     projDir = os.path.join(outDir, projName)
 
