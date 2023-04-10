@@ -1370,15 +1370,31 @@ class portstarObj(object):
                 portFinal.extend(portDep)
                 starFinal.extend(starDep)
 
-            # # Check shapes to ensure they are same length.  If not, slice off extra.
-            # if len(portFinal) > portDF.shape[0]:
-            #     lenDif = portDF.shape[0] - len(portFinal)
-            #     portFinal = portFinal[:lenDif]
-            #
-            # if len(starFinal) > starDF.shape[0]:
-            #     lenDif = starDF.shape[0] - len(starFinal)
-            #     starFinal = starFinal[:lenDif]
+            # Check shapes to ensure they are same length.  If not, slice off extra.
+            ## Port
+            if len(portFinal) > portDF.shape[0]:
+                # Trim portFinal
+                lenDif = portDF.shape[0] - len(portFinal)
+                portFinal = portFinal[:lenDif]
+            elif len(portFinal) < portDF.shape[0]:
+                # Extend portFinal
+                t = np.zeros((len(portDF))) # Make array same size as portDF
+                t[:len(portFinal)] = portFinal
+                portFinal = t
+            else:
+                pass
 
+            ## Star
+            if len(starFinal) > starDF.shape[0]:
+                lenDif = starDF.shape[0] - len(starFinal)
+                starFinal = starFinal[:lenDif]
+            elif len(starFinal) < starDF.shape[0]:
+                # Extend starFinal
+                t = np.zeros((len(starDF))) # Make array same size as starDF
+                t[:len(starFinal)] = starFinal
+                starFinal = t
+
+            # Smooth depth
             if smthDep:
                 portFinal = savgol_filter(portFinal, 51, 3)
                 starFinal = savgol_filter(starFinal, 51, 3)
