@@ -730,7 +730,7 @@ def read_master_func(project_mode=0,
             maxIdxChunk = df.at[maxIdx, 'chunk_id']
             maxChunk = df['chunk_id'].max()
 
-            if maxIdxChunk == maxChunk:
+            if maxIdxChunk <= maxChunk:
                 df = df[df['chunk_id'] <= maxIdxChunk]
 
             son._saveSonMetaCSV(df)
