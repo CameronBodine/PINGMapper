@@ -1067,7 +1067,7 @@ class sonObj(object):
         # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
         sonMetaAll = self._calcTrkDistTS(sonMetaAll)
 
-        self._saveSonMeta(sonMetaAll)
+        self._saveSonMetaCSV(sonMetaAll)
 
         return pix_m
 
@@ -1261,7 +1261,7 @@ class sonObj(object):
         return sonMetaAll
 
     #=======================================================================
-    def _saveSonMeta(self, sonMetaAll):
+    def _saveSonMetaCSV(self, sonMetaAll):
         # Write metadata to csv
         if not hasattr(self, 'sonMetaFile'):
             outCSV = os.path.join(self.metaDir, self.beam+"_"+self.beamName+"_meta.csv")
@@ -2063,6 +2063,22 @@ class sonObj(object):
             del self.sonDat
         except:
             pass
+
+    # ======================================================================
+    def _pickleSon(self):
+        '''
+        Pickle sonObj so we can reload later if needed.
+        '''
+        if not hasattr(self, 'sonMetaPickle'):
+            outFile = self.sonMetaFile.replace(".csv", ".meta")
+            self.sonMetaPickle = outFile
+        else:
+            outFile = self.sonMetaPickle
+
+        with open(outFile, 'wb') as sonFile:
+            pickle.dump(self, sonFile)
+
+        return
 
 
     # ======================================================================

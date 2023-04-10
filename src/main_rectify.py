@@ -348,6 +348,7 @@ def rectify_master_func(project_mode=0,
                 del son.smthTrk
             except:
                 pass
+            son._pickleSon()
         del son
     print("Done!")
     print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -375,10 +376,11 @@ def rectify_master_func(project_mode=0,
     ##############################################
 
     for son in portstar:
-        outFile = son.sonMetaFile.replace(".csv", ".meta")
-        son.sonMetaPickle = outFile
-        with open(outFile, 'wb') as sonFile:
-            pickle.dump(son, sonFile)
+        # outFile = son.sonMetaFile.replace(".csv", ".meta")
+        # son.sonMetaPickle = outFile
+        # with open(outFile, 'wb') as sonFile:
+        #     pickle.dump(son, sonFile)
+        son._pickleSon()
         del son
 
     # Cleanup

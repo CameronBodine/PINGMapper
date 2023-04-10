@@ -317,6 +317,7 @@ def map_master_func(project_mode=0,
             #     break
 
             son._cleanup()
+            son._pickleSon()
             del chunks
 
         del son
@@ -365,6 +366,7 @@ def map_master_func(project_mode=0,
             # #     sys.exit()
             # sys.exit()
             Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop, probs=probs) for c, f in toMap.items())
+            son._pickleSon()
             del toMap
 
         del son
@@ -411,6 +413,7 @@ def map_master_func(project_mode=0,
                         toMap[k] = [e, v]
                     else:
                         toMap[k] = [v, e]
+
         del son
 
 
@@ -610,9 +613,10 @@ def map_master_func(project_mode=0,
 
     for son in mapObjs:
         son._cleanup()
-        outFile = son.sonMetaFile.replace(".csv", ".meta")
-        son.sonMetaPickle = outFile
-        with open(outFile, 'wb') as sonFile:
-            pickle.dump(son, sonFile)
+        # outFile = son.sonMetaFile.replace(".csv", ".meta")
+        # son.sonMetaPickle = outFile
+        # with open(outFile, 'wb') as sonFile:
+        #     pickle.dump(son, sonFile)
+        son._pickleSon()
     gc.collect()
     printUsage()

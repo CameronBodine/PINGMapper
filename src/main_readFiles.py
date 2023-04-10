@@ -717,13 +717,23 @@ def read_master_func(project_mode=0,
 
             df.drop(columns = ['beam'], inplace=True)
 
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            # if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            #
+            #     df.loc[:1, ['index']] = [np.nan]
+            #     df.loc[:1, ['f']] = [np.nan]
+            #     df.loc[:1, ['volt_scale']] = [np.nan]
 
-                df.loc[:1, ['index']] = [np.nan]
-                df.loc[:1, ['f']] = [np.nan]
-                df.loc[:1, ['volt_scale']] = [np.nan]
+            # Check that last chunk has index anywhere in the chunk.
+            ## If not, a bunch of NoData was added to the end.
+            ## Trim off the NoData
+            maxIdx = df[['index']].idxmax().values[0]
+            maxIdxChunk = df.at[maxIdx, 'chunk_id']
+            maxChunk = df['chunk_id'].max()
 
-            son._saveSonMeta(df)
+            if maxIdxChunk == maxChunk:
+                df = df[df['chunk_id'] <= maxIdxChunk]
+
+            son._saveSonMetaCSV(df)
             son._cleanup()
         del df, rowsToProc, dfAll, son, chunks, rdr, beams
 
@@ -805,6 +815,9 @@ def read_master_func(project_mode=0,
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
+
+    for son in sonObjs:
+        son._pickleSon()
 
     ############################################################################
     # For Depth Detection                                                      #
@@ -946,6 +959,7 @@ def read_master_func(project_mode=0,
 
     for son in sonObjs:
         son._cleanup()
+        son._pickleSon()
     del son
 
 
@@ -1015,6 +1029,9 @@ def read_master_func(project_mode=0,
             for son in sonObjs:
                 son.remShadow = False
 
+    for son in sonObjs:
+        son._pickleSon()
+
     # Cleanup
     try:
         psObj._cleanup()
@@ -1051,6 +1068,8 @@ def read_master_func(project_mode=0,
                     for i in chunks:
                         son._exportTiles(i, tileFile)
                         sys.exit()
+
+                son._pickleSon()
 
             # Tidy up
             son._cleanup()
@@ -1102,10 +1121,11 @@ def read_master_func(project_mode=0,
     ##############################################
 
     for son in sonObjs:
-        # print('\n\n\n\n', son)
-        outFile = son.sonMetaFile.replace(".csv", ".meta")
-        son.sonMetaPickle = outFile
-        with open(outFile, 'wb') as sonFile:
-            pickle.dump(son, sonFile)
+        # # print('\n\n\n\n', son)
+        # outFile = son.sonMetaFile.replace(".csv", ".meta")
+        # son.sonMetaPickle = outFile
+        # with open(outFile, 'wb') as sonFile:
+        #     pickle.dump(son, sonFile)
+        son._pickleSon()
     gc.collect()
     printUsage()
