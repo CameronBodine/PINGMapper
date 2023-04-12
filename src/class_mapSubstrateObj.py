@@ -246,17 +246,47 @@ class mapSubObj(rectObj):
         --------------------
         '''
 
+        # First get indices for l,c,r chunks
+        ## Couple of things to consider:
+        ## If c == 0, or c == self.chunkMax:
+        ### l or r needs to be c also.
+        ## Also need to check that there is actually data available for i+-1
+        ### This is necessary due to filling with NoData
+
+        c = i # Set c
+        if c == 0:
+            l = c # Use c for l also
+        else:
+            l = c-1 # Use chunk before c
+
+        if c == self.chunkMax:
+            r = c # us c for r also
+        else:
+            r = c+1 # Use chunk after c
+
+        # Get chunk id's, except those with NoData
+        valid_chunks = self._getChunkID()
+
+        # If l or c is not in valid_chunks, set to c
+        if l not in valid_chunks:
+            l = c
+        if r not in valid_chunks:
+            r = c
+
+
         # Get sonMeta df
+        if not hasattr(self, "sonMetaDF"):
+            self._loadSonMeta()
         df = self.sonMetaDF
 
         # Get sonar chunks, remove shadows and crop, remove water column and crop
         ######
         # Left
-        # if i==0, use i for left also
-        if i == 0:
-            l = i
-        else:
-            l = i-1
+        # # if i==0, use i for left also
+        # if i == 0:
+        #     l = i
+        # else:
+        #     l = i-1
 
         # Get sonDat
         self._getScanChunkSingle(l)
@@ -276,8 +306,8 @@ class mapSubObj(rectObj):
         # Create copy of sonar data
         lSonDat = self.sonDat.copy()
 
-        # If using first chunk, flip horizontally
-        if l == 0:
+        # If using same chunk as c, flip horizontally
+        if l == c:
             lSonDat = np.fliplr(lSonDat)
 
         ########
@@ -305,11 +335,12 @@ class mapSubObj(rectObj):
 
         ########
         # Right
-        # if i is last chunk, use i for right also
-        if i == self.chunkMax:
-            r = i
-        else:
-            r = i+1
+        # # if i is last chunk, use i for right also
+        # if i == self.chunkMax:
+        #     r = i
+        # else:
+        #     r = i+1
+
         # Get sonDat
         self._getScanChunkSingle(r)
 
@@ -325,8 +356,8 @@ class mapSubObj(rectObj):
         # Create copy of sonar data
         rSonDat = self.sonDat.copy()
 
-        # If using first chunk, flip horizontally
-        if r == self.pingMax:
+        # If using same chunk as c, flip horizontally
+        if r == c:
             rSonDat = np.fliplr(rSonDat)
 
         del self.sonDat

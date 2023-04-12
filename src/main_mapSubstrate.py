@@ -275,6 +275,9 @@ def map_master_func(project_mode=0,
         gc.collect()
         printUsage()
 
+    for son in mapObjs:
+        son._pickleSon()
+
     ############################################################################
     # For Substrate Prediction                                                 #
     ############################################################################
@@ -295,7 +298,6 @@ def map_master_func(project_mode=0,
 
             # Get chunk id's
             chunks = son._getChunkID()
-
             # Prepare model
             if pred_sub == 1:
                 # Load model weights
