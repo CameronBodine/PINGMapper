@@ -1040,6 +1040,63 @@ def read_master_func(project_mode=0,
         pass
 
     ############################################################################
+    # For sonar intensity corrections/normalization                            #
+    ############################################################################
+
+    egn = False
+    if egn:
+        start_time = time.time()
+        print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                print('\n\tCalculating EGN for', son.beamName)
+                son.egn = True
+                # Determine what chunks to process
+                chunks = son._getChunkID()
+
+                # Load sonMetaDF
+                son._loadSonMeta()
+
+                # Calculate range-wise mean intensity for each chunk
+                print('\n\tCalculating range-wise mean intensity for each chunk...')
+                chunk_means = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcChunkMeans)(i) for i in chunks)
+
+                # Calculate global means
+                print('\n\tCalculating range-wise global means...')
+                son._egnCalcGlobalMeans(chunk_means)
+
+                # Calculate egn min and max for each chunk
+                print('\n\tCalculating EGN minimum and maximum values for each chunk...')
+                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcMinMax)(i) for i in chunks)
+
+                # Calculate global min max for each channel
+                son._egnCalcGlobalMinMax(min_max)
+
+                # son._pickleSon()
+
+        # Get true global min and max
+        mins = []
+        maxs = []
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                mins.append(son.egn_min)
+                maxs.append(son.egn_max)
+        min = np.min(mins)
+        max = np.max(maxs)
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                son.egn_min = min
+                son.egn_max = max
+                son._pickleSon()
+
+            # Tidy up
+            son._cleanup()
+            gc.collect()
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+
+    ############################################################################
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
@@ -1062,12 +1119,12 @@ def read_master_func(project_mode=0,
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                # Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
 
-                if son.beamName == "ss_port":
-                    for i in chunks:
-                        son._exportTiles(i, tileFile)
-                        sys.exit()
+                # if son.beamName == "ss_port":
+                #     for i in chunks:
+                #         son._exportTiles(i, tileFile)
+                #         sys.exit()
 
                 son._pickleSon()
 

@@ -951,8 +951,8 @@ class rectObj(sonObj):
         else:
             # Rectifying substrate classification
             pass
-        if filterIntensity:
-            self._doPPDRC()
+        # if filterIntensity:
+        #     self._doPPDRC()
 
         # Remove shadows
         if self.remShadow:
@@ -962,10 +962,10 @@ class rectObj(sonObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
 
-        # Pyhum corrections
-        do_correct = False
-        if do_correct:
-            self.sonDat = doPyhumCorrections(self, sonMeta)
+        # # Pyhum corrections
+        # do_correct = False
+        # if do_correct:
+        #     self.sonDat = doPyhumCorrections(self, sonMeta)
 
         img = self.sonDat
 
@@ -1135,6 +1135,11 @@ class rectObj(sonObj):
                     pass
 
             self._WCR_SRC(sonMeta)
+
+            # Empirical gain normalization
+            if self.egn:
+                self._egn()
+
             img = self.sonDat
 
             img[0]=0 # To fix extra white on curves

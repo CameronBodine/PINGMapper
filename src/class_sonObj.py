@@ -1382,13 +1382,13 @@ class sonObj(object):
             # Load chunk's sonar data into memory
             self._loadSonChunk()
 
-            if filterIntensity:
-                self._doPPDRC()
-
-            # Pyhum corrections
-            do_correct = False
-            if do_correct:
-                self.sonDat = doPyhumCorrections(self, sonMeta)
+            # if filterIntensity:
+            #     self._doPPDRC()
+            #
+            # # Pyhum corrections
+            # do_correct = False
+            # if do_correct:
+            #     self.sonDat = doPyhumCorrections(self, sonMeta)
 
             # Remove shadows
             if self.remShadow:
@@ -1408,6 +1408,11 @@ class sonObj(object):
             if self.wcr_src:
                 self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
                 # self._doPPDRC()
+
+                # Empirical gain normalization
+                if self.egn:
+                    self._egn()
+
                 self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
 
             # try:
@@ -2100,74 +2105,260 @@ class sonObj(object):
     ############################################################################
 
     # ======================================================================
-    def _doPPDRC(self):
+    def _egnCalcChunkMeans(self, chunk):
         '''
-        Reference:
-        Peter Kovesi, "Phase Preserving Tone Mapping of Non-Photographic High Dynamic
-        Range Images".  Proceedings: Digital Image Computing: Techniques and
-        Applications 2012 (DICTA 2012). Available via IEEE Xplore
 
-        Dan Buscombe translated from matlab code posted on:
-        http://www.csse.uwa.edu.au/~pk/research/matlabfns/PhaseCongruency/
-
-        Dan Buscombe implemented in PyHum:
-        https://github.com/dbuscombe-usgs/PyHum
         '''
-        im = self.sonDat.astype('float64')
-        im = standardize(im, 0, 1)
-        im = im*1e4
 
-        # Populate needed parameters
-        n = 2
-        eps = 2.2204e-16
-        rows, cols = np.shape(im)
-        wavelength = cols/2
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
 
-        IM = np.fft.fft2(im)
+        # Update class attributes based on current chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
-        # Generate horizontal and vertical frequency grids that vary from
-        # -0.5 to 0.5
-        u1, u2 = np.meshgrid((np.r_[0:cols]-(np.fix(cols/2)+1))/(cols-np.mod(cols,2)),(np.r_[0:rows]-(np.fix(rows/2)+1))/(rows-np.mod(rows,2)))
+        ############
+        # load sonar
+        self._loadSonChunk()
 
-        u1 = np.fft.ifftshift(u1)   # Quadrant shift to put 0 frequency at the corners
-        u2 = np.fft.ifftshift(u2)
+        ################
+        # remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
 
-        radius = np.sqrt(u1*u1 + u2*u2)
-        # Matrix values contain frequency values as a radius from centre (but quadrant shifted)
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
 
-        # Get rid of the 0 radius value in the middle (at top left corner after
-        # fftshifting) so that dividing by the radius, will not cause trouble.
-        radius[1,1] = 1
+        ########################
+        # slant range correction
+        self._WCR_SRC(sonMeta)
 
-        H1 = 1j*u1/radius   # The two monogenic filters in the frequency domain
-        H2 = 1j*u2/radius
-        H1[1,1] = 0
-        H2[1,1] = 0
-        radius[1,1] = 0  # undo fudge
+        # Set zeros to nans (????)
+        self.sonDat = self.sonDat.astype('float')
+        self.sonDat[self.sonDat == 0] = np.nan
 
-        # High pass Butterworth filter
-        H =  1.0 - 1.0 / (1.0 + (radius * wavelength)**(2*n))
+        ##############################
+        # Calculate range-wise average
+        mean_intensity = np.nanmean(self.sonDat, axis=1)
 
-        f = np.real(np.fft.ifft2(H*IM))
-        h1f = np.real(np.fft.ifft2(H*H1*IM))
-        h2f = np.real(np.fft.ifft2(H*H2*IM))
+        # ##############################################################
+        # # Calculate min/max intensity for rescaling after applying EGN
+        # min = np.nanmin(self.sonDat)
+        # max = np.nanmax(self.sonDat)
 
-        ph = np.arctan(f/np.sqrt(h1f*h1f + h2f*h2f + eps))
-        E = np.sqrt(f*f + h1f*h1f + h2f*h2f)
-        res = np.sin(ph)*np.log1p(E)
+        return mean_intensity#, (min, max)
 
-        res = standardize(res, 0, 1)
+    # ======================================================================
+    def _egnCalcGlobalMeans(self, chunk_means):
+        '''
+        Calculate weighted average of chunk_means
+        '''
+        # Remove last chunks means so we don't have to do weighted average
+        ## All other chunks will have same length
+        chunk_means = chunk_means[:-1]
 
-        # # Try median filter
-        # avg = np.nanmedian(res, axis=0)
-        # res = res-avg + np.nanmean(avg)
-        # res = res + np.abs(np.nanmin(avg))
-        # res = median(res, square(3))
-        #
-        # res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
+        # #####################
+        # # Find largest vector, and store min/max
+        # lv = 0
+        # mins = []
+        # maxs = []
+        # for c, (c_min, c_max) in chunk_means:
+        #     mins.append(c_min)
+        #     maxs.append(c_max)
+        #     if c.shape[0] > lv:
+        #         lv = c.shape[0]
 
-        # Try standardizing and rescaling
-        res = standardize(res, 0, 255)
+        #####################
+        # Find largest vector
+        lv = 0
+        for c in chunk_means:
+            if c.shape[0] > lv:
+                lv = c.shape[0]
 
-        self.sonDat = res
-        return self
+        ########################
+        # Stack vectors in array
+
+        # Create nan array
+        a = np.empty((lv, len(chunk_means)))
+        a[:] = np.nan
+
+        # Stack arrays
+        for i, m in enumerate(chunk_means):
+            # a[:m[0].shape[0], i] = m[0]
+            a[:m.shape[0], i] = m
+
+        ################
+        # Calculate mean
+        self.egn_means = np.nanmean(a, axis=1)
+
+        # ###############
+        # # Store min/max
+        # self.egn_min = np.nanmin(mins)
+        # self.egn_max = np.nanmax(maxs)
+
+        return
+
+    # ======================================================================
+    def _egnCalcMinMax(self, chunk):
+        '''
+        Calculate local min and max values after applying EGN
+        '''
+        # Filter sonMetaDF by chunk
+        isChunk = self.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+
+        # Update class attributes based on current chunk
+        self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
+        self.headIdx = sonMeta['index'] # store byte offset per ping
+        self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+
+        ############
+        # load sonar
+        self._loadSonChunk()
+
+        ################
+        # remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
+        ########################
+        # slant range correction
+        self._WCR_SRC(sonMeta)
+
+        ########
+        # Do EGN
+        self._egn(do_rescale=False)
+
+        ###################
+        # Calculate min/max
+        min = np.nanmin(self.sonDat)
+        max = np.nanmax(self.sonDat)
+
+        return (min, max)
+
+    # ======================================================================
+    def _egnCalcGlobalMinMax(self, min_max):
+        '''
+        '''
+
+        mins = []
+        maxs = []
+        for (min, max) in min_max:
+            mins.append(min)
+            maxs.append(max)
+
+        self.egn_min = np.min(mins)
+        self.egn_max = np.max(maxs)
+
+        return
+
+
+    # ======================================================================
+    def _egn(self, do_rescale=True):
+        '''
+        Apply empirical gain normalization to sonDat
+        '''
+
+        # Get sonar data
+        sonDat = self.sonDat
+
+        # Get egn means
+        egn_means = self.egn_means.copy() # Don't want to overwrite
+
+        # Divide each ping by mean vector
+        sonDat = sonDat / egn_means[:, None]
+
+        if do_rescale:
+            # Rescale by global min and max
+            m = self.egn_min
+            M = self.egn_max
+            mn = 0
+            mx = 255
+            # m = min(dat.flatten())
+            # M = max(dat.flatten())
+            sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
+
+        self.sonDat = sonDat
+        return
+
+
+
+    # # ======================================================================
+    # def _doPPDRC(self):
+    #     '''
+    #     Reference:
+    #     Peter Kovesi, "Phase Preserving Tone Mapping of Non-Photographic High Dynamic
+    #     Range Images".  Proceedings: Digital Image Computing: Techniques and
+    #     Applications 2012 (DICTA 2012). Available via IEEE Xplore
+    #
+    #     Dan Buscombe translated from matlab code posted on:
+    #     http://www.csse.uwa.edu.au/~pk/research/matlabfns/PhaseCongruency/
+    #
+    #     Dan Buscombe implemented in PyHum:
+    #     https://github.com/dbuscombe-usgs/PyHum
+    #     '''
+    #     im = self.sonDat.astype('float64')
+    #     im = standardize(im, 0, 1)
+    #     im = im*1e4
+    #
+    #     # Populate needed parameters
+    #     n = 2
+    #     eps = 2.2204e-16
+    #     rows, cols = np.shape(im)
+    #     wavelength = cols/2
+    #
+    #     IM = np.fft.fft2(im)
+    #
+    #     # Generate horizontal and vertical frequency grids that vary from
+    #     # -0.5 to 0.5
+    #     u1, u2 = np.meshgrid((np.r_[0:cols]-(np.fix(cols/2)+1))/(cols-np.mod(cols,2)),(np.r_[0:rows]-(np.fix(rows/2)+1))/(rows-np.mod(rows,2)))
+    #
+    #     u1 = np.fft.ifftshift(u1)   # Quadrant shift to put 0 frequency at the corners
+    #     u2 = np.fft.ifftshift(u2)
+    #
+    #     radius = np.sqrt(u1*u1 + u2*u2)
+    #     # Matrix values contain frequency values as a radius from centre (but quadrant shifted)
+    #
+    #     # Get rid of the 0 radius value in the middle (at top left corner after
+    #     # fftshifting) so that dividing by the radius, will not cause trouble.
+    #     radius[1,1] = 1
+    #
+    #     H1 = 1j*u1/radius   # The two monogenic filters in the frequency domain
+    #     H2 = 1j*u2/radius
+    #     H1[1,1] = 0
+    #     H2[1,1] = 0
+    #     radius[1,1] = 0  # undo fudge
+    #
+    #     # High pass Butterworth filter
+    #     H =  1.0 - 1.0 / (1.0 + (radius * wavelength)**(2*n))
+    #
+    #     f = np.real(np.fft.ifft2(H*IM))
+    #     h1f = np.real(np.fft.ifft2(H*H1*IM))
+    #     h2f = np.real(np.fft.ifft2(H*H2*IM))
+    #
+    #     ph = np.arctan(f/np.sqrt(h1f*h1f + h2f*h2f + eps))
+    #     E = np.sqrt(f*f + h1f*h1f + h2f*h2f)
+    #     res = np.sin(ph)*np.log1p(E)
+    #
+    #     res = standardize(res, 0, 1)
+    #
+    #     # # Try median filter
+    #     # avg = np.nanmedian(res, axis=0)
+    #     # res = res-avg + np.nanmean(avg)
+    #     # res = res + np.abs(np.nanmin(avg))
+    #     # res = median(res, square(3))
+    #     #
+    #     # res = denoise_tv_chambolle(res, weight=0.1, multichannel=False)
+    #
+    #     # Try standardizing and rescaling
+    #     res = standardize(res, 0, 255)
+    #
+    #     self.sonDat = res
+    #     return self
