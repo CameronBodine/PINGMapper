@@ -1402,14 +1402,21 @@ class sonObj(object):
             # Export water column present (wcp) image
             if self.wcp:
                 # self._doPPDRC()
+
+                # # Empirical gain normalization with wcp
+                # if self.egn:
+                #     if self.beamName == "ss_port" or self.beamName == "ss_star":
+                #         self._egn_wcr(chunk, sonMeta)
+
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
 
             # Export slant range corrected (water column removed) imagery
             if self.wcr_src:
                 self._WCR_SRC(sonMeta) # Remove water column and redistribute ping returns based on FlatBottom assumption
+
                 # self._doPPDRC()
 
-                # Empirical gain normalization
+                # Empirical gain normalization with wcr
                 if self.egn:
                     self._egn()
 
@@ -2123,6 +2130,15 @@ class sonObj(object):
         # load sonar
         self._loadSonChunk()
 
+        # #####################################
+        # # Get wc avg (for wcp egn) before src
+        # self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
+        # bedMask = 1-self.wcMask # Invert zeros and ones
+        # wc = self.sonDat*bedMask # Mask bed pixels
+        # wc[wc == 0] = np.nan # Set zeros to nan
+        # wc_avg = np.nanmean(wc) # get one avg for wc
+        # del bedMask, wc, self.wcMask
+
         ################
         # remove shadows
         if self.remShadow:
@@ -2140,16 +2156,27 @@ class sonObj(object):
         self.sonDat = self.sonDat.astype('float')
         self.sonDat[self.sonDat == 0] = np.nan
 
+        #####
+        # WCR
+        #####
+
         ##############################
         # Calculate range-wise average
-        mean_intensity = np.nanmean(self.sonDat, axis=1)
+        mean_intensity_wcr = np.nanmean(self.sonDat, axis=1)
 
-        # ##############################################################
-        # # Calculate min/max intensity for rescaling after applying EGN
-        # min = np.nanmin(self.sonDat)
-        # max = np.nanmax(self.sonDat)
 
-        return mean_intensity#, (min, max)
+        # #####
+        # # WCP
+        # #####
+        #
+        # ############
+        # # Get depths
+        # bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        #
+        # # Make copy of mean_intensity_wcr
+
+
+        return mean_intensity_wcr
 
     # ======================================================================
     def _egnCalcGlobalMeans(self, chunk_means):
@@ -2287,6 +2314,78 @@ class sonObj(object):
 
         self.sonDat = sonDat
         return
+
+
+    # ======================================================================
+    def _egn_wcr(self, chunk, sonMeta, do_rescale=True):
+        '''
+        Apply empirical gain normalization to sonDat
+        '''
+
+        # Get sonar data
+        sonDat = self.sonDat
+
+        # Get water column mask
+        self._WC_mask(chunk, son=False) # So we don't reload sonDat
+        wcMask = 1-self.wcMask # Get the mask, invert zeros and ones
+
+        # Get water column, mask bed
+        wc = sonDat * wcMask
+
+        # Get egn_means
+        egn_means = self.egn_means.copy() # Don't want to overwrite
+
+        # Get bedpicks, in pixel units
+        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+
+        # Iterate each ping
+        for j in range(sonDat.shape[1]):
+            depth = bedPick[j] # Get bedpick
+            # Create 1d array to store relocated egn avgs for given ping.  Set to -9999 so we
+            ## can later interpolate over gaps.
+            egn_p = (np.zeros((sonDat.shape[0])).astype(np.float32)) #* -9999
+            # dataExtent = 0
+            # Iterate over each avg
+            for i in range(sonDat.shape[0]):
+                # Set wc avgs to 1 (unchanged)
+                if i < depth:
+                    egn_p[i] = 1
+                else:
+                    # k = i - depth # egn_means index
+                    # r_avg = egn_means[k] # get avg for given range
+
+                    # Get egn_means index (range) for given slant range (i)
+                    avgIndex = round(np.sqrt(i**2 - depth**2),0).astype(int)
+                    r_avg = egn_means[avgIndex] # Get egn_mean value
+                    egn_p[i] = r_avg # Store range avg at appropriate slant range
+
+            # # Interpolate over gaps (just in case)
+            # egn_p[egn_p == -9999] = np.nan
+            # nans, x = np.isnan(egn_p), lambda z: z.nonzero()[0]
+            # egn_p[nans] = np.interp(x(nans), x(~nans), egn_p[~nans])
+
+            # Normalize ping intensities with egn_p
+            sonDat[:,j] = sonDat[:,j] / egn_p
+
+        if do_rescale:
+            # Rescale by global min and max
+            # m = self.egn_min
+            m = 0
+            M = self.egn_max
+            mn = 0
+            mx = 255
+            # m = min(dat.flatten())
+            # M = max(dat.flatten())
+            sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
+
+        # Mask water column in sonDat
+        wcMask = 1-wcMask
+        sonDat = sonDat * wcMask
+
+        # Add water column pixels back in
+        sonDat = sonDat + wc
+
+        self.sonDat = sonDat
 
 
 

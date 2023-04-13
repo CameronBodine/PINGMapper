@@ -45,6 +45,7 @@ def read_master_func(project_mode=0,
                      fixNoDat=False,
                      threadCnt=0,
                      tileFile=False,
+                     egn=False,
                      wcp=False,
                      wcr=False,
                      lbl_set=False,
@@ -602,6 +603,17 @@ def read_master_func(project_mode=0,
                     pass
 
 
+        if egn:
+            for son in sonObjs:
+                if son.beamName == "ss_port":
+                    if son.egn == egn:
+                        egn = False
+                        print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+                        print("\tSetting egn to 0.")
+                else:
+                    pass
+
+
         if pred_sub:
             for son in sonObjs:
                 if son.beamName == "ss_port":
@@ -1043,7 +1055,6 @@ def read_master_func(project_mode=0,
     # For sonar intensity corrections/normalization                            #
     ############################################################################
 
-    egn = False
     if egn:
         start_time = time.time()
         print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
@@ -1053,6 +1064,7 @@ def read_master_func(project_mode=0,
                 son.egn = True
                 # Determine what chunks to process
                 chunks = son._getChunkID()
+                # chunks = [chunks[0]]
 
                 # Load sonMetaDF
                 son._loadSonMeta()
@@ -1073,6 +1085,8 @@ def read_master_func(project_mode=0,
                 son._egnCalcGlobalMinMax(min_max)
 
                 # son._pickleSon()
+            else:
+                son.egn = False # Dont bother with down-facing beams
 
         # Get true global min and max
         mins = []
@@ -1095,6 +1109,10 @@ def read_master_func(project_mode=0,
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+    else:
+        if project_mode != 1:
+            for son in sonObjs:
+                son.egn=False
 
     ############################################################################
     # Export un-rectified sonar tiles                                          #

@@ -115,6 +115,10 @@ threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total thre
 tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
+# Sonar Intensity Corrections
+egn = True
+
+
 # Sonogram Exports
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
 wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
@@ -126,12 +130,12 @@ maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
-remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+remShadow = 1  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
+adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = False #Plot bedpick on sonogram
 
 
@@ -142,7 +146,7 @@ mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
 pltSubClass = True # Export plots of substrate classification and predictions
 map_sub = False # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
 export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
@@ -172,6 +176,7 @@ params = {
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
+    'egn':egn,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,

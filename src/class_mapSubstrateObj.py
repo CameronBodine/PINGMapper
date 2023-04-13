@@ -294,11 +294,15 @@ class mapSubObj(rectObj):
         # Store left offset for left corner of center chunk, i.e. width of first chunk
         lOffL = self.sonDat.shape[1]
 
+        # Get sonMetaDF
+        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy().reset_index()
+
+        # # Do egn
+        # if self.egn:
+        #     self._egn_wcr(l, lMetaDF)
+
         # Crop shadows
         _ = self._SHW_crop(l, False)
-
-        # Get sonMetaDF
-        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy()
 
         # Remove water column and crop
         lMinDep = self._WCR_crop(lMetaDF)
@@ -321,11 +325,15 @@ class mapSubObj(rectObj):
         # Store left offset for right corner of center chunk, i.e. width of both chunks
         lOffR = lOffL + self.sonDat.shape[1]
 
+        # Get sonMetaDF
+        cMetaDF = df.loc[df['chunk_id'] == c, ['dep_m']].copy().reset_index()
+
+        # # Do egn
+        # if self.egn:
+        #     self._egn_wcr(c, cMetaDF)
+
         # Crop shadows first
         _ = self._SHW_crop(i, False)
-
-        # Get sonMetaDF
-        cMetaDF = df.loc[df['chunk_id'] == i, ['dep_m']].copy()
 
         # Remove water column and crop
         cMinDep = self._WCR_crop(cMetaDF)
@@ -344,11 +352,15 @@ class mapSubObj(rectObj):
         # Get sonDat
         self._getScanChunkSingle(r)
 
+        # Get sonMetaDF
+        rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy().reset_index()
+
+        # # Do egn
+        # if self.egn:
+        #     self._egn_wcr(r, rMetaDF)
+
         # Crop shadows first
         _ = self._SHW_crop(r, False)
-
-        # Get sonMetaDF
-        rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy()
 
         # Remove water column and crop
         rMinDep = self._WCR_crop(rMetaDF)
