@@ -603,15 +603,15 @@ def read_master_func(project_mode=0,
                     pass
 
 
-        if egn:
-            for son in sonObjs:
-                if son.beamName == "ss_port":
-                    if son.egn == egn:
-                        egn = False
-                        print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
-                        print("\tSetting egn to 0.")
-                else:
-                    pass
+        # if egn:
+        #     for son in sonObjs:
+        #         if son.beamName == "ss_port":
+        #             if son.egn == egn:
+        #                 egn = False
+        #                 print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+        #                 print("\tSetting egn to 0.")
+        #         else:
+        #             pass
 
 
         if pred_sub:
@@ -1062,9 +1062,14 @@ def read_master_func(project_mode=0,
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
                 print('\n\tCalculating EGN for', son.beamName)
                 son.egn = True
+
+                # if lbl_set > 0:
+                #     print('\n\n\t lbl_set selected for export:')
+                #     print('\t EGN will be calculated without masking shadows.')
+                #     son.remShadow = False
+
                 # Determine what chunks to process
                 chunks = son._getChunkID()
-                # chunks = [chunks[0]]
 
                 # Load sonMetaDF
                 son._loadSonMeta()
@@ -1076,6 +1081,10 @@ def read_master_func(project_mode=0,
                 # Calculate global means
                 print('\n\tCalculating range-wise global means...')
                 son._egnCalcGlobalMeans(chunk_means)
+                del chunk_means
+
+                # Check if any nan's and set to 1
+                son.egn_means[np.isnan(son.egn_means)] = 1
 
                 # Calculate egn min and max for each chunk
                 print('\n\tCalculating EGN minimum and maximum values for each chunk...')
@@ -1083,8 +1092,12 @@ def read_master_func(project_mode=0,
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
+                del min_max
 
-                # son._pickleSon()
+                son.remShadow = remShadow
+
+                gc.collect()
+                printUsage()
             else:
                 son.egn = False # Dont bother with down-facing beams
 
@@ -1109,6 +1122,7 @@ def read_master_func(project_mode=0,
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
     else:
         if project_mode != 1:
             for son in sonObjs:
@@ -1180,6 +1194,7 @@ def read_master_func(project_mode=0,
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
                 son._cleanup()
+
             gc.collect()
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))

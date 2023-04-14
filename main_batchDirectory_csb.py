@@ -50,8 +50,11 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'G:\Shared drives\MAISRC_zebra mussel project\Phase III\SideScanMapping\HumminBird Data\StC'
 # outDir = r'Z:\MAISRC_zebra mussel project\Phase III\SideScanMapping\Processed_Data_csb\AutoSubstrate'
 
+# inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
+# outDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Mosaics\AutoDepth'
+
 inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
-outDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Mosaics\AutoDepth'
+outDir = r'E:\SynologyDrive\Modeling\00_forLabeling\SpdCor_EGN_AllGSRecordings'
 
 # inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
 # outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
@@ -89,33 +92,36 @@ nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+tileFile = '.jpg' # Img format for plots and sonogram exports
 
+
+# Sonar Intensity Corrections
+egn = True
 
 # Sonogram Exports
-tileFile = '.jpg'
 wcp = False #Export tiles with water column present
 wcr = False #Export Tiles with water column removed (and slant range corrected)
 
 
 # Speed/Factor corrected images for labeling
-lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
-remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
+adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
-rect_wcp = True #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcp = False #Export rectified tiles with water column present
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
@@ -219,6 +225,7 @@ for i, datFile in enumerate(inFiles):
         'exportUnknown':exportUnknown,
         'fixNoDat':fixNoDat,
         'threadCnt':threadCnt,
+        'egn':egn,
         'tileFile':tileFile,
         'wcp':wcp,
         'wcr':wcr,
