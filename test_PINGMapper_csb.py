@@ -124,7 +124,7 @@ wcp = False #Export tiles with water column present: 0==False; 1==True, side sca
 wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 # Speed corrected sonogram Exports
-lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
+lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
@@ -141,8 +141,8 @@ pltBedPick = False #Plot bedpick on sonogram
 
 # Rectification Sonar Map Exports
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping

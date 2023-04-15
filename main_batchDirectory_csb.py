@@ -122,7 +122,7 @@ pltBedPick = False #Plot bedpick on sonogram
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
 rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
