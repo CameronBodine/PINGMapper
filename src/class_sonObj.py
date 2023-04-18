@@ -1527,7 +1527,6 @@ class sonObj(object):
 
 
 
-
     # ======================================================================
     def _WCR_SRC(self, sonMeta, son=True):
         '''
@@ -2536,3 +2535,58 @@ class sonObj(object):
     #
     #     self.sonDat = res
     #     return self
+
+    # # ======================================================================
+    # def _WCR_SRC(self, sonMeta, son=True):
+    #
+    #     chunk = sonMeta['chunk_id'][0]
+    #
+    #     # Load depth (in real units) and convert to pixels
+    #     # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
+    #     bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+    #     bedPick = np.asarray(bedPick)
+    #
+    #     # Initialize 2d array to store relocated sonar records
+    #     srcDat = np.zeros(self.sonDat.shape).astype(np.float32)#.astype(int)
+    #     srcDat[:] = np.nan
+    #
+    #     # # Create Index array
+    #     # # Create a 2D array with 4 rows and 5 columns
+    #     # wcpIndex = np.zeros(self.sonDat.shape)
+    #     #
+    #     # # # Create a 1D array with column indices
+    #     # # row_indices = np.arange(self.sonDat.shape[0])
+    #     #
+    #     # # # Use broadcasting to fill the 2D array with column indices
+    #     # # wcpIndex += row_indices
+    #     #
+    #     # # Get wc mask
+    #     # self._WC_mask(chunk)
+    #     # mask = self.wcMask.astype('bool')
+    #     #
+    #     # row_indices = np.indices(self.sonDat.shape)[0]
+    #     #
+    #     # # Use np.where to select the appropriate row indices based on the mask and shift them
+    #     # # shifted_row_indices = np.where(mask, row_indices - np.argmax(mask, axis=1)[:, np.newaxis], 0)
+    #     # shifted_row_indices = np.where(mask, row_indices[])
+    #     #
+    #     #
+    #     # # Use np.where to select the appropriate row indices based on the mask
+    #     # # wcpIndex[mask] = row_indices[mask]
+    #     # wcpIndex[mask] = shifted_row_indices[mask]
+    #     # print(wcpIndex[:, 0])
+    #     # print(wcpIndex[:, 10])
+    #
+    #     row_indices = np.indices(self.sonDat.shape)[0]
+    #     self._WC_mask(chunk)
+    #     mask = self.wcMask.astyp('bool')
+    #
+    #
+    #     for
+    #
+    #     print(wcpIndex)
+    #
+    #
+    #
+    #
+    #     sys.exit()
