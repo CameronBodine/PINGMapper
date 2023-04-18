@@ -100,7 +100,7 @@ if ds == 2:
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 2
+project_mode = 1
 
 # General Parameters
 pix_res_factor = 1.0 # Pixel resampling factor;
@@ -116,12 +116,12 @@ tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Sonar Intensity Corrections
-egn = True
+egn = False
 
 
 # Sonogram Exports
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
-wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 # Speed corrected sonogram Exports
 lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
@@ -130,18 +130,18 @@ maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
-remShadow = 2 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+remShadow = 0 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
-smthDep = True #Smooth depth before water column removal
+smthDep = False #Smooth depth before water column removal
 adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Sonar Map Exports
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
