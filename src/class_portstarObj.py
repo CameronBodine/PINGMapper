@@ -1402,12 +1402,12 @@ class portstarObj(object):
             # Convert pix to depth [m]
             # portFinal = portFinal * portDF['pix_m']
             # starFinal = starFinal * starDF['pix_m']
-            portFinal = portFinal * self.port.pixM
-            starFinal = starFinal * self.star.pixM
+            portFinal = np.asarray(portFinal) * self.port.pixM
+            starFinal = np.asarray(starFinal) * self.star.pixM
 
             # Set negatives to 0
-            portFinal = np.asarray(portFinal)
-            starFinal = np.asarray(starFinal)
+            # portFinal = np.asarray(portFinal)
+            # starFinal = np.asarray(starFinal)
 
             portFinal = np.where(portFinal<0, 0, portFinal)
             starFinal = np.where(starFinal<0, 0, starFinal)
