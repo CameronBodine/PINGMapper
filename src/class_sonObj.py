@@ -2156,14 +2156,14 @@ class sonObj(object):
         # self._loadSonChunk()
         self._getScanChunkSingle(chunk)
 
-        # #####################################
-        # # Get wc avg (for wcp egn) before src
-        # self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
-        # bedMask = 1-self.wcMask # Invert zeros and ones
-        # wc = self.sonDat*bedMask # Mask bed pixels
-        # wc[wc == 0] = np.nan # Set zeros to nan
-        # wc_avg = np.nanmean(wc) # get one avg for wc
-        # del bedMask, wc, self.wcMask
+        #####################################
+        # Get wc avg (for wcp egn) before src
+        self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
+        bedMask = 1-self.wcMask # Invert zeros and ones
+        wc = self.sonDat*bedMask # Mask bed pixels
+        wc[wc == 0] = np.nan # Set zeros to nan
+        mean_intensity_wc = np.nanmean(wc, axis=1) # get one avg for wc
+        del bedMask, wc, self.wcMask
 
         ################
         # remove shadows
@@ -2204,7 +2204,7 @@ class sonObj(object):
 
         del self.sonDat
         gc.collect()
-        return mean_intensity_wcr
+        return mean_intensity_wcr, mean_intensity_wc
 
     # ======================================================================
     def _egnCalcGlobalMeans(self, chunk_means):
@@ -2230,26 +2230,33 @@ class sonObj(object):
         # Find largest vector
         lv = 0
         for c in chunk_means:
-            if c.shape[0] > lv:
-                lv = c.shape[0]
+            if c[0].shape[0] > lv:
+                lv = c[0].shape[0]
 
         ########################
         # Stack vectors in array
 
         # Create nan array
-        a = np.empty((lv, len(chunk_means)))
-        a[:] = np.nan
+        wc_means = np.empty((lv, len(chunk_means)))
+        wc_means[:] = np.nan
+
+        bed_means = np.empty((lv, len(chunk_means)))
+        bed_means[:] = np.nan
 
         # Stack arrays
         for i, m in enumerate(chunk_means):
-            # a[:m[0].shape[0], i] = m[0]
-            a[:m.shape[0], i] = m
+            ## Bed means
+            bed_means[:m[0].shape[0], i] = m[0]
+
+            ## WC means
+            wc_means[:m[1].shape[0], i] = m[1]
         del chunk_means
 
         ################
         # Calculate mean
-        self.egn_means = np.nanmean(a, axis=1)
-        del a
+        self.egn_bed_means = np.nanmean(bed_means, axis=1)
+        self.egn_wc_means = np.nanmean(wc_means, axis=1)
+        del bed_means, wc_means
 
         # ###############
         # # Store min/max

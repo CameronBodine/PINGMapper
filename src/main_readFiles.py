@@ -46,6 +46,8 @@ def read_master_func(project_mode=0,
                      threadCnt=0,
                      tileFile=False,
                      egn=False,
+                     egn_rescale=0,
+                     egn_rescale_factor=1,
                      wcp=False,
                      wcr=False,
                      lbl_set=False,
@@ -603,15 +605,15 @@ def read_master_func(project_mode=0,
                     pass
 
 
-        if egn:
-            for son in sonObjs:
-                if son.beamName == "ss_port":
-                    if son.egn == egn:
-                        egn = False
-                        print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
-                        print("\tSetting egn to 0.")
-                else:
-                    pass
+        # if egn:
+        #     for son in sonObjs:
+        #         if son.beamName == "ss_port":
+        #             if son.egn == egn:
+        #                 egn = False
+        #                 print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+        #                 print("\tSetting egn to 0.")
+        #         else:
+        #             pass
 
 
         if pred_sub:
@@ -1084,11 +1086,12 @@ def read_master_func(project_mode=0,
                 del chunk_means
 
                 # Check if any nan's and set to 1
-                son.egn_means[np.isnan(son.egn_means)] = 1
+                son.egn_bed_means[np.isnan(son.egn_bed_means)] = 1
+                son.egn_wc_means[np.isnan(son.egn_wc_means)] = 1
 
-                # Calculate egn min and max for each chunk
-                print('\n\tCalculating EGN minimum and maximum values for each chunk...')
-                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcMinMax)(i) for i in chunks)
+                # Calculate egn statistics for each chunk
+                print('\n\tCalculating EGN statistics for each chunk...')
+                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcStats)(i) for i in chunks)
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)

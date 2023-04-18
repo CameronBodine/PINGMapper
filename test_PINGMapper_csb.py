@@ -116,7 +116,10 @@ tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Sonar Intensity Corrections
-egn = False
+egn = True
+egn_rescale = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_rescale_factor = 0.5 # If % Clip, the percent of histogram tails to clip;
+                         ## If std, the number of standard deviations to retain
 
 
 # Sonogram Exports
@@ -177,6 +180,8 @@ params = {
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
     'egn':egn,
+    'egn_rescale':egn_rescale,
+    'egn_rescale_factor':egn_rescale_factor,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,
