@@ -2676,7 +2676,7 @@ class sonObj(object):
             self.egn_wcr_stretch_max = m
             del m, mp, v
 
-            return (self.egn_wcp_stretch_min, self.egn_wcp_stretch_max), (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
+        return (self.egn_wcp_stretch_min, self.egn_wcp_stretch_max), (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
 
 
     # ======================================================================
@@ -2701,14 +2701,18 @@ class sonObj(object):
         sonDat = np.where(sonDat < m, m, sonDat)
         sonDat = np.where(sonDat > M, M, sonDat)
 
-        print('\n\n\n\n', sonDat)
         # sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
+
+
+        print("\n\n\n", sonDat)
+        # sonDat = exposure.adjust_gamma(sonDat, gamma=1.3, gain=1) # Darken
+        # sonDat = exposure.adjust_gamma(sonDat, gamma=0.7, gain=1) # Lighten
+        # sonDat = exposure.adjust_log(sonDat, 1)
+        print("\n\n\n", sonDat)
+
         # Normalize image to between 0 and 255
         # https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
         sonDat *= (255.0/sonDat.max())
-        print(sonDat)
-
-        print(m, M, mn, mx)
 
         # sonDat = np.where(sonDat < mn, mn, sonDat)
         # sonDat = np.where(sonDat > mx, mx, sonDat)
