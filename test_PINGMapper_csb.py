@@ -117,23 +117,23 @@ tileFile = '.jpg' # Img format for plots and sonogram exports
 
 # Sonar Intensity Corrections
 egn = True
-egn_rescale = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
-egn_rescale_factor = 0.5 # If % Clip, the percent of histogram tails to clip;
+egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
                          ## If std, the number of standard deviations to retain
 
 
 # Sonogram Exports
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
-wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 # Speed corrected sonogram Exports
-lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
+lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
-remShadow = 0 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+remShadow = 1 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
@@ -180,8 +180,8 @@ params = {
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
     'egn':egn,
-    'egn_rescale':egn_rescale,
-    'egn_rescale_factor':egn_rescale_factor,
+    'egn_stretch':egn_stretch,
+    'egn_stretch_factor':egn_stretch_factor,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,

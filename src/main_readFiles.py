@@ -46,8 +46,8 @@ def read_master_func(project_mode=0,
                      threadCnt=0,
                      tileFile=False,
                      egn=False,
-                     egn_rescale=0,
-                     egn_rescale_factor=1,
+                     egn_stretch=0,
+                     egn_stretch_factor=1,
                      wcp=False,
                      wcr=False,
                      lbl_set=False,
@@ -1089,13 +1089,20 @@ def read_master_func(project_mode=0,
                 son.egn_bed_means[np.isnan(son.egn_bed_means)] = 1
                 son.egn_wc_means[np.isnan(son.egn_wc_means)] = 1
 
-                # Calculate egn statistics for each chunk
-                print('\n\tCalculating EGN statistics for each chunk...')
-                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcStats)(i) for i in chunks)
+                # Calculate egn min and max for each chunk
+                print('\n\tCalculating EGN min and max values for each chunk...')
+                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcMinMax)(i) for i in chunks)
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
                 del min_max
+
+                print(son.egn_bed_min, son.egn_bed_max)
+                print(son.egn_wc_min, son.egn_wc_max)
+
+                # # Calculate histogram for each chunk
+                # print('\n\tCalculating EGN histogram for each chunk...')
+                # hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
 
                 # son.remShadow = remShadow
 
@@ -1105,23 +1112,136 @@ def read_master_func(project_mode=0,
                 son.egn = False # Dont bother with down-facing beams
 
         # Get true global min and max
-        mins = []
-        maxs = []
+        # mins = []
+        # maxs = []
+        # for son in sonObjs:
+        #     if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+        #         mins.append(son.egn_min)
+        #         maxs.append(son.egn_max)
+        # min = np.min(mins)
+        # max = np.max(maxs)
+        # for son in sonObjs:
+        #     if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+        #         son.egn_min = min
+        #         son.egn_max = max
+        #         son._pickleSon()
+
+        bed_mins = []
+        bed_maxs = []
+        wc_mins = []
+        wc_maxs = []
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                mins.append(son.egn_min)
-                maxs.append(son.egn_max)
-        min = np.min(mins)
-        max = np.max(maxs)
+                bed_mins.append(son.egn_bed_min)
+                bed_maxs.append(son.egn_bed_max)
+                wc_mins.append(son.egn_wc_min)
+                wc_maxs.append(son.egn_wc_max)
+        bed_min = np.min(bed_mins)
+        bed_max = np.max(bed_maxs)
+        wc_min = np.min(wc_mins)
+        wc_max = np.max(wc_maxs)
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                son.egn_min = min
-                son.egn_max = max
-                son._pickleSon()
+                son.egn_bed_min = bed_min
+                son.egn_bed_max = bed_max
+                son.egn_wc_min = wc_min
+                son.egn_wc_max = wc_max
 
             # Tidy up
             son._cleanup()
+            son._pickleSon()
             gc.collect()
+
+        # Need to calculate histogram if egn_stretch is greater then 0
+        if egn_stretch > 0:
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    print('\n\tCalculating EGN corrected histogram for', son.beamName)
+                    hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
+
+                    # print('\n\tCalculating global EGN corrected histogram')
+                    son._egnCalcGlobalHist(hist)
+
+            # Now calculate true global histogram
+            egn_wcp_hist = np.zeros((255))
+            egn_wcr_hist = np.zeros((255))
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    egn_wcp_hist += son.egn_wcp_hist
+                    egn_wcr_hist += son.egn_wcr_hist
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son.egn_wcp_hist = egn_wcp_hist
+                    son.egn_wcr_hist = egn_wcr_hist
+
+            # Calculate global percentages and standard deviation
+            wcp_pcnt = np.zeros((egn_wcp_hist.shape))
+            wcr_pcnt = np.zeros((egn_wcr_hist.shape))
+
+            # Calculate total pixels
+            wcp_sum = np.sum(egn_wcp_hist)
+            wcr_sum = np.sum(egn_wcr_hist)
+
+            # Caclulate percentages
+            for i, v in enumerate(egn_wcp_hist):
+                wcp_pcnt[i] = egn_wcp_hist[i] / wcp_sum
+
+            for i, v in enumerate(egn_wcr_hist):
+                wcr_pcnt[i] = egn_wcr_hist[i] / wcr_sum
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son.egn_wcp_hist_pcnt = wcp_pcnt
+                    son.egn_wcr_hist_pcnt = wcr_pcnt
+
+
+            del egn_wcp_hist, egn_wcr_hist, wcp_pcnt, wcr_pcnt
+
+            # Calculate min and max for rescale
+            for son in sonObjs:
+                if son.beamName == 'ss_port':
+                    wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
+                    print(wcp_stretch, wcr_stretch)
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+            for son in sonObjs:
+                if son.beamName == 'ss_star':
+                    son.egn_stretch = egn_stretch
+                    son.egn_stretch_factor = egn_stretch_factor
+
+                    son.egn_wcp_stretch_min = wcp_stretch[0]
+                    son.egn_wcp_stretch_max = wcp_stretch[1]
+
+                    son.egn_wcr_stretch_min = wcr_stretch[0]
+                    son.egn_wcr_stretch_max = wcr_stretch[1]
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+        else:
+            # Use global min max as stretch vals
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son.egn_wcp_stretch_min = min(son.egn_bed_min, son.egn_wc_min)
+                    son.egn_wcp_stretch_max = max(son.egn_bed_max, son.egn_wc_max)
+
+                    son.egn_wcr_stretch_min = son.egn_bed_min
+                    son.egn_wcr_stretch_max = son.egn_bed_max
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
