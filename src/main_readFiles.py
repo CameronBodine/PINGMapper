@@ -1097,9 +1097,6 @@ def read_master_func(project_mode=0,
                 son._egnCalcGlobalMinMax(min_max)
                 del min_max
 
-                print(son.egn_bed_min, son.egn_bed_max)
-                print(son.egn_wc_min, son.egn_wc_max)
-
                 # # Calculate histogram for each chunk
                 # print('\n\tCalculating EGN histogram for each chunk...')
                 # hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
@@ -1203,7 +1200,6 @@ def read_master_func(project_mode=0,
             for son in sonObjs:
                 if son.beamName == 'ss_port':
                     wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
-                    print(wcp_stretch, wcr_stretch)
 
                     # Tidy up
                     son._cleanup()

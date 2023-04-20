@@ -53,11 +53,14 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
 # outDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Mosaics\AutoDepth'
 
-inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
-outDir = r'E:\SynologyDrive\Modeling\00_forLabeling\SpdCor_EGN_AllGSRecordings'
+# inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
+# outDir = r'E:\SynologyDrive\Modeling\00_forLabeling\SpdCor_EGN_AllGSRecordings'
 
 # inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
 # outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
+
+inDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
 
 inDir = os.path.normpath(inDir)
 outDir = os.path.normpath(outDir)
@@ -90,13 +93,17 @@ pix_res_factor = 1.0 # Pixel resampling factor;
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Sonar Intensity Corrections
 egn = True
+egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
+                         ## If std, the number of standard deviations to retain
+
 
 # Sonogram Exports
 wcp = False #Export tiles with water column present
@@ -226,6 +233,8 @@ for i, datFile in enumerate(inFiles):
         'fixNoDat':fixNoDat,
         'threadCnt':threadCnt,
         'egn':egn,
+        'egn_stretch':egn_stretch,
+        'egn_stretch_factor':egn_stretch_factor,
         'tileFile':tileFile,
         'wcp':wcp,
         'wcr':wcr,

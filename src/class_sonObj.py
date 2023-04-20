@@ -2703,12 +2703,9 @@ class sonObj(object):
 
         # sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
-
-        print("\n\n\n", sonDat)
         # sonDat = exposure.adjust_gamma(sonDat, gamma=1.3, gain=1) # Darken
         # sonDat = exposure.adjust_gamma(sonDat, gamma=0.7, gain=1) # Lighten
         # sonDat = exposure.adjust_log(sonDat, 1)
-        print("\n\n\n", sonDat)
 
         # Normalize image to between 0 and 255
         # https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
