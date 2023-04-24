@@ -482,6 +482,7 @@ class rectObj(sonObj):
         # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
         gc.collect()
+        self._pickleSon()
         return self
 
     #===========================================
@@ -1082,6 +1083,18 @@ class rectObj(sonObj):
             except:
                 pass
 
+            # egn
+            if self.egn:
+
+                self._egn_wcp(chunk, sonMeta)
+                # self._egn()
+                if self.remShadow:
+                    stretch_wcp=False
+                else:
+                    stretch_wcp=True
+
+                self._egnDoStretch(stretch_wcp=stretch_wcp)
+
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -1139,6 +1152,13 @@ class rectObj(sonObj):
             # Empirical gain normalization
             if self.egn:
                 self._egn()
+
+                if self.remShadow:
+                    stretch_wcp=False
+                else:
+                    stretch_wcp=True
+
+                self._egnDoStretch(stretch_wcp=stretch_wcp)
 
             img = self.sonDat
 
