@@ -59,10 +59,14 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
 # outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
 
-inDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
-outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
+# inDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+# outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
+#
+# inDir = os.path.normpath(inDir)
+# outDir = os.path.normpath(outDir)
 
-inDir = os.path.normpath(inDir)
+# For McAulay
+outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM'
 outDir = os.path.normpath(outDir)
 
 #################
@@ -82,7 +86,7 @@ outDir = os.path.normpath(outDir)
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 0
+project_mode = 1
 
 
 # General Parameters
@@ -93,7 +97,7 @@ pix_res_factor = 1.0 # Pixel resampling factor;
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 tileFile = '.jpg' # Img format for plots and sonogram exports
 
@@ -111,7 +115,7 @@ wcr = False #Export Tiles with water column removed (and slant range corrected)
 
 
 # Speed/Factor corrected images for labeling
-lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
@@ -122,13 +126,13 @@ detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 202
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
+adjDep = 5 #Aditional depth adjustment (in pixels) for water column removaL (10 px ~= 0.6 ft)
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
@@ -142,22 +146,33 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 
 
 
-# Find all DAT and SON files in all subdirectories of inDir
-os.path.normpath(inDir)
-os.path.normpath(outDir)
-
-inFiles=[]
-for root, dirs, files in os.walk(inDir):
-    for file in files:
-        if file.endswith('.DAT'):
-            inFiles.append(os.path.join(root, file))
-
 # # Find all DAT and SON files in all subdirectories of inDir
+# os.path.normpath(inDir)
+# os.path.normpath(outDir)
+#
 # inFiles=[]
 # for root, dirs, files in os.walk(inDir):
 #     for file in files:
-#         if file.endswith('.DAT') and ('EggSites' not in root):
+#         if file.endswith('.DAT'):
 #             inFiles.append(os.path.join(root, file))
+
+
+
+
+# For McAulay
+inFiles = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSB1\289_244_Rec00001.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSC1\289_244_Rec00004.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSA1\489_451_Rec00003.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSA1\451_438_Rec00004.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSB1\453_451_Rec00005.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSB1\451_438_Rec00006.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210304_FWSA1\393_363_Rec00007.DAT',
+           r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210304_FWSB1\395_365_Rec00009.DAT']
+
+
+
+
+
 
 inFiles = sorted(inFiles, reverse=False)
 
@@ -258,38 +273,38 @@ for i, datFile in enumerate(inFiles):
         'map_class_method':map_class_method
         }
 
-    try:
-        print('sonPath',sonPath)
-        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-        print('+++++++++++++++++++++++++++++++++++++++++++')
-        print('***** Working On *****')
-        print('Index:', i)
-        print('Output Director:', projDir)
-        print('Input File:', humFile)
-        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+    # try:
+    print('sonPath',sonPath)
+    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+    print('+++++++++++++++++++++++++++++++++++++++++++')
+    print('***** Working On *****')
+    print('Index:', i)
+    print('Output Director:', projDir)
+    print('Input File:', humFile)
+    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
+    print('\n===========================================')
+    print('===========================================')
+    print('***** READING *****')
+    read_master_func(**params)
+
+    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** READING *****')
-        read_master_func(**params)
+        print('***** RECTIFYING *****')
+        rectify_master_func(**params)
 
-        if rect_wcp or rect_wcr:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** RECTIFYING *****')
-            rectify_master_func(**params)
+    #==================================================
+    if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** MAPPING SUBSTRATE *****')
+        print("working on "+projDir)
+        map_master_func(**params)
 
-        #==================================================
-        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** MAPPING SUBSTRATE *****')
-            print("working on "+projDir)
-            map_master_func(**params)
-
-    except:
-        print('Could not process:', datFile)
-        errorRecording.append(projDir)
+    # except:
+    #     print('Could not process:', datFile)
+    #     errorRecording.append(projDir)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)), '\n\n\n')

@@ -605,15 +605,20 @@ def read_master_func(project_mode=0,
                     pass
 
 
-        # if egn:
-        #     for son in sonObjs:
-        #         if son.beamName == "ss_port":
-        #             if son.egn == egn:
-        #                 egn = False
-        #                 print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
-        #                 print("\tSetting egn to 0.")
-        #         else:
-        #             pass
+        if egn:
+            for son in sonObjs:
+                # print('\n\n\n\n')
+                # vs = vars(son)
+                # for v in vs:
+                #     if "shadow" not in v:
+                #         print(v, vs[v])
+                if son.beamName == "ss_port":
+                    if son.egn == egn:
+                        egn = False
+                        print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+                        print("\tSetting egn to 0.")
+                else:
+                    pass
 
 
         if pred_sub:

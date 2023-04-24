@@ -105,10 +105,42 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # projDir = projDir[-1]
 # projDir = os.path.join(r'./procData/', projDir)
 
-humFile = r'E:\SynologyDrive\ExampleHumFiles\20230204_SandraBond_Klamath\Test_scans_Klamath\2019\Rec00015.DAT'
+# humFile = r'E:\SynologyDrive\ExampleHumFiles\20230204_SandraBond_Klamath\Test_scans_Klamath\2019\Rec00015.DAT'
+# sonPath = humFile.split('.')[0]
+# projDir = os.path.dirname(humFile)
+# projDir = projDir+ os.sep+ 'Substrate_Segformer'
+
+# For McAulay
+humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSB1\289_244_Rec00001.DAT'
+# humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSC1\289_244_Rec00004.DAT'
+outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM\AOI_Columbia'
+
+# humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSA1\489_451_Rec00003.DAT'
+# humFile = r''
+# outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM\AOI_Georgetown'
 sonPath = humFile.split('.')[0]
-projDir = os.path.dirname(humFile)
-projDir = projDir+ os.sep+ 'Substrate_Segformer'
+
+# GS Exports
+recName = os.path.basename(humFile.split('.')[0])
+try:
+    upRKM = recName.split('_')[0]
+    dnRKM = recName.split('_')[1]
+    recNum = recName.split('_')[2]
+except:
+    upRKM = 'XXX'
+    dnRKM = 'XXX'
+    recNum = recName
+
+riverDate = os.path.dirname(humFile).split(os.sep)[-1]
+river = riverDate.split('_')[0]
+date = riverDate.split('_')[1]
+unit = riverDate.split('_')[2]
+
+projName = river+'_'+upRKM+'_'+dnRKM+'_'+date+'_'+unit+'_'+recNum
+print(projName)
+
+projDir = os.path.join(outDir, projName)
+
 
 # humFile = r'E:\SynologyDrive\ExampleHumFiles\20230220_MichealDikun\R00001'
 # sonPath = humFile.split('.')[0]
@@ -133,11 +165,11 @@ print(projDir)
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 2
+project_mode = 0
 
 
 # General Parameters
-pix_res_factor = 0.1 # Pixel resampling factor;
+pix_res_factor = 1.0 # Pixel resampling factor;
 ##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
 ##                     1.0: Use sonar default resolution;
 ##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
@@ -146,10 +178,17 @@ nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+tileFile = '.jpg'
+
+
+# Sonar Intensity Corrections
+egn = True
+egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
+                         ## If std, the number of standard deviations to retain
 
 
 # Sonogram Exports
-tileFile = '.jpg'
 wcp = False #Export tiles with water column present
 wcr = False #Export Tiles with water column removed (and slant range corrected)
 
@@ -159,26 +198,26 @@ maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
-remShadow = 0  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 0 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
+adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
-pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
-pltSubClass = True # Export plots of substrate classification and predictions
-map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
-export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = False # Export plots of substrate classification and predictions
+map_sub = 0 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
 map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
@@ -205,6 +244,9 @@ params = {
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
+    'egn':egn,
+    'egn_stretch':egn_stretch,
+    'egn_stretch_factor':egn_stretch_factor,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,
