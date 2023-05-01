@@ -111,13 +111,18 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # projDir = projDir+ os.sep+ 'Substrate_Segformer'
 
 # For McAulay
-humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSB1\289_244_Rec00001.DAT'
-# humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSC1\289_244_Rec00004.DAT'
-outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM\AOI_Columbia'
+# humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSB1\289_244_Rec00001.DAT'
+# # humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210511_FWSC1\289_244_Rec00004.DAT'
+# outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM\AOI_Columbia'
 
 # humFile = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data\Pearl\Pearl\PRL_20210303_FWSA1\489_451_Rec00003.DAT'
 # humFile = r''
 # outDir = r'E:\SynologyDrive\RFI\20220324_McAulayJaunsen_USM\AOI_Georgetown'
+# sonPath = humFile.split('.')[0]
+
+# For EGN troubleshoot
+humFile = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data/Pascagoula/Pascagoula/PAS_20220908_USM1/120_104_Rec00003.DAT'
+outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
 sonPath = humFile.split('.')[0]
 
 # GS Exports
@@ -165,7 +170,7 @@ print(projDir)
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 0
+project_mode = 1
 
 
 # General Parameters
@@ -176,7 +181,7 @@ pix_res_factor = 1.0 # Pixel resampling factor;
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 tileFile = '.jpg'
 
@@ -192,9 +197,9 @@ egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.
 wcp = False #Export tiles with water column present
 wcr = False #Export Tiles with water column removed (and slant range corrected)
 
-lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Segmentation Parameters
@@ -202,14 +207,14 @@ remShadow = 2  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank sh
 detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
-smthDep = True #Smooth depth before water column removal
-adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
+smthDep = False #Smooth depth before water column removal
+adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = False #Plot bedpick on sonogram
 
 
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 

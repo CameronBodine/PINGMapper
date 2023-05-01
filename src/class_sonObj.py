@@ -1917,11 +1917,11 @@ class sonObj(object):
 
                 self._egn_wcp(chunk, sonMeta)
                 # self._egn()
-                if self.remShadow:
+                # if self.remShadow:
+                if lbl_set == 2:
                     stretch_wcp=False
                 else:
                     stretch_wcp=True
-
                 self._egnDoStretch(stretch_wcp=stretch_wcp)
 
             # Remove shadows and crop
@@ -2217,9 +2217,9 @@ class sonObj(object):
         '''
         Calculate weighted average of chunk_means
         '''
-        # Remove last chunks means so we don't have to do weighted average
-        ## All other chunks will have same length
-        chunk_means = chunk_means[:-1]
+        # # Remove last chunks means so we don't have to do weighted average
+        # ## All other chunks will have same length
+        # chunk_means = chunk_means[:-1]
 
         # #####################
         # # Find largest vector, and store min/max
@@ -2445,11 +2445,11 @@ class sonObj(object):
             wc_mins.append(w_min)
             wc_maxs.append(w_max)
 
-        self.egn_bed_min = np.min(bed_mins)
-        self.egn_bed_max = np.max(bed_maxs)
+        self.egn_bed_min = np.nanmin(bed_mins)
+        self.egn_bed_max = np.nanmax(bed_maxs)
 
-        self.egn_wc_min = np.min(wc_mins)
-        self.egn_wc_max = np.max(wc_maxs)
+        self.egn_wc_min = np.nanmin(wc_mins)
+        self.egn_wc_max = np.nanmax(wc_maxs)
 
         return
 
@@ -2513,6 +2513,7 @@ class sonObj(object):
         self.sonDat = wc
         self._egn(wc=True, do_rescale=False)
         wc = self.sonDat.copy()
+        wc = np.nan_to_num(wc, nan=0) # replace nans with zero
         del self.sonDat
 
         # Get egn_means
@@ -2579,6 +2580,7 @@ class sonObj(object):
         sonDat = sonDat * wcMask
         # for p in range(sonDat.shape[1]):
         #     print(np.min(sonDat[:,p]), np.max(sonDat[:,p]), sonDat[:,p])
+        sonDat = np.nan_to_num(sonDat, nan=0) # replace nans with zero
 
         # Add water column pixels back in
         sonDat = sonDat + wc
@@ -2630,9 +2632,15 @@ class sonObj(object):
             mp = 0 # Store percentage
             v = wcp_pcnt[m]
             while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m < 255):
                 m += 1
                 mp += v
-                v = wcp_pcnt[m]
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
 
             self.egn_wcp_stretch_min = m
             del m, mp, v
@@ -2642,9 +2650,16 @@ class sonObj(object):
             mp = 0
             v = wcp_pcnt[m]
             while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m >= 0):
                 m -= 1
                 mp += v
-                v = wcp_pcnt[m]
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
+
 
             self.egn_wcp_stretch_max = m
             del m, mp, v
@@ -2657,9 +2672,15 @@ class sonObj(object):
             mp = 0 # Store percentage
             v = wcp_pcnt[m]
             while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m < 255):
                 m += 1
                 mp += v
-                v = wcp_pcnt[m]
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
 
             self.egn_wcr_stretch_min = m
             del m, mp, v
@@ -2669,9 +2690,15 @@ class sonObj(object):
             mp = 0
             v = wcr_pcnt[m]
             while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m >= 0):
                 m -= 1
                 mp += v
-                v = wcr_pcnt[m]
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
 
             self.egn_wcr_stretch_max = m
             del m, mp, v
