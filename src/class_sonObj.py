@@ -2362,6 +2362,10 @@ class sonObj(object):
         '''
         Calculate local min and max values after applying EGN
         '''
+        # Get sonMetaDF
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
@@ -2714,6 +2718,9 @@ class sonObj(object):
         # Get sonDat
         sonDat = self.sonDat.astype('float64')
 
+        # Create mask from zero values
+        mask = np.where(sonDat == 0, 0, 1)
+
         # Get stretch min max
         if stretch_wcp:
             m = self.egn_wcp_stretch_min
@@ -2741,6 +2748,9 @@ class sonObj(object):
         # sonDat = np.where(sonDat < mn, mn, sonDat)
         # sonDat = np.where(sonDat > mx, mx, sonDat)
         # print(sonDat)
+
+        # Try masking out zeros
+        sonDat = sonDat*mask
 
         self.sonDat = sonDat.astype('uint8')
         return

@@ -594,15 +594,15 @@ def read_master_func(project_mode=0,
         #         autoBed = False
 
 
-        # if remShadow:
-        #     for son in sonObjs:
-        #         if son.beamName == "ss_port":
-        #             if son.remShadow == remShadow:
-        #                 remShadow = 0
-        #                 print("\nUsing previous shadow settings. No need to re-process.")
-        #                 print("\tSetting remShadow to 0.")
-        #         else:
-        #             pass
+        if remShadow:
+            for son in sonObjs:
+                if son.beamName == "ss_port":
+                    if son.remShadow == remShadow:
+                        remShadow = 0
+                        print("\nUsing previous shadow settings. No need to re-process.")
+                        print("\tSetting remShadow to 0.")
+                else:
+                    pass
 
 
         # if egn:
@@ -859,71 +859,71 @@ def read_master_func(project_mode=0,
 
 
 
-    # Trying to bypass depth detection while exporting son lbl with previous exported metadata
-    for son in sonObjs:
-        son.detectDep = detectDep
-
-    # USE old meta files to align sonogram with substrate label
-    for son in sonObjs:
-        if hasattr(son, 'sonMetaDF'):
-            del son.sonMetaDF
-        # print(son)
-        # metaDir = son.metaDir
-        sonMetaFile = son.sonMetaFile
-        # print('\n\n\n', metaDir)
-        print('\n\n\nUsing old metadata files...\n\n', sonMetaFile)
-
-        # metaDir = metaDir.replace('EGN_', '')
-        sonMetaFile = sonMetaFile.replace('EGN_', '')
-
-        # Get project name
-        proj_name = os.path.basename(son.projDir)
-        print('\n\tCurrent Project Name:', proj_name)
-        river_code = proj_name.split('_')[0]
-        # print(river_code)
-
-        # Get river name
-        if river_code == 'BCH':
-            rivername = 'BougeChitto'
-        elif river_code == 'BOU':
-            rivername = 'Bouie'
-        elif river_code == 'CHI':
-            rivername = 'Chick'
-        elif river_code == 'CHU':
-            rivername = 'Chunky'
-        elif river_code == 'LEA':
-            rivername = 'Leaf'
-        elif river_code == 'PAS':
-            rivername = 'Pasc'
-        elif river_code == 'PRL':
-            rivername = 'Pearl'
-        # print(rivername)
-
-        date = proj_name.split('_')[3]
-        # print(date)
-
-        unit = "Solix"
-        # print(unit)
-
-        unitid = proj_name.split('_')[4]
-        # print(unitid)
-
-        recording = proj_name.split('_')[5]
-        # print(recording)
-
-        to_join = [rivername, date, unit, unitid, recording]
-        old_proj_name = '_'.join(to_join)
-        print('\n\tOld Project Name:', old_proj_name)
-
-        # metaDir = metaDir.replace(proj_name, old_proj_name)
-        sonMetaFile = sonMetaFile.replace(proj_name, old_proj_name)
-
-
-        # print('\n\n\n', metaDir)
-        print('\n\tOld Project Metadata File', sonMetaFile)
-        son.sonMetaFile = sonMetaFile
-    #     sys.exit()
-    # sys.exit()
+    # # Trying to bypass depth detection while exporting son lbl with previous exported metadata
+    # for son in sonObjs:
+    #     son.detectDep = detectDep
+    #
+    # # USE old meta files to align sonogram with substrate label
+    # for son in sonObjs:
+    #     if hasattr(son, 'sonMetaDF'):
+    #         del son.sonMetaDF
+    #     # print(son)
+    #     # metaDir = son.metaDir
+    #     sonMetaFile = son.sonMetaFile
+    #     # print('\n\n\n', metaDir)
+    #     print('\n\n\nUsing old metadata files...\n\n', sonMetaFile)
+    #
+    #     # metaDir = metaDir.replace('EGN_', '')
+    #     sonMetaFile = sonMetaFile.replace('EGN_', '')
+    #
+    #     # Get project name
+    #     proj_name = os.path.basename(son.projDir)
+    #     print('\n\tCurrent Project Name:', proj_name)
+    #     river_code = proj_name.split('_')[0]
+    #     # print(river_code)
+    #
+    #     # Get river name
+    #     if river_code == 'BCH':
+    #         rivername = 'BougeChitto'
+    #     elif river_code == 'BOU':
+    #         rivername = 'Bouie'
+    #     elif river_code == 'CHI':
+    #         rivername = 'Chick'
+    #     elif river_code == 'CHU':
+    #         rivername = 'Chunky'
+    #     elif river_code == 'LEA':
+    #         rivername = 'Leaf'
+    #     elif river_code == 'PAS':
+    #         rivername = 'Pasc'
+    #     elif river_code == 'PRL':
+    #         rivername = 'Pearl'
+    #     # print(rivername)
+    #
+    #     date = proj_name.split('_')[3]
+    #     # print(date)
+    #
+    #     unit = "Solix"
+    #     # print(unit)
+    #
+    #     unitid = proj_name.split('_')[4]
+    #     # print(unitid)
+    #
+    #     recording = proj_name.split('_')[5]
+    #     # print(recording)
+    #
+    #     to_join = [rivername, date, unit, unitid, recording]
+    #     old_proj_name = '_'.join(to_join)
+    #     print('\n\tOld Project Name:', old_proj_name)
+    #
+    #     # metaDir = metaDir.replace(proj_name, old_proj_name)
+    #     sonMetaFile = sonMetaFile.replace(proj_name, old_proj_name)
+    #
+    #
+    #     # print('\n\n\n', metaDir)
+    #     print('\n\tOld Project Metadata File', sonMetaFile)
+    #     son.sonMetaFile = sonMetaFile
+    # #     sys.exit()
+    # # sys.exit()
 
 
 
@@ -955,116 +955,116 @@ def read_master_func(project_mode=0,
 
     chunks = np.unique(chunks).astype(int)
 
-    # # # Check if it has already been processed
-    # # if psObj.port.detectDep == detectDep:
-    # #     print('\n\nUsing previously exported depths.')
-    # #     if psObj.port.detectDep > 0:
-    # #         autoBed = True
-    # #     else:
-    # #         autoBed = False
-    # #
-    # # else:
-    # # # Automatically estimate depth
-    # if detectDep > 0:
-    #     print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
-    #
-    #     #Dictionary to store chunk : np.array(depth estimate)
-    #     psObj.portDepDetect = {}
-    #     psObj.starDepDetect = {}
-    #
-    #     # Estimate depth using:
-    #     # Zheng et al. 2021
-    #     # Load model weights and configuration file
-    #     if detectDep == 1:
-    #         psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
-    #         psObj.configfile = psObj.weights.replace('.h5', '.json')
-    #         print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
-    #
-    #     # With binary thresholding
-    #     elif detectDep == 2:
-    #         print('\n\tUsing binary thresholding...')
-    #
-    #     # Parallel estimate depth for each chunk using appropriate method
-    #     r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
-    #
-    #     # store the depth predictions in the class
-    #     for ret in r:
-    #         psObj.portDepDetect[ret[2]] = ret[0]
-    #         psObj.starDepDetect[ret[2]] = ret[1]
-    #         del ret
-    #     del r
-    #
-    #     # Flag indicating depth autmatically estimated
-    #     autoBed = True
-    #
-    #     saveDepth = True
-    #
-    # # Don't estimate depth, use instrument depth estimate (sonar derived)
-    # elif detectDep == 0:
-    #     print('\n\nUsing instrument depth:')
-    #     autoBed = False
-    #     saveDepth = True
+    # # Check if it has already been processed
+    # if psObj.port.detectDep == detectDep:
+    #     print('\n\nUsing previously exported depths.')
+    #     if psObj.port.detectDep > 0:
+    #         autoBed = True
+    #     else:
+    #         autoBed = False
     #
     # else:
-    #     saveDepth = False
-    #
-    # if saveDepth:
-    #     # Save detected depth to csv
-    #     depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
-    #
-    #     # Store depths in downlooking sonar files also
-    #     for son in sonObjs:
-    #         # Store detectDep
-    #         son.detectDep = detectDep
-    #
-    #         beam = son.beamName
-    #         if beam != "ss_port" and beam != "ss_star":
-    #             son._loadSonMeta()
-    #             sonDF = son.sonMetaDF
-    #
-    #             # If reprocessing, delete existing depth columns
-    #             try:
-    #                 sonDF.drop('dep_m', axis=1, inplace=True)
-    #                 sonDF.drop('dep_m_Method', axis=1, inplace=True)
-    #                 sonDF.drop('dep_m_smth', axis=1, inplace=True)
-    #                 sonDF.drop('dep_m_adjBy', axis=1, inplace=True)
-    #             except:
-    #                 pass
-    #
-    #             sonDF = pd.concat([sonDF, depDF], axis=1)
-    #
-    #             sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
-    #             del sonDF, son.sonMetaDF
-    #             son._cleanup()
-    #
-    #     del depDF
-    #
-    #     # Cleanup
-    #     psObj._cleanup()
-    #
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # # Plot sonar depth and auto depth estimate (if available) on sonogram
-    # if pltBedPick:
-    #     start_time = time.time()
-    #
-    #     print("\n\nExporting bedpick plots to {}...".format(tileFile))
-    #     Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
-    #
-    #     print("\nDone!")
-    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
-    #     printUsage()
-    #
-    # # Cleanup
-    # psObj._cleanup()
-    # del psObj, portstar
-    #
-    # for son in sonObjs:
-    #     son._cleanup()
-    #     son._pickleSon()
-    # del son
+    # # Automatically estimate depth
+    if detectDep > 0:
+        print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
+
+        #Dictionary to store chunk : np.array(depth estimate)
+        psObj.portDepDetect = {}
+        psObj.starDepDetect = {}
+
+        # Estimate depth using:
+        # Zheng et al. 2021
+        # Load model weights and configuration file
+        if detectDep == 1:
+            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
+            psObj.configfile = psObj.weights.replace('.h5', '.json')
+            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
+
+        # With binary thresholding
+        elif detectDep == 2:
+            print('\n\tUsing binary thresholding...')
+
+        # Parallel estimate depth for each chunk using appropriate method
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in chunks)
+
+        # store the depth predictions in the class
+        for ret in r:
+            psObj.portDepDetect[ret[2]] = ret[0]
+            psObj.starDepDetect[ret[2]] = ret[1]
+            del ret
+        del r
+
+        # Flag indicating depth autmatically estimated
+        autoBed = True
+
+        saveDepth = True
+
+    # Don't estimate depth, use instrument depth estimate (sonar derived)
+    elif detectDep == 0:
+        print('\n\nUsing instrument depth:')
+        autoBed = False
+        saveDepth = True
+
+    else:
+        saveDepth = False
+
+    if saveDepth:
+        # Save detected depth to csv
+        depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+
+        # Store depths in downlooking sonar files also
+        for son in sonObjs:
+            # Store detectDep
+            son.detectDep = detectDep
+
+            beam = son.beamName
+            if beam != "ss_port" and beam != "ss_star":
+                son._loadSonMeta()
+                sonDF = son.sonMetaDF
+
+                # If reprocessing, delete existing depth columns
+                try:
+                    sonDF.drop('dep_m', axis=1, inplace=True)
+                    sonDF.drop('dep_m_Method', axis=1, inplace=True)
+                    sonDF.drop('dep_m_smth', axis=1, inplace=True)
+                    sonDF.drop('dep_m_adjBy', axis=1, inplace=True)
+                except:
+                    pass
+
+                sonDF = pd.concat([sonDF, depDF], axis=1)
+
+                sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+                del sonDF, son.sonMetaDF
+                son._cleanup()
+
+        del depDF
+
+        # Cleanup
+        psObj._cleanup()
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    # Plot sonar depth and auto depth estimate (if available) on sonogram
+    if pltBedPick:
+        start_time = time.time()
+
+        print("\n\nExporting bedpick plots to {}...".format(tileFile))
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in chunks)
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    # Cleanup
+    psObj._cleanup()
+    del psObj, portstar
+
+    for son in sonObjs:
+        son._cleanup()
+        son._pickleSon()
+    del son
 
 
     ############################################################################

@@ -405,6 +405,11 @@ class rectObj(sonObj):
         sonMetaDF = self.sonMetaDF
 
         # Get smoothed trackline
+        if not hasattr(self, 'smthTrk'):
+        # if type(self.smthTrk) == str:
+            self.smthTrk = pd.read_csv(self.smthTrkFile)
+        else:
+            pass
         sDF = self.smthTrk
 
         ########################
@@ -1088,12 +1093,12 @@ class rectObj(sonObj):
 
                 self._egn_wcp(chunk, sonMeta)
                 # self._egn()
-                if self.remShadow:
-                    stretch_wcp=False
-                else:
-                    stretch_wcp=True
+                # if self.remShadow:
+                #     stretch_wcp=False
+                # else:
+                #     stretch_wcp=True
 
-                self._egnDoStretch(stretch_wcp=stretch_wcp)
+                self._egnDoStretch(stretch_wcp=True)
 
             img[0]=0 # To fix extra white on curves
 
@@ -1152,13 +1157,14 @@ class rectObj(sonObj):
             # Empirical gain normalization
             if self.egn:
                 self._egn()
+                self.sonDat = np.nan_to_num(self.sonDat, nan=0)
 
-                if self.remShadow:
-                    stretch_wcp=False
-                else:
-                    stretch_wcp=True
+                # if self.remShadow:
+                #     stretch_wcp=False
+                # else:
+                #     stretch_wcp=True
 
-                self._egnDoStretch(stretch_wcp=stretch_wcp)
+                self._egnDoStretch(stretch_wcp=False)
 
             img = self.sonDat
 
