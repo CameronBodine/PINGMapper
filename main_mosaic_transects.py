@@ -39,6 +39,7 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from class_sonObj import sonObj
 from class_rectObj import rectObj
+from class_portstarObj import portstarObj
 
 import time
 import datetime
@@ -64,7 +65,7 @@ threadCnt=cpu_count()
 #################
 
 # Directory and Project Name
-transectDir = r'Z:\MN_Mussel\EGN_Mosaic'
+transectDir = r'Z:\MN_Mussel\EGN_Mosaic_StC'
 projName = 'Transect_Mosaic'
 
 
@@ -74,7 +75,8 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 
 
 # Mosaic Parameters
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic_transect = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic_all_transects = True # True: Mosaic transects into one; False: Don't Mosaic
 resampleAlg = 'cubic' # mode, average, gauss, lanczos, bilinear, cubic, cubicspline, nearest
 pix_fn = 'average'
 overview = True
@@ -301,23 +303,23 @@ portstar = []
 for i in range(0, len(rectObjs), 2):
     portstar.append([rectObjs[i], rectObjs[i+1]])
 
-# # Smooth tracklines
-# print("\nSmoothing tracklines...")
-# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
-#
-# # Store smthTrkFile in rectObj
-# for sons in portstar:
-#     for son in sons:
-#         son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
-#
-# # Calculate range extent coordinates
-# print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
-#
-# for sons in portstar:
-#     for son in sons:
-#         son._cleanup()
-#         son._pickleSon()
+# Smooth tracklines
+print("\nSmoothing tracklines...")
+Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
+
+# Store smthTrkFile in rectObj
+for sons in portstar:
+    for son in sons:
+        son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
+
+# Calculate range extent coordinates
+print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
+
+for sons in portstar:
+    for son in sons:
+        son._cleanup()
+        son._pickleSon()
 
 
 #============================================
@@ -560,45 +562,63 @@ del egn_wcr_stretch_max
 #######################
 # Rectify sonar imagery
 
-# print("\nRectifying and exporting GeoTiffs:\n")
-# for sons in portstar:
-#     print("Working on:", os.path.basename(sons[0].projDir))
-#     for son in sons:
-#         filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
-#
-#         # Overwrite local egn settings with global settings
-#         for k, v in egn_vals.items():
-#             son.k = v
-#
-#         # Store rect_wcp and rect_wcr
-#         son.rect_wcp = rect_wcp
-#         son.rect_wcr = rect_wcr
-#
-#         # Get chunk id's
-#         chunks = son._getChunkID()
-#
-#         # Load sonMetaDF
-#         son._loadSonMeta()
-#
-#         print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-#         Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
-#
-#         del son.sonMetaDF
-#         try:
-#             del son.smthTrk
-#         except:
-#             pass
-#         son._cleanup()
-#         # son._pickleSon()
+print("\nRectifying and exporting GeoTiffs:\n")
+for sons in portstar:
+    print("Working on:", os.path.basename(sons[0].projDir))
+    for son in sons:
+        filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
+
+        # Overwrite local egn settings with global settings
+        for k, v in egn_vals.items():
+            son.k = v
+
+        # Store rect_wcp and rect_wcr
+        son.rect_wcp = rect_wcp
+        son.rect_wcr = rect_wcr
+
+        # Get chunk id's
+        chunks = son._getChunkID()
+
+        # Load sonMetaDF
+        son._loadSonMeta()
+
+        print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+        Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+
+        del son.sonMetaDF
+        try:
+            del son.smthTrk
+        except:
+            pass
+        son._cleanup()
+        # son._pickleSon()
+
+#============================================
+
+######################
+# Mosaic each transect
+
+if mosaic_transect > 0:
+    print("\nMosaicing each transect...")
+    for sons in portstar:
+        start_time = time.time()
+        psObj = portstarObj(sons)
+        psObj._createMosaic(mosaic, overview, threadCnt)
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        del psObj
+        gc.collect()
+        printUsage()
+
 
 
 #============================================
 
-##############################
-# Create mosaic from transects
+##################################
+# Create mosaic from all transects
 
-if mosaic > 0:
-    print("\nMosaicing GeoTiffs...")
+if mosaic_all_transects:
+    print("\nMosaicing all transects...")
     # Set output filename
     filename = os.path.join(projDir, projName)
 
@@ -609,40 +629,46 @@ if mosaic > 0:
         wcrToMosaic = sorted(glob(os.path.join(transectDir, '**', 'rect_wcr', '*.tif'), recursive=True))
 
     # Export mosaic as gtiff
-    if mosaic == 1:
-        if rect_wcp:
-            pass
-        if rect_wcr:
-            outTIF = filename+'_rect_wcr.tif'
-            outVRT = filename+'_rect_wcr.vrt'
+    if rect_wcp:
+        pass
+    if rect_wcr:
+        start_time = time.time()
+        print('\n\tMosaicing sonograms with water column removed (wcr)...')
+        outTIF = filename+'_rect_wcr.tif'
+        outVRT = filename+'_rect_wcr.vrt'
 
-            print('\tBuilding vrt...')
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, srcNodata=0, VRTNodata=0)
-            gdal.BuildVRT(outVRT, wcrToMosaic, options=vrt_options)
+        print('\tBuilding vrt...')
+        vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, srcNodata=0, VRTNodata=0)
+        gdal.BuildVRT(outVRT, wcrToMosaic, options=vrt_options)
 
-            # # Use half of available memory for applying raster function
-            # # max_cache_size = int((psutil.virtual_memory()[1]/2))
-            # max_cache_size = int((psutil.virtual_memory()[1]))
-            # # os.environ['GDAL_CACHEMAX'] = str(max_cache_size)
-            # gdal.SetCacheMax(max_cache_size)
+        # Create GeoTiff from vrt
+        print('\tExporting geotiff...')
+        # Add resample function
+        add_pixel_fn(outVRT, pix_fn)
 
-            # Add resample function
-            add_pixel_fn(outVRT, pix_fn)
+        gdal.SetConfigOption('GDAL_VRT_ENABLE_PYTHON', 'YES')
+        ds = gdal.Open(outVRT)
 
-            gdal.SetConfigOption('GDAL_VRT_ENABLE_PYTHON', 'YES')
+        kwargs = {'format': 'GTiff',
+                  'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW', 'TILED=YES']
+                  }
+        gdal.Translate(outTIF, ds, **kwargs)
 
-            # Create GeoTiff from vrt
-            print('\tExporting geotiff...')
-            ds = gdal.Open(outVRT)
+        gdal.SetConfigOption('GDAL_VRT_ENABLE_PYTHON', None)
 
-            kwargs = {'format': 'GTiff',
-                      'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW']
-                      }
-            gdal.Translate(outTIF, ds, **kwargs)
+        ds = None
 
-            gdal.SetConfigOption('GDAL_VRT_ENABLE_PYTHON', None)
+        # Generate overviews
+        if overview:
+            dest = gdal.Open(outTIF, 1)
+            gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
+            dest.BuildOverviews('nearest', [2 ** j for j in range(1,10)])
+            dest = None
 
-            ds = None
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
 
 
 

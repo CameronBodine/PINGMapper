@@ -416,7 +416,7 @@ class portstarObj(object):
             ds = gdal.Open(outVRT)
 
             kwargs = {'format': 'GTiff',
-                      'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW']
+                      'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW', 'TILED=YES']
                       }
             gdal.Translate(outTIF, ds, **kwargs)
 

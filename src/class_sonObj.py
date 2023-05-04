@@ -2475,6 +2475,12 @@ class sonObj(object):
         # Slice egn means if too long
         egn_means = egn_means[:sonDat.shape[0]]
 
+        # Add ones to egn means if not long enough
+        if sonDat.shape[0] > egn_means.shape[0]:
+            t = np.ones((sonDat.shape[0]))
+            t[:egn_means.shape[0]] = egn_means
+            egn_means = t
+
         # Divide each ping by mean vector
         sonDat = sonDat / egn_means[:, None]
 
