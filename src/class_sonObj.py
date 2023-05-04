@@ -2738,22 +2738,9 @@ class sonObj(object):
         mn = 0
         mx = 255
 
-        sonDat = np.where(sonDat < m, m, sonDat)
-        sonDat = np.where(sonDat > M, M, sonDat)
+        sonDat = np.clip(sonDat, m, M)
 
-        # sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
-
-        # sonDat = exposure.adjust_gamma(sonDat, gamma=1.3, gain=1) # Darken
-        # sonDat = exposure.adjust_gamma(sonDat, gamma=0.7, gain=1) # Lighten
-        # sonDat = exposure.adjust_log(sonDat, 1)
-
-        # Normalize image to between 0 and 255
-        # https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
-        sonDat *= (255.0/sonDat.max())
-
-        # sonDat = np.where(sonDat < mn, mn, sonDat)
-        # sonDat = np.where(sonDat > mx, mx, sonDat)
-        # print(sonDat)
+        sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
         # Try masking out zeros
         sonDat = sonDat*mask

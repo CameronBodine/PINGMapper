@@ -76,7 +76,7 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 
 # Mosaic Parameters
 mosaic_transect = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
-mosaic_all_transects = True # True: Mosaic transects into one; False: Don't Mosaic
+mosaic_all_transects = False # True: Mosaic transects into one; False: Don't Mosaic
 resampleAlg = 'cubic' # mode, average, gauss, lanczos, bilinear, cubic, cubicspline, nearest
 pix_fn = 'average'
 overview = True
@@ -303,23 +303,23 @@ portstar = []
 for i in range(0, len(rectObjs), 2):
     portstar.append([rectObjs[i], rectObjs[i+1]])
 
-# Smooth tracklines
-print("\nSmoothing tracklines...")
-Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
-
-# Store smthTrkFile in rectObj
-for sons in portstar:
-    for son in sons:
-        son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
-
-# Calculate range extent coordinates
-print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
-
-for sons in portstar:
-    for son in sons:
-        son._cleanup()
-        son._pickleSon()
+# # Smooth tracklines
+# print("\nSmoothing tracklines...")
+# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
+#
+# # Store smthTrkFile in rectObj
+# for sons in portstar:
+#     for son in sons:
+#         son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
+#
+# # Calculate range extent coordinates
+# print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
+#
+# for sons in portstar:
+#     for son in sons:
+#         son._cleanup()
+#         son._pickleSon()
 
 
 #============================================
@@ -568,7 +568,7 @@ for sons in portstar:
     for son in sons:
         filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
 
-        # Overwrite local egn settings with global settings
+        # # Overwrite local egn settings with global settings
         for k, v in egn_vals.items():
             son.k = v
 
