@@ -603,7 +603,7 @@ if mosaic_transect > 0:
     for sons in portstar:
         start_time = time.time()
         psObj = portstarObj(sons)
-        psObj._createMosaic(mosaic, overview, threadCnt)
+        psObj._createMosaic(mosaic_transect, overview, threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj
