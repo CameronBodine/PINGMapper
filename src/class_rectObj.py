@@ -405,6 +405,11 @@ class rectObj(sonObj):
         sonMetaDF = self.sonMetaDF
 
         # Get smoothed trackline
+        if not hasattr(self, 'smthTrk'):
+        # if type(self.smthTrk) == str:
+            self.smthTrk = pd.read_csv(self.smthTrkFile)
+        else:
+            pass
         sDF = self.smthTrk
 
         ########################
@@ -482,6 +487,7 @@ class rectObj(sonObj):
         # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
         gc.collect()
+        self._pickleSon()
         return self
 
     #===========================================
@@ -951,8 +957,8 @@ class rectObj(sonObj):
         else:
             # Rectifying substrate classification
             pass
-        if filterIntensity:
-            self._doPPDRC()
+        # if filterIntensity:
+        #     self._doPPDRC()
 
         # Remove shadows
         if self.remShadow:
@@ -962,10 +968,10 @@ class rectObj(sonObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
 
-        # Pyhum corrections
-        do_correct = False
-        if do_correct:
-            self.sonDat = doPyhumCorrections(self, sonMeta)
+        # # Pyhum corrections
+        # do_correct = False
+        # if do_correct:
+        #     self.sonDat = doPyhumCorrections(self, sonMeta)
 
         img = self.sonDat
 
@@ -1082,6 +1088,18 @@ class rectObj(sonObj):
             except:
                 pass
 
+            # egn
+            if self.egn:
+
+                self._egn_wcp(chunk, sonMeta)
+                # self._egn()
+                # if self.remShadow:
+                #     stretch_wcp=False
+                # else:
+                #     stretch_wcp=True
+
+                self._egnDoStretch(stretch_wcp=True)
+
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -1135,6 +1153,19 @@ class rectObj(sonObj):
                     pass
 
             self._WCR_SRC(sonMeta)
+
+            # Empirical gain normalization
+            if self.egn:
+                self._egn()
+                self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+
+                # if self.remShadow:
+                #     stretch_wcp=False
+                # else:
+                #     stretch_wcp=True
+
+                self._egnDoStretch(stretch_wcp=False)
+
             img = self.sonDat
 
             img[0]=0 # To fix extra white on curves

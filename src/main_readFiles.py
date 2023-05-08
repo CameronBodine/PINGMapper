@@ -45,6 +45,9 @@ def read_master_func(project_mode=0,
                      fixNoDat=False,
                      threadCnt=0,
                      tileFile=False,
+                     egn=False,
+                     egn_stretch=0,
+                     egn_stretch_factor=1,
                      wcp=False,
                      wcr=False,
                      lbl_set=False,
@@ -581,14 +584,14 @@ def read_master_func(project_mode=0,
             print("\tSetting fixNoDat to FALSE.")
 
 
-        if son.detectDep == detectDep:
-            detectDep = -1
-            print("\nUsing previously exported depths.")
-            print("\tSetting detectDep to -1.")
-            if detectDep > 0:
-                autoBed = True
-            else:
-                autoBed = False
+        # if son.detectDep == detectDep:
+        #     detectDep = -1
+        #     print("\nUsing previously exported depths.")
+        #     print("\tSetting detectDep to -1.")
+        #     if detectDep > 0:
+        #         autoBed = True
+        #     else:
+        #         autoBed = False
 
 
         if remShadow:
@@ -601,6 +604,21 @@ def read_master_func(project_mode=0,
                 else:
                     pass
 
+
+        # if egn:
+        #     for son in sonObjs:
+        #         # print('\n\n\n\n')
+        #         # vs = vars(son)
+        #         # for v in vs:
+        #         #     if "shadow" not in v:
+        #         #         print(v, vs[v])
+        #         if son.beamName == "ss_port":
+        #             if son.egn == egn:
+        #                 egn = False
+        #                 print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+        #                 print("\tSetting egn to 0.")
+        #         else:
+        #             pass
 
         if pred_sub:
             for son in sonObjs:
@@ -628,6 +646,15 @@ def read_master_func(project_mode=0,
 
 
         del son
+
+    # for son in sonObjs:
+    #     if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+    #         print('\n\n\n\n\n', son.beamName)
+    #         temp = vars(son)
+    #         for t in temp:
+    #             print('\n\n', t, temp[t])
+    #
+    # sys.exit()
 
 
 
@@ -826,6 +853,83 @@ def read_master_func(project_mode=0,
     ## Method based on Zheng et al. 2021 using deep learning for segmenting
     ## water-bed interface.
     ## Second is rule's based binary segmentation (may be deprecated in future..)
+
+
+
+
+
+
+    # # Trying to bypass depth detection while exporting son lbl with previous exported metadata
+    # for son in sonObjs:
+    #     son.detectDep = detectDep
+    #
+    # # USE old meta files to align sonogram with substrate label
+    # for son in sonObjs:
+    #     if hasattr(son, 'sonMetaDF'):
+    #         del son.sonMetaDF
+    #     # print(son)
+    #     # metaDir = son.metaDir
+    #     sonMetaFile = son.sonMetaFile
+    #     # print('\n\n\n', metaDir)
+    #     print('\n\n\nUsing old metadata files...\n\n', sonMetaFile)
+    #
+    #     # metaDir = metaDir.replace('EGN_', '')
+    #     sonMetaFile = sonMetaFile.replace('EGN_', '')
+    #
+    #     # Get project name
+    #     proj_name = os.path.basename(son.projDir)
+    #     print('\n\tCurrent Project Name:', proj_name)
+    #     river_code = proj_name.split('_')[0]
+    #     # print(river_code)
+    #
+    #     # Get river name
+    #     if river_code == 'BCH':
+    #         rivername = 'BougeChitto'
+    #     elif river_code == 'BOU':
+    #         rivername = 'Bouie'
+    #     elif river_code == 'CHI':
+    #         rivername = 'Chick'
+    #     elif river_code == 'CHU':
+    #         rivername = 'Chunky'
+    #     elif river_code == 'LEA':
+    #         rivername = 'Leaf'
+    #     elif river_code == 'PAS':
+    #         rivername = 'Pasc'
+    #     elif river_code == 'PRL':
+    #         rivername = 'Pearl'
+    #     # print(rivername)
+    #
+    #     date = proj_name.split('_')[3]
+    #     # print(date)
+    #
+    #     unit = "Solix"
+    #     # print(unit)
+    #
+    #     unitid = proj_name.split('_')[4]
+    #     # print(unitid)
+    #
+    #     recording = proj_name.split('_')[5]
+    #     # print(recording)
+    #
+    #     to_join = [rivername, date, unit, unitid, recording]
+    #     old_proj_name = '_'.join(to_join)
+    #     print('\n\tOld Project Name:', old_proj_name)
+    #
+    #     # metaDir = metaDir.replace(proj_name, old_proj_name)
+    #     sonMetaFile = sonMetaFile.replace(proj_name, old_proj_name)
+    #
+    #
+    #     # print('\n\n\n', metaDir)
+    #     print('\n\tOld Project Metadata File', sonMetaFile)
+    #     son.sonMetaFile = sonMetaFile
+    # #     sys.exit()
+    # # sys.exit()
+
+
+
+
+
+
 
 
     start_time = time.time()
@@ -1040,6 +1144,254 @@ def read_master_func(project_mode=0,
         pass
 
     ############################################################################
+    # For sonar intensity corrections/normalization                            #
+    ############################################################################
+
+    # for son in sonObjs:
+    #     print('\n\n\n\n\n\n\n', son.beamName)
+    #     if son.beamName == 'ss_port':
+    #         temp = vars(son)
+    #         for item in temp:
+    #             print('\n\n', item, temp[item])
+    # sys.exit()
+
+    if egn:
+        start_time = time.time()
+        print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                print('\n\tCalculating EGN for', son.beamName)
+                son.egn = True
+
+                # if lbl_set > 0:
+                #     print('\n\n\t lbl_set selected for export:')
+                #     print('\t EGN will be calculated without masking shadows.')
+                #     son.remShadow = False
+
+
+
+
+
+                # Determine what chunks to process
+                chunks = son._getChunkID()
+                chunks = chunks[:-1] # remove last chunk
+
+
+
+
+                # Load sonMetaDF
+                son._loadSonMeta()
+
+                # Calculate range-wise mean intensity for each chunk
+                print('\n\tCalculating range-wise mean intensity for each chunk...')
+                chunk_means = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcChunkMeans)(i) for i in chunks)
+
+                # for m in chunk_means:
+                #     print('\n\n\n', m)
+
+                # Calculate global means
+                print('\n\tCalculating range-wise global means...')
+                son._egnCalcGlobalMeans(chunk_means)
+                # del chunk_means
+
+                # print('\n\n\nBed Means')
+                # for i, v in enumerate(son.egn_bed_means):
+                #     print(i, v)
+
+                # print('\n\n\nWCP Means')
+                # for i, v in enumerate(son.egn_wc_means):
+                #     print(i, v)
+                # sys.exit()
+
+                # print('\n\n\n', son.egn_bed_means)
+                # print(son.egn_bed_means.shape, np.unique(son.egn_bed_means, return_counts=True))
+                # print('\n', son.egn_wc_means)
+                # print(son.egn_wc_means.shape, np.unique(son.egn_wc_means, return_counts=True))
+
+                # # Check if any nan's and set to 1
+                # son.egn_bed_means[np.isnan(son.egn_bed_means)] = 1
+                # son.egn_wc_means[np.isnan(son.egn_wc_means)] = 1
+
+                # Calculate egn min and max for each chunk
+                print('\n\tCalculating EGN min and max values for each chunk...')
+                min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcMinMax)(i) for i in chunks)
+
+                # for (mm) in min_max:
+                #     print('\n\n\n', mm)
+
+                # Calculate global min max for each channel
+                son._egnCalcGlobalMinMax(min_max)
+                del min_max
+
+                # print('\n\n', son.egn_bed_min, son.egn_bed_max)
+                # print(son.egn_wc_min, son.egn_wc_max)
+
+                son._cleanup()
+                son._pickleSon()
+
+                # # Calculate histogram for each chunk
+                # print('\n\tCalculating EGN histogram for each chunk...')
+                # hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
+
+                # son.remShadow = remShadow
+
+                gc.collect()
+                printUsage()
+            else:
+                son.egn = False # Dont bother with down-facing beams
+
+        # Get true global min and max
+
+        bed_mins = []
+        bed_maxs = []
+        wc_mins = []
+        wc_maxs = []
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                bed_mins.append(son.egn_bed_min)
+                bed_maxs.append(son.egn_bed_max)
+                wc_mins.append(son.egn_wc_min)
+                wc_maxs.append(son.egn_wc_max)
+        bed_min = np.min(bed_mins)
+        bed_max = np.max(bed_maxs)
+        wc_min = np.min(wc_mins)
+        wc_max = np.max(wc_maxs)
+        for son in sonObjs:
+            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                son.egn_bed_min = bed_min
+                son.egn_bed_max = bed_max
+                son.egn_wc_min = wc_min
+                son.egn_wc_max = wc_max
+
+            # Tidy up
+            son._cleanup()
+            son._pickleSon()
+            gc.collect()
+
+        # print('\n\n\n', bed_min, bed_max)
+        # print(wc_min, wc_max)
+        # sys.exit()
+
+        # Need to calculate histogram if egn_stretch is greater then 0
+        if egn_stretch > 0:
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    # Determine what chunks to process
+                    chunks = son._getChunkID()
+                    chunks = chunks[:-1] # remove last chunk
+
+                    print('\n\tCalculating EGN corrected histogram for', son.beamName)
+                    hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
+
+                    # print('\n\tCalculating global EGN corrected histogram')
+                    son._egnCalcGlobalHist(hist)
+                    # print('\n\n\n', son.egn_wcp_hist)
+                    # print(son.egn_wcr_hist)
+
+            # Now calculate true global histogram
+            egn_wcp_hist = np.zeros((255))
+            egn_wcr_hist = np.zeros((255))
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    egn_wcp_hist += son.egn_wcp_hist
+                    egn_wcr_hist += son.egn_wcr_hist
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son.egn_wcp_hist = egn_wcp_hist
+                    son.egn_wcr_hist = egn_wcr_hist
+
+            # Calculate global percentages and standard deviation
+            wcp_pcnt = np.zeros((egn_wcp_hist.shape))
+            wcr_pcnt = np.zeros((egn_wcr_hist.shape))
+
+            # Calculate total pixels
+            wcp_sum = np.sum(egn_wcp_hist)
+            wcr_sum = np.sum(egn_wcr_hist)
+
+            # Caclulate percentages
+            for i, v in enumerate(egn_wcp_hist):
+                wcp_pcnt[i] = egn_wcp_hist[i] / wcp_sum
+
+            for i, v in enumerate(egn_wcr_hist):
+                wcr_pcnt[i] = egn_wcr_hist[i] / wcr_sum
+
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    son.egn_wcp_hist_pcnt = wcp_pcnt
+                    son.egn_wcr_hist_pcnt = wcr_pcnt
+
+            # print('\n\n\nGlobal Histogram')
+            # print(wcp_pcnt)
+            # print(wcr_pcnt)
+
+
+            del egn_wcp_hist, egn_wcr_hist, wcp_pcnt, wcr_pcnt
+
+            # Calculate min and max for rescale
+            for son in sonObjs:
+                if son.beamName == 'ss_port':
+                    wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+            for son in sonObjs:
+                if son.beamName == 'ss_star':
+                    son.egn_stretch = egn_stretch
+                    son.egn_stretch_factor = egn_stretch_factor
+
+                    son.egn_wcp_stretch_min = wcp_stretch[0]
+                    son.egn_wcp_stretch_max = wcp_stretch[1]
+
+                    son.egn_wcr_stretch_min = wcr_stretch[0]
+                    son.egn_wcr_stretch_max = wcr_stretch[1]
+
+                    # print('\n\n\nMinMax Global Stretch Vals')
+                    # print(son.egn_wcp_stretch_min, son.egn_wcp_stretch_max)
+                    # print(son.egn_wcr_stretch_min, son.egn_wcr_stretch_max)
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+        else:
+            # Use global min max as stretch vals
+            for son in sonObjs:
+                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                    # son.egn_wcp_stretch_min = min(son.egn_bed_min, son.egn_wc_min)
+                    # son.egn_wcp_stretch_max = max(son.egn_bed_max, son.egn_wc_max)
+                    son.egn_wcp_stretch_min = son.egn_wc_min
+                    son.egn_wcp_stretch_max = son.egn_wc_max
+
+                    son.egn_wcr_stretch_min = son.egn_bed_min
+                    son.egn_wcr_stretch_max = son.egn_bed_max
+
+                    # print('\n\n\nMinMax Global Stretch Vals')
+                    # print(son.egn_wcp_stretch_min, son.egn_wcp_stretch_max)
+                    # print(son.egn_wcr_stretch_min, son.egn_wcr_stretch_max)
+
+                    # Tidy up
+                    son._cleanup()
+                    son._pickleSon()
+                    gc.collect()
+
+
+
+        print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+    else:
+        if project_mode != 1:
+            for son in sonObjs:
+                son.egn=False
+
+
+    ############################################################################
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
@@ -1062,12 +1414,12 @@ def read_master_func(project_mode=0,
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                # Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
 
-                if son.beamName == "ss_port":
-                    for i in chunks:
-                        son._exportTiles(i, tileFile)
-                        sys.exit()
+                # if son.beamName == "ss_port":
+                #     for i in chunks:
+                #         son._exportTiles(i, tileFile)
+                #         sys.exit()
 
                 son._pickleSon()
 
@@ -1101,10 +1453,13 @@ def read_master_func(project_mode=0,
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
                 # Load sonMetaDF
+
+                print(son.sonMetaFile)
                 son._loadSonMeta()
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
                 son._cleanup()
+
             gc.collect()
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
