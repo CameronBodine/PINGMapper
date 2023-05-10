@@ -584,14 +584,14 @@ def read_master_func(project_mode=0,
             print("\tSetting fixNoDat to FALSE.")
 
 
-        # if son.detectDep == detectDep:
-        #     detectDep = -1
-        #     print("\nUsing previously exported depths.")
-        #     print("\tSetting detectDep to -1.")
-        #     if detectDep > 0:
-        #         autoBed = True
-        #     else:
-        #         autoBed = False
+        if son.detectDep == detectDep:
+            detectDep = -1
+            print("\nUsing previously exported depths.")
+            print("\tSetting detectDep to -1.")
+            if detectDep > 0:
+                autoBed = True
+            else:
+                autoBed = False
 
 
         if remShadow:
@@ -605,20 +605,20 @@ def read_master_func(project_mode=0,
                     pass
 
 
-        # if egn:
-        #     for son in sonObjs:
-        #         # print('\n\n\n\n')
-        #         # vs = vars(son)
-        #         # for v in vs:
-        #         #     if "shadow" not in v:
-        #         #         print(v, vs[v])
-        #         if son.beamName == "ss_port":
-        #             if son.egn == egn:
-        #                 egn = False
-        #                 print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
-        #                 print("\tSetting egn to 0.")
-        #         else:
-        #             pass
+        if egn:
+            for son in sonObjs:
+                # print('\n\n\n\n')
+                # vs = vars(son)
+                # for v in vs:
+                #     if "shadow" not in v:
+                #         print(v, vs[v])
+                if son.beamName == "ss_port":
+                    if son.egn == egn:
+                        egn = False
+                        print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
+                        print("\tSetting egn to 0.")
+                else:
+                    pass
 
         if pred_sub:
             for son in sonObjs:
@@ -766,10 +766,10 @@ def read_master_func(project_mode=0,
 
         printUsage()
 
-    # else:
-    #     if project_mode != 1:
-    #         for son in sonObjs:
-    #             son.fixNoDat = fixNoDat
+    else:
+        if project_mode != 1:
+            for son in sonObjs:
+                son.fixNoDat = fixNoDat
 
     ############################################################################
     # Print Metadata Summary                                                   #
@@ -962,7 +962,7 @@ def read_master_func(project_mode=0,
     #         autoBed = True
     #     else:
     #         autoBed = False
-    #
+
     # else:
     # # Automatically estimate depth
     if detectDep > 0:
