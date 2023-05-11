@@ -1570,15 +1570,18 @@ class sonObj(object):
         #Iterate each ping
         for j in range(self.sonDat.shape[1]):
             depth = bedPick[j] # Get depth (in pixels) at nadir
+            dd = depth**2
             # Create 1d array to store relocated bed pixels.  Set to -9999 so we
             ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -9999
+            # pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * -9999
+            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * np.nan
             dataExtent = 0
             #Iterate each sonar/ping return
             for i in range(self.sonDat.shape[0]):
                 if i >= depth:
                     intensity = self.sonDat[i,j] # Get the intensity value
-                    srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int) #Calculate horizontal range (in pixels) using pathagorean theorem
+                    # srcIndex = round(np.sqrt(i**2 - depth**2),0).astype(int) #Calculate horizontal range (in pixels) using pathagorean theorem
+                    srcIndex = int(round(math.sqrt(i**2 - dd),0)) #Calculate horizontal range (in pixels) using pathagorean theorem
                     pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
                     dataExtent = srcIndex # Store range extent (max range) of ping
                 else:
@@ -1587,7 +1590,7 @@ class sonObj(object):
 
             # Process of relocating bed pixels will introduce across track gaps
             ## in the array so we will interpolate over gaps to fill them.
-            pingDat[pingDat==-9999] = np.nan
+            # pingDat[pingDat==-9999] = np.nan
             nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
             pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
 

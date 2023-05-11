@@ -44,6 +44,7 @@ from rasterio.enums import Resampling
 from numpy.lib.stride_tricks import as_strided as ast
 
 import pandas as pd
+import math
 
 from collections import defaultdict
 from copy import deepcopy
