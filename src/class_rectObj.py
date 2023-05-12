@@ -1098,7 +1098,7 @@ class rectObj(sonObj):
                 # else:
                 #     stretch_wcp=True
 
-                self._egnDoStretch(stretch_wcp=True)
+                self._egnDoStretch()
 
             img[0]=0 # To fix extra white on curves
 
@@ -1158,13 +1158,7 @@ class rectObj(sonObj):
             if self.egn:
                 self._egn()
                 self.sonDat = np.nan_to_num(self.sonDat, nan=0)
-
-                # if self.remShadow:
-                #     stretch_wcp=False
-                # else:
-                #     stretch_wcp=True
-
-                self._egnDoStretch(stretch_wcp=False)
+                self._egnDoStretch()
 
             img = self.sonDat
 

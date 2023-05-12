@@ -1410,6 +1410,11 @@ class sonObj(object):
                 #     if self.beamName == "ss_port" or self.beamName == "ss_star":
                 #         self._egn_wcr(chunk, sonMeta)
 
+                # egn
+                if self.egn:
+                    self._egn_wcp(chunk, sonMeta)
+                    self._egnDoStretch()
+
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
 
             # Export slant range corrected (water column removed) imagery
@@ -1418,9 +1423,11 @@ class sonObj(object):
 
                 # self._doPPDRC()
 
-                # Empirical gain normalization with wcr
+                # Empirical gain normalization
                 if self.egn:
                     self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+                    self._egnDoStretch()
 
                 self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
 
