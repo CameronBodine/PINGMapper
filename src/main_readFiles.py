@@ -37,6 +37,7 @@ def read_master_func(humFile='',
                      projDir='',
                      tempC=10,
                      nchunk=500,
+                     cropRange=0,
                      exportUnknown=False,
                      fixNoDat=False,
                      threadCnt=0,
@@ -463,7 +464,10 @@ def read_master_func(humFile='',
 
     # Get metadata for each beam in parallel.
     if len(toProcess) > 0:
-        Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        # Store pix_m in object
+        for son, pix_m in zip(sonObjs, r):
+            son.pixM = pix_m # Sonar instrument pixel resolution
         del toProcess
 
     metaDir = sonObjs[0].metaDir # Get path to metadata directory
@@ -471,6 +475,19 @@ def read_master_func(humFile='',
     for i in range(0,len(sonObjs)): # Iterate each metadata file
         sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
     del i, sonMeta
+
+    # Store cropRange in object
+    for son in sonObjs:
+        son.cropRange = cropRange
+        # Do range crop, if necessary
+        if cropRange > 0.0:
+            # Convert to distance in pix
+            d = round(cropRange / son.pixM, 0).astype(int)
+
+            # Get sonMetaDF
+            son._loadSonMeta()
+            son.sonMetaDF['ping_cnt'] = d
+            son._saveSonMeta(son.sonMetaDF)
 
     # Store flag to export un-rectified sonar tiles in each sonObj.
     for son in sonObjs:

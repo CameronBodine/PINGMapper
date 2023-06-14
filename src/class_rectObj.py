@@ -218,7 +218,8 @@ class rectObj(sonObj):
         # Check if enough points to interpolate
         # If not, too many overlapping pings
         if len(x) <= deg:
-            return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
+            # return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
+            return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s']]
 
         # Fit a spline to filtered coordinates and parameterize with time ellapsed
         try:
@@ -245,7 +246,7 @@ class rectObj(sonObj):
                   'record_num': dfOrig['record_num'],
                   'ping_cnt': dfOrig['ping_cnt'],
                   'time_s': dfOrig['time_s'],
-                  'pix_m': dfOrig['pix_m'],
+                  'pix_m': self.pixM,
                   lons: x_interp[0],
                   lats: x_interp[1],
                   'dep_m': dfOrig['dep_m']}
@@ -421,10 +422,22 @@ class rectObj(sonObj):
         # Calculate max range for each chunk to ensure none of the sonar image
         ## is cut off due to changing the range setting during the survey.
         chunk = sDF.groupby(chunk_id) # Group dataframe by chunk_id
-        maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
-        pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
+
+        # Old method
+        # maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
+        # New method to find maxPing based on most numerous ping count
+        maxPing = []
+        for name, group in sDF.groupby(chunk_id):
+            rangeCnt = np.unique(group[ping_cnt], return_counts=True)
+            pingMaxi = np.argmax(rangeCnt[1])
+            maxPing.append(int(rangeCnt[0][pingMaxi]))
+        # Convert maxPing i to pd series
+        maxPing = pd.Series(maxPing)
+
+        # pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
+        pix_m = self.pixM # Get pixel size for each chunk
         for i in maxPing.index: # Calculate range (in meters) for each chunk
-            sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m[i]
+            sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m
 
         ##################################################
         # Calculate range extent coordinates for each ping
@@ -571,7 +584,8 @@ class rectObj(sonObj):
 
         ##################################################
         # Join smoothed trackline to smoothed range extent
-        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
+        # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
+        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
         rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
@@ -973,7 +987,8 @@ class rectObj(sonObj):
         # Open smoothed trackline/range extent file
         trkMeta = pd.read_csv(trkMetaFile)
         trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
-        pix_m = trkMeta['pix_m'].min() # Get pixel size
+        # pix_m = trkMeta['pix_m'].min() # Get pixel size
+        pix_m = self.pixM # Get pixel size
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
         xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T

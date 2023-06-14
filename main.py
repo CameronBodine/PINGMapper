@@ -42,16 +42,21 @@ start_time = time.time()
 # User Parameters
 #################
 
-# Path to data/output
-humFile = r'./exampleData/Test-Small-DS.DAT'
-sonPath = r'./exampleData/Test-Small-DS'
-projDir = r'./procData/PINGMapper-Test-Small-DS'
+# # Path to data/output
+# humFile = r'./exampleData/Test-Small-DS.DAT'
+# sonPath = r'./exampleData/Test-Small-DS'
+# projDir = r'./procData/PINGMapper-Test-Small-DS'
+
+humFile = r'E:\SynologyDrive\RFI\20230614_BGunnett8\R00021.DAT'
+sonPath = humFile.split('.')[0]
+projDir = r'./procData/BGunnett8'
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
+cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
@@ -96,6 +101,7 @@ params = {
     'projDir':projDir,
     'tempC':tempC,
     'nchunk':nchunk,
+    'cropRange':cropRange,
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
