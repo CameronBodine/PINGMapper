@@ -80,3 +80,10 @@ To determine if PING-Mapper is functioning as expected, run the [test scripts](h
 
 ## Running PING-Mapper on your own data
 Learn how to use PING-Mapper to [process your own data](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Running.html).
+
+# PING-Mapper is part of the Doodleverse!
+![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
+
+The Doodleverse is an opinionated collection of Python packages designed for geoscientific image segmentation. Find out more on [GitHub](https://github.com/Doodleverse).
+
+

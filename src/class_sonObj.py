@@ -1067,9 +1067,11 @@ class sonObj(object):
         # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
         sonMetaAll = self._calcTrkDistTS(sonMetaAll)
 
+
         self._saveSonMetaCSV(sonMetaAll)
 
         return pix_m
+
 
     # ======================================================================
     def _getHeader(self,
@@ -1952,11 +1954,13 @@ class sonObj(object):
                 # d = round(d / sonMeta.at[0, 'pix_m'], 0).astype(int)
                 d = round(d / self.pixM, 0).astype(int)
 
+
                 # sonDat = resize(sonDat,
                 #                 (sonDat.shape[0], d),
                 #                 mode='constant',
                 #                 cval=np.nan,
                 #                 clip=False, preserve_range=True)
+
                 sonDat = resize(sonDat,
                                 (sonDat.shape[0], d),
                                 mode='reflect',

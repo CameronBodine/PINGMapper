@@ -41,6 +41,7 @@ def read_master_func(project_mode=0,
                      projDir='',
                      tempC=10,
                      nchunk=500,
+                     cropRange=0,
                      exportUnknown=False,
                      fixNoDat=False,
                      threadCnt=0,
@@ -500,6 +501,20 @@ def read_master_func(project_mode=0,
         for i in range(0,len(sonObjs)): # Iterate each metadata file
             sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
         del i, sonMeta
+        
+            
+        # Store cropRange in object
+        for son in sonObjs:
+            son.cropRange = cropRange
+            # Do range crop, if necessary
+            if cropRange > 0.0:
+                # Convert to distance in pix
+                d = round(cropRange / son.pixM, 0).astype(int)
+
+                # Get sonMetaDF
+                son._loadSonMeta()
+                son.sonMetaDF['ping_cnt'] = d
+                son._saveSonMeta(son.sonMetaDF)
 
         # Store flag to export un-rectified sonar tiles in each sonObj.
         for son in sonObjs:
