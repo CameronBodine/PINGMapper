@@ -28,6 +28,7 @@
 
 
 # Imports
+from funcs_common import *
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import json
@@ -35,11 +36,12 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.python.client import device_lib
-from skimage.transform import resize
-from skimage.filters import threshold_otsu, gaussian
-from skimage.morphology import remove_small_holes, remove_small_objects
 
 import itertools
+
+from transformers import TFSegformerForSemanticSegmentation
+from transformers import logging
+logging.set_verbosity_error()
 
 # Fixes depth detection warning
 tf.get_logger().setLevel('ERROR')
@@ -51,8 +53,96 @@ tf.get_logger().setLevel('ERROR')
 Utilities provided courtesy Dr. Dan Buscombe from segmentation_gym
 https://github.com/Doodleverse/segmentation_gym
 '''
-### Model for custom res-unet ###
 
+#=======================================================================
+def initModel(weights, configfile, USE_GPU=False):
+    '''
+    Compiles a Tensorflow model for bedpicking. Developed following:
+    https://github.com/Doodleverse/segmentation_gym
+
+    ----------
+    Parameters
+    ----------
+    None
+
+    ----------------------------
+    Required Pre-processing step
+    ----------------------------
+    self.__init__()
+
+    -------
+    Returns
+    -------
+    self.bedpickModel containing compiled model.
+
+    --------------------
+    Next Processing Step
+    --------------------
+    self._detectDepth()
+    '''
+    SEED=42
+    np.random.seed(SEED)
+    AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+
+    tf.random.set_seed(SEED)
+
+    if USE_GPU == True:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+    else:
+
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+
+    #suppress tensorflow warnings
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+    #suppress tensorflow warnings
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+    # Open model configuration file
+    with open(configfile) as f:
+        config = json.load(f)
+    globals().update(config)
+
+
+    ########################################################################
+    ########################################################################
+
+    # Get model architecture
+    if MODEL == 'resunet':
+        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
+                        FILTERS,
+                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
+                        kernel_size=(KERNEL,KERNEL),
+                        strides=STRIDE,
+                        dropout=DROPOUT,#0.1,
+                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
+                        dropout_type=DROPOUT_TYPE,#"standard",
+                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
+                        )
+
+    elif MODEL == 'segformer':
+        id2label = {}
+        for k in range(NCLASSES):
+            id2label[k]=str(k)
+        model = segformer(id2label,num_classes=NCLASSES)
+
+
+    # Compile model and load weights
+    if MODEL != 'segformer':
+        try:
+            model = tf.keras.models.load_model(weights)
+        except:
+            model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+            model.load_weights(weights)
+
+    else:
+        model.compile(optimizer = 'adam')
+        model.load_weights(weights)
+
+    return model, MODEL, N_DATA_BANDS
+
+
+### Model for custom res-unet ###
 #=======================================================================
 def custom_resunet(sz,
     f,
@@ -201,6 +291,30 @@ def custom_resunet(sz,
     # model = keras.Model(inputs=[inputs], outputs=[outputs])
     # model.make_predict_function()
     return model
+
+
+#=======================================================================
+def segformer(
+    id2label,
+    num_classes=2,
+):
+    """
+    https://keras.io/examples/vision/segformer/
+    https://huggingface.co/nvidia/mit-b0
+    """
+
+    label2id = {label: id for id, label in id2label.items()}
+    model_checkpoint = "nvidia/mit-b0"
+
+    model = TFSegformerForSemanticSegmentation.from_pretrained(
+        model_checkpoint,
+        num_labels=num_classes,
+        id2label=id2label,
+        label2id=label2id,
+        ignore_mismatched_sizes=True,
+    )
+    return model
+
 
 ### Model subfunctions ###
 #=======================================================================
@@ -520,3 +634,49 @@ def label_to_colors(
         )
     else:
         return cimg
+
+#=======================================================================
+def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE):
+
+    '''
+    '''
+
+    # Read array into a cropped and resized tensor
+    image, w, h, bigimage = seg_file2tensor(arr, TARGET_SIZE)
+
+    # Standardize
+    image = standardize(image.numpy()).squeeze()
+
+    if MODEL == 'segformer':
+        if np.ndim(image)==2:
+            image = np.dstack((image, image, image))
+        image = tf.transpose(image, (2, 0, 1))
+
+    # Do prediction
+    try:
+        if MODEL == 'segformer':
+            softmax_score = model.predict(tf.expand_dims(image, 0), batch_size=1).logits
+        else:
+            softmax_score = model.predict(tf.expand_dims(image, 0), batch_size=1).squeeze()
+    except:
+        if MODEL=='segformer':
+            softmax_score = model.predict(tf.expand_dims(image[:,:,0], 0), batch_size=1).logits
+        else:
+            softmax_score = model.predict(tf.expand_dims(image[:,:,0], 0), batch_size=1).squeeze()
+
+    # softmax_score cannot be float16 so convert to float32
+    softmax_score = softmax_score.astype('float32')
+
+    # Resize to original dimensions
+    if MODEL=='segformer':
+        softmax_score = resize(softmax_score, (1, NCLASSES, TARGET_SIZE[0],TARGET_SIZE[1]), preserve_range=True, clip=True).squeeze()
+        softmax_score = np.transpose(softmax_score, (1,2,0))
+
+    softmax_score = resize(softmax_score, (w, h))
+
+    return softmax_score
+
+
+
+
+    return 1, 2
