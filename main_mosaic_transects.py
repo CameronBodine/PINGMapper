@@ -303,23 +303,23 @@ portstar = []
 for i in range(0, len(rectObjs), 2):
     portstar.append([rectObjs[i], rectObjs[i+1]])
 
-# # Smooth tracklines
-# print("\nSmoothing tracklines...")
-# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
-#
-# # Store smthTrkFile in rectObj
-# for sons in portstar:
-#     for son in sons:
-#         son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
-#
-# # Calculate range extent coordinates
-# print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-# Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
-#
-# for sons in portstar:
-#     for son in sons:
-#         son._cleanup()
-#         son._pickleSon()
+# Smooth tracklines
+print("\nSmoothing tracklines...")
+Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
+
+# Store smthTrkFile in rectObj
+for sons in portstar:
+    for son in sons:
+        son.smthTrkFile = os.path.join(son.metaDir, 'Trackline_Smth_'+son.beamName+'.csv')
+
+# Calculate range extent coordinates
+print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
+
+for sons in portstar:
+    for son in sons:
+        son._cleanup()
+        son._pickleSon()
 
 
 #============================================
