@@ -42,14 +42,10 @@ start_time = time.time()
 # User Parameters
 #################
 
-# # Path to data/output
-# humFile = r'./exampleData/Test-Small-DS.DAT'
-# sonPath = r'./exampleData/Test-Small-DS'
-# projDir = r'./procData/PINGMapper-Test-Small-DS'
-
-humFile = r'E:\SynologyDrive\RFI\20230614_BGunnett8\R00021.DAT'
-sonPath = humFile.split('.')[0]
-projDir = r'./procData/BGunnett8'
+# Path to data/output
+humFile = r'./exampleData/Test-Small-DS.DAT'
+sonPath = r'./exampleData/Test-Small-DS'
+projDir = r'./procData/PINGMapper-Test-Small-DS'
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
