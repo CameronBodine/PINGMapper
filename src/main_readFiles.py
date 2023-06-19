@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -501,8 +501,8 @@ def read_master_func(project_mode=0,
         for i in range(0,len(sonObjs)): # Iterate each metadata file
             sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
         del i, sonMeta
-        
-            
+
+
         # Store cropRange in object
         for son in sonObjs:
             son.cropRange = cropRange
@@ -744,12 +744,6 @@ def read_master_func(project_mode=0,
 
             df.drop(columns = ['beam'], inplace=True)
 
-            # if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-            #
-            #     df.loc[:1, ['index']] = [np.nan]
-            #     df.loc[:1, ['f']] = [np.nan]
-            #     df.loc[:1, ['volt_scale']] = [np.nan]
-
             # Check that last chunk has index anywhere in the chunk.
             ## If not, a bunch of NoData was added to the end.
             ## Trim off the NoData
@@ -853,84 +847,6 @@ def read_master_func(project_mode=0,
     ## Method based on Zheng et al. 2021 using deep learning for segmenting
     ## water-bed interface.
     ## Second is rule's based binary segmentation (may be deprecated in future..)
-
-
-
-
-
-
-    # # Trying to bypass depth detection while exporting son lbl with previous exported metadata
-    # for son in sonObjs:
-    #     son.detectDep = detectDep
-    #
-    # # USE old meta files to align sonogram with substrate label
-    # for son in sonObjs:
-    #     if hasattr(son, 'sonMetaDF'):
-    #         del son.sonMetaDF
-    #     # print(son)
-    #     # metaDir = son.metaDir
-    #     sonMetaFile = son.sonMetaFile
-    #     # print('\n\n\n', metaDir)
-    #     print('\n\n\nUsing old metadata files...\n\n', sonMetaFile)
-    #
-    #     # metaDir = metaDir.replace('EGN_', '')
-    #     sonMetaFile = sonMetaFile.replace('EGN_', '')
-    #
-    #     # Get project name
-    #     proj_name = os.path.basename(son.projDir)
-    #     print('\n\tCurrent Project Name:', proj_name)
-    #     river_code = proj_name.split('_')[0]
-    #     # print(river_code)
-    #
-    #     # Get river name
-    #     if river_code == 'BCH':
-    #         rivername = 'BougeChitto'
-    #     elif river_code == 'BOU':
-    #         rivername = 'Bouie'
-    #     elif river_code == 'CHI':
-    #         rivername = 'Chick'
-    #     elif river_code == 'CHU':
-    #         rivername = 'Chunky'
-    #     elif river_code == 'LEA':
-    #         rivername = 'Leaf'
-    #     elif river_code == 'PAS':
-    #         rivername = 'Pasc'
-    #     elif river_code == 'PRL':
-    #         rivername = 'Pearl'
-    #     # print(rivername)
-    #
-    #     date = proj_name.split('_')[3]
-    #     # print(date)
-    #
-    #     unit = "Solix"
-    #     # print(unit)
-    #
-    #     unitid = proj_name.split('_')[4]
-    #     # print(unitid)
-    #
-    #     recording = proj_name.split('_')[5]
-    #     # print(recording)
-    #
-    #     to_join = [rivername, date, unit, unitid, recording]
-    #     old_proj_name = '_'.join(to_join)
-    #     print('\n\tOld Project Name:', old_proj_name)
-    #
-    #     # metaDir = metaDir.replace(proj_name, old_proj_name)
-    #     sonMetaFile = sonMetaFile.replace(proj_name, old_proj_name)
-    #
-    #
-    #     # print('\n\n\n', metaDir)
-    #     print('\n\tOld Project Metadata File', sonMetaFile)
-    #     son.sonMetaFile = sonMetaFile
-    # #     sys.exit()
-    # # sys.exit()
-
-
-
-
-
-
-
 
     start_time = time.time()
 
@@ -1168,16 +1084,9 @@ def read_master_func(project_mode=0,
                 son._egnCalcGlobalMeans(chunk_means)
                 del chunk_means
 
-                # # Check if any nan's and set to 1
-                # son.egn_bed_means[np.isnan(son.egn_bed_means)] = 1
-                # son.egn_wc_means[np.isnan(son.egn_wc_means)] = 1
-
                 # Calculate egn min and max for each chunk
                 print('\n\tCalculating EGN min and max values for each chunk...')
                 min_max = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcMinMax)(i) for i in chunks)
-
-                # for (mm) in min_max:
-                #     print('\n\n\n', mm)
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
@@ -1185,8 +1094,6 @@ def read_master_func(project_mode=0,
 
                 son._cleanup()
                 son._pickleSon()
-
-                # son.remShadow = remShadow
 
                 gc.collect()
                 printUsage()
@@ -1222,9 +1129,6 @@ def read_master_func(project_mode=0,
             son._pickleSon()
             gc.collect()
 
-        # print('\n\n\n', bed_min, bed_max)
-        # sys.exit()
-
         # Need to calculate histogram if egn_stretch is greater then 0
         if egn_stretch > 0:
             for son in sonObjs:
@@ -1238,8 +1142,6 @@ def read_master_func(project_mode=0,
 
                     # print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
-                    # print('\n\n\n', son.egn_wcr_hist)
-                    # sys.exit()
 
             # Now calculate true global histogram
             # egn_wcp_hist = np.zeros((255))
@@ -1274,10 +1176,6 @@ def read_master_func(project_mode=0,
                 if son.beamName == 'ss_port' or son.beamName == 'ss_star':
                     # son.egn_wcp_hist_pcnt = wcp_pcnt
                     son.egn_wcr_hist_pcnt = wcr_pcnt
-
-            # print('\n\n\nGlobal Histogram')
-            # print(wcr_pcnt)
-            # sys.exit()
 
 
             # del egn_wcp_hist, egn_wcr_hist, wcp_pcnt, wcr_pcnt
@@ -1409,8 +1307,6 @@ def read_master_func(project_mode=0,
                 print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
                 # Load sonMetaDF
-
-                print(son.sonMetaFile)
                 son._loadSonMeta()
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in chunks)
@@ -1432,11 +1328,6 @@ def read_master_func(project_mode=0,
     ##############################################
 
     for son in sonObjs:
-        # # print('\n\n\n\n', son)
-        # outFile = son.sonMetaFile.replace(".csv", ".meta")
-        # son.sonMetaPickle = outFile
-        # with open(outFile, 'wb') as sonFile:
-        #     pickle.dump(son, sonFile)
         son._pickleSon()
     gc.collect()
     printUsage()

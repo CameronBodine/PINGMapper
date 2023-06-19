@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -380,10 +380,6 @@ def rectify_master_func(project_mode=0,
     ##############################################
 
     for son in portstar:
-        # outFile = son.sonMetaFile.replace(".csv", ".meta")
-        # son.sonMetaPickle = outFile
-        # with open(outFile, 'wb') as sonFile:
-        #     pickle.dump(son, sonFile)
         son._pickleSon()
         del son
 
