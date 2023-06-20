@@ -100,7 +100,7 @@ if ds == 2:
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 1
+project_mode = 2
 
 # General Parameters
 pix_res_factor = 1.0 # Pixel resampling factor;
@@ -110,13 +110,13 @@ pix_res_factor = 1.0 # Pixel resampling factor;
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Sonar Intensity Corrections
-egn = True
+egn = False
 egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
 egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
                          ## If std, the number of standard deviations to retain
@@ -124,17 +124,17 @@ egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.
 
 # Sonogram Exports
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
-wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
 # Speed corrected sonogram Exports
-lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
+lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
 remShadow = 1 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDep = 0 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = False #Smooth depth before water column removal

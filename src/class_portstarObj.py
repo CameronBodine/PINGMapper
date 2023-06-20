@@ -45,6 +45,10 @@ import matplotlib.pyplot as plt
 
 import inspect
 
+from doodleverse_utils.imports import *
+from doodleverse_utils.model_imports import *
+from doodleverse_utils.prediction_imports import *
+
 class portstarObj(object):
     '''
     Python class to store port and starboard objects (sonObj() or rectObj()) in
@@ -525,78 +529,78 @@ class portstarObj(object):
     # General Model Functions                                                  #
     ############################################################################
 
-    #=======================================================================
-    def _initModel(self,
-                   USE_GPU=False):
-        '''
-        Compiles a Tensorflow model for bedpicking. Developed following:
-        https://github.com/Doodleverse/segmentation_gym
-
-        ----------
-        Parameters
-        ----------
-        None
-
-        ----------------------------
-        Required Pre-processing step
-        ----------------------------
-        self.__init__()
-
-        -------
-        Returns
-        -------
-        self.bedpickModel containing compiled model.
-
-        --------------------
-        Next Processing Step
-        --------------------
-        self._detectDepth()
-        '''
-        SEED=42
-        np.random.seed(SEED)
-        AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-
-        tf.random.set_seed(SEED)
-
-        if USE_GPU == True:
-            os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
-        else:
-
-            os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-        #suppress tensorflow warnings
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-        # Open model configuration file
-        with open(self.configfile) as f:
-            config = json.load(f)
-        globals().update(config)
-
-
-        ########################################################################
-        ########################################################################
-
-        model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
-                        FILTERS,
-                        nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
-                        kernel_size=(KERNEL,KERNEL),
-                        strides=STRIDE,
-                        dropout=DROPOUT,#0.1,
-                        dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
-                        dropout_type=DROPOUT_TYPE,#"standard",
-                        use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
-                        )
-
-        try:
-            model = tf.keras.models.load_model(self.weights)
-        except:
-            model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
-            model.load_weights(self.weights)
-
-        return model
+    # #=======================================================================
+    # def _initModel(self,
+    #                USE_GPU=False):
+    #     '''
+    #     Compiles a Tensorflow model for bedpicking. Developed following:
+    #     https://github.com/Doodleverse/segmentation_gym
+    #
+    #     ----------
+    #     Parameters
+    #     ----------
+    #     None
+    #
+    #     ----------------------------
+    #     Required Pre-processing step
+    #     ----------------------------
+    #     self.__init__()
+    #
+    #     -------
+    #     Returns
+    #     -------
+    #     self.bedpickModel containing compiled model.
+    #
+    #     --------------------
+    #     Next Processing Step
+    #     --------------------
+    #     self._detectDepth()
+    #     '''
+    #     SEED=42
+    #     np.random.seed(SEED)
+    #     AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
+    #
+    #     tf.random.set_seed(SEED)
+    #
+    #     if USE_GPU == True:
+    #         os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
+    #     else:
+    #
+    #         os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
+    #
+    #     #suppress tensorflow warnings
+    #     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    #
+    #     #suppress tensorflow warnings
+    #     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    #
+    #     # Open model configuration file
+    #     with open(self.configfile) as f:
+    #         config = json.load(f)
+    #     globals().update(config)
+    #
+    #
+    #     ########################################################################
+    #     ########################################################################
+    #
+    #     model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
+    #                     FILTERS,
+    #                     nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
+    #                     kernel_size=(KERNEL,KERNEL),
+    #                     strides=STRIDE,
+    #                     dropout=DROPOUT,#0.1,
+    #                     dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
+    #                     dropout_type=DROPOUT_TYPE,#"standard",
+    #                     use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
+    #                     )
+    #
+    #     try:
+    #         model = tf.keras.models.load_model(self.weights)
+    #     except:
+    #         model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
+    #         model.load_weights(self.weights)
+    #
+    #     return model
 
     #=======================================================================
     def _doPredict(self,
@@ -713,10 +717,17 @@ class portstarObj(object):
         self._depthZheng() or self._depthThreshold()
         '''
 
+        # Open model configuration file
+        with open(self.configfile) as f:
+            config = json.load(f)
+        globals().update(config)
+
         if method == 1:
             if not hasattr(self, 'bedpickModel'):
-                model = self._initModel(USE_GPU)
+                # model = self._initModel(USE_GPU)
+                model = initModel(self.weights, self.configfile, USE_GPU)
                 self.bedpickModel = model
+
             portDepPixCrop, starDepPixCrop, i = self._depthZheng(i, tileFile)
 
         elif method == 2:
@@ -886,7 +897,8 @@ class portstarObj(object):
 
         ##########################################
         # Do initial prediction on entire sonogram
-        init_label, init_prob = self._doPredict(model, son3bnd) ###############################
+        # init_label, init_prob = self._doPredict(model, son3bnd) ###############################
+        init_label, init_prob = doPredict(model, MODEL, son3bnd, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
 
         ######################################
         # Filters for removing small artifacts
@@ -990,7 +1002,9 @@ class portstarObj(object):
         #######################
         # Segment cropped image
         # crop_label = self._doPredict(model, sonCrop)
-        crop_label, crop_prob = self._doPredict(model, sonCrop)
+        # crop_label, crop_prob = self._doPredict(model, sonCrop)
+        crop_label, crop_prob = doPredict(model, MODEL, sonCrop, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
+
 
         ######################################
         # Filters for removing small artifacts
@@ -1694,12 +1708,18 @@ class portstarObj(object):
         '''
 
         '''
-        self.port._loadSonMeta()
-        self.star._loadSonMeta()
+        # Open model configuration file
+        with open(self.configfile) as f:
+            config = json.load(f)
+        globals().update(config)
 
         # Load the model if necessary
         if not hasattr(self, 'shadowModel'):
-            self.shadowModel = self._initModel(USE_GPU)
+            # self.shadowModel = self._initModel(USE_GPU)
+            self.shadowModel = initModel(self.weights, self.configfile, USE_GPU)
+
+        self.port._loadSonMeta()
+        self.star._loadSonMeta()
 
         # Get the model
         model = self.shadowModel
@@ -1729,8 +1749,11 @@ class portstarObj(object):
 
         ###############
         # Do prediction
-        port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
-        star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
+        # port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
+        # star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
+
+        port_label, port_prob = doPredict(model, MODEL, self.port.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
+        star_label, star_prob = doPredict(model, MODEL, self.star.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
 
         # Set shadow to 0, else 1
         port_label = np.where(port_label==0,1,0)

@@ -65,7 +65,7 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 
 import psutil
 
-from funcs_pyhum_correct import doPyhumCorrections
+# from funcs_pyhum_correct import doPyhumCorrections
 
 # # =========================================================
 # # Keep
