@@ -1885,7 +1885,7 @@ class sonObj(object):
         #
         #     self.sonDat = sonDat.astype('uint8')
 
-        self._doSpdCor(chunk, lbl_set=lbl_set, spdCor=spdCor, maxCrop=maxCrop)
+        self._doSpdCor(chunk, lbl_set=lbl_set, spdCor=spdCor, maxCrop=maxCrop, do_egn=self.egn)
 
         if self.sonDat is not np.nan:
             self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
@@ -1897,7 +1897,7 @@ class sonObj(object):
 
 
     # ======================================================================
-    def _doSpdCor(self, chunk, lbl_set=1, spdCor=1, maxCrop=0, son=True, integer=True):
+    def _doSpdCor(self, chunk, lbl_set=1, spdCor=1, maxCrop=0, son=True, integer=True, do_egn=False):
 
         if not hasattr(self, 'sonMetaDF'):
             self._loadSonMeta()
@@ -1918,7 +1918,7 @@ class sonObj(object):
                 self._getScanChunkSingle(chunk)
 
             # egn
-            if self.egn:
+            if do_egn:
 
                 self._egn_wcp(chunk, sonMeta, do_rescale=True)
 

@@ -229,5 +229,5 @@ def error_noSubMap_mosaic():
     print("\tUnable to mosaic substrate maps.")
     print("\tSet: map_sub = True")
     print("\tOR")
-    print("\tSet: mosaic = 0\n\n")
+    print("\tSet: map_mosaic = 0\n\n")
     sys.exit()

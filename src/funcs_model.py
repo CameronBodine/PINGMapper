@@ -184,6 +184,24 @@ def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRES
         else:
             est_label = (est_label > 0.5).astype('uint8')
 
+    else: # NCLASSES>2
+        est_label, counter = est_label_multiclass(image, model, MODEL, False, NCLASSES, TARGET_SIZE)
+
+        est_label /= counter + 1
+        # est_label cannot be float16 so convert to float32
+        est_label = est_label.numpy().astype('float32')
+
+        if MODEL=='segformer':
+            est_label = resize(est_label, (1, NCLASSES, TARGET_SIZE[0],TARGET_SIZE[1]), preserve_range=True, clip=True).squeeze()
+            est_label = np.transpose(est_label, (1,2,0))
+            est_label = resize(est_label, (w, h))
+        else:
+            est_label = resize(est_label, (w, h))
+
+        softmax_scores = est_label.copy()
+
+        est_label = np.argmax(softmax_scores, -1)
+
 
     return est_label, softmax_scores
 
@@ -202,14 +220,19 @@ def seg_file2tensor(bigimage, N_DATA_BANDS, TARGET_SIZE, MODEL):#, resize):
     GLOBAL INPUTS: TARGET_SIZE
     """
 
-    smallimage = resize(bigimage,(TARGET_SIZE[0], TARGET_SIZE[1]), preserve_range=True, clip=True)
-    smallimage = np.array(smallimage)
-    smallimage = tf.cast(smallimage, tf.uint8)
+    image = resize(bigimage,(TARGET_SIZE[0], TARGET_SIZE[1]), preserve_range=True, clip=True)
+    image = np.array(image)
+    image = tf.cast(image, tf.uint8)
 
     w = tf.shape(bigimage)[0]
     h = tf.shape(bigimage)[1]
 
-    return smallimage, w, h, bigimage
+    if MODEL=='segformer':
+        if np.ndim(image)==2:
+            image = np.dstack((image, image, image))
+        image = tf.transpose(image, (2, 0, 1))
+
+    return image, w, h, bigimage
 
 
 # ### Model for custom res-unet ###

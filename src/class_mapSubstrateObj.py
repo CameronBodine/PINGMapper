@@ -35,8 +35,12 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-from skimage.filters import threshold_otsu
+# from skimage.filters import threshold_otsu
 from osgeo import gdal, ogr, osr
+
+from doodleverse_utils.imports import *
+from doodleverse_utils.model_imports import *
+from doodleverse_utils.prediction_imports import *
 
 class mapSubObj(rectObj):
 
@@ -87,7 +91,7 @@ class mapSubObj(rectObj):
         # Initialize the model
         if not hasattr(self, 'substrateModel'):
             model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
-            self.substrateModel = model
+            self.substrateModel = [model]
 
         # Open model configuration file
         with open(self.configfile) as f:
@@ -168,7 +172,7 @@ class mapSubObj(rectObj):
             model = self.substrateModel
 
             # Do prediction, return softmax_score for each class
-            softmax_score = doPredict(model, MODEL, sonWin, N_DATA_BANDS, NCLASSES, TARGET_SIZE)
+            est_label, softmax_score = doPredict(model, MODEL, sonWin, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
 
             # Expand softmax_score to son3Chunk dims, filled with nan's
             softmax_score = self._expandWin(H, W, wStart, wEnd, softmax_score)
@@ -297,15 +301,31 @@ class mapSubObj(rectObj):
         # Get sonMetaDF
         lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy().reset_index()
 
-        # # Do egn
-        # if self.egn:
-        #     self._egn_wcr(l, lMetaDF)
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(l, False)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
+        # Do egn
+        if self.egn:
+            # self._egn_wcr(l, lMetaDF)
+            self._egn_wcp(l, lMetaDF)
+            self._egnDoStretch()
 
         # Crop shadows
         _ = self._SHW_crop(l, False)
 
-        # Remove water column and crop
-        lMinDep = self._WCR_crop(lMetaDF)
+        # # Remove water column and crop
+        # lMinDep = self._WCR_crop(lMetaDF)
+
+        # Mask water column and find min depth for cropping
+        self._WC_mask(l, False)
+        lMinDep = self.minDep
+
+        self.sonDat = self.sonDat*self.wcMask
 
         # Create copy of sonar data
         lSonDat = self.sonDat.copy()
@@ -317,7 +337,7 @@ class mapSubObj(rectObj):
         ########
         # Center
         # Get sonDat
-        self._getScanChunkSingle(i)
+        self._getScanChunkSingle(c)
 
         # Original image dimensions
         H, W = self.sonDat.shape
@@ -328,15 +348,34 @@ class mapSubObj(rectObj):
         # Get sonMetaDF
         cMetaDF = df.loc[df['chunk_id'] == c, ['dep_m']].copy().reset_index()
 
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(c, False)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
         # # Do egn
         # if self.egn:
         #     self._egn_wcr(c, cMetaDF)
+        # Do egn
+        if self.egn:
+            # self._egn_wcr(l, lMetaDF)
+            self._egn_wcp(c, cMetaDF)
+            self._egnDoStretch()
 
         # Crop shadows first
-        _ = self._SHW_crop(i, False)
+        _ = self._SHW_crop(c, False)
 
-        # Remove water column and crop
-        cMinDep = self._WCR_crop(cMetaDF)
+        # # Remove water column and crop
+        # cMinDep = self._WCR_crop(cMetaDF)
+
+        # Mask water column and find min depth for cropping
+        self._WC_mask(c, False)
+        cMinDep = self.minDep
+
+        self.sonDat = self.sonDat*self.wcMask
 
         # Create copy of sonar data
         cSonDat = self.sonDat.copy()
@@ -355,15 +394,34 @@ class mapSubObj(rectObj):
         # Get sonMetaDF
         rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy().reset_index()
 
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(r, False)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
         # # Do egn
         # if self.egn:
         #     self._egn_wcr(r, rMetaDF)
+        # Do egn
+        if self.egn:
+            # self._egn_wcr(l, lMetaDF)
+            self._egn_wcp(r, rMetaDF)
+            self._egnDoStretch()
 
         # Crop shadows first
         _ = self._SHW_crop(r, False)
 
-        # Remove water column and crop
-        rMinDep = self._WCR_crop(rMetaDF)
+        # # Remove water column and crop
+        # rMinDep = self._WCR_crop(rMetaDF)
+
+        # Mask water column and find min depth for cropping
+        self._WC_mask(r, False)
+        rMinDep = self.minDep
+
+        self.sonDat = self.sonDat*self.wcMask
 
         # Create copy of sonar data
         rSonDat = self.sonDat.copy()
@@ -715,6 +773,7 @@ class mapSubObj(rectObj):
 
         # Get final classification
         label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
+        print('\n\n\n', '1', label)
 
         # Do speed correction
         if spdCor>0:
@@ -725,6 +784,8 @@ class mapSubObj(rectObj):
 
             # Store sonar back in sonDat just in case
             self.sonDat = son
+
+        print('\n\n\n', '2', label)
 
         # Prepare plt file name/path
         f = projName+'_'+'pltSub_'+'classified_'+map_class_method+'_'+channel+'_'+addZero+str(k)+'.png'
@@ -993,7 +1054,7 @@ class mapSubObj(rectObj):
         #
         #     # Least to most important
         #     class_order = [0, 6, 7, 5, 1, 2, 4, 3]
-        #
+
         #     # First get label the normal way
         #     label = np.argmax(arr, -1)
         #
@@ -1006,10 +1067,10 @@ class mapSubObj(rectObj):
         #             # Update label
         #             label[p==1]=k
         #     label += 1
-
-        else:
-            print('Invalid map_class_method provided:', map_class_method)
-            sys.exit()
+        #
+        # else:
+        #     print('Invalid map_class_method provided:', map_class_method)
+        #     sys.exit()
 
         ##################
         # Mask predictions
@@ -1116,7 +1177,6 @@ class mapSubObj(rectObj):
 
             # Filter small regions and holes
             label = self._filterLabel(label, min_size)
-
 
         return label
 

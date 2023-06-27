@@ -73,7 +73,8 @@ def rectify_master_func(project_mode=0,
                         export_poly=False,
                         map_predict=0,
                         pltSubClass=False,
-                        map_class_method='max'):
+                        map_class_method='max',
+                        map_mosaic=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -278,7 +279,7 @@ def rectify_master_func(project_mode=0,
         del lastRow, curRow, i
 
         son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
-        
+
         # Do positional correction
         if x_offset != 0.0 or y_offset != 0.0:
             son0._applyPosOffset(x_offset, y_offset)

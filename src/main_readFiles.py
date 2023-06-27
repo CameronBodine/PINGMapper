@@ -71,7 +71,8 @@ def read_master_func(project_mode=0,
                      export_poly=False,
                      map_predict=0,
                      pltSubClass=False,
-                     map_class_method='max'):
+                     map_class_method='max',
+                     map_mosaic=0):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been

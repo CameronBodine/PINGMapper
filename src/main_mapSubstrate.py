@@ -47,6 +47,8 @@ def map_master_func(project_mode=0,
                     exportUnknown=False,
                     fixNoDat=False,
                     threadCnt=0,
+                    x_offset=0,
+                    y_offset=0,
                     tileFile=False,
                     egn=False,
                     egn_stretch=0,
@@ -70,7 +72,8 @@ def map_master_func(project_mode=0,
                     export_poly=False,
                     map_predict=0,
                     pltSubClass=False,
-                    map_class_method='max'):
+                    map_class_method='max',
+                    map_mosaic=0):
 
     '''
     Main script to map substrates from side scan sonar imagery.
@@ -160,7 +163,7 @@ def map_master_func(project_mode=0,
 
     #########################################################
     # If map_sub == 0, make sure data was previously exported
-    if not map_sub:
+    if not map_sub and map_mosaic:
         # Get directory
         mapPath = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
         maps = glob(os.path.join(mapPath, '*.tif'))
@@ -170,8 +173,6 @@ def map_master_func(project_mode=0,
                 error_noSubMap_poly()
             if mosaic:
                 error_noSubMap_mosaic()
-
-
 
     #############################################
     # Determine if smoothed trackline was created
@@ -240,6 +241,10 @@ def map_master_func(project_mode=0,
 
         son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
 
+        # Do positional correction
+        if x_offset != 0.0 or y_offset != 0.0:
+            son0._applyPosOffset(x_offset, y_offset)
+
         # Update other channel with smoothed coordinates
         # Determine which rectObj we need to update
         for i, son in enumerate(mapObjs):
@@ -307,8 +312,17 @@ def map_master_func(project_mode=0,
                 # Load model weights
                 # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
                 # son.configfile = son.weights.replace('.h5', '.json')
-                son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
-                son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                # son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
+                # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+
+                if son.egn:
+                    son.weights = r'./models/substrate/EGN_Substrate_Segformer/weights/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5'
+                    son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                else:
+                    # ! # !
+                    # Update with Raw_Substrate_Segformer model once trained
+                    son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
+                    son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
@@ -447,7 +461,7 @@ def map_master_func(project_mode=0,
     ############################################################################
 
     overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if mosaic > 0:
+    if map_mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
 
