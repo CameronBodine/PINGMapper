@@ -14,5 +14,7 @@ dependencies:
   - h5py
   - pip
   - pip:
+      - doodleverse_utils
       - psutil
       - tensorflow
+      - transformers

@@ -1,7 +1,7 @@
 {
   "TARGET_SIZE": [512,512],
   "MODEL": "resunet",
-  "NCLASSES": 1,
+  "NCLASSES": 2,
   "KERNEL":3,
   "STRIDE":2,
   "BATCH_SIZE": 10,
@@ -36,5 +36,6 @@
   "AUG_COPIES": 3,
   "TESTTIMEAUG": false,
   "SET_GPU": "0",
-  "MODE": "all"
+  "MODE": "all",
+  "OTSU_THRESHOLD": true
 }

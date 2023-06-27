@@ -8,6 +8,5 @@ exampleData/Test-Large-DS*
 
 main_batch.py
 main_batchFolder.py
-*csb*.py
 
 !procData/OutputsHere.txt

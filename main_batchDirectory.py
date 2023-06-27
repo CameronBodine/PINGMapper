@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,9 +32,15 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
 import time
 import datetime
+
+# Get processing script's dir so we can save it to file
+scriptDir = os.getcwd()
+copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+script = os.path.join(scriptDir, os.path.basename(__file__))
 
 
 inDir = r'./exampleData'
@@ -42,7 +48,29 @@ outDir = r'./procData'
 
 #################
 # User Parameters
+
+# *** IMPORTANT ****: Overwriting project and outputs
+# Export Mode: project_mode
+## 0==NEW PROJECT: Create a new project. [DEFAULT]
+##      If project already exists, program will exit without any project changes.
+##
+## 1==UPDATE PROJECT: Export additional datasets to existing project.
+##      Use this mode to update an existing project.
+##      If selected datasets were previously exported, they will be overwritten.
+##      To ensure datasets aren't overwritten, deselect them below.
+##      If project does not exist, program will exit without any project changes.
+##
+## 2==MAYHEM MODE: Create new project, regardless of previous project state.
+##      If project exists, it will be DELETED and reprocessed.
+##      If project does not exist, a new project will be created.
+project_mode = 2
+
+
 # General Parameters
+pix_res_factor = 0.1 # Pixel resampling factor;
+##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
+##                     1.0: Use sonar default resolution;
+##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
@@ -88,6 +116,17 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
+# Substrate Mapping
+# Substrate Mapping
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = True # Export plots of substrate classification and predictions
+map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
+map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
+
+
+
 # Find all DAT and SON files in all subdirectories of inDir
 inFiles=[]
 for root, dirs, files in os.walk(inDir):
@@ -113,6 +152,8 @@ for datFile in inFiles:
         projDir = os.path.join(outDir, recName)
 
         params = {
+            'project_mode':project_mode,
+            'pix_res_factor':pix_res_factor,
             'humFile':humFile,
             'sonFiles':sonFiles,
             'projDir':projDir,
@@ -138,7 +179,13 @@ for datFile in inFiles:
             'pltBedPick':pltBedPick,
             'rect_wcp':rect_wcp,
             'rect_wcr':rect_wcr,
-            'mosaic':mosaic
+            'mosaic':mosaic,
+            'pred_sub': pred_sub,
+            'map_sub':map_sub,
+            'export_poly':export_poly,
+            'map_predict':map_predict,
+            'pltSubClass':pltSubClass,
+            'map_class_method':map_class_method
             }
 
         print('sonPath',sonPath)
@@ -160,6 +207,15 @@ for datFile in inFiles:
             print('***** RECTIFYING *****')
             rectify_master_func(**params)
             # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+
+        #==================================================
+        #==================================================
+        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
 
     except:
         print('Could not process:', datFile)

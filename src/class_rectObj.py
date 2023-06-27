@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -91,8 +91,11 @@ class rectObj(sonObj):
         for attr, value in metaFile.__dict__.items(): # Store sonObj() attributes in self
             setattr(self, attr, value)
 
-        self.rect_wcp = False
-        self.rect_wcr = False
+        if not hasattr(self, 'rect_wcp'):
+            self.rect_wcp = False
+
+        if not hasattr(self, 'rect_wcr'):
+            self.rect_wcr = False
 
         return
 
@@ -494,6 +497,11 @@ class rectObj(sonObj):
         sonMetaDF = self.sonMetaDF
 
         # Get smoothed trackline
+        if not hasattr(self, 'smthTrk'):
+        # if type(self.smthTrk) == str:
+            self.smthTrk = pd.read_csv(self.smthTrkFile)
+        else:
+            pass
         sDF = self.smthTrk
 
         ########################
@@ -571,6 +579,7 @@ class rectObj(sonObj):
         # Smooth and interpolate range coordinates
         self._interpRangeCoords(filt)
         gc.collect()
+        self._pickleSon()
         return self
 
     #===========================================
@@ -690,7 +699,8 @@ class rectObj(sonObj):
 
         ###########################################
         # Overwrite Trackline_Smth_son.beamName.csv
-        outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        # outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+        outCSV = self.smthTrkFile
         rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
         self.rangeExt = rsDF # Store smoothed range extent in rectObj
@@ -934,7 +944,8 @@ class rectObj(sonObj):
     def _rectSonParallel(self,
                          chunk,
                          filt=50,
-                         wgs=False):
+                         wgs=False,
+                         son=True):
         '''
         This function will georectify sonar tiles with water column present
         (rect_wcp) OR water column removed and slant range corrected (rect_wcr).
@@ -979,13 +990,15 @@ class rectObj(sonObj):
         NA
         '''
         filterIntensity = False
+        pix_res_factor = self.pix_res_factor # Pixel upscale/downscale factor
 
-        # Create output directory if it doesn't exist
-        outDir = self.outDir # Parent directory
-        try:
-            os.mkdir(outDir)
-        except:
-            pass
+        if son:
+            # Create output directory if it doesn't exist
+            outDir = self.outDir # Parent directory
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
 
         # Get trackline/range extent file path
         trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
@@ -1006,17 +1019,8 @@ class rectObj(sonObj):
             xTrk = 'trk_utm_es'
             yTrk = 'trk_utm_ns'
 
-        # Determine leading zeros to match naming convention
-        if chunk < 10:
-            addZero = '0000'
-        elif chunk < 100:
-            addZero = '000'
-        elif chunk < 1000:
-            addZero = '00'
-        elif chunk < 10000:
-            addZero = '0'
-        else:
-            addZero = ''
+        # # Determine leading zeros to match naming convention
+        addZero = self._addZero(chunk)
 
         #################################
         # Prepare pixel (pix) coordinates
@@ -1024,6 +1028,9 @@ class rectObj(sonObj):
         ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
 
         # Filter sonMetaDF by chunk
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
         sonMetaAll = self.sonMetaDF
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
@@ -1036,10 +1043,14 @@ class rectObj(sonObj):
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
-        # Open image to rectify
-        self._loadSonChunk()
-        if filterIntensity:
-            self._doPPDRC()
+        if son:
+            # Open image to rectify
+            self._loadSonChunk()
+        else:
+            # Rectifying substrate classification
+            pass
+        # if filterIntensity:
+        #     self._doPPDRC()
 
         # Remove shadows
         if self.remShadow:
@@ -1048,6 +1059,11 @@ class rectObj(sonObj):
 
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
+
+        # # Pyhum corrections
+        # do_correct = False
+        # if do_correct:
+        #     self.sonDat = doPyhumCorrections(self, sonMeta)
 
         img = self.sonDat
 
@@ -1145,8 +1161,11 @@ class rectObj(sonObj):
         yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
         # Calculate x,y resolution of a single pixel
-        xres = (xMax - xMin) / outShape[0]
-        yres = (yMax - yMin) / outShape[1]
+        # xres = (xMax - xMin) / outShape[0]
+        # yres = (yMax - yMin) / outShape[1]
+        # Scale by factor for down/upsampling
+        xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
+        yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -1161,6 +1180,18 @@ class rectObj(sonObj):
             except:
                 pass
 
+            # egn
+            if self.egn:
+
+                self._egn_wcp(chunk, sonMeta)
+                # self._egn()
+                # if self.remShadow:
+                #     stretch_wcp=False
+                # else:
+                #     stretch_wcp=True
+
+                self._egnDoStretch()
+
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -1187,8 +1218,8 @@ class rectObj(sonObj):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
+                height=out.shape[0] * pix_res_factor,
+                width=out.shape[1] * pix_res_factor,
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,
@@ -1197,6 +1228,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
@@ -1206,12 +1238,20 @@ class rectObj(sonObj):
             imgOutPrefix = 'rect_wcr'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
-            try:
-                os.mkdir(outDir)
-            except:
-                pass
+            if son:
+                try:
+                    os.mkdir(outDir)
+                except:
+                    pass
 
             self._WCR_SRC(sonMeta)
+
+            # Empirical gain normalization
+            if self.egn:
+                self._egn()
+                self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+                self._egnDoStretch()
+
             img = self.sonDat
 
             img[0]=0 # To fix extra white on curves
@@ -1225,6 +1265,30 @@ class rectObj(sonObj):
                        clip=False,
                        preserve_range=True)
 
+            # Warping substrate classification adds anomlies which must be removed
+            if not son:
+                # Set minSize
+                min_size = 1500
+
+                # Label all regions
+                lbl = label(out)
+
+                # First set small objects to background value (0)
+                noSmall = remove_small_objects(lbl, min_size)
+
+                # Punch holes in original label
+                holes = ~(noSmall==0)
+
+                l = out*holes
+
+                # Remove small holes
+                # Convert l to binary
+                binary_objects = l.astype(bool)
+                # Remove the holes
+                binary_filled = remove_small_holes(binary_objects, min_size)
+                # Recover classification with holes filled
+                out = watershed(binary_filled, l, mask=binary_filled)
+
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
@@ -1233,7 +1297,14 @@ class rectObj(sonObj):
             beamName = self.beamName # Determine which sonar beam we are working with
             imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
 
-            gtiff = os.path.join(outDir, imgName) # Output file name
+            if son:
+                gtiff = os.path.join(outDir, imgName) # Output file name
+            else:
+                outDir = os.path.join(self.substrateDir, 'map_sub')
+                if not os.path.exists(outDir):
+                    os.mkdir(outDir)
+                gtiff = os.path.join(outDir, imgName) # Output file name
+                gtiff = gtiff.replace(imgOutPrefix, 'sub_map')
 
 
             # Export georectified image
@@ -1241,16 +1312,18 @@ class rectObj(sonObj):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
+                height=out.shape[0] * pix_res_factor,
+                width=out.shape[1] * pix_res_factor,
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,
                 transform=transform,
-                compress='lzw'
+                compress='lzw',
+                resampling=Resampling.bilinear
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
