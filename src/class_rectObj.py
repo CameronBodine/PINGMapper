@@ -343,6 +343,98 @@ class rectObj(sonObj):
         return db
 
     ############################################################################
+    # Apply offset to coordinates                                              #
+    ############################################################################
+
+    #===========================================
+    def _applyPosOffset(self, x_offset, y_offset):
+        '''
+        Apply offset to smoothed coordinates to account for GPS and transducer
+        offset.
+        '''
+        # Store necessary dataframe column names in variables
+        lons = 'lons'
+        lats = 'lats'
+        bearing = 'cog'
+        utm_es = 'utm_es'
+        utm_ns = 'utm_ns'
+
+        # Get smoothed trackline
+        sDF = self.smthTrk
+
+        #######################
+        # Go along x-axis first
+
+        R = 6371.393*1000 #Radius of the Earth in meters
+        if x_offset < 0:
+            rotate = 180
+        else:
+            rotate = 0
+
+        brng = (sDF['cog']+rotate) % 360
+        brng = np.deg2rad(brng)
+        d = abs(x_offset)
+
+        # Get lat/lon for origin of each ping, convert to numpy array
+        lat1 = np.deg2rad(sDF[lats]).to_numpy()
+        lon1 = np.deg2rad(sDF[lons]).to_numpy()
+
+        # Calculate position down boat x-axis
+        # Calculate latitude of range extent
+        lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
+               np.cos(lat1) * np.sin(d/R) * np.cos(brng))
+
+        # Calculate longitude of range extent
+        lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
+                                  np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
+
+        lat2 = np.degrees(lat2)
+        lon2 = np.degrees(lon2)
+
+        sDF[lons] = lon2
+        sDF[lats] = lat2
+
+        ######################################
+        # Calculate position along boat y-axis
+        if y_offset > 0:
+            rotate = 90
+        else:
+            rotate = -90
+
+        brng = (sDF['cog']+rotate) % 360
+        brng = np.deg2rad(brng)
+        d = abs(y_offset)
+
+        # Get lat/lon for origin of each ping, convert to numpy array
+        lat1 = np.deg2rad(sDF[lats]).to_numpy()
+        lon1 = np.deg2rad(sDF[lons]).to_numpy()
+
+        # Calculate position down boat x-axis
+        # Calculate latitude of range extent
+        lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
+               np.cos(lat1) * np.sin(d/R) * np.cos(brng))
+
+        # Calculate longitude of range extent
+        lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
+                                  np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
+
+        lat2 = np.degrees(lat2)
+        lon2 = np.degrees(lon2)
+
+        sDF[lons] = lon2
+        sDF[lats] = lat2
+
+        # Calculate easting and northing
+        e_smth, n_smth = self.trans(sDF[lons].to_numpy(), sDF[lats].to_numpy())
+        # Store in dataframe
+        sDF[utm_es] = e_smth
+        sDF[utm_ns] = n_smth
+        sDF = sDF.dropna() # Drop any NA's
+        self.smthTrk = sDF # Store df in class attribute
+
+        return
+
+    ############################################################################
     # Calculate range extent coordinates                                       #
     ############################################################################
 
