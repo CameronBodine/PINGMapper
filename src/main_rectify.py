@@ -45,6 +45,8 @@ def rectify_master_func(humFile='',
                         exportUnknown=False,
                         fixNoDat=False,
                         threadCnt=0,
+                        x_offset=0,
+                        y_offset=0,
                         tileFile=False,
                         wcp=False,
                         wcr=False,
@@ -252,6 +254,10 @@ def rectify_master_func(humFile='',
     del lastRow, curRow, i
 
     son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
+
+    # Do positional correction
+    if x_offset != 0.0 or y_offset != 0.0:
+        son0._applyPosOffset(x_offset, y_offset)
 
     # Update other channel with smoothed coordinates
     # Determine which rectObj we need to update

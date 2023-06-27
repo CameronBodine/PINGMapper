@@ -51,6 +51,17 @@ fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
+# Position Corrections
+## Provide an x and y offset to account for position offset between
+## control head (or external GPS) and transducer.
+## Origin (0,0) is the location of control head (or external GPS)
+## X-axis runs from bow (fore, or front) to stern (aft, or rear) with positive offset towards the bow, negative towards stern
+## Y-axis runs from portside (left) to starboard (right), with negative values towards the portside, positive towards starboard
+## Z-offsets can be provided with `adjDep` below.
+x_offset = 0.0 # [meters]
+y_offset = 0.0 # [meters]
+
+
 # Sonogram Exports
 tileFile = '.jpg'
 wcp = 2 #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
@@ -111,6 +122,8 @@ for datFile in inFiles:
             'exportUnknown':exportUnknown,
             'fixNoDat':fixNoDat,
             'threadCnt':threadCnt,
+            'x_offset':x_offset,
+            'y_offset':y_offset,
             'tileFile':tileFile,
             'wcp':wcp,
             'wcr':wcr,
