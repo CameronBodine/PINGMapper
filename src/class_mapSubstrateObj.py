@@ -87,6 +87,12 @@ class mapSubObj(rectObj):
         --------------------
         '''
 
+        # Get chunk
+        chunk = i[0]
+
+        # Get offset
+        w_off = i[1]
+
 
         # Initialize the model
         if not hasattr(self, 'substrateModel'):
@@ -99,19 +105,631 @@ class mapSubObj(rectObj):
         globals().update(config)
 
         # Do prediction
-        substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1/3)
+        # substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1/3)
+        substratePred = self._predSubstrate(chunk, w_off, model_name, n_data_bands)
 
         # Save predictions to npz
-        self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
+        self._saveSubstrateNpz(substratePred, chunk, w_off, MY_CLASS_NAMES)
 
         del self.substrateModel, substratePred
         gc.collect()
 
         return
 
+    #=======================================================================
+    def _predSubstrate(self, chunk, w_off, model_name, n_data_bands):
+        '''
+        Function to predict substrate, called from _detectSubstrate(). Will load
+        current chunk, and next chunk, if necessary. Merged chunks will be cropped
+        based on window offset. Infrence will be made on window and returned to
+        _detectSubstrate.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+
+        #################################################
+        # Get depth for water column removal and cropping
+        # Get sonMeta to get depth
+        self._loadSonMeta()
+
+
+        ############
+        # Load sonar
+        son = self._getSon2Chunk(chunk, w_off)
+
+
+        ###############
+        # Do prediction
+
+        # Get the model
+        model = self.substrateModel
+
+        # Do prediction, return softmax_score for each class
+        _, softmax_score = doPredict(model, MODEL, son, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
+
+        return softmax_score
 
     #=======================================================================
-    def _predSubstrate(self, i, model_name, n_data_bands, winO=1/3):
+    def _getSon2Chunk(self, c, o):
+        '''
+        Load chunk, and next chunk if necessary. Merge the chunks, then crop
+        based on o and nchunk.
+        '''
+
+        # Get sonMeta df
+        if not hasattr(self, "sonMetaDF"):
+            self._loadSonMeta()
+        df = self.sonMetaDF
+
+
+        ############
+        # Left chunk
+        l = c
+        self._getScanChunkSingle(l)
+
+        # Get sonMetaDF
+        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy().reset_index()
+
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(l, False)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+
+        # Do egn
+        if self.egn:
+            self._egn_wcp(l, lMetaDF)
+            self._egnDoStretch()
+
+        # Crop shadows
+        _ = self._SHW_crop(l, False)
+
+        # Mask water column and find min depth for cropping
+        self._WC_mask(l, False)
+        lMinDep = self.minDep
+
+        self.sonDat = self.sonDat*self.wcMask
+
+        # Create copy of sonar data
+        lSonDat = self.sonDat.copy()
+        del self.sonDat
+
+
+        ###########################
+        # Right chunk, if necessary
+        if o > 0:
+            r = c+1
+            self._getScanChunkSingle(r)
+
+            # Get sonMetaDF
+            rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy().reset_index()
+
+            # Remove shadows
+            if self.remShadow:
+                # Get mask
+                self._SHW_mask(r, False)
+
+                # Mask out shadows
+                self.sonDat = self.sonDat*self.shadowMask
+
+            # Do egn
+            if self.egn:
+                self._egn_wcp(r, rMetaDF)
+                self._egnDoStretch()
+
+            # Crop shadows first
+            _ = self._SHW_crop(r, False)
+
+            # Mask water column and find min depth for cropping
+            self._WC_mask(r, False)
+            rMinDep = self.minDep
+
+            self.sonDat = self.sonDat*self.wcMask
+
+            # Create copy of sonar data
+            rSonDat = self.sonDat.copy()
+            del self.sonDat
+
+
+        ####################
+        # Merge left & right
+        if o == 0:
+            final_son = lSonDat
+
+        else:
+            # Align arrays based on wc_crops
+            # Find min depth
+            minDep = min(lMinDep, rMinDep)
+
+            # Pad arrays if chunk's minDep > minDep and fill with zero's
+            # Left
+            if lMinDep > minDep:
+                # Get current sonDat shape
+                r, c = lSonDat.shape
+
+                # Determine pad size (actual offset from top)
+                pad = lMinDep - minDep
+
+                # Make new zero array w/ pad added in
+                newArr = np.zeros((pad+r, c))
+                # Fill with nan to prevent unneeded prediction
+                newArr.fill(np.nan)
+
+                # Fill sonDat in appropriate location
+                newArr[pad:,:] = lSonDat
+                lSonDat = newArr.copy()
+                del newArr
+
+            # Right
+            if rMinDep > minDep:
+                # Get current sonDat shape
+                r, c = rSonDat.shape
+                # Determine pad size
+                pad = rMinDep - minDep
+
+                # Make new zero array w/ pad added in
+                newArr = np.zeros((pad+r, c))
+                # Fill with nan to prevent unneeded prediction
+                newArr.fill(np.nan)
+
+                # Fill sonDat in appropriate location
+                newArr[pad:,:] = rSonDat
+                rSonDat = newArr.copy()
+                del newArr
+
+            ####
+            # Arrays are now aligned along the water bed interface.
+            # Last step is to create output array large enough to store all data.
+
+            # Find max rows across each chunk
+            maxR = max(lSonDat.shape[0], rSonDat.shape[0])
+
+            # Find max cols
+            maxC = lSonDat.shape[1] + rSonDat.shape[1]
+
+            # Create final array of appropriate size
+            fSonDat = np.zeros((maxR, maxC))
+            # Fill with nan to prevent unneeded prediction
+            fSonDat.fill(np.nan)
+
+            ####
+            # Add each chunk to final array
+
+            # Insert left chunk
+            fSonDat[:lSonDat.shape[0], :self.nchunk] = lSonDat
+
+            # Insert right chunk
+            fSonDat[:rSonDat.shape[0], self.nchunk:] = rSonDat
+
+            ###################
+            # Now do final crop
+            final_son = fSonDat[:, o:o+self.nchunk]
+
+        return final_son
+
+    #=======================================================================
+    def _saveSubstrateNpz(self, arr, k, o, classes):
+        '''
+        Save substrate prediction to npz
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+        # # Save array to float16 to save on disk space
+        # arr = arr.astype('float16')
+
+        # Save on disk space by converting to int
+        # Multiply by 100 to get two decimal places of precision
+        arr *= 100
+        arr = arr.astype('int16') # value range (-32768, 32767)
+
+        ###################
+        # Prepare File Name
+        # File name zero padding
+        addZero = self._addZero(k)
+
+        # Out directory
+        outDir = self.outDir
+
+        #projName_substrate_beam_chunk.npz
+        channel = self.beamName #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+
+        # Prepare file name
+        f = projName+'_'+'substrateSoftmax'+'_'+channel+'_'+addZero+str(k)+'_'+str(o)+'.npz'
+        f = os.path.join(outDir, f)
+
+        # Create dict to store output
+        datadict = dict()
+        datadict['substrate'] = arr
+
+        datadict['classes'] = list(classes.values())
+
+        # Save compressed npz
+        np.savez_compressed(f, **datadict)
+
+        del arr
+        return
+
+    #=======================================================================
+    def _getSubstrateNpz(self):
+        '''
+        Locate previously saved substrate npz files and return dictionary:
+        npzs = {chunkID:NPZFilePath}
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+
+        # Get npz dir
+        npzDir = os.path.join(self.substrateDir, 'predict_npz')
+
+        # Dictionary to store {chunkID:[list of npz paths]}
+        toMap = defaultdict()
+
+        # Iterate each chunk and find npzs for chunk to left, current, and to right
+        for i in range(int(self.chunkMax)+1):
+            l = i-1
+            c = i
+            r = i+1
+
+            # Get left npzs
+            if l >= 0:
+                addZero = self._addZero(l)
+                l = addZero+str(l)
+                lnpz = sorted(glob(os.path.join(npzDir, '*'+self.beamName+'*'+l+'*.npz')))
+            else:
+                lnpz = []
+
+            # Get center npzs
+            addZero = self._addZero(c)
+            c = addZero+str(c)
+            cnpz = sorted(glob(os.path.join(npzDir, '*'+self.beamName+'*'+c+'*.npz')))
+
+            # Get right npzs
+            addZero = self._addZero(r)
+            r = addZero+str(r)
+            try:
+                rnpz = sorted(glob(os.path.join(npzDir, '*'+self.beamName+'*'+r+'*.npz')))
+            except:
+                rnpz = []
+
+            toMap[i] = [lnpz, cnpz, rnpz]
+
+        return toMap
+
+
+    #=======================================================================
+    def _loadAndAvgNpzWindows(self, npzs):
+        '''
+        Take average of all moving window predictions
+
+        1) Get left, center, and right npzs
+
+        '''
+
+        lnpzs = npzs[0]
+        cnpzs = npzs[1]
+        rnpzs = npzs[2]
+
+        # Final shape is dims of first npz in cnpzs
+        h, w, d = np.load(cnpzs[0])['substrate'].shape
+
+        ######
+        # Left
+        # lPreds = np.zeros((h,w,d))
+        # lPreds.fill(np.nan)
+
+        lPreds = [] # Store each windows softmax
+        for f in lnpzs:
+            pred = np.zeros((h,w,d))
+            pred.fill(np.nan)
+
+            npz = np.load(f)['substrate']
+
+            # Get offset
+            o = int(os.path.basename(f).split('.')[0].split('_')[-1])
+
+            # Get min height for slicing
+            minH = min(h, npz.shape[0])
+
+            # Store slice in pred
+            pred[:minH, :o] = npz[:minH, -o:]
+
+
+
+
+    #=======================================================================
+    def _pltSubClass(self, map_class_method, chunk, npzs, spdCor=1, maxCrop=0, probs=True):
+
+        '''
+        Generate plots of substrate classification including predictions as
+        probabilities or logits for each possible class.
+
+        ----------
+        Parameters
+        ----------
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+
+        -------
+        Returns
+        -------
+
+        --------------------
+        Next Processing Step
+        --------------------
+        '''
+
+        ###################
+        # Prepare File Name
+        # File name zero padding
+        k = chunk
+        addZero = self._addZero(k)
+
+        # Out directory
+        outDir = self.outDir
+
+        #projName_substrate_beam_chunk.npz
+        channel = self.beamName #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+
+        # Load sonDat
+        self._getScanChunkSingle(chunk)
+        son = self.sonDat
+
+        # Speed correct son
+        if spdCor>0:
+            # Do sonar first
+            self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop)
+            son = self.sonDat.copy()
+
+        # # Open substrate softmax scores
+        # npz = np.load(npz)
+        # softmax = npz['substrate'].astype('float32')
+        #
+        # # Get classes
+        # classes = npz['classes']
+
+        npz = self._loadAndAvgNpzWindows(npzs)
+
+
+        #####################
+        # Plot Classification
+
+        # Get final classification
+        label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
+        print('\n\n\n', '1', label)
+
+        # Do speed correction
+        if spdCor>0:
+            # Now do label
+            self.sonDat = label
+            self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop, son=False)
+            label = self.sonDat.copy()
+
+            # Store sonar back in sonDat just in case
+            self.sonDat = son
+
+        print('\n\n\n', '2', label)
+
+        # Prepare plt file name/path
+        f = projName+'_'+'pltSub_'+'classified_'+map_class_method+'_'+channel+'_'+addZero+str(k)+'.png'
+        f = os.path.join(outDir, f)
+
+        # Set colormap
+        class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
+
+        # Convert labels to colors
+        color_label = label_to_colors(label, son[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+
+        # Do plot
+        fig = plt.figure()
+        ax = plt.subplot(111)
+
+        # Plot overlay
+        ax.imshow(son, cmap='gray')
+        ax.imshow(color_label, alpha=0.5)
+        ax.axis('off')
+
+        # Shrink plot
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+
+        # Legend
+        colors = class_label_colormap[:len(classes)]
+        l=dict()
+        for i, (n, c) in enumerate(zip(classes,colors)):
+            l[str(i)+' '+n]=c
+
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in l.values()]
+        ax.legend(markers, l.keys(), numpoints=1, ncol=int(len(colors)/3),
+                  markerscale=0.5, prop={'size': 5}, loc='upper center',
+                  bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True,
+                  columnspacing=0.75, handletextpad=0.25)
+
+        plt.savefig(f, dpi=200, bbox_inches='tight')
+        plt.close()
+
+
+        ##############
+        # Plot Softmax
+
+        if probs:
+            sigma = 1 # Number of standard deviations to plot
+        else:
+            sigma = 2
+
+        # Number of rows
+        rows=len(classes)
+
+        # Convert to probabilities????
+        if probs:
+            softmax = tf.nn.softmax(softmax).numpy()
+
+        # Calculate stats and prepare labels
+        meanSoft = round(np.nanmean(softmax), 1)
+        stdSoft = np.nanstd(softmax)
+        minSoft = round(meanSoft-(sigma*stdSoft), 1)
+        maxSoft = round(meanSoft+(sigma*stdSoft), 1)
+
+        # Prepare subtitle
+        meanL = '$\mu$' +' ('+str(meanSoft)+')'
+        if probs:
+            if minSoft < 0:
+                minSoft = 0
+                minL = '('+str(minSoft)+')'
+            else:
+                minL = '-'+str(sigma)+'$\sigma$'+' ('+str(minSoft)+')'
+
+            if maxSoft > 1:
+                maxSoft = 1
+                maxL = '('+str(maxSoft)+')'
+            else:
+                maxL = str(sigma)+'$\sigma$'+' ('+str(maxSoft)+')'
+
+        else:
+            minL = '-'+str(sigma)+'$\sigma$'+' ('+str(minSoft)+')'
+            meanL = '$\mu$' +' ('+str(meanSoft)+')'
+            maxL = str(sigma)+'$\sigma$'+' ('+str(maxSoft)+')'
+
+        # Create subplots
+        plt.figure(figsize=(16,12))
+        plt.subplots_adjust(hspace=0.25)
+        nrows = 3
+        ncols = int(np.ceil((softmax.shape[-1]+2)/nrows))
+
+        # Prepare Title
+        if probs:
+            title = 'Substrate Probabilities\n'
+        else:
+            title = 'Substrate Logits\n'
+        title = title+minL + '$\leq$' + meanL + '$\leq$' + maxL
+        plt.suptitle(title, fontsize=18, y=0.95)
+
+        # Plot substrate in first position
+        ax = plt.subplot(nrows, ncols, 1)
+        ax.set_title('Sonar')
+        ax.imshow(son, cmap='gray')
+        ax.axis('off')
+
+        # Plot classification in second position
+        ax = plt.subplot(nrows, ncols, 2)
+        ax.set_title('Classification: '+ map_class_method)
+        # Plot overlay
+        ax.imshow(son, cmap='gray')
+        ax.imshow(color_label, alpha=0.5)
+        ax.axis('off')
+
+        # Loop through axes
+        for i in range(softmax.shape[-1]):
+
+            # Get class
+            cname=classes[i]
+            c = softmax[:,:,i]
+
+            # Do speed correction
+            if spdCor>0:
+                # Now do label
+                self.sonDat = c
+                self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop, son=False, integer=False)
+                c = self.sonDat.copy()
+
+                # Store sonar back in sonDat just in case
+                self.sonDat = son
+
+            # Do plot
+            ax = plt.subplot(nrows, ncols, i+3)
+            ax.set_title(cname, backgroundcolor=class_label_colormap[i], color='white')
+
+            ax.imshow(son, cmap='gray')
+
+            # Prepare color map
+            color_map = plt.cm.get_cmap('viridis')
+            # color_map = color_map.reversed()
+
+            im = ax.imshow(c, cmap=color_map, alpha=0.5, vmin=minSoft, vmax=maxSoft)
+            ax.axis('off')
+
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            cbar = plt.colorbar(im, ticks=[minSoft, meanSoft, maxSoft], cax=cax)
+
+            # Prepare colorbar labels
+            meanL = '$\mu$'
+            if probs:
+                if minSoft == 0:
+                    minL = str(minSoft)
+                else:
+                    minL = '-'+str(sigma)+'$\sigma$'
+
+                if maxSoft == 1:
+                    maxL = str(maxSoft)
+                else:
+                    maxL = str(sigma)+'$\sigma$'
+
+            else:
+                minL = '-'+str(sigma)+'$\sigma$'
+                meanL = '$\mu$'
+                maxL = str(sigma)+'$\sigma$'
+
+            cbar.ax.set_yticklabels([minL, meanL, maxL])
+
+        if probs:
+            f = f.replace('classified_'+map_class_method, 'probability')
+        else:
+            f = f.replace('classified_'+map_class_method, 'logits')
+        plt.savefig(f, dpi=200, bbox_inches='tight')
+        plt.close()
+
+
+
+    #=======================================================================
+    def _predSubstrate_OLD(self, i, model_name, n_data_bands, winO=1/3):
         '''
         Function to predict substrate, called from _detectSubstrate(). Performs
         a moving window, the size of which specified by winO. Each window's
@@ -223,7 +841,7 @@ class mapSubObj(rectObj):
         return fArr
 
     #=======================================================================
-    def _getSon3Chunk(self, i):
+    def _getSon3Chunk_OLD(self, i):
         '''
         Substrate predictions are done using a moving window to avoid classification
         issues between chunks. For the given chunk, the chunk before and after are
@@ -545,7 +1163,7 @@ class mapSubObj(rectObj):
 
 
     #=======================================================================
-    def _expandWin(self, H, W, w1, w2, arr):
+    def _expandWin_OLD(self, H, W, w1, w2, arr):
         '''
         Generate new array of size (H, W, arr.shape[2]) filled with nan's. Place
         arr in new arr at index [:, w1:w2]
@@ -580,7 +1198,7 @@ class mapSubObj(rectObj):
         return a
 
     #=======================================================================
-    def _getSonDatWin(self, w, arr):
+    def _getSonDatWin_OLD(self, w, arr):
 
         '''
         Get slice of son3Chunk using index (w) and nchunk which will be used
@@ -614,7 +1232,7 @@ class mapSubObj(rectObj):
         return son, w, e
 
     #=======================================================================
-    def _getMovWinInd(self, o, arr):
+    def _getMovWinInd_OLD(self, o, arr):
 
         '''
         Get moving window indices based on window overlap (o) and arr size
@@ -660,7 +1278,7 @@ class mapSubObj(rectObj):
         return winInd
 
     #=======================================================================
-    def _saveSubstrateNpz(self, arr, k, classes):
+    def _saveSubstrateNpz_OLD(self, arr, k, classes):
         '''
         Save substrate prediction to npz
 
@@ -714,7 +1332,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _pltSubClass(self, map_class_method, chunk, npz, spdCor=1, maxCrop=0, probs=True):
+    def _pltSubClass_OLD(self, map_class_method, chunk, npz, spdCor=1, maxCrop=0, probs=True):
 
         '''
         Generate plots of substrate classification including predictions as
@@ -1186,7 +1804,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _getSubstrateNpz(self):
+    def _getSubstrateNpz_OLD(self):
         '''
         Locate previously saved substrate npz files and return dictionary:
         npzs = {chunkID:NPZFilePath}

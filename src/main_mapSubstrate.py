@@ -28,11 +28,12 @@
 
 
 from funcs_common import *
-# from funcs_model import *
 
 from class_rectObj import rectObj
 from class_mapSubstrateObj import mapSubObj
 from class_portstarObj import portstarObj
+
+import itertools
 
 #===============================================================================
 def map_master_func(project_mode=0,
@@ -68,6 +69,7 @@ def map_master_func(project_mode=0,
                     rect_wcr=False,
                     mosaic=False,
                     pred_sub=0,
+                    pred_stride=0,
                     map_sub=0,
                     export_poly=False,
                     map_predict=0,
@@ -307,6 +309,14 @@ def map_master_func(project_mode=0,
 
             # Get chunk id's
             chunks = son._getChunkID()
+
+            # Get window offsets
+            winOffset = list(range(0, nchunk, pred_stride))
+
+            # Get all combinations
+            chunk_offset = list(itertools.product(chunks[:-1], winOffset))
+            chunk_offset.append((chunks[-1], 0))
+
             # Prepare model
             if pred_sub == 1:
                 # Load model weights
@@ -325,9 +335,9 @@ def map_master_func(project_mode=0,
                     son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
             # Do prediction (make parallel later)
-            print('\n\tPredicting substrate for', len(chunks), 'sonograms for', son.beamName)
+            print('\n\tPredicting substrate for', len(chunk_offset), 'chunk and window combinations for', son.beamName)
 
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+            Parallel(n_jobs=np.min([len(chunk_offset), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunk_offset)
 
             # For debug
             # for c in chunks:
@@ -346,9 +356,13 @@ def map_master_func(project_mode=0,
         gc.collect()
         printUsage()
 
+    sys.exit()
+
     ############################################################################
     # Fot Substrate Plotting                                                   #
     ############################################################################
+
+    print(pltSubClass)
 
     if pltSubClass:
         start_time = time.time()
