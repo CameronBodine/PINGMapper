@@ -310,13 +310,6 @@ def map_master_func(project_mode=0,
             # Get chunk id's
             chunks = son._getChunkID()
 
-            # Get window offsets
-            winOffset = list(range(0, nchunk, pred_stride))
-
-            # Get all combinations
-            chunk_offset = list(itertools.product(chunks[:-1], winOffset))
-            chunk_offset.append((chunks[-1], 0))
-
             # Prepare model
             if pred_sub == 1:
                 # Load model weights
@@ -335,9 +328,9 @@ def map_master_func(project_mode=0,
                     son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
             # Do prediction (make parallel later)
-            print('\n\tPredicting substrate for', len(chunk_offset), 'chunk and window combinations for', son.beamName)
+            print('\n\tPredicting substrate for', len(chunks), 'chunks for', son.beamName)
 
-            Parallel(n_jobs=np.min([len(chunk_offset), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunk_offset)
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
 
             # For debug
             # for c in chunks:
@@ -355,8 +348,6 @@ def map_master_func(project_mode=0,
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()
         printUsage()
-
-    sys.exit()
 
     ############################################################################
     # Fot Substrate Plotting                                                   #
