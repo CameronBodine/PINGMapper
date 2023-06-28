@@ -69,7 +69,6 @@ def map_master_func(project_mode=0,
                     rect_wcr=False,
                     mosaic=False,
                     pred_sub=0,
-                    pred_stride=0,
                     map_sub=0,
                     export_poly=False,
                     map_predict=0,
@@ -324,7 +323,9 @@ def map_master_func(project_mode=0,
                 else:
                     # ! # !
                     # Update with Raw_Substrate_Segformer model once trained
-                    son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
+                    # son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
+                    # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                    son.weights = r'./models/substrate/Raw_Substrate_Segformer/weights/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5'
                     son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
             # Do prediction (make parallel later)

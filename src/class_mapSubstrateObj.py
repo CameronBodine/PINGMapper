@@ -749,14 +749,28 @@ class mapSubObj(rectObj):
         channel = self.beamName #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
 
+        # Get sonMeta df
+        if not hasattr(self, "sonMetaDF"):
+            self._loadSonMeta()
+        df = self.sonMetaDF
+
+        # Get sonMetaDF
+        df = df.loc[df['chunk_id'] == chunk, ['dep_m']].copy().reset_index()
+
         # Load sonDat
         self._getScanChunkSingle(chunk)
+
+        # Correct data
+        if self.egn:
+            self._egn_wcp(chunk, df)
+            self._egnDoStretch()
+
         son = self.sonDat
 
         # Speed correct son
         if spdCor>0:
             # Do sonar first
-            self._doSpdCor(chunk, spdCor=spdCor, maxCrop=maxCrop)
+            self._doSpdCor(chunk, son=False, spdCor=spdCor, maxCrop=maxCrop)
             son = self.sonDat.copy()
 
         # Open substrate softmax scores
@@ -772,7 +786,6 @@ class mapSubObj(rectObj):
 
         # Get final classification
         label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
-        print('\n\n\n', '1', label)
 
         # Do speed correction
         if spdCor>0:
@@ -783,8 +796,6 @@ class mapSubObj(rectObj):
 
             # Store sonar back in sonDat just in case
             self.sonDat = son
-
-        print('\n\n\n', '2', label)
 
         # Prepare plt file name/path
         f = projName+'_'+'pltSub_'+'classified_'+map_class_method+'_'+channel+'_'+addZero+str(k)+'.png'

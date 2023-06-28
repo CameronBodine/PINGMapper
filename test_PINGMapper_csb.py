@@ -61,7 +61,7 @@ if ds == 1:
     # Path to data/output
     humFile = r'./exampleData/Test-Small-DS.DAT'
     sonPath = r'./exampleData/Test-Small-DS'
-    projDir = r'./procData/PINGMapper-Test-Small-DS'
+    projDir = r'./procData/PINGMapper-Test-Small-DS_EGN'
 
 if ds == 2:
     # Check if files have already been downloaded
@@ -145,7 +145,7 @@ maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 # Depth Detection and Shadow Removal Parameters
 remShadow = 2 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 0 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = False #Smooth depth before water column removal
@@ -160,11 +160,11 @@ mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff;
 
 
 # Substrate Mapping
-pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
-pred_stride = 250 # Stride size, in pings, for moving window prediction: 0==No moving window
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+# pred_stride = 250 # Stride size, in pings, for moving window prediction: 0==No moving window
 pltSubClass = True # Export plots of substrate classification and predictions
 map_sub = True # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
-export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
 map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 map_mosaic = 1 #Export rectified substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
@@ -213,7 +213,6 @@ params = {
     'rect_wcr':rect_wcr,
     'mosaic':mosaic,
     'pred_sub':pred_sub,
-    'pred_stride':pred_stride,
     'map_sub':map_sub,
     'export_poly':export_poly,
     'map_predict':map_predict,
