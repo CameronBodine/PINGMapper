@@ -206,7 +206,8 @@ class portstarObj(object):
                       mosaic=1,
                       overview=True,
                       threadCnt=cpu_count(),
-                      son=True):
+                      son=True,
+                      maxChunk = 50):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -239,7 +240,7 @@ class portstarObj(object):
         --------------------
         Calls self._mosaicGtiff() or self._mosaicVRT() to generate mosaics.
         '''
-        maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
+        # maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
         if son:

@@ -73,6 +73,7 @@ def rectify_master_func(project_mode=0,
                         pltSubClass=False,
                         map_class_method='max',
                         pix_res=0.0,
+                        mosaic_nchunk=50,
                         mosaic=False,
                         map_mosaic=0):
     '''
@@ -376,7 +377,7 @@ def rectify_master_func(project_mode=0,
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        psObj._createMosaic(mosaic, overview, threadCnt)
+        psObj._createMosaic(mosaic, overview, threadCnt, mosaic_nchunk)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj

@@ -104,10 +104,6 @@ project_mode = 2
 
 
 # General Parameters
-pix_res_factor = 0.1 # Pixel resampling factor;
-##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
-##                     1.0: Use sonar default resolution;
-##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
@@ -127,17 +123,26 @@ x_offset = 0.0 # [meters]
 y_offset = 0.0 # [meters]
 
 
+# Sonar Intensity Corrections
+egn = True
+egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
+                         ## If std, the number of standard deviations to retain
+
+
 # Sonogram Exports
-tileFile = '.jpg'
+tileFile = '.jpg' # Img format for plots and sonogram exports
 wcp = True #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
 wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
+
+# Speed corrected sonogram Exports
 lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
 maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
 
 
-# Segmentation Parameters
+# Depth Detection and Shadow Removal Parameters
 remShadow = 1  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
 detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
@@ -150,7 +155,6 @@ pltBedPick = True #Plot bedpick on sonogram
 # Rectification Parameters
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
-mosaic = 0 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Substrate Mapping
@@ -160,6 +164,13 @@ map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires su
 export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
 map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
+
+
+# Mosaic Exports
+pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
+mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 #################
@@ -174,19 +185,20 @@ print(sonFiles)
 
 params = {
     'project_mode':project_mode,
-    'pix_res_factor':pix_res_factor,
     'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,
     'projDir':projDir,
     'tempC':tempC,
     'nchunk':nchunk,
-    'cropRange':cropRange,
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
     'x_offset':x_offset,
     'y_offset':y_offset,
+    'egn':egn,
+    'egn_stretch':egn_stretch,
+    'egn_stretch_factor':egn_stretch_factor,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,
@@ -201,13 +213,16 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
-    'mosaic':mosaic,
-    'pred_sub': pred_sub,
+    'pred_sub':pred_sub,
     'map_sub':map_sub,
     'export_poly':export_poly,
     'map_predict':map_predict,
     'pltSubClass':pltSubClass,
-    'map_class_method':map_class_method
+    'map_class_method':map_class_method,
+    'pix_res':pix_res,
+    'mosaic_nchunk':mosaic_nchunk,
+    'mosaic':mosaic,
+    'map_mosaic':map_mosaic
     }
 #==================================================
 print('\n===========================================')

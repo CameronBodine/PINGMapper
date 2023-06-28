@@ -71,6 +71,7 @@ def read_master_func(project_mode=0,
                      pltSubClass=False,
                      map_class_method='max',
                      pix_res=0.0,
+                     mosaic_nchunk=50,
                      mosaic=False,
                      map_mosaic=0):
 

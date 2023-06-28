@@ -100,7 +100,7 @@ if ds == 2:
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 1
+project_mode = 0
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
@@ -108,7 +108,6 @@ nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
-tileFile = '.jpg' # Img format for plots and sonogram exports
 
 
 # Position Corrections
@@ -130,8 +129,10 @@ egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.
 
 
 # Sonogram Exports
+tileFile = '.jpg' # Img format for plots and sonogram exports
 wcp = False #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
 wcr = False #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+
 
 # Speed corrected sonogram Exports
 lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
@@ -166,6 +167,7 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 
 # Mosaic Exports
 pix_res = 1.0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
@@ -218,6 +220,7 @@ params = {
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method,
     'pix_res':pix_res,
+    'mosaic_nchunk':mosaic_nchunk,
     'mosaic':mosaic,
     'map_mosaic':map_mosaic
     }
