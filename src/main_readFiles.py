@@ -659,6 +659,11 @@ def read_master_func(project_mode=0,
                 else:
                     pass
 
+        # for son in sonObjs:
+        #     son.pred_sub = pred_sub
+        #     son.map_sub = map_sub
+        #     son.map_predict = map_predict
+
         for son in sonObjs:
             son.wcp = wcp
 

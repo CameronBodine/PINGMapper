@@ -254,7 +254,7 @@ class portstarObj(object):
                 star = sorted(glob(os.path.join(starPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if len(port) > maxChunk:
+                if (len(port) > maxChunk) and (maxChunk != 0):
                     port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
                     star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
                     wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
@@ -271,7 +271,7 @@ class portstarObj(object):
                 star = sorted(glob(os.path.join(starPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if len(port) > maxChunk:
+                if (len(port) > maxChunk) and (maxChunk != 0):
                     port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
                     star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
                     srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
@@ -285,7 +285,7 @@ class portstarObj(object):
                 map = sorted(glob(os.path.join(mapPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if len(map) > maxChunk:
+                if (len(map) > maxChunk) and (maxChunk != 0):
                     subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
                     # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
@@ -300,7 +300,7 @@ class portstarObj(object):
                 map = sorted(glob(os.path.join(mapPath, '*.tif')))
 
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if len(map) > maxChunk:
+                if (len(map) > maxChunk) and (maxChunk != 0):
                     predictToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
                     # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:

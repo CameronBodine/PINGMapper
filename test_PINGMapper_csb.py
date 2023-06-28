@@ -100,7 +100,7 @@ if ds == 2:
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 0
+project_mode = 1
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
@@ -156,7 +156,7 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 
 
 # Substrate Mapping
-pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
 # pred_stride = 250 # Stride size, in pings, for moving window prediction: 0==No moving window
 pltSubClass = False # Export plots of substrate classification and predictions
 map_sub = False # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
@@ -166,7 +166,7 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 
 
 # Mosaic Exports
-pix_res = 1.0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+pix_res = 0.25 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
@@ -233,7 +233,7 @@ read_master_func(**params)
 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
 #==================================================
-if rect_wcp or rect_wcr:
+if rect_wcp or rect_wcr or mosaic:
     print('\n===========================================')
     print('===========================================')
     print('***** RECTIFYING *****')
