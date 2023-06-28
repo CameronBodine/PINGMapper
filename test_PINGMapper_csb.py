@@ -61,7 +61,7 @@ if ds == 1:
     # Path to data/output
     humFile = r'./exampleData/Test-Small-DS.DAT'
     sonPath = r'./exampleData/Test-Small-DS'
-    projDir = r'./procData/PINGMapper-Test-Small-DS_EGN'
+    projDir = r'./procData/PINGMapper-Test-Small-DS'
 
 if ds == 2:
     # Check if files have already been downloaded
@@ -103,14 +103,10 @@ if ds == 2:
 project_mode = 1
 
 # General Parameters
-pix_res_factor = 1.0 # Pixel resampling factor;
-##                     0<pix_res_factor<1.0: Downsample output image to lower resolution/larger cellsizes;
-##                     1.0: Use sonar default resolution;
-##                     pix_res_factor > 1.0: Upsample output image to higher resolution/smaller cellsizes.
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 tileFile = '.jpg' # Img format for plots and sonogram exports
 
@@ -155,19 +151,24 @@ pltBedPick = False #Plot bedpick on sonogram
 
 # Rectification Sonar Map Exports
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
 
 # Substrate Mapping
-pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pred_sub = 0 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
 # pred_stride = 250 # Stride size, in pings, for moving window prediction: 0==No moving window
-pltSubClass = True # Export plots of substrate classification and predictions
-map_sub = True # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+pltSubClass = False # Export plots of substrate classification and predictions
+map_sub = False # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
 export_poly = False # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
 map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
-map_mosaic = 1 #Export rectified substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+
+
+# Mosaic Exports
+pix_res = 1.0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+
 
 
 #################
@@ -182,7 +183,6 @@ print(sonFiles)
 
 params = {
     'project_mode':project_mode,
-    'pix_res_factor':pix_res_factor,
     'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,
@@ -211,13 +211,14 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
-    'mosaic':mosaic,
     'pred_sub':pred_sub,
     'map_sub':map_sub,
     'export_poly':export_poly,
     'map_predict':map_predict,
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method,
+    'pix_res':pix_res,
+    'mosaic':mosaic,
     'map_mosaic':map_mosaic
     }
 #==================================================

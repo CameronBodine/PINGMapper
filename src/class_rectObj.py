@@ -990,7 +990,6 @@ class rectObj(sonObj):
         NA
         '''
         filterIntensity = False
-        pix_res_factor = self.pix_res_factor # Pixel upscale/downscale factor
 
         if son:
             # Create output directory if it doesn't exist
@@ -1161,11 +1160,11 @@ class rectObj(sonObj):
         yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
         # Calculate x,y resolution of a single pixel
-        # xres = (xMax - xMin) / outShape[0]
-        # yres = (yMax - yMin) / outShape[1]
-        # Scale by factor for down/upsampling
-        xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
-        yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
+        xres = (xMax - xMin) / outShape[0]
+        yres = (yMax - yMin) / outShape[1]
+        # # Scale by factor for down/upsampling
+        # xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
+        # yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -1218,8 +1217,8 @@ class rectObj(sonObj):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0] * pix_res_factor,
-                width=out.shape[1] * pix_res_factor,
+                height=out.shape[0],
+                width=out.shape[1],
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,
@@ -1312,8 +1311,8 @@ class rectObj(sonObj):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0] * pix_res_factor,
-                width=out.shape[1] * pix_res_factor,
+                height=out.shape[0],
+                width=out.shape[1],
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,

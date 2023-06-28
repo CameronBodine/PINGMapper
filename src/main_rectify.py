@@ -37,14 +37,13 @@ import inspect
 
 #===============================================================================
 def rectify_master_func(project_mode=0,
-                        pix_res_factor=1.0,
                         script='',
                         humFile='',
                         sonFiles='',
                         projDir='',
                         tempC=10,
                         nchunk=500,
-                        cropRange=0.0,
+                        cropRange=0,
                         exportUnknown=False,
                         fixNoDat=False,
                         threadCnt=0,
@@ -67,13 +66,14 @@ def rectify_master_func(project_mode=0,
                         pltBedPick=False,
                         rect_wcp=False,
                         rect_wcr=False,
-                        mosaic=False,
                         pred_sub=0,
                         map_sub=0,
                         export_poly=False,
                         map_predict=0,
                         pltSubClass=False,
                         map_class_method='max',
+                        pix_res=0.0,
+                        mosaic=False,
                         map_mosaic=0):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
@@ -338,6 +338,8 @@ def rectify_master_func(project_mode=0,
 
     if rect_wcp or rect_wcr:
         for son in portstar:
+            # Set output directory
+            son.outDir = os.path.join(son.projDir, son.beamName)
 
             # Get chunk id's
             chunks = son._getChunkID()

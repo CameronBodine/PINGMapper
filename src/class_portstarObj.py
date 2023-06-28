@@ -309,35 +309,35 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], resampleAlg="lanczos") for c in range(1,bands+1))
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         # Create vrt
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], resampleAlg="lanczos") for c in range(1,bands+1))
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         return self
 
@@ -348,7 +348,7 @@ class portstarObj(object):
                      overview=True,
                      i=0,
                      bands=[1],
-                     resampleAlg='nearest'):
+                     son=True):
         '''
         Function to mosaic sonograms into a GeoTiff.
 
@@ -377,6 +377,11 @@ class portstarObj(object):
         --------------------
         None
         '''
+
+        if son:
+            resampleAlg='lanczos'
+        else:
+            resampleAlg='nearest'
 
         # Iterate each sublist of images
         outMosaic = []
@@ -422,7 +427,13 @@ class portstarObj(object):
             kwargs = {'format': 'GTiff',
                       'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW', 'TILED=YES']
                       }
-            gdal.Translate(outTIF, ds, **kwargs)
+
+            # Set output pixel resolution
+            xRes = self.port.pix_res
+            yRes = self.port.pix_res
+
+            # Create geotiff
+            gdal.Translate(outTIF, ds, xRes=xRes, yRes=yRes, **kwargs)
 
             # Generate overviews
             if overview:
@@ -2187,9 +2198,6 @@ class portstarObj(object):
         '''
         '''
 
-        # Rescale by factor
-        pix_res_factor = self.port.pix_res_factor
-
         # Get trackline/range extent file path
         portTrkMetaFile = os.path.join(self.port.metaDir, "Trackline_Smth_"+self.port.beamName+".csv")
         starTrkMetaFile = os.path.join(self.star.metaDir, "Trackline_Smth_"+self.star.beamName+".csv")
@@ -2319,11 +2327,11 @@ class portstarObj(object):
         yMin, yMax = dstAll[:,1].min(), dstAll[:,1].max()
 
         # Calculate x,y resolution of a single pixel
-        # xres = (xMax - xMin) / outShape[0]
-        # yres = (yMax - yMin) / outShape[1]
-        # Scale by factor for down/upsampling
-        xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
-        yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
+        xres = (xMax - xMin) / outShape[0]
+        yres = (yMax - yMin) / outShape[1]
+        # # Scale by factor for down/upsampling
+        # xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
+        # yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -2396,8 +2404,8 @@ class portstarObj(object):
                 gtiff,
                 'w',
                 driver='GTiff',
-                height=out.shape[0] * pix_res_factor,
-                width=out.shape[1] * pix_res_factor,
+                height=out.shape[0],
+                width=out.shape[1],
                 count=1,
                 dtype=out.dtype,
                 crs=epsg,

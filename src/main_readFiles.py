@@ -35,7 +35,6 @@ from doodleverse_utils.imports import *
 
 #===========================================
 def read_master_func(project_mode=0,
-                     pix_res_factor=1.0,
                      script='',
                      humFile='',
                      sonFiles='',
@@ -65,13 +64,14 @@ def read_master_func(project_mode=0,
                      pltBedPick=False,
                      rect_wcp=False,
                      rect_wcr=False,
-                     mosaic=False,
                      pred_sub=0,
                      map_sub=0,
                      export_poly=False,
                      map_predict=0,
                      pltSubClass=False,
                      map_class_method='max',
+                     pix_res=0.0,
+                     mosaic=False,
                      map_mosaic=0):
 
     '''
@@ -263,7 +263,7 @@ def read_master_func(project_mode=0,
 
         #######################################
         # Store needed parameters as attributes
-        son.pix_res_factor = pix_res_factor
+        # son.pix_res_factor = pix_res_factor
         son.fixNoDat = fixNoDat
 
 
@@ -498,6 +498,10 @@ def read_master_func(project_mode=0,
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
                 son.pixM = pix_m # Sonar instrument pixel resolution
+                if pix_res == 0:
+                    son.pix_res = son.pixM
+                else:
+                    son.pix_res = pix_res # Store output pixel resolution
             del toProcess
 
         metaDir = sonObjs[0].metaDir # Get path to metadata directory
@@ -595,6 +599,15 @@ def read_master_func(project_mode=0,
         ##########################################################
         # Do some checks to see if additional processing is needed
 
+        # Output pixel resolution
+        if son.pix_res != pix_res:
+            print("\nSetting output pixel resolution to {}".format(pix_res))
+            for son in sonObjs:
+                if pix_res == 0:
+                    son.pix_res = son.pixM
+                else:
+                    son.pix_res = pix_res # Store output pixel resolution
+
         # If missing pings already located, no need to reprocess.
         if son.fixNoDat == True:
             # Missing pings already located, set fixNoDat to False
@@ -657,7 +670,9 @@ def read_master_func(project_mode=0,
             else:
                 son.wcr_src = False
 
-
+        for son in sonObjs:
+            son._pickleSon()
+        gc.collect()
 
         del son
 
