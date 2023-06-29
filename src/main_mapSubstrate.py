@@ -517,7 +517,7 @@ def map_master_func(project_mode=0,
          # Make sure map_sub is set to true
          psObj.port.map_sub = True
 
-         psObj._rasterToPoly(mosaic, threadCnt, mosaic_nchunk)
+         psObj._rasterToPoly(map_mosaic, threadCnt, mosaic_nchunk)
 
          # Revert rect_wcp and rect_wcr
          psObj.port.rect_wcp = rect_wcp

@@ -457,7 +457,7 @@ class portstarObj(object):
                    overview=True,
                    i=0,
                    bands=[1],
-                   resampleAlg='nearest'):
+                   son=True):
         '''
         Function to mosaic sonograms into a VRT (virtual raster table, see
         https://gdal.org/drivers/raster/vrt.html for more information).
@@ -488,6 +488,11 @@ class portstarObj(object):
         None
         '''
 
+        if son:
+            resampleAlg='lanczos'
+        else:
+            resampleAlg='nearest'
+
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
@@ -515,8 +520,12 @@ class portstarObj(object):
                 except:
                     pass
 
+            # Set output pixel resolution
+            xRes = self.port.pix_res
+            yRes = self.port.pix_res
+
             # Build VRT
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
@@ -2426,13 +2435,13 @@ class portstarObj(object):
 
 
     #=======================================================================
-    def _rasterToPoly(self, mosaic, threadCnt):
+    def _rasterToPoly(self, mosaic, threadCnt, mosaic_nchunk):
         '''
         '''
 
         # if mosaic != 2:
         print("\n\tCreating vrt...")
-        self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False)
+        self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=False, maxChunk=mosaic_nchunk)
 
         inDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
         rasterFiles = glob(os.path.join(inDir, '*map_sub*vrt'))
@@ -2493,6 +2502,12 @@ class portstarObj(object):
     def _createPolygon(self, f, outDir):
         '''
         '''
+        # Get class names from json
+        # Open model configuration file
+        with open(self.port.configfile) as file:
+            config = json.load(file)
+        globals().update(config)
+
         # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
         # Open raster
         src_ds = gdal.Open(f)
@@ -2518,8 +2533,31 @@ class portstarObj(object):
         dst_layer.CreateField(newField)
         gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
 
+        # Set substrate name
+        newField = ogr.FieldDefn('Name', ogr.OFTString)
+        newField.SetWidth(20)
+        dst_layer.CreateField(newField)
+
+        for feature in dst_layer:
+            subID = str(int(feature.GetField('Substrate')))
+            subName = MY_CLASS_NAMES[subID]
+            feature.SetField('Name', subName)
+            dst_layer.SetFeature(feature)
+
         # Calculate Area
         # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
+        # Create field to store area
+        newField = ogr.FieldDefn('Area_m', ogr.OFTReal)
+        newField.SetWidth(32)
+        newField.SetPrecision(2)
+        dst_layer.CreateField(newField)
+
+        # Calculate Area
+        for feature in dst_layer:
+            geom = feature.GetGeometryRef()
+            area = geom.GetArea()
+            feature.SetField("Area_m", area)
+            dst_layer.SetFeature(feature)
 
         # Delete NoData Polygon
         # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
@@ -2528,6 +2566,26 @@ class portstarObj(object):
 
         for feat in layer:
             layer.DeleteFeature(feat.GetFID())
+
+        # Calculate Area
+        # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
+
+        # # Create field to store area
+        # newField = ogr.FieldDefn('Area_m', ogr.OFTReal)
+        # newField.SetWidth(32)
+        # newField.SetPrecision(2)
+        # dst_layer.CreateField(newField)
+
+        # layer = dst_ds.GetLayer()
+        # # Calculate Area
+        # for feature in dst_layer:
+        #     print(feature)
+        #     geom = feature.GetGeometryRef()
+        #     print(geom)
+        #     area = geom.GetArea()
+        #     print(area)
+        #     feature.SetField("Area", area)
+        #     layer.SetFeature(feature)
 
 
         dst_ds.SyncToDisk()
