@@ -93,7 +93,7 @@ tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
-threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+threadCnt = -4 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
 # Position Corrections
@@ -331,7 +331,7 @@ for i, datFile in enumerate(inFiles):
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)), '\n\n\n')
-    sys.exit()
+    # sys.exit()
 
 if len(errorRecording) > 0:
     print('\n\nUnable to process the following:')
