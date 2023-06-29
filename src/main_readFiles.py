@@ -1012,6 +1012,7 @@ def read_master_func(project_mode=0,
         if remShadow == 0:
             print('\n\nEGN requires shadow removal')
             print('Setting remShadow==2...')
+            remShadow = 2
 
     # Need to detect shadows if mapping substrate
     if pred_sub:

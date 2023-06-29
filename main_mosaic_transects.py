@@ -379,30 +379,30 @@ del egn_bed_means
 # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-####################
-### egn_wc_means ###
-egn_val = 'egn_wc_means'
-# Find longest vector
-lv = 0
-for v in egn_vals[egn_val]:
-    if len(v) > lv:
-        lv = len(v)
-
-# Create nan array
-egn_wc_means = np.empty((lv, len(egn_vals[egn_val])))
-egn_wc_means[:] = np.nan
-
-# Stack arrays
-for i, v in enumerate(egn_vals[egn_val]):
-    egn_wc_means[:len(v), i] = v
-
-# Calculate mean
-egn_wc_means = np.nanmean(egn_wc_means, axis=1)
-
-# Update dictionary
-egn_vals[egn_val] = egn_wc_means
-del egn_wc_means
-# print('\n\n'+egn_val, egn_vals[egn_val])
+# ####################
+# ### egn_wc_means ###
+# egn_val = 'egn_wc_means'
+# # Find longest vector
+# lv = 0
+# for v in egn_vals[egn_val]:
+#     if len(v) > lv:
+#         lv = len(v)
+#
+# # Create nan array
+# egn_wc_means = np.empty((lv, len(egn_vals[egn_val])))
+# egn_wc_means[:] = np.nan
+#
+# # Stack arrays
+# for i, v in enumerate(egn_vals[egn_val]):
+#     egn_wc_means[:len(v), i] = v
+#
+# # Calculate mean
+# egn_wc_means = np.nanmean(egn_wc_means, axis=1)
+#
+# # Update dictionary
+# egn_vals[egn_val] = egn_wc_means
+# del egn_wc_means
+# # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
 ###################
@@ -431,54 +431,54 @@ del egn_bed_max
 # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-##################
-### egn_wc_min ###
-egn_val = 'egn_wc_min'
-
-# Calculate min
-egn_wc_min = np.nanmin(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_wc_min
-del egn_wc_min
-# print('\n\n'+egn_val, egn_vals[egn_val])
-
-
-##################
-### egn_wc_max ###
-egn_val = 'egn_wc_max'
-
-# Calculate min
-egn_wc_max = np.nanmax(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_wc_max
-del egn_wc_max
-# print('\n\n'+egn_val, egn_vals[egn_val])
-
-
-####################
-### egn_wcp_hist ###
-egn_val = 'egn_wcp_hist'
-
-# Delete because we don't need it
-del egn_vals[egn_val]
+# ##################
+# ### egn_wc_min ###
+# egn_val = 'egn_wc_min'
+#
+# # Calculate min
+# egn_wc_min = np.nanmin(egn_vals[egn_val])
+#
+# # Update dictionary
+# egn_vals[egn_val] = egn_wc_min
+# del egn_wc_min
+# # print('\n\n'+egn_val, egn_vals[egn_val])
+#
+#
+# ##################
+# ### egn_wc_max ###
+# egn_val = 'egn_wc_max'
+#
+# # Calculate min
+# egn_wc_max = np.nanmax(egn_vals[egn_val])
+#
+# # Update dictionary
+# egn_vals[egn_val] = egn_wc_max
+# del egn_wc_max
+# # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-####################
-### egn_wcp_hist ###
-egn_val = 'egn_wcr_hist'
+# ####################
+# ### egn_wcp_hist ###
+# egn_val = 'egn_wcp_hist'
+#
+# # Delete because we don't need it
+# del egn_vals[egn_val]
 
-# Delete because we don't need it
-del egn_vals[egn_val]
+
+# ####################
+# ### egn_wcp_hist ###
+# egn_val = 'egn_wcr_hist'
+#
+# # Delete because we don't need it
+# del egn_vals[egn_val]
 
 
-#########################
-### egn_wcp_hist_pcnt ###
-egn_val = 'egn_wcp_hist_pcnt'
-
-# Delete because we don't need it
-del egn_vals[egn_val]
+# #########################
+# ### egn_wcp_hist_pcnt ###
+# egn_val = 'egn_wcp_hist_pcnt'
+#
+# # Delete because we don't need it
+# del egn_vals[egn_val]
 
 
 #########################
@@ -505,30 +505,30 @@ egn_val = 'egn_stretch_factor'
 del egn_vals[egn_val]
 
 
-###########################
-### egn_wcp_stretch_min ###
-egn_val = 'egn_wcp_stretch_min'
-
-# Calculate min
-egn_wcp_stretch_min = np.nanmin(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_wcp_stretch_min
-del egn_wcp_stretch_min
-# print('\n\n'+egn_val, egn_vals[egn_val])
-
-
-###########################
-### egn_wcp_stretch_max ###
-egn_val = 'egn_wcp_stretch_max'
-
-# Calculate min
-egn_wcp_stretch_max = np.nanmin(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_wcp_stretch_max
-del egn_wcp_stretch_max
-# print('\n\n'+egn_val, egn_vals[egn_val])
+# ###########################
+# ### egn_wcp_stretch_min ###
+# egn_val = 'egn_wcp_stretch_min'
+#
+# # Calculate min
+# egn_wcp_stretch_min = np.nanmin(egn_vals[egn_val])
+#
+# # Update dictionary
+# egn_vals[egn_val] = egn_wcp_stretch_min
+# del egn_wcp_stretch_min
+# # print('\n\n'+egn_val, egn_vals[egn_val])
+#
+#
+# ###########################
+# ### egn_wcp_stretch_max ###
+# egn_val = 'egn_wcp_stretch_max'
+#
+# # Calculate min
+# egn_wcp_stretch_max = np.nanmin(egn_vals[egn_val])
+#
+# # Update dictionary
+# egn_vals[egn_val] = egn_wcp_stretch_max
+# del egn_wcp_stretch_max
+# # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
 ###########################
