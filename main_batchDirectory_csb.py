@@ -138,7 +138,7 @@ pltBedPick = False #Plot bedpick on sonogram
 
 # Rectification Sonar Map Exports
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
 
 # Substrate Mapping
@@ -331,7 +331,7 @@ for i, datFile in enumerate(inFiles):
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)), '\n\n\n')
-    # sys.exit()
+    sys.exit()
 
 if len(errorRecording) > 0:
     print('\n\nUnable to process the following:')

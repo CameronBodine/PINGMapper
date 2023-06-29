@@ -336,38 +336,38 @@ def rectify_master_func(project_mode=0,
     for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
-    #
-    # if rect_wcp or rect_wcr:
-    #     for son in portstar:
-    #         # Set output directory
-    #         son.outDir = os.path.join(son.projDir, son.beamName)
-    #
-    #         # Get chunk id's
-    #         chunks = son._getChunkID()
-    #
-    #         # Load sonMetaDF
-    #         son._loadSonMeta()
-    #
-    #         print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-    #         # for i in chunks:
-    #         #     son._rectSonParallel(i, filter, wgs=False)
-    #         #     sys.exit()
-    #         Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
-    #         gc.collect()
-    #
-    # if rect_wcp or rect_wcr:
-    #     for son in portstar:
-    #         del son.sonMetaDF
-    #         try:
-    #             del son.smthTrk
-    #         except:
-    #             pass
-    #         son._pickleSon()
-    #     del son
-    # print("Done!")
-    # print("Time (s):", round(time.time() - start_time, ndigits=1))
-    # gc.collect()
-    # printUsage()
+
+    if rect_wcp or rect_wcr:
+        for son in portstar:
+            # Set output directory
+            son.outDir = os.path.join(son.projDir, son.beamName)
+
+            # Get chunk id's
+            chunks = son._getChunkID()
+
+            # Load sonMetaDF
+            son._loadSonMeta()
+
+            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+            # for i in chunks:
+            #     son._rectSonParallel(i, filter, wgs=False)
+            #     sys.exit()
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            gc.collect()
+
+    if rect_wcp or rect_wcr:
+        for son in portstar:
+            del son.sonMetaDF
+            try:
+                del son.smthTrk
+            except:
+                pass
+            son._pickleSon()
+        del son
+    print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
 
     ############################################################################
     # Mosaic imagery                                                           #
