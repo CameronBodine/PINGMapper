@@ -306,6 +306,8 @@ class portstarObj(object):
                 else:
                     predictToMosaic = [map]
 
+        print(mosaic)
+
         # Create geotiff
         if mosaic == 1:
             if son:
@@ -315,7 +317,7 @@ class portstarObj(object):
                     _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes

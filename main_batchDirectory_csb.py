@@ -56,11 +56,11 @@ script = os.path.join(scriptDir, os.path.basename(__file__))
 # inDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data'
 # outDir = r'E:\SynologyDrive\Modeling\00_forLabeling\SpdCor_EGN_AllGSRecordings'
 
-# inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
-# outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate'
+inDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+outDir = '/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/EGN'
 
-inDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
-outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
+# inDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data'
+# outDir = r'/mnt/md0/SynologyDrive/Modeling/00_forLabeling/SpdCor_EGN_AllGSRecordings'
 
 inDir = os.path.normpath(inDir)
 outDir = os.path.normpath(outDir)
@@ -86,7 +86,7 @@ outDir = os.path.normpath(outDir)
 ## 2==MAYHEM MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 0
+project_mode = 1
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
@@ -138,7 +138,7 @@ pltBedPick = False #Plot bedpick on sonogram
 
 # Rectification Sonar Map Exports
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 
 
 # Substrate Mapping
@@ -152,10 +152,10 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 
 
 # Mosaic Exports
-pix_res = 1.0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+pix_res = 0.25 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
-mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
-map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+mosaic = 0 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 
@@ -296,41 +296,42 @@ for i, datFile in enumerate(inFiles):
         'map_mosaic':map_mosaic
         }
 
-    try:
-        print('sonPath',sonPath)
-        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-        print('+++++++++++++++++++++++++++++++++++++++++++')
-        print('***** Working On *****')
-        print('Index:', i)
-        print('Output Director:', projDir)
-        print('Input File:', humFile)
-        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+    # try:
+    print('sonPath',sonPath)
+    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+    print('+++++++++++++++++++++++++++++++++++++++++++')
+    print('***** Working On *****')
+    print('Index:', i)
+    print('Output Director:', projDir)
+    print('Input File:', humFile)
+    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
+    print('\n===========================================')
+    print('===========================================')
+    print('***** READING *****')
+    read_master_func(**params)
+
+    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** READING *****')
-        read_master_func(**params)
+        print('***** RECTIFYING *****')
+        rectify_master_func(**params)
 
-        if rect_wcp or rect_wcr:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** RECTIFYING *****')
-            rectify_master_func(**params)
+    #==================================================
+    if pred_sub or map_sub or export_poly or map_predict or pltSubClass or map_mosaic:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** MAPPING SUBSTRATE *****')
+        print("working on "+projDir)
+        map_master_func(**params)
 
-        #==================================================
-        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** MAPPING SUBSTRATE *****')
-            print("working on "+projDir)
-            map_master_func(**params)
-
-    except:
-        print('Could not process:', datFile)
-        errorRecording.append(projDir)
+    # except:
+    #     print('Could not process:', datFile)
+    #     errorRecording.append(projDir)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)), '\n\n\n')
+    # sys.exit()
 
 if len(errorRecording) > 0:
     print('\n\nUnable to process the following:')

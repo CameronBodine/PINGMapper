@@ -173,7 +173,7 @@ def map_master_func(project_mode=0,
         if len(maps) == 0:
             if export_poly:
                 error_noSubMap_poly()
-            if mosaic:
+            if map_mosaic:
                 error_noSubMap_mosaic()
 
     #############################################
@@ -484,7 +484,7 @@ def map_master_func(project_mode=0,
         psObj.port.map_sub = True
 
         # Create the mosaic
-        psObj._createMosaic(mosaic, overview, threadCnt, False)
+        psObj._createMosaic(mosaic=map_mosaic, overview=overview, threadCnt=threadCnt, son=False, maxChunk=mosaic_nchunk)
 
         # Revert rect_wcp and rect_wcr
         psObj.port.rect_wcp = rect_wcp
@@ -517,11 +517,7 @@ def map_master_func(project_mode=0,
          # Make sure map_sub is set to true
          psObj.port.map_sub = True
 
-         # # Turn on map_sub
-         # psObj.port.map_sub = True
-         print(psObj.port.map_sub)
-
-         psObj._rasterToPoly(mosaic, threadCnt)
+         psObj._rasterToPoly(mosaic, threadCnt, mosaic_nchunk)
 
          # Revert rect_wcp and rect_wcr
          psObj.port.rect_wcp = rect_wcp
@@ -600,7 +596,7 @@ def map_master_func(project_mode=0,
 
 
     ############################################################################
-    # For Substrate Mosaic                                                     #
+    # For Prediction Mosaic                                                    #
     ############################################################################
 
     overview = True # False will reduce overall file size, but reduce performance in a GIS
@@ -608,9 +604,9 @@ def map_master_func(project_mode=0,
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
 
-        for son in mapObjs:
-            son.map_predict = map_predict
-        del son
+        # for son in mapObjs:
+        #     son.map_predict = map_predict
+        # del son
 
         # Create portstar object
         psObj = portstarObj(mapObjs)
@@ -618,15 +614,17 @@ def map_master_func(project_mode=0,
         # Switch off rect_wcp, rect_wcr, and mapSub
         psObj.port.rect_wcp = False
         psObj.port.rect_wcr = False
-        psObj.port.map_sub = False
+        psObj.port.map_sub = True
+        psObj.port.map_predict = False
 
         # Create the mosaic
-        psObj._createMosaic(1, overview, threadCnt, False)
+        psObj._createMosaic(mosaic=1, overview=overview, threadCnt=threadCnt, son=False, maxChunk=mosaic_nchunk)
 
         # Revert rect_wcp, rect_wcr, mapSub
         psObj.port.rect_wcp = rect_wcp
         psObj.port.rect_wcr = rect_wcr
         psObj.port.map_sub = map_sub
+        psObj.port.map_predict = map_predict
 
         del psObj
         print("Done!")
