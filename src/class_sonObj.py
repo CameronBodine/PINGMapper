@@ -2490,10 +2490,17 @@ class sonObj(object):
         # Slice egn means if too long
         egn_means = egn_means[:sonDat.shape[0]]
 
-        # Add ones to egn means if not long enough
+        # # Add ones to egn means if not long enough
+        # if sonDat.shape[0] > egn_means.shape[0]:
+        #     t = np.ones((sonDat.shape[0]))
+        #     t[:egn_means.shape[0]] = egn_means
+        #     egn_means = t
+        # Take last value of egn means and add to end if not long enough
         if sonDat.shape[0] > egn_means.shape[0]:
             t = np.ones((sonDat.shape[0]))
+            l = egn_means[-1] # last value
             t[:egn_means.shape[0]] = egn_means
+            t[egn_means.shape[0]:] = l # insert last value
             egn_means = t
 
         # Divide each ping by mean vector
@@ -2652,6 +2659,14 @@ class sonObj(object):
 
         # Get egn_means
         egn_means = self.egn_bed_means.copy() # Don't want to overwrite
+
+        # Take last value of egn means and add to end if not long enough
+        if sonDat.shape[0] > egn_means.shape[0]:
+            t = np.ones((sonDat.shape[0]))
+            l = egn_means[-1] # last value
+            t[:egn_means.shape[0]] = egn_means
+            t[egn_means.shape[0]:] = l # insert last value
+            egn_means = t
 
         # Get bedpicks, in pixel units
         bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
