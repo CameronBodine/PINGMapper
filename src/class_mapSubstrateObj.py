@@ -38,9 +38,9 @@ import matplotlib.pyplot as plt
 # from skimage.filters import threshold_otsu
 from osgeo import gdal, ogr, osr
 
-from doodleverse_utils.imports import *
-from doodleverse_utils.model_imports import *
-from doodleverse_utils.prediction_imports import *
+# from doodleverse_utils.imports import *
+# from doodleverse_utils.model_imports import *
+# from doodleverse_utils.prediction_imports import *
 
 class mapSubObj(rectObj):
 
@@ -1000,6 +1000,80 @@ class mapSubObj(rectObj):
         if map_class_method == 'max':
             # Take argmax to get classification
             label = np.argmax(arr, -1)
+            label += 1
+
+        elif map_class_method == 'thresh':
+            label_order = [4, 3]
+
+            # Tweaking
+            thresholds = {
+                          3: 0.14,
+                          4: 0.35,
+                          # 5: 0.28
+            }
+
+            # # means
+            # thresholds = {
+            #               1: 0.31,
+            #               2: 0.22,
+            #               3: 0.10,
+            #               4: 0.31,
+            #               5: 0.08,
+            #               6: 0.04
+            #               }
+
+            # # medians
+            # thresholds = {
+            #               1: 0.24,
+            #               2: 0.15,
+            #               3: 0.06,
+            #               4: 0.26,
+            #               5: 0.06,
+            #               6: 0.03
+            #               }
+
+
+            # # Do argmax to get classes we don't want to threshold
+            # lbl = np.argmax(arr, -1)
+            #
+            # for c in range(arr.shape[-1]):
+            #     if c not in label_order:
+            #         arr1 = np.where(lbl==c, c, 0)
+            #         if 'label' not in locals():
+            #             label = arr1
+            #         else:
+            #             label += arr1
+            #         del arr1
+            # del lbl
+
+            # First do argmax
+            label = np.argmax(arr, -1)
+
+            # Iterate label order and set class
+            for l in label_order:
+                # Get threshold
+                thresh = thresholds[l]
+
+                # Get label softmax
+                probs = arr[:,:,l]
+
+                # Assign value by threshold
+                est = np.where(probs >= thresh, 1, 0)
+
+                # If l is hardbottom, make a mask
+                if l == 4:
+                    hb_mask = est.copy()
+
+                # If l is cobble, mask with hard bottom
+                if l == 3:
+                    est = est*hb_mask
+
+                # If l is wood, mask with hard bottom
+                if l == 5:
+                    est = est*hb_mask
+
+                # Set value in lbl
+                label[est == 1] = l
             label += 1
 
         # elif map_class_method == 'thresh':
