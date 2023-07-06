@@ -1058,6 +1058,7 @@ class rectObj(sonObj):
 
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
 
         # # Pyhum corrections
         # do_correct = False
@@ -1104,6 +1105,7 @@ class rectObj(sonObj):
         # Get trackline (origin of ping) coordinates [xT, yT] to transposed numpy arrays
         xT, yT = trkMeta[xTrk].to_numpy().T, trkMeta[yTrk].to_numpy().T
         xyT = np.vstack((xT, yT)).T # Stack the  arrays
+        del trkMeta
 
         # Stack the coordinates (range[0,0], trk[0,0], range[1,1]...) following
         ## pattern of pix coordinates
@@ -1113,6 +1115,7 @@ class rectObj(sonObj):
 
         # Filter dst using previously made mask
         dst = dstAll[mask]
+        del mask
 
         ##################
         ## Before applying a geographic projection to the image, the image
@@ -1181,15 +1184,10 @@ class rectObj(sonObj):
 
             # egn
             if self.egn:
-
                 self._egn_wcp(chunk, sonMeta)
-                # self._egn()
-                # if self.remShadow:
-                #     stretch_wcp=False
-                # else:
-                #     stretch_wcp=True
-
                 self._egnDoStretch()
+
+            img = self.sonDat
 
             img[0]=0 # To fix extra white on curves
 
@@ -1201,6 +1199,8 @@ class rectObj(sonObj):
                        cval=np.nan,
                        clip=False,
                        preserve_range=True)
+
+            del img, self.sonDat
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
@@ -1233,6 +1233,8 @@ class rectObj(sonObj):
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
 
+            del out, dst
+
         if self.rect_wcr:
             imgOutPrefix = 'rect_wcr'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
@@ -1264,6 +1266,8 @@ class rectObj(sonObj):
                        clip=False,
                        preserve_range=True)
 
+            del img, self.sonDat
+
             # Warping substrate classification adds anomlies which must be removed
             if not son:
                 # Set minSize
@@ -1274,9 +1278,11 @@ class rectObj(sonObj):
 
                 # First set small objects to background value (0)
                 noSmall = remove_small_objects(lbl, min_size)
+                del lbl
 
                 # Punch holes in original label
                 holes = ~(noSmall==0)
+                del noSmall
 
                 l = out*holes
 
@@ -1287,6 +1293,7 @@ class rectObj(sonObj):
                 binary_filled = remove_small_holes(binary_objects, min_size)
                 # Recover classification with holes filled
                 out = watershed(binary_filled, l, mask=binary_filled)
+                del binary_objects, binary_filled, l
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
@@ -1327,6 +1334,8 @@ class rectObj(sonObj):
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
+
+            del out, dst
 
         gc.collect()
         return self

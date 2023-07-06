@@ -1609,10 +1609,13 @@ class sonObj(object):
             else:
                 srcDat[:,j] = pingDat
 
+            del pingDat
+
         if son:
             self.sonDat = srcDat.astype(int) # Store in class attribute for later use
         else:
             self.sonDat = srcDat
+        del srcDat
         return self
 
     # ======================================================================
@@ -2502,6 +2505,7 @@ class sonObj(object):
             t[:egn_means.shape[0]] = egn_means
             t[egn_means.shape[0]:] = l # insert last value
             egn_means = t
+            del t
 
         # Divide each ping by mean vector
         sonDat = sonDat / egn_means[:, None]
@@ -2522,6 +2526,7 @@ class sonObj(object):
             sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
         self.sonDat = sonDat
+        del sonDat, egn_means
         return
 
     # ======================================================================
@@ -2667,6 +2672,7 @@ class sonObj(object):
             t[:egn_means.shape[0]] = egn_means
             t[egn_means.shape[0]:] = l # insert last value
             egn_means = t
+            del t, l
 
         # Get bedpicks, in pixel units
         bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
@@ -2691,9 +2697,11 @@ class sonObj(object):
                     avgIndex = int(round(math.sqrt(i**2 - dd),0))
                     r_avg = egn_means[avgIndex] # Get egn_mean value
                     egn_p[i] = r_avg # Store range avg at appropriate slant range
+                    del avgIndex, r_avg
 
             # Apply correction to ping
             sonDat[:,j] = sonDat[:,j] / egn_p
+            del egn_p
 
         mn = 0
         mx = 255
@@ -2713,12 +2721,14 @@ class sonObj(object):
         # Mask water column in sonDat
         sonDat = sonDat * self.wcMask
         sonDat = np.nan_to_num(sonDat, nan=0) # replace nans with zero
+        del wcMask, self.wcMask
 
         # Add water column pixels back in
         sonDat = sonDat + wc
-
+        del wc
 
         self.sonDat = sonDat.astype('uint8')
+        del sonDat
         return
 
 
@@ -2852,8 +2862,10 @@ class sonObj(object):
 
         # Try masking out zeros
         sonDat = sonDat*mask
+        del mask
 
         self.sonDat = sonDat.astype('uint8')
+        del sonDat
         return
 
     # # ======================================================================

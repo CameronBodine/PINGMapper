@@ -353,11 +353,16 @@ def rectify_master_func(project_mode=0,
             #     son._rectSonParallel(i, filter, wgs=False)
             #     sys.exit()
             Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            son._cleanup()
             gc.collect()
+            printUsage()
 
     if rect_wcp or rect_wcr:
         for son in portstar:
-            del son.sonMetaDF
+            try:
+                del son.sonMetaDF
+            except:
+                pass
             try:
                 del son.smthTrk
             except:
