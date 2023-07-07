@@ -66,6 +66,7 @@ def rectify_master_func(project_mode=0,
                         pltBedPick=False,
                         rect_wcp=False,
                         rect_wcr=False,
+                        son_colorMap='Greys',
                         pred_sub=0,
                         map_sub=0,
                         export_poly=False,
@@ -347,6 +348,9 @@ def rectify_master_func(project_mode=0,
 
             # Load sonMetaDF
             son._loadSonMeta()
+
+            # Get colormap
+            son._getSonColorMap(son_colorMap)
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             # for i in chunks:

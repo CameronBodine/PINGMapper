@@ -138,6 +138,17 @@ import psutil
 #     return a.reshape(dim), newshape
 
 # =========================================================
+def rescale( dat,
+             mn,
+             mx):
+    '''
+    rescales an input dat between mn and mx
+    '''
+    m = min(dat.flatten())
+    M = max(dat.flatten())
+    return (mx-mn)*(dat-m)/(M-m)+mn
+
+# =========================================================
 def convert_wgs_to_utm(lon, lat):
     """
     This function estimates UTM zone from geographic coordinates

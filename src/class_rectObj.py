@@ -35,6 +35,8 @@ from rasterio.transform import from_origin
 from rasterio.enums import Resampling
 from PIL import Image
 
+from matplotlib import cm
+
 class rectObj(sonObj):
     '''
     Python child class of sonObj() to store everything related to georectification
@@ -1227,6 +1229,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst.write_colormap(1, self.son_colorMap)
                     dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
@@ -1329,6 +1332,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst.write_colormap(1, self.son_colorMap)
                     dst=None
                     ## Uncomment below code if overviews should be created for each file
                     # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
@@ -1339,3 +1343,27 @@ class rectObj(sonObj):
 
         gc.collect()
         return self
+
+    #===========================================================================
+    def _getSonColorMap(self, name):
+        '''
+        '''
+
+        son_colorMap = {}
+        try:
+            color = cm.get_cmap(name, 256)
+        except:
+            print('****WARNING*****\n', son_colorMap, 'is not a valid colormap.\nSetting to Greys...')
+            color = cm.get_cmap('Greys', 256)
+
+        # need to get values for 0-255 but test_color in 0-1
+        color = color(np.linspace(0, 1, 256))
+        color = rescale(color, 0, 255).astype('uint8')
+
+        vals = range(0, 255)
+        for i,v in zip(vals, reversed(color)):
+            son_colorMap[i] = tuple(v)
+
+        self.son_colorMap = son_colorMap
+        del son_colorMap, color
+        return

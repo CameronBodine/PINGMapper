@@ -87,10 +87,11 @@ class mapSubObj(rectObj):
         --------------------
         '''
 
-        # Initialize the model
-        if not hasattr(self, 'substrateModel'):
-            model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
-            self.substrateModel = [model]
+        # # Initialize the model
+        # if not hasattr(self, 'substrateModel'):
+        #     print('initialized on chunk', i)
+        #     model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
+        #     self.substrateModel = [model]
 
         # Open model configuration file
         with open(self.configfile) as f:
@@ -98,7 +99,7 @@ class mapSubObj(rectObj):
         globals().update(config)
 
         # Do prediction
-        substratePred = self._predSubstrate(i, model_name, n_data_bands, winO=1/3)
+        substratePred = self._predSubstrate(i, MODEL, N_DATA_BANDS, winO=1/3)
 
         # Save predictions to npz
         self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)

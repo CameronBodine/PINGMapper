@@ -32,6 +32,7 @@ from funcs_common import *
 from class_rectObj import rectObj
 from class_mapSubstrateObj import mapSubObj
 from class_portstarObj import portstarObj
+from funcs_model import *
 
 import itertools
 
@@ -66,6 +67,7 @@ def map_master_func(project_mode=0,
                      pltBedPick=False,
                      rect_wcp=False,
                      rect_wcr=False,
+                     son_colorMap='Greys',
                      pred_sub=0,
                      map_sub=0,
                      export_poly=False,
@@ -330,9 +332,12 @@ def map_master_func(project_mode=0,
                     son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
             # Do prediction (make parallel later)
-            print('\n\tPredicting substrate for', len(chunks), 'chunks for', son.beamName)
+            print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')
 
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=1)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+            model, model_name, n_data_bands = initModel(son.weights, son.configfile, USE_GPU)
+            son.substrateModel = [model]
+
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
 
             # For debug
             # for c in chunks:
