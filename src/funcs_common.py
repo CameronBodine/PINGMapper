@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -40,9 +40,11 @@ from array import array as arr
 
 import pyproj
 import rasterio
+from rasterio.enums import Resampling
 from numpy.lib.stride_tricks import as_strided as ast
 
 import pandas as pd
+import math
 
 from collections import defaultdict
 from copy import deepcopy
@@ -54,11 +56,16 @@ import datetime
 
 # from skimage.filters import median
 # from skimage.morphology import square
-from skimage.io import imsave
-from skimage.transform import resize
+from skimage.io import imsave, imread
 from skimage.measure import label, regionprops
+from skimage.segmentation import watershed
+from skimage.transform import resize
+from skimage.filters import threshold_otsu, gaussian
+from skimage.morphology import remove_small_holes, remove_small_objects
 
 import psutil
+
+# from funcs_pyhum_correct import doPyhumCorrections
 
 # # =========================================================
 # # Keep
@@ -131,6 +138,17 @@ import psutil
 #     return a.reshape(dim), newshape
 
 # =========================================================
+def rescale( dat,
+             mn,
+             mx):
+    '''
+    rescales an input dat between mn and mx
+    '''
+    m = min(dat.flatten())
+    M = max(dat.flatten())
+    return (mx-mn)*(dat-m)/(M-m)+mn
+
+# =========================================================
 def convert_wgs_to_utm(lon, lat):
     """
     This function estimates UTM zone from geographic coordinates
@@ -164,3 +182,63 @@ def printUsage():
 
 
     return
+
+# =========================================================
+def printProjectMode(p):
+    if p == 0:
+        print("\nPROJECT MODE {}: Creating new project.".format(str(p)))
+    elif p == 1:
+        print("\nPROJECT MODE {}: Updating project (Any existing dataset flagged for export will be overwritten).".format(str(p)))
+    elif p == 2:
+        print("\nPROJECT MODE {}: Deleting existing project (if it exists) and creating new project.".format(str(p)))
+    else:
+        print("\nABORTING: Invalid Project Mode!")
+        print("Specify a valid project mode:")
+        print("\tproject_mode = 0: Create new project (exits if project already exists).")
+        print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+        print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+        sys.exit()
+
+# =========================================================
+def projectMode_1_inval():
+    print("\nABORTING: Project Already Exists!")
+    print("\nEither select a different project name, or select from one of the following:")
+    print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+    print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2_inval():
+    print("\nABORTING: Project Does Not Exist!")
+    print("Set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2a_inval():
+    print("\nABORTING: No Son Meta objects exist, unable to update project.")
+    print("Specify a new project name (or delete existing project) and set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubNpz():
+    print("\nABORTING: No existing substrate npz files.")
+    print("\tSet: pred_sub = 1\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_poly():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to export substrate map to shapefile.")
+    print("\tSet: map_sub = True\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_mosaic():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to mosaic substrate maps.")
+    print("\tSet: map_sub = True")
+    print("\tOR")
+    print("\tSet: map_mosaic = 0\n\n")
+    sys.exit()
