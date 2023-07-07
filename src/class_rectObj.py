@@ -1257,4 +1257,8 @@ class rectObj(sonObj):
                     # dst.close()
 
         gc.collect()
-        return self
+
+        # DON"T RETURN SELF
+        # Unnecessary here and leads to massive memory leaks
+        # Also very slow
+        return
