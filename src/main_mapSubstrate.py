@@ -334,9 +334,6 @@ def map_master_func(project_mode=0,
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')
 
-            model, model_name, n_data_bands = initModel(son.weights, son.configfile, USE_GPU)
-            son.substrateModel = [model]
-
             Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
 
             # For debug

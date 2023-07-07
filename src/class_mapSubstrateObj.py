@@ -87,11 +87,10 @@ class mapSubObj(rectObj):
         --------------------
         '''
 
-        # # Initialize the model
-        # if not hasattr(self, 'substrateModel'):
-        #     print('initialized on chunk', i)
-        #     model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
-        #     self.substrateModel = [model]
+        # Initialize the model
+        if not hasattr(self, 'substrateModel'):
+            model, model_name, n_data_bands = initModel(self.weights, self.configfile, USE_GPU)
+            self.substrateModel = [model]
 
         # Open model configuration file
         with open(self.configfile) as f:
@@ -181,10 +180,11 @@ class mapSubObj(rectObj):
             # Store expanded softmax_score
             winSoftMax.append(softmax_score)
 
-            del sonWin, wStart, wEnd, softmax_score
+            del sonWin, wStart, wEnd, softmax_score, est_label
 
         # Take mean across all windows to get one final softmax_score array
         fSoftmax = np.nanmean(np.stack(winSoftMax, axis=0), axis=0)
+        del winSoftMax
 
         # Crop center chunk predictions and recover original dims
         h, w = origDims # Center chunks original dims
