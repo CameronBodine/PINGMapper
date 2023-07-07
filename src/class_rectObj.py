@@ -1342,7 +1342,12 @@ class rectObj(sonObj):
             del out, dst
 
         gc.collect()
-        return self
+
+        # DON"T RETURN SELF
+        # Unnecessary here and leads to massive memory leaks
+        # Also very slow
+
+        return
 
     #===========================================================================
     def _getSonColorMap(self, name):
