@@ -65,7 +65,7 @@ threadCnt=cpu_count()
 #################
 
 # Directory and Project Name
-transectDir = r'Z:\MN_Mussel\EGN_Mosaic_StC'
+transectDir = r'Z:\MN_Mussel\EGN_Substrate'
 projName = 'Transect_Mosaic'
 
 
@@ -567,6 +567,10 @@ for sons in portstar:
     print("Working on:", os.path.basename(sons[0].projDir))
     for son in sons:
         filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
+
+        son.outDir = os.path.join(son.projDir, son.beamName)
+        if not os.path.exists(son.outDir):
+            os.mkdir(son.outDir)
 
         # # Overwrite local egn settings with global settings
         for k, v in egn_vals.items():
