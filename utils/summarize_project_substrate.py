@@ -30,11 +30,12 @@ from funcs_common import *
 from shapely import Point, LineString, MultiPolygon
 from shapely.ops import split
 import numpy as np
-from itertools import accumulate
+from joblib import Parallel, delayed, cpu_count
 
 
 ############
 # Parameters
+threadCnt = 0
 inDirs = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw'
 
 summary_dist = 1000 # Distance to summarize over [meters]
@@ -43,6 +44,22 @@ d = 10 # Distance to extend window lines
 export_polygon = True # Summarize to polygon (dissolved substrate map)
 export_point = True # Summarize to point
 point_begin = False # True == place point at beginning of summary window; False == end of summary window
+
+
+# Specify multithreaded processing thread count
+if threadCnt==0: # Use all threads
+    threadCnt=cpu_count()
+elif threadCnt<0: # Use all threads except threadCnt; i.e., (cpu_count + (-threadCnt))
+    threadCnt=cpu_count()+threadCnt
+    if threadCnt<0: # Make sure not negative
+        threadCnt=1
+else: # Use specified threadCnt if positive
+    pass
+
+if threadCnt>cpu_count(): # If more than total avail. threads, make cpu_count()
+    threadCnt=cpu_count();
+    print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
+
 
 ###########
 # Functions
@@ -116,22 +133,9 @@ def calcSinuosity(df):
     
     return sinuosity
 
-#########
-# Do work
+def doWork(i, projDir):
 
-# Get project folders
-projDirs = glob(os.path.join(inDirs, '*'))
-projDirs = sorted(projDirs, reverse=True)
-
-# For testing
-#projDirs = projDirs[7:]
-#projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
-
-proj_cnt = len(projDirs)
-
-for i, projDir in enumerate(projDirs):
-
-    print(i, 'of', proj_cnt, ':', os.path.basename(projDir))
+    #print(i, 'of', proj_cnt, ':', os.path.basename(projDir))
 
     ####################################################
     # Check if sonObj pickle exists, append to metaFiles
@@ -214,10 +218,7 @@ for i, projDir in enumerate(projDirs):
     crs_out = substrateMap.crs.to_epsg()
 
     # Make a dissolved layer
-    #diss = substrateMap.dissolve(by=None)
-
-    #diss.to_file(os.path.join(outDir, 'dissolve.shp'), index=False)
-    diss = gpd.read_file(os.path.join(outDir, 'dissolve.shp'))
+    diss = substrateMap.dissolve(by=None)
 
 
     ####################################
@@ -405,4 +406,20 @@ for i, projDir in enumerate(projDirs):
         f = os.path.join(outDir, fname)
         outPnt.to_file(f, index=False)
 
-    print('Done')
+    #print('Done')
+
+
+#########
+# Do work
+
+# Get project folders
+projDirs = glob(os.path.join(inDirs, '*'))
+projDirs = sorted(projDirs, reverse=True)
+
+# For testing
+projDirs = projDirs[:10]
+#projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
+
+proj_cnt = len(projDirs)
+
+Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
