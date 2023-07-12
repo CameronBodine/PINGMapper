@@ -232,7 +232,7 @@ def doWork(i, projDir):
 
     while start_dist < maxDist:
 
-        print('Summarizing (', start_dist, '-', end_dist, 'meters ) of', round(maxDist, 0), 'meters')
+        #print('Summarizing (', start_dist, '-', end_dist, 'meters ) of', round(maxDist, 0), 'meters')
 
         # Get pings that fall in current window
         portDF = portSmth.loc[(portSmth['trk_dist'] >= start_dist) & (portSmth['trk_dist'] <= end_dist)].reset_index(drop=True)
@@ -417,7 +417,7 @@ projDirs = glob(os.path.join(inDirs, '*'))
 projDirs = sorted(projDirs, reverse=True)
 
 # For testing
-projDirs = projDirs[:10]
+#projDirs = projDirs[:10]
 #projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
 
 proj_cnt = len(projDirs)
