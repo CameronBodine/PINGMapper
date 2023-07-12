@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python
   - pandas
+  - geopandas
   - rasterio
   - pyproj
   - scikit-image
