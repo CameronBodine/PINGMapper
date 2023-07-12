@@ -1560,21 +1560,21 @@ class portstarObj(object):
         starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
 
         # Convert depth in meters to pixels
-        # portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        # portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
+        # portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
         #
-        # starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        # starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        # starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
+        # starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
 
-        portInst = (portDF['inst_dep_m'] / self.port.pixM).to_numpy(dtype=np.int, copy=True)
-        portAuto = (portDF['dep_m'] / self.port.pixM).to_numpy(dtype=np.int, copy=True)
+        portInst = (portDF['inst_dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
+        portAuto = (portDF['dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
 
-        starInst = (starDF['inst_dep_m'] / self.star.pixM).to_numpy(dtype=np.int, copy=True)
-        starAuto = (starDF['dep_m'] / self.star.pixM).to_numpy(dtype=np.int, copy=True)
+        starInst = (starDF['inst_dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
+        starAuto = (starDF['dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
 
         # if autoBank:
-        #     portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=np.int, copy=True)
-        #     starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=np.int, copy=True)
+        #     portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
+        #     starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
