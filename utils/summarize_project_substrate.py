@@ -19,6 +19,7 @@
 import sys, os
 
 from matplotlib.colors import cnames
+from pandas.core.indexes import multi
 sys.path.insert(0, 'src')
 
 import geopandas as gpd
@@ -27,7 +28,7 @@ from glob import glob
 from class_mapSubstrateObj import mapSubObj
 from class_portstarObj import portstarObj
 from funcs_common import *
-from shapely import Point, LineString, MultiPolygon
+from shapely import Point, LineString, MultiPolygon, MultiLineString
 from shapely.ops import split
 import numpy as np
 from joblib import Parallel, delayed, cpu_count
@@ -36,11 +37,12 @@ from joblib import Parallel, delayed, cpu_count
 ############
 # Parameters
 threadCnt = 0
-inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/EGN'
+inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
 
 summary_dist = 1000 # Distance to summarize over [meters]
 stride = 1000 # Distance between each summary window [meters]
 d = 10 # Distance to extend window lines
+export_line = True # Summarize to trackline
 export_polygon = True # Summarize to polygon (dissolved substrate map)
 export_point = True # Summarize to point
 point_begin = False # True == place point at beginning of summary window; False == end of summary window
@@ -137,8 +139,6 @@ def doWork(i, projDir):
 
     try:
 
-        #print(i, 'of', proj_cnt, ':', os.path.basename(projDir))
-
         ####################################################
         # Check if sonObj pickle exists, append to metaFiles
         metaDir = os.path.join(projDir, "meta")
@@ -229,9 +229,6 @@ def doWork(i, projDir):
         start_dist = 0
         end_dist = summary_dist
 
-        #keep_working = True
-        #while keep_working:
-
         while start_dist < maxDist:
             try:
 
@@ -276,11 +273,6 @@ def doWork(i, projDir):
                 beginLine = LineString(beginLine)
                 endLine = LineString(endLine)
 
-                # Create geodataframe from lines
-                winGDF = gpd.GeoDataFrame({'geometry': [beginLine, endLine]}, geometry='geometry', crs=crs_out)
-
-                #winGDF.to_file(os.path.join(outDir, str(start_dist)+'_win_lines.shp'), index=False)
-
                 ##################################
                 # Try splitting polygon with lines
 
@@ -293,14 +285,9 @@ def doWork(i, projDir):
 
                 # Convert to geodataframe
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
-                #print('\n\n\nsplit 1', splitGDF)
 
                 # Use interior points for within geometry operation
                 splitGDF = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
-
-                # Get polygon which intersects endLine
-                #splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
-                #print('\nintersect 1', splitGDF)
 
                 # Get polygon to split
                 to_split = splitGDF.loc[0].geometry
@@ -311,19 +298,10 @@ def doWork(i, projDir):
 
                 # Get poly which touches both lines
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
-                #print('\nsplit 2', splitGDF)
-                #splitGDF.to_file(os.path.join(outDir, str(start_dist)+'_last_Split.shp'), index=False)
-
                 winSlice = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
-                #winSlice = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))]
-                #print('\nintersect 2', winSlice)
-
-                #winSlice.to_file(os.path.join(outDir, str(start_dist)+'_split_poly.shp'), index=False)
 
                 # Clip substrate map
                 clipSubstrate = gpd.clip(substrateMap, winSlice, keep_geom_type=True)
-                #print(clipSubstrate)
-                #clipSubstrate.to_file(os.path.join(outDir, str(start_dist)+'_substrate.shp'), index=False)
 
 
                 ##############################
@@ -333,6 +311,19 @@ def doWork(i, projDir):
                 sumStats['Project'] = os.path.basename(port.projDir)
                 sumStats['Begin'] = start_dist
                 sumStats['End'] = end_dist
+
+                # Calculate depth stats
+                depthPort = portDF.dep_m
+                depthStar = starDF.dep_m
+                depth = pd.concat([depthPort, depthStar])
+            
+                sumStats['dep_m_min'] = round(depth.min(), 2)
+                sumStats['dep_m_max'] = round(depth.max(), 2)
+                sumStats['dep_m_avg'] = round(depth.mean(), 2)
+                sumStats['dep_m_std'] = round(depth.std(), 2)
+                sumStats['dep_m_var'] = round(depth.var(), 2)
+                sumStats['dep_m_med'] = round(depth.median(), 2)
+                sumStats['dep_m_mod'] = round(depth.mode().values[-1], 2)
 
                 # Calculate sinuosity
                 sinuosity = calcSinuosity(portDF)
@@ -392,6 +383,38 @@ def doWork(i, projDir):
                         outPnt = pnt
                     else:
                         outPnt = pd.concat([outPnt, pnt], ignore_index=True)
+
+                if export_line:
+
+                    # Get trackpoint coordinates
+                    x = portDF.trk_utm_es.to_numpy()
+                    y = portDF.trk_utm_ns.to_numpy()
+
+                    # Make point gdf
+                    start = gpd.points_from_xy(x, y, crs=crs_out)
+                    end = start[1:]
+                    start = start[:-1]
+
+                    # Convert to line segments
+                    lines = []
+                    for a, b in zip(start, end):
+                        lines.append(LineString([a, b]))
+            
+                    # Convert to multiline
+                    multiline = MultiLineString([l for l in lines])
+                
+                    # Convert to geodataframe
+                    mline = gpd.GeoDataFrame({'geometry': [multiline]}, geometry='geometry', crs=crs_out)
+                
+                    # Add attributes
+                    for k, v in sumStats.items():
+                        mline.loc[[0], k] = v
+
+                    if 'outLine' not in locals():
+                        outLine = mline
+                    else:
+                        outLine = pd.concat([outLine, mline], ignore_index=True)
+
             except:
                 print('\n\n\nIssue with:', os.path.basename(port.projDir), start_dist, end_dist, maxDist)
 
@@ -408,7 +431,7 @@ def doWork(i, projDir):
                 f = os.path.join(outDir, fname)
                 outSlice.to_file(f, index=False)
             except:
-                print('\n\n\nIssue with:', os.path.basename(port.projDir))
+                print('\n\n\nIssue with polygon:', os.path.basename(port.projDir))
 
         if export_point:
             try:
@@ -416,7 +439,18 @@ def doWork(i, projDir):
                 f = os.path.join(outDir, fname)
                 outPnt.to_file(f, index=False)
             except:
-                print('\n\n\nIssue with:', os.path.basename(port.projDir))
+                print('\n\n\nIssue with point:', os.path.basename(port.projDir))
+
+        if export_line:
+            try:
+                fname = os.path.basename(port.projDir)+'_summary_line_'+str(summary_dist)+'_m.shp'
+                f = os.path.join(outDir, fname)
+                outLine.to_file(f, index=False)
+            except:
+                print('\n\n\nIssue with line:', os.path.basename(port.projDir))
+
+        
+
 
         #print('Done')
     except:
@@ -430,10 +464,18 @@ def doWork(i, projDir):
 projDirs = glob(os.path.join(inDirs, '*'))
 projDirs = sorted(projDirs, reverse=True)
 
+proj_cnt = len(projDirs)
+
+Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
+
 # For testing
 #projDirs = projDirs[:10]
 #projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
 
-proj_cnt = len(projDirs)
+## For testing
+#projDirs = [projDirs[8]]
+#for i, p in enumerate(projDirs):
+#    print(i, p)
+#    doWork(i, p)
 
-Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
+
