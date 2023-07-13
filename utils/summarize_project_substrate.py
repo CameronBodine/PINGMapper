@@ -17,9 +17,6 @@
 #########
 # Imports
 import sys, os
-
-from matplotlib.colors import cnames
-from pandas.core.indexes import multi
 sys.path.insert(0, 'src')
 
 import geopandas as gpd
@@ -39,8 +36,8 @@ from joblib import Parallel, delayed, cpu_count
 threadCnt = 0
 inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
 
-summary_dist = 1000 # Distance to summarize over [meters]
-stride = 1000 # Distance between each summary window [meters]
+summary_dist = 10000 # Distance to summarize over [meters]
+stride = 10000 # Distance between each summary window [meters]
 d = 10 # Distance to extend window lines
 export_line = True # Summarize to trackline
 export_polygon = True # Summarize to polygon (dissolved substrate map)
@@ -310,7 +307,7 @@ def doWork(i, projDir):
                 sumStats = {}
                 sumStats['Project'] = os.path.basename(port.projDir)
                 sumStats['Begin'] = start_dist
-                sumStats['End'] = end_dist
+                sumStats['Length'] = round(portDF.iloc[-1]['trk_dist'] - portDF.iloc[0]['trk_dist'])
 
                 # Calculate depth stats
                 depthPort = portDF.dep_m
