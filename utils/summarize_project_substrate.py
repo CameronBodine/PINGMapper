@@ -29,15 +29,17 @@ from shapely import Point, LineString, MultiPolygon, MultiLineString
 from shapely.ops import split
 import numpy as np
 from joblib import Parallel, delayed, cpu_count
+import re
 
 
 ############
 # Parameters
 threadCnt = 0
-inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
+# inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
+inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
 
-summary_dist = 10000 # Distance to summarize over [meters]
-stride = 10000 # Distance between each summary window [meters]
+summary_dist = 1000 # Distance to summarize over [meters]
+stride = summary_dist # Distance between each summary window [meters]
 d = 10 # Distance to extend window lines
 export_line = True # Summarize to trackline
 export_polygon = True # Summarize to polygon (dissolved substrate map)
@@ -171,6 +173,29 @@ def doWork(i, projDir):
                 pass # Don't add non-port/star objects since they can't be rectified
         del son, beam, sonObjs
 
+        # Update directories if needed
+        dir_to_replace = port.projDir
+        for attr, value in port.__dict__.items():
+            if dir_to_replace in str(value):
+                v = value.replace(dir_to_replace, '')
+                v = v.replace('\\', '/')
+                if len(v) > 0:
+                    v = v[1:]
+                v = os.path.join(projDir, v)
+                v = os.path.normpath(v)
+                setattr(port, attr, v)
+
+        dir_to_replace = star.projDir
+        for attr, value in star.__dict__.items():
+            if dir_to_replace in str(value):
+                v = value.replace(dir_to_replace, '')
+                v = v.replace('\\', '/')
+                if len(v) > 0:
+                    v = v[1:]
+                v = os.path.join(projDir, v)
+                v = os.path.normpath(v)
+                setattr(star, attr, v)
+
         # Set out directory
         outDir = os.path.join(port.substrateDir, 'map_summary')
 
@@ -235,10 +260,22 @@ def doWork(i, projDir):
                 portDF = portSmth.loc[(portSmth['trk_dist'] >= start_dist) & (portSmth['trk_dist'] <= end_dist)].reset_index(drop=True)
                 starDF = starSmth.loc[(starSmth['trk_dist'] >= start_dist) & (starSmth['trk_dist'] <= end_dist)].reset_index(drop=True)
 
-                # Get median record number to find coordinates that fall in middle of window for spatial query
+                # # Get median record number to find coordinates that fall in middle of window for spatial query
+                # midPnt = int(len(portDF)/2)
+                # midPnt = portDF.loc[midPnt]
+                # midPnt = Point(midPnt['trk_utm_es'], midPnt['trk_utm_ns'])
+
+                # Create a midline for intersecting middle window
                 midPnt = int(len(portDF)/2)
                 midPnt = portDF.loc[midPnt]
-                midPnt = Point(midPnt['trk_utm_es'], midPnt['trk_utm_ns'])
+                midPntA = Point(midPnt.range_es, midPnt.range_ns)
+
+                midPnt = int(len(starDF)/2)
+                midPnt = starDF.loc[midPnt]
+                midPntB = Point(midPnt.range_es, midPnt.range_ns)
+
+                midline = extendLines([midPntA, midPntB], d)
+                midline = LineString(midline)
 
                 # Store begin and end record_num for each
                 portRecnum = [portDF.record_num.values[0], portDF.record_num.values[-1]]
@@ -283,8 +320,21 @@ def doWork(i, projDir):
                 # Convert to geodataframe
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
 
-                # Use interior points for within geometry operation
-                splitGDF = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+                try:
+                    # Use interior points for within geometry operation
+                    # splitGDF = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+                    splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
+                    # Get polygon to split
+                    to_split = splitGDF.loc[0].geometry
+                except:
+                    try:
+                        # Use interior points for within geometry operation
+                        splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
+                        # Get polygon to split
+                        to_split = splitGDF.loc[0].geometry
+                    except:
+                        print('Unable to intersect:', projDir, beginLine, endLine)
+
 
                 # Get polygon to split
                 to_split = splitGDF.loc[0].geometry
@@ -295,7 +345,16 @@ def doWork(i, projDir):
 
                 # Get poly which touches both lines
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
-                winSlice = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+
+                try:
+                    # winSlice = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+                    winSlice = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
+                except:
+                    try:
+                        # Use interior points for within geometry operation
+                        winSlice = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
+                    except:
+                        print('Unable to intersect:', projDir, beginLine, endLine)
 
                 # Clip substrate map
                 clipSubstrate = gpd.clip(substrateMap, winSlice, keep_geom_type=True)
@@ -313,7 +372,7 @@ def doWork(i, projDir):
                 depthPort = portDF.dep_m
                 depthStar = starDF.dep_m
                 depth = pd.concat([depthPort, depthStar])
-            
+
                 sumStats['dep_m_min'] = round(depth.min(), 2)
                 sumStats['dep_m_max'] = round(depth.max(), 2)
                 sumStats['dep_m_avg'] = round(depth.mean(), 2)
@@ -396,13 +455,13 @@ def doWork(i, projDir):
                     lines = []
                     for a, b in zip(start, end):
                         lines.append(LineString([a, b]))
-            
+
                     # Convert to multiline
                     multiline = MultiLineString([l for l in lines])
-                
+
                     # Convert to geodataframe
                     mline = gpd.GeoDataFrame({'geometry': [multiline]}, geometry='geometry', crs=crs_out)
-                
+
                     # Add attributes
                     for k, v in sumStats.items():
                         mline.loc[[0], k] = v
@@ -446,10 +505,9 @@ def doWork(i, projDir):
             except:
                 print('\n\n\nIssue with line:', os.path.basename(port.projDir))
 
-        
 
 
-        #print('Done')
+
     except:
         print('\n\n\nUnable to process:', projDir)
 
@@ -463,16 +521,14 @@ projDirs = sorted(projDirs, reverse=True)
 
 proj_cnt = len(projDirs)
 
-Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
+# Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
 
 # For testing
 #projDirs = projDirs[:10]
-#projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
+# projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
 
 ## For testing
 #projDirs = [projDirs[8]]
 #for i, p in enumerate(projDirs):
 #    print(i, p)
 #    doWork(i, p)
-
-
