@@ -35,8 +35,8 @@ import re
 ############
 # Parameters
 threadCnt = 0
-# inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
-inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
+inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
+#inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
 
 summary_dist = 1000 # Distance to summarize over [meters]
 stride = summary_dist # Distance between each summary window [meters]
@@ -268,14 +268,14 @@ def doWork(i, projDir):
                 # Create a midline for intersecting middle window
                 midPnt = int(len(portDF)/2)
                 midPnt = portDF.loc[midPnt]
-                midPntA = Point(midPnt.range_es, midPnt.range_ns)
+                midPnts = [(midPnt.range_es, midPnt.range_ns)]
 
                 midPnt = int(len(starDF)/2)
                 midPnt = starDF.loc[midPnt]
-                midPntB = Point(midPnt.range_es, midPnt.range_ns)
+                midPnts.append((midPnt.range_es, midPnt.range_ns))
 
-                midline = extendLines([midPntA, midPntB], d)
-                midline = LineString(midline)
+                midLine = extendLines(midPnts, d)
+                midLine = LineString(midLine)
 
                 # Store begin and end record_num for each
                 portRecnum = [portDF.record_num.values[0], portDF.record_num.values[-1]]
@@ -462,6 +462,9 @@ def doWork(i, projDir):
                     # Convert to geodataframe
                     mline = gpd.GeoDataFrame({'geometry': [multiline]}, geometry='geometry', crs=crs_out)
 
+                    # Simplify line
+                    mline['geometry'] = mline['geometry'].simplify(tolerance=10)
+
                     # Add attributes
                     for k, v in sumStats.items():
                         mline.loc[[0], k] = v
@@ -521,7 +524,7 @@ projDirs = sorted(projDirs, reverse=True)
 
 proj_cnt = len(projDirs)
 
-# Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
+Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
 
 # For testing
 #projDirs = projDirs[:10]
