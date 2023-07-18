@@ -582,7 +582,7 @@ class rectObj(sonObj):
         self._interpRangeCoords(filt)
         gc.collect()
         self._pickleSon()
-        return self
+        return #self
 
     #===========================================
     def _interpRangeCoords(self,
@@ -706,7 +706,7 @@ class rectObj(sonObj):
         rsDF.to_csv(outCSV, index=True, float_format='%.14f')
 
         self.rangeExt = rsDF # Store smoothed range extent in rectObj
-        return self
+        return #self
 
     #===========================================================================
     def _checkPings(self,

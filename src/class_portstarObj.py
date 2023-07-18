@@ -195,7 +195,7 @@ class portstarObj(object):
         del self.port.sonDat, self.star.sonDat
 
         self.mergeSon = mergeSon
-        return self
+        return #self
 
     ############################################################################
     # Mosaic                                                                   #
@@ -342,7 +342,7 @@ class portstarObj(object):
                     for i, pred in enumerate(predictToMosaic):
                         _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
-        return self
+        return #self
 
 
     #=======================================================================
@@ -1113,7 +1113,7 @@ class portstarObj(object):
         del portDepPix, starDepPix
         del model, self.bedpickModel ######## Not sure about this one...
 
-        # return self
+        # return #self
         return portDepPixFinal, starDepPixFinal, i
 
     #=======================================================================
@@ -1278,7 +1278,7 @@ class portstarObj(object):
                 # self.starDepDetect[chunk] = bed
                 starDepPixCrop = bed
 
-        # return self
+        # return #self
         return portDepPixCrop, starDepPixCrop, chunk
 
     #=======================================================================
@@ -1662,7 +1662,7 @@ class portstarObj(object):
         del self.mergeSon, self.port.sonMetaDF, self.star.sonMetaDF, y
 
         gc.collect()
-        return self
+        return #self
 
 
     ############################################################################
@@ -2621,7 +2621,7 @@ class portstarObj(object):
             pass
 
         gc.collect()
-        return self
+        return #self
 
     # ======================================================================
     def __str__(self):

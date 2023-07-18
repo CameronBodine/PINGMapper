@@ -1443,7 +1443,7 @@ class sonObj(object):
             #     pass
 
             gc.collect()
-        return self
+        return #self
 
     # ==========================================================================
     def _loadSonChunk(self):
@@ -1485,7 +1485,7 @@ class sonObj(object):
 
         file.close() # Close the file
         self.sonDat = sonDat # Store array in class attribute
-        return self
+        return #self
 
     # ======================================================================
     def _WC_mask(self, i, son=True):
@@ -1616,7 +1616,7 @@ class sonObj(object):
         else:
             self.sonDat = srcDat
         del srcDat
-        return self
+        return #self
 
     # ======================================================================
     def _WCR_crop(self,
@@ -1678,7 +1678,7 @@ class sonObj(object):
 
         self.shadowMask = mask
 
-        return self
+        return #self
 
 
     # ======================================================================
@@ -1896,7 +1896,7 @@ class sonObj(object):
             pass
 
         gc.collect()
-        return self
+        return #self
 
 
     # ======================================================================
@@ -2060,7 +2060,7 @@ class sonObj(object):
 
         del self.headIdx, self.pingCnt
 
-        return self
+        return #self
 
     # ======================================================================
     def _loadSonMeta(self):
@@ -2069,7 +2069,7 @@ class sonObj(object):
         '''
         meta = pd.read_csv(self.sonMetaFile)
         self.sonMetaDF = meta
-        return self
+        return
 
     # ======================================================================
     def _getChunkID(self):
@@ -3143,7 +3143,7 @@ class sonObj(object):
     #     res = standardize(res, 0, 255)
     #
     #     self.sonDat = res
-    #     return self
+    #     return #self
 
     # # ======================================================================
     # def _WCR_SRC(self, sonMeta, son=True):
