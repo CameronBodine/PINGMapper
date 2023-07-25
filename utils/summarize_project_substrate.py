@@ -35,16 +35,17 @@ import re
 ############
 # Parameters
 threadCnt = 0
-inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
+inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/RawEGN_Avg'
 #inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Raw'
 
-summary_dist = 1000 # Distance to summarize over [meters]
+summary_dist = 5000 # Distance to summarize over [meters]
 stride = summary_dist # Distance between each summary window [meters]
 d = 10 # Distance to extend window lines
 export_line = True # Summarize to trackline
 export_polygon = True # Summarize to polygon (dissolved substrate map)
 export_point = True # Summarize to point
 point_begin = False # True == place point at beginning of summary window; False == end of summary window
+del_summary_folder = True
 
 
 # Specify multithreaded processing thread count
@@ -136,6 +137,8 @@ def calcSinuosity(df):
 
 def doWork(i, projDir):
 
+    print(os.path.basename(projDir))
+
     try:
 
         ####################################################
@@ -199,6 +202,11 @@ def doWork(i, projDir):
         # Set out directory
         outDir = os.path.join(port.substrateDir, 'map_summary')
 
+        if del_summary_folder:
+            # Delete out directory if it already exists
+            if os.path.exists(outDir):
+                shutil.rmtree(outDir)
+
         if not os.path.exists(outDir):
             os.mkdir(outDir)
 
@@ -251,7 +259,7 @@ def doWork(i, projDir):
         start_dist = 0
         end_dist = summary_dist
 
-        while start_dist < maxDist:
+        while (start_dist + 0.75*summary_dist) < maxDist:
             try:
 
                 #print('Summarizing (', start_dist, '-', end_dist, 'meters ) of', round(maxDist, 0), 'meters')
@@ -260,22 +268,55 @@ def doWork(i, projDir):
                 portDF = portSmth.loc[(portSmth['trk_dist'] >= start_dist) & (portSmth['trk_dist'] <= end_dist)].reset_index(drop=True)
                 starDF = starSmth.loc[(starSmth['trk_dist'] >= start_dist) & (starSmth['trk_dist'] <= end_dist)].reset_index(drop=True)
 
-                # # Get median record number to find coordinates that fall in middle of window for spatial query
+                # # Create a midline for intersecting middle window
                 # midPnt = int(len(portDF)/2)
                 # midPnt = portDF.loc[midPnt]
-                # midPnt = Point(midPnt['trk_utm_es'], midPnt['trk_utm_ns'])
+                # midPnts = [(midPnt.range_es, midPnt.range_ns)]
 
-                # Create a midline for intersecting middle window
-                midPnt = int(len(portDF)/2)
-                midPnt = portDF.loc[midPnt]
-                midPnts = [(midPnt.range_es, midPnt.range_ns)]
+                # midPnt = int(len(starDF)/2)
+                # midPnt = starDF.loc[midPnt]
+                # midPnts.append((midPnt.range_es, midPnt.range_ns))
 
-                midPnt = int(len(starDF)/2)
-                midPnt = starDF.loc[midPnt]
-                midPnts.append((midPnt.range_es, midPnt.range_ns))
+                # midLine = extendLines(midPnts, d)
+                # midLine = LineString(midLine)
 
-                midLine = extendLines(midPnts, d)
-                midLine = LineString(midLine)
+
+
+
+
+
+                # Try intersection with trackline
+                # Get trackpoint coordinates
+                x = portDF.trk_utm_es.to_numpy()
+                y = portDF.trk_utm_ns.to_numpy()
+
+                # Make sure trackline contained within desired area
+                x = x[5:-5]
+                y = y[5:-5]
+
+                # Make point gdf
+                start = gpd.points_from_xy(x, y, crs=crs_out)
+                end = start[1:]
+                start = start[:-1]
+
+                # Convert to line segments
+                lines = []
+                for a, b in zip(start, end):
+                    lines.append(LineString([a, b]))
+
+                # Convert to multiline
+                multiline = MultiLineString([l for l in lines])
+
+                # Convert to geodataframe
+                mline = gpd.GeoDataFrame({'geometry': [multiline]}, geometry='geometry', crs=crs_out)
+
+                # Simplify line
+                mline['geometry'] = mline['geometry'].simplify(tolerance=10)
+
+
+
+
+
 
                 # Store begin and end record_num for each
                 portRecnum = [portDF.record_num.values[0], portDF.record_num.values[-1]]
@@ -320,20 +361,29 @@ def doWork(i, projDir):
                 # Convert to geodataframe
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
 
+                # try:
+                #     # Use interior points for within geometry operation
+                #     # splitGDF = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+                #     splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
+                #     # Get polygon to split
+                #     to_split = splitGDF.loc[0].geometry
+                # except:
+                #     try:
+                #         # Use interior points for within geometry operation
+                #         splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
+                #         # Get polygon to split
+                #         to_split = splitGDF.loc[0].geometry
+                #     except:
+                #         print('Unable to intersect:', projDir, beginLine, endLine)
+
+
                 try:
-                    # Use interior points for within geometry operation
-                    # splitGDF = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
-                    splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
-                    # Get polygon to split
-                    to_split = splitGDF.loc[0].geometry
+                    # splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(mline))].reset_index(drop=True)
+                    splitGDF = gpd.sjoin(splitGDF, mline, op='intersects').reset_index(drop=True)
                 except:
-                    try:
-                        # Use interior points for within geometry operation
-                        splitGDF = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
-                        # Get polygon to split
-                        to_split = splitGDF.loc[0].geometry
-                    except:
-                        print('Unable to intersect:', projDir, beginLine, endLine)
+                    print('Unable to intersect 1:', projDir, beginLine, endLine)
+
+                splitGDF = splitGDF.dissolve(by=None)
 
 
                 # Get polygon to split
@@ -346,15 +396,22 @@ def doWork(i, projDir):
                 # Get poly which touches both lines
                 splitGDF = gpd.GeoDataFrame(geometry=polys, crs=crs_out)
 
+                # try:
+                #     # winSlice = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
+                #     winSlice = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
+                # except:
+                #     try:
+                #         # Use interior points for within geometry operation
+                #         winSlice = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
+                #     except:
+                #         print('Unable to intersect:', projDir, beginLine, endLine)
+
+
                 try:
-                    # winSlice = splitGDF.loc[(splitGDF.geometry.contains(midPnt))].reset_index(drop=True)
-                    winSlice = splitGDF.loc[(splitGDF.geometry.intersects(midLine))].reset_index(drop=True)
+                    # winSlice = splitGDF.loc[(splitGDF.geometry.intersects(mline))].reset_index(drop=True)
+                    winSlice = gpd.sjoin(splitGDF, mline, op='intersects').reset_index(drop=True)
                 except:
-                    try:
-                        # Use interior points for within geometry operation
-                        winSlice = splitGDF.loc[(splitGDF.geometry.intersects(beginLine)) & (splitGDF.geometry.intersects(endLine))].reset_index(drop=True)
-                    except:
-                        print('Unable to intersect:', projDir, beginLine, endLine)
+                    print('Unable to intersect 2:', projDir, beginLine, endLine)
 
                 # Clip substrate map
                 clipSubstrate = gpd.clip(substrateMap, winSlice, keep_geom_type=True)
@@ -526,12 +583,15 @@ proj_cnt = len(projDirs)
 
 Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
 
-# For testing
-#projDirs = projDirs[:10]
-# projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Raw\PRL_124_100_20230117_USM1_Rec00008']
-
 ## For testing
-#projDirs = [projDirs[8]]
-#for i, p in enumerate(projDirs):
+##projDirs = projDirs[:10]
+# projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\RawEGN_Avg\PRL_489_451_20210303_FWSA1_Rec00003']
+
+### For testing
+##projDirs = [projDirs[8]]
+# for i, p in enumerate(projDirs):
 #    print(i, p)
 #    doWork(i, p)
+
+
+print('DONE')
