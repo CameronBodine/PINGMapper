@@ -41,11 +41,11 @@ inDirs = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/RawEGN_Avg'
 summary_dist = 5000 # Distance to summarize over [meters]
 stride = summary_dist # Distance between each summary window [meters]
 d = 10 # Distance to extend window lines
-export_line = True # Summarize to trackline
+export_line = False # Summarize to trackline
 export_polygon = True # Summarize to polygon (dissolved substrate map)
-export_point = True # Summarize to point
+export_point = False # Summarize to point
 point_begin = False # True == place point at beginning of summary window; False == end of summary window
-del_summary_folder = True
+del_summary_folder = False
 
 
 # Specify multithreaded processing thread count
@@ -413,6 +413,8 @@ def doWork(i, projDir):
                 except:
                     print('Unable to intersect 2:', projDir, beginLine, endLine)
 
+                winSlice = winSlice.dissolve(by=None)
+
                 # Clip substrate map
                 clipSubstrate = gpd.clip(substrateMap, winSlice, keep_geom_type=True)
 
@@ -585,7 +587,7 @@ Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)
 
 ## For testing
 ##projDirs = projDirs[:10]
-# projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\RawEGN_Avg\PRL_489_451_20210303_FWSA1_Rec00003']
+# projDirs = [r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\RawEGN_Avg\CHI_158_137_20210624_USM1_Rec00008']
 
 ### For testing
 ##projDirs = [projDirs[8]]
