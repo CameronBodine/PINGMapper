@@ -9,7 +9,7 @@ nav_exclude: false
 ---
 
 # Installation
-- Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) _(preferred)_ or [Anaconda](https://www.anaconda.com).
+- Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html). When prompted, select the option to install for "me" insted of "all users". This will install miniconda into your user folder. 
 
 - Open Anaconda Powershell Prompt or Anaconda Prompt.
 
@@ -36,6 +36,10 @@ conda config --set solver libmamba
 > ```
 > conda config --set solver classic
 > ```
+
+- Now install git with:
+conda install git
+
 
 - Now navigate to where you would like to save PING Mapper. Here I am saving PING-Mapper into 'MyPythonRepos', a folder inside my user folder:
 ```
