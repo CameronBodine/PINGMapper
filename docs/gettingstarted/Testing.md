@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Testing PING-Mapper
-nav_order: 2
+nav_order: 3
 parent: Getting Started
 
 nav_exclude: false

@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Running PING-Mapper
-nav_order: 3
+nav_order: 4
 parent: Getting Started
 
 nav_exclude: false
