@@ -38,7 +38,9 @@ conda config --set solver libmamba
 > ```
 
 - Now install git with:
+```
 conda install git
+```
 
 
 - Now navigate to where you would like to save PING Mapper. Here I am saving PING-Mapper into 'MyPythonRepos', a folder inside my user folder:
