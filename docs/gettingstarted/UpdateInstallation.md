@@ -26,8 +26,6 @@ Stash any changes you may have made since downloading PING-Mapper (i.e. editing 
 git stash
 ```
 
-- Now let's run a [test](./Testing.md) to make sure everything is functioning as expected.
-
 ## Step 3
 
 Download the latest updates:
