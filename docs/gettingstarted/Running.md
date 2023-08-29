@@ -15,9 +15,19 @@ After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you 
 ## Process single sonar recording
 
 ### Step 1
-Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
+1. Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
 ```
 cd C:\users\Cam\MyPythonRepos\PINGMapper
+```
+
+2. Activate the `ping` virtual environment:
+```
+conda activate ping
+```
+
+You should see something similar to the following in the command prompt following by a flashing cursor:
+```
+(ping) PS C:\users\Cam\Python\PINGMapper>
 ```
 
 ### Step 2
@@ -217,9 +227,17 @@ rect_wcr = True
     - `mosaic = 2`: Do Mosaic - VRT (virtual raster)
 
 ### Step 9
+{: .g2k }
+> Don't forget to save the file! You can either save it, or save as a new file inside the PINGMapper directory, i.e. `main_myscript.py`.
+
 Run the program by entering the following in the command prompt:
 ```
 python main.py
+```
+
+or if you changed the filename:
+```
+python main_myscript.py
 ```
 
 ## Batch process multiple sonar recordings
@@ -297,7 +315,15 @@ outDir = r"C:/user/cam/ExportedDatasets"
 Edit parameters as necessary (*Note: supplied parameters will be applied to all sonar recordings. See section above for description of parameters*).
 
 ### Step 5
+{: .g2k }
+> Don't forget to save the file! You can either save it, or save as a new file inside the PINGMapper directory, i.e. `main_batchDirectory_myscript.py`.
+
 Run the program by entering the following in the command prompt:
 ```
 python main_batchDirectory.py
+```
+
+or if you changed the filename:
+```
+python main_batchDirectory_myscript.py
 ```
