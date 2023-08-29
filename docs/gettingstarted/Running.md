@@ -246,9 +246,19 @@ python main_myscript.py
 PING-Mapper includes a script which will find all sonar recordings in a directory (even subdirectories!) and batch process them. This is useful if you have spent a day on the water collecting multiple sonar recordings. Just point this script at the top-most folder, provide an output directory for processed files, and PING-Mapper will do the rest!
 
 ### Step 1
-Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
+1. Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
 ```
 cd C:\users\Cam\MyPythonRepos\PINGMapper
+```
+
+2. Activate the `ping` virtual environment:
+```
+conda activate ping
+```
+
+You should see something similar to the following in the command prompt following by a flashing cursor:
+```
+(ping) PS C:\users\Cam\Python\PINGMapper>
 ```
 
 ### Step 2
