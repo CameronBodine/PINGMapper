@@ -227,6 +227,7 @@ rect_wcr = True
     - `mosaic = 2`: Do Mosaic - VRT (virtual raster)
 
 ### Step 9
+
 {: .g2k }
 > Don't forget to save the file! You can either save it, or save as a new file inside the PINGMapper directory, i.e. `main_myscript.py`.
 
@@ -315,6 +316,7 @@ outDir = r"C:/user/cam/ExportedDatasets"
 Edit parameters as necessary (*Note: supplied parameters will be applied to all sonar recordings. See section above for description of parameters*).
 
 ### Step 5
+
 {: .g2k }
 > Don't forget to save the file! You can either save it, or save as a new file inside the PINGMapper directory, i.e. `main_batchDirectory_myscript.py`.
 
