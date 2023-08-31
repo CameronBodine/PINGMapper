@@ -6,7 +6,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2022 Cameron S. Bodine
+# Copyright (c) 2022-23 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,26 +33,44 @@ sys.path.insert(0, 'src')
 from funcs_common import *
 from main_readFiles import read_master_func
 from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
+
+# Get processing script's dir so we can save it to file
+scriptDir = os.getcwd()
+copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+script = os.path.join(scriptDir, os.path.basename(__file__))
+
+# For the logfile
+logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
 start_time = time.time()
 
 #============================================
 
-#################
-# User Parameters
-#################
+#######################
+# Start User Parameters
+#######################
 
 # Path to data/output
-humFile = r'./exampleData/Test-Small-DS.DAT'
-sonPath = r'./exampleData/Test-Small-DS'
-projDir = r'./procData/PINGMapper-Test-Small-DS'
+
+humFile = "/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data/Pascagoula/Bouie/BOU_20210402_USM1/030_023_Rec00003.DAT" # Path to sonar recording .DAT file
+projDir = "/home/cbodine/Desktop/test" # Directory where you want to export files
+
+# *** IMPORTANT ****
+# Export Mode: project_mode
+## 0==NEW PROJECT: Create a new project. [DEFAULT]
+##      If project already exists, program will exit without any project changes.
+##
+## 1==OVERWRITE MODE: Create new project, regardless of previous project state.
+##      If project exists, it will be DELETED and reprocessed.
+##      If project does not exist, a new project will be created.
+project_mode = 1
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
 exportUnknown = False #Option to export Unknown ping metadata
-fixNoDat = False # Locate and flag missing pings; add NoData to exported imagery.
+fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
@@ -67,19 +85,28 @@ x_offset = 0.0 # [meters]
 y_offset = 0.0 # [meters]
 
 
+# Sonar Intensity Corrections
+egn = True
+egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
+                         ## If std, the number of standard deviations to retain
+
+
 # Sonogram Exports
-tileFile = '.jpg'
-wcp = 2 #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
-wcr = 2 #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
+tileFile = '.jpg' # Img format for plots and sonogram exports
+wcp = True #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
+wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
 
-lbl_set = 0 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+
+# Speed corrected sonogram Exports
+lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
-# Segmentation Parameters
-remShadow = 1  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+# Depth Detection and Shadow Removal Parameters
+remShadow = 2 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
@@ -87,33 +114,94 @@ adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
 
-# Rectification Parameters
+# Rectification Sonar Map Exports
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
-mosaic = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+son_colorMap = 'Greys_r' # Specify colorramp for rectified imagery. '_r'==reverse the ramp: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 
-#################
-#################
+
+# Substrate Mapping
+pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
+pltSubClass = True # Export plots of substrate classification and predictions
+map_sub = True # Export substrate maps (as rasters). Requires substrate predictions saved to npz.
+export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
+
+
+# Mosaic Exports
+pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
+mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
+mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+
+#####################
+# End User Parameters
+#####################
+
+
+# =========================================================
+# Determine project_mode
+printProjectMode(project_mode)
+if project_mode == 0:
+    # Create new project
+    if not os.path.exists(projDir):
+        os.mkdir(projDir)
+    else:
+        projectMode_1_inval()
+
+elif project_mode == 1:
+    # Overwrite existing project
+    if os.path.exists(projDir):
+        shutil.rmtree(projDir)
+
+    os.mkdir(projDir)        
+
+elif project_mode == 2:
+    # Update project
+    # Make sure project exists, exit if not.
+    
+    if not os.path.exists(projDir):
+        projectMode_2_inval()
+
+# =========================================================
+# For logging the console output
+
+logdir = os.path.join(projDir, 'meta', 'logs')
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+logfilename = os.path.join(logdir, logfilename)
+
+sys.stdout = Logger(logfilename)
 
 #============================================
 
+sonPath = humFile.split('.DAT')[0]
 sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 print(sonFiles)
+
+if not 'map_predict' in locals():
+    map_predict = 0
 
 #============================================
 
 params = {
+    'logfilename':logfilename,
+    'project_mode':project_mode,
+    'script':[script, copied_script_name],
     'humFile':humFile,
     'sonFiles':sonFiles,
     'projDir':projDir,
     'tempC':tempC,
     'nchunk':nchunk,
-    'cropRange':cropRange,
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
     'x_offset':x_offset,
     'y_offset':y_offset,
+    'egn':egn,
+    'egn_stretch':egn_stretch,
+    'egn_stretch_factor':egn_stretch_factor,
     'tileFile':tileFile,
     'wcp':wcp,
     'wcr':wcr,
@@ -128,7 +216,17 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
-    'mosaic':mosaic
+    'son_colorMap':son_colorMap,
+    'pred_sub':pred_sub,
+    'map_sub':map_sub,
+    'export_poly':export_poly,
+    'map_predict':map_predict,
+    'pltSubClass':pltSubClass,
+    'map_class_method':map_class_method,
+    'pix_res':pix_res,
+    'mosaic_nchunk':mosaic_nchunk,
+    'mosaic':mosaic,
+    'map_mosaic':map_mosaic
     }
 #==================================================
 print('\n===========================================')
@@ -147,5 +245,15 @@ if rect_wcp or rect_wcr:
     rectify_master_func(**params)
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
+#==================================================
+if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+    print('\n===========================================')
+    print('===========================================')
+    print('***** MAPPING SUBSTRATE *****')
+    print("working on "+projDir)
+    map_master_func(**params)
+
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+sys.stdout.log.close()

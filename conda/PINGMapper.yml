@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python
   - pandas
+  - geopandas
   - rasterio
   - pyproj
   - scikit-image
@@ -14,5 +15,7 @@ dependencies:
   - h5py
   - pip
   - pip:
+      - doodleverse_utils
       - psutil
       - tensorflow
+      - transformers

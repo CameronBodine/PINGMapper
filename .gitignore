@@ -3,11 +3,18 @@ __pycache__/*
 oldFiles/*
 testData/*
 /src/__pycache__/*
-models/bedpick/Old*
 exampleData/Test-Large-DS*
+models
 
 main_batch.py
 main_batchFolder.py
-*csb*.py
 
 !procData/OutputsHere.txt
+
+.vs
+.vscode
+
+ping (*
+Python 3.7*
+
+*csb*.py
