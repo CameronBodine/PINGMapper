@@ -34,23 +34,25 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 3. Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels .
 
-4. Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonograms with water column removed (WCR) using Humminbird depth estimates OR automated depth detections.
+4. Correct sonar backscatter with Empiracle Gain Normalization.
 
-5. Export speed corrected un-rectified sonograms.
+5. Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonograms with water column removed (WCR) using Humminbird depth estimates OR automated depth detections.
 
-6. Smooth and interpolate GPS track points.
+6. Export speed corrected un-rectified sonograms.
 
-7. Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
+7. Smooth and interpolate GPS track points.
 
-8. Mosaic georectified sonar imagery.
+8. Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
+
+9. Mosaic georectified sonar imagery.
+
+10. Automatically segment and classify substrate patches.
 
 More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
 
 ## Workflows in the Pipeline
-1. Automatic substrate classification
-2. GUI front-end, either as standalone software, or QGIS plugin
-3. Imagery corrections (radiometric, attenuation, etc.)
-4. So much more...
+1. GUI front-end, either as standalone software, or QGIS plugin
+2. So much more...
 
 # Software Documentation
 ## Website
@@ -69,8 +71,8 @@ A Preprint of the above article was first made available here:
 ### Code that made the paper and v1.0.0
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
-## PING-Mapper v2.0.0
-The second version of PING-Mapper is under development. Scientific articles documenting the new functionality will be posted here when available.
+## PING-Mapper v2.0.0-alpha
+The second version of PING-Mapper is available now as an alpha release. Scientific articles documenting the new functionality will be posted here when available.
 
 # Installation
 View the [installation instructions](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
