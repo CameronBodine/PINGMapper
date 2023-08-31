@@ -3,8 +3,8 @@ __pycache__/*
 oldFiles/*
 testData/*
 /src/__pycache__/*
-models/bedpick/Old*
 exampleData/Test-Large-DS*
+models
 
 main_batch.py
 main_batchFolder.py
