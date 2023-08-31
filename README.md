@@ -50,9 +50,6 @@ Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for
 
 More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
 
-## Workflows in the Pipeline
-1. GUI front-end, either as standalone software, or QGIS plugin
-2. So much more...
 
 # Software Documentation
 ## Website
