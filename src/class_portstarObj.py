@@ -2389,7 +2389,7 @@ class portstarObj(object):
             # Punch holes in original label
             holes = ~(noSmall==0)
 
-            l = out*holes
+            l = (out*holes).astype('uint8')
 
             del holes, lbl
 

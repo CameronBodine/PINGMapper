@@ -28,6 +28,7 @@
 
 
 from __future__ import division
+import sys
 from funcs_common import *
 
 from class_rectObj import rectObj
@@ -36,7 +37,8 @@ from class_portstarObj import portstarObj
 import inspect
 
 #===============================================================================
-def rectify_master_func(project_mode=0,
+def rectify_master_func(logfilename='',
+                        project_mode=0,
                         script='',
                         humFile='',
                         sonFiles='',
@@ -406,3 +408,5 @@ def rectify_master_func(project_mode=0,
     del portstar
 
     printUsage()
+
+    # sys.stdout.log.close()

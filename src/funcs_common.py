@@ -67,6 +67,134 @@ import psutil
 
 # from funcs_pyhum_correct import doPyhumCorrections
 
+
+# =========================================================
+def rescale( dat,
+             mn,
+             mx):
+    '''
+    rescales an input dat between mn and mx
+    '''
+    m = min(dat.flatten())
+    M = max(dat.flatten())
+    return (mx-mn)*(dat-m)/(M-m)+mn
+
+# =========================================================
+def convert_wgs_to_utm(lon, lat):
+    """
+    This function estimates UTM zone from geographic coordinates
+    see https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair
+    """
+    utm_band = str((np.floor((lon + 180) / 6 ) % 60) + 1)
+    if len(utm_band) == 1:
+        utm_band = '0'+utm_band
+    if lat >= 0:
+        epsg_code = '326' + utm_band
+    else:
+        epsg_code = '327' + utm_band
+    return epsg_code
+
+# =========================================================
+def printUsage():
+    '''
+    Show computing resources used
+    '''
+    cpuPercent = round(psutil.cpu_percent(0.5), 1)
+    ramPercent = round(psutil.virtual_memory()[2], 1)
+    ramUsed = round(psutil.virtual_memory()[3]/1000000000, 1)
+
+    print('\n\nCurrent CPU/RAM Usage:')
+    print('________________________')
+    print('{:<5s} | {:<5s} | {:<5s}'.format('CPU %', 'RAM %', 'RAM [GB]'))
+    print('________________________')
+
+    print('{:<5s} | {:<5s} | {:<5s}'.format(str(cpuPercent), str(ramPercent), str(ramUsed)))
+    print('________________________\n\n')
+
+
+    return
+
+# =========================================================
+def printProjectMode(p):
+    if p == 0:
+        print("\nPROJECT MODE {}: Creating new project.".format(str(p)))
+    elif p == 1:
+        print("\nPROJECT MODE {}: Deleting existing project (if it exists) and creating new project.".format(str(p)))
+    elif p == 2:
+        print("\nPROJECT MODE {}: Updating project (Any existing dataset flagged for export will be overwritten).".format(str(p)))
+    
+    else:
+        print("\nABORTING: Invalid Project Mode!")
+        print("Specify a valid project mode:")
+        print("\tproject_mode = 0: Create new project (exits if project already exists).")
+        print("\tproject_mode = 1: Deleting existing project (if it exists).")
+        # print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+        # print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+        sys.exit()
+
+# =========================================================
+def projectMode_1_inval():
+    print("\nABORTING: Project Already Exists!")
+    print("\nEither select a different project name, or select from one of the following:")
+    print("\tproject_mode = 1: Deleting existing project (if it exists).")
+    # print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
+    # print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2_inval():
+    print("\nABORTING: Project Does Not Exist!")
+    print("Set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
+
+# =========================================================
+def projectMode_2a_inval():
+    print("\nABORTING: No Son Meta objects exist, unable to update project.")
+    print("Specify a new project name (or delete existing project) and set project mode to:")
+    print("\tproject_mode = 0: Create new project.\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubNpz():
+    print("\nABORTING: No existing substrate npz files.")
+    print("\tSet: pred_sub = 1\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_poly():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to export substrate map to shapefile.")
+    print("\tSet: map_sub = True\n\n")
+    sys.exit()
+
+# =========================================================
+def error_noSubMap_mosaic():
+    print("\nABORTING: No existing substrate map rasters.")
+    print("\tUnable to mosaic substrate maps.")
+    print("\tSet: map_sub = True")
+    print("\tOR")
+    print("\tSet: map_mosaic = 0\n\n")
+    sys.exit()
+
+# =========================================================
+class Logger(object):
+    def __init__(self, logfilename):
+        self.terminal = sys.stdout
+        self.log = open(logfilename, "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        pass
+
+
+
+
+
+
 # # =========================================================
 # # Keep
 # def norm_shape(shap):
@@ -136,109 +264,3 @@ import psutil
 #     #dim = filter(lambda i : i != 1,dim)
 #
 #     return a.reshape(dim), newshape
-
-# =========================================================
-def rescale( dat,
-             mn,
-             mx):
-    '''
-    rescales an input dat between mn and mx
-    '''
-    m = min(dat.flatten())
-    M = max(dat.flatten())
-    return (mx-mn)*(dat-m)/(M-m)+mn
-
-# =========================================================
-def convert_wgs_to_utm(lon, lat):
-    """
-    This function estimates UTM zone from geographic coordinates
-    see https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair
-    """
-    utm_band = str((np.floor((lon + 180) / 6 ) % 60) + 1)
-    if len(utm_band) == 1:
-        utm_band = '0'+utm_band
-    if lat >= 0:
-        epsg_code = '326' + utm_band
-    else:
-        epsg_code = '327' + utm_band
-    return epsg_code
-
-# =========================================================
-def printUsage():
-    '''
-    Show computing resources used
-    '''
-    cpuPercent = round(psutil.cpu_percent(0.5), 1)
-    ramPercent = round(psutil.virtual_memory()[2], 1)
-    ramUsed = round(psutil.virtual_memory()[3]/1000000000, 1)
-
-    print('\n\nCurrent CPU/RAM Usage:')
-    print('________________________')
-    print('{:<5s} | {:<5s} | {:<5s}'.format('CPU %', 'RAM %', 'RAM [GB]'))
-    print('________________________')
-
-    print('{:<5s} | {:<5s} | {:<5s}'.format(str(cpuPercent), str(ramPercent), str(ramUsed)))
-    print('________________________\n\n')
-
-
-    return
-
-# =========================================================
-def printProjectMode(p):
-    if p == 0:
-        print("\nPROJECT MODE {}: Creating new project.".format(str(p)))
-    elif p == 1:
-        print("\nPROJECT MODE {}: Updating project (Any existing dataset flagged for export will be overwritten).".format(str(p)))
-    elif p == 2:
-        print("\nPROJECT MODE {}: Deleting existing project (if it exists) and creating new project.".format(str(p)))
-    else:
-        print("\nABORTING: Invalid Project Mode!")
-        print("Specify a valid project mode:")
-        print("\tproject_mode = 0: Create new project (exits if project already exists).")
-        print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
-        print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
-        sys.exit()
-
-# =========================================================
-def projectMode_1_inval():
-    print("\nABORTING: Project Already Exists!")
-    print("\nEither select a different project name, or select from one of the following:")
-    print("\tproject_mode = 1: Update existing project (Any existing dataset flagged for export will be overwritten).")
-    print("\tproject_mode = 2: Mayhem mode - throw caution to the wind, delete existing project (if it exists) and carry on.\n\n")
-    sys.exit()
-
-# =========================================================
-def projectMode_2_inval():
-    print("\nABORTING: Project Does Not Exist!")
-    print("Set project mode to:")
-    print("\tproject_mode = 0: Create new project.\n\n")
-    sys.exit()
-
-# =========================================================
-def projectMode_2a_inval():
-    print("\nABORTING: No Son Meta objects exist, unable to update project.")
-    print("Specify a new project name (or delete existing project) and set project mode to:")
-    print("\tproject_mode = 0: Create new project.\n\n")
-    sys.exit()
-
-# =========================================================
-def error_noSubNpz():
-    print("\nABORTING: No existing substrate npz files.")
-    print("\tSet: pred_sub = 1\n\n")
-    sys.exit()
-
-# =========================================================
-def error_noSubMap_poly():
-    print("\nABORTING: No existing substrate map rasters.")
-    print("\tUnable to export substrate map to shapefile.")
-    print("\tSet: map_sub = True\n\n")
-    sys.exit()
-
-# =========================================================
-def error_noSubMap_mosaic():
-    print("\nABORTING: No existing substrate map rasters.")
-    print("\tUnable to mosaic substrate maps.")
-    print("\tSet: map_sub = True")
-    print("\tOR")
-    print("\tSet: map_mosaic = 0\n\n")
-    sys.exit()

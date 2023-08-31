@@ -12,6 +12,7 @@ main_batchFolder.py
 !procData/OutputsHere.txt
 
 .vs
+.vscode
 
 ping (*
 Python 3.7*

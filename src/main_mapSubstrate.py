@@ -37,7 +37,8 @@ from funcs_model import *
 import itertools
 
 #===============================================================================
-def map_master_func(project_mode=0,
+def map_master_func(logfilename='',
+                    project_mode=0,
                      script='',
                      humFile='',
                      sonFiles='',

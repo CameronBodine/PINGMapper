@@ -40,36 +40,35 @@ scriptDir = os.getcwd()
 copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
 script = os.path.join(scriptDir, os.path.basename(__file__))
 
+# For the logfile
+logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
 start_time = time.time()
 
 #============================================
 
-#################
-# User Parameters
-#################
+#######################
+# Start User Parameters
+#######################
 
-# *** IMPORTANT ****: Overwriting project and outputs
+# Path to data/output
+
+humFile = "/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data/Pascagoula/Bouie/BOU_20210402_USM1/030_023_Rec00003.DAT" # Path to sonar recording .DAT file
+projDir = "/home/cbodine/Desktop/test" # Directory where you want to export files
+
+# *** IMPORTANT ****
 # Export Mode: project_mode
 ## 0==NEW PROJECT: Create a new project. [DEFAULT]
 ##      If project already exists, program will exit without any project changes.
 ##
-## 1==UPDATE PROJECT: Export additional datasets to existing project.
-##      Use this mode to update an existing project.
-##      If selected datasets were previously exported, they will be overwritten.
-##      To ensure datasets aren't overwritten, deselect them below.
-##      If project does not exist, program will exit without any project changes.
-##
-## 2==MAYHEM MODE: Create new project, regardless of previous project state.
+## 1==OVERWRITE MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 2
-
+project_mode = 1
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
 nchunk = 500 #Number of pings per chunk
-cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
@@ -100,14 +99,14 @@ wcr = True #Export Tiles with water column removed (and slant range corrected): 
 
 
 # Speed corrected sonogram Exports
-lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
+lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows (based on maxCrop)
 spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+maxCrop = False # True==Ping-wise crop; False==Crop tile to max range.
 
 
 # Depth Detection and Shadow Removal Parameters
-remShadow = 1  # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
-detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
+remShadow = 2 # 0==Leave Shadows; 1==Remove all shadows; 2==Remove only bank shadows
+detectDep = 1 # 0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
@@ -115,7 +114,7 @@ adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
 
-# Rectification Parameters
+# Rectification Sonar Map Exports
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
 
@@ -123,9 +122,8 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 # Substrate Mapping
 pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
 pltSubClass = True # Export plots of substrate classification and predictions
-map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
+map_sub = True # Export substrate maps (as rasters). Requires substrate predictions saved to npz.
 export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
-map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
 
@@ -133,20 +131,61 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
-map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+
+#####################
+# End User Parameters
+#####################
 
 
-#################
-#################
+# =========================================================
+# Determine project_mode
+printProjectMode(project_mode)
+if project_mode == 0:
+    # Create new project
+    if not os.path.exists(projDir):
+        os.mkdir(projDir)
+    else:
+        projectMode_1_inval()
+
+elif project_mode == 1:
+    # Overwrite existing project
+    if os.path.exists(projDir):
+        shutil.rmtree(projDir)
+
+    os.mkdir(projDir)        
+
+elif project_mode == 2:
+    # Update project
+    # Make sure project exists, exit if not.
+    
+    if not os.path.exists(projDir):
+        projectMode_2_inval()
+
+# =========================================================
+# For logging the console output
+
+logdir = os.path.join(projDir, 'meta', 'logs')
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+logfilename = os.path.join(logdir, logfilename)
+
+sys.stdout = Logger(logfilename)
 
 #============================================
 
+sonPath = humFile.split('.DAT')[0]
 sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 print(sonFiles)
+
+if not 'map_predict' in locals():
+    map_predict = 0
 
 #============================================
 
 params = {
+    'logfilename':logfilename,
     'project_mode':project_mode,
     'script':[script, copied_script_name],
     'humFile':humFile,
@@ -214,3 +253,5 @@ if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
 
 gc.collect()
 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+sys.stdout.log.close()

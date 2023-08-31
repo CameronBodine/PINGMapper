@@ -41,6 +41,8 @@ scriptDir = os.getcwd()
 copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
 script = os.path.join(scriptDir, os.path.basename(__file__))
 
+# For the logfile
+logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
 start_time = time.time()
 
@@ -86,21 +88,15 @@ if ds == 2:
     projDir = r'./procData/PINGMapper-Test-Large-DS'
 
 
-# *** IMPORTANT ****: Overwriting project and outputs
+# *** IMPORTANT ****
 # Export Mode: project_mode
 ## 0==NEW PROJECT: Create a new project. [DEFAULT]
 ##      If project already exists, program will exit without any project changes.
 ##
-## 1==UPDATE PROJECT: Export additional datasets to existing project.
-##      Use this mode to update an existing project.
-##      If selected datasets were previously exported, they will be overwritten.
-##      To ensure datasets aren't overwritten, deselect them below.
-##      If project does not exist, program will exit without any project changes.
-##
-## 2==MAYHEM MODE: Create new project, regardless of previous project state.
+## 1==OVERWRITE MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 2
+project_mode = 1
 
 
 # General Parameters
@@ -148,7 +144,7 @@ detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 202
 ## 2==Auto detect depth w/ Thresholding
 
 smthDep = True #Smooth depth before water column removal
-adjDep = 0 #Aditional depth adjustment (in pixels) for water column removaL
+adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
 pltBedPick = True #Plot bedpick on sonogram
 
 
@@ -176,6 +172,41 @@ map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 #################
 #################
 
+# =========================================================
+# Determine project_mode
+printProjectMode(project_mode)
+if project_mode == 0:
+    # Create new project
+    if not os.path.exists(projDir):
+        os.mkdir(projDir)
+    else:
+        projectMode_1_inval()
+
+elif project_mode == 1:
+    # Overwrite existing project
+    if os.path.exists(projDir):
+        shutil.rmtree(projDir)
+
+    os.mkdir(projDir)        
+
+elif project_mode == 2:
+    # Update project
+    # Make sure project exists, exit if not.
+    
+    if not os.path.exists(projDir):
+        projectMode_2_inval()
+
+# =========================================================
+# For logging the console output
+
+logdir = os.path.join(projDir, 'meta', 'logs')
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+logfilename = os.path.join(logdir, logfilename)
+
+sys.stdout = Logger(logfilename)
+
 #============================================
 
 sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
@@ -184,6 +215,7 @@ print(sonFiles)
 #============================================
 
 params = {
+    'logfilename':logfilename,
     'project_mode':project_mode,
     'script':[script, copied_script_name],
     'humFile':humFile,

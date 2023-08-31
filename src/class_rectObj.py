@@ -1189,7 +1189,7 @@ class rectObj(sonObj):
                 self._egn_wcp(chunk, sonMeta)
                 self._egnDoStretch()
 
-            img = self.sonDat
+            img = self.sonDat.copy()
 
             img[0]=0 # To fix extra white on curves
 
@@ -1201,8 +1201,6 @@ class rectObj(sonObj):
                        cval=np.nan,
                        clip=False,
                        preserve_range=True)
-
-            del img, self.sonDat
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
@@ -1236,7 +1234,7 @@ class rectObj(sonObj):
                     # dst.update_tags(ns='rio_overview', resampling='nearest')
                     # dst.close()
 
-            del out, dst
+            del out, dst, img
 
         if self.rect_wcr:
             imgOutPrefix = 'rect_wcr'
@@ -1251,10 +1249,11 @@ class rectObj(sonObj):
             self._WCR_SRC(sonMeta)
 
             # Empirical gain normalization
-            if self.egn:
-                self._egn()
-                self.sonDat = np.nan_to_num(self.sonDat, nan=0)
-                self._egnDoStretch()
+            if not self.rect_wcp:
+                if self.egn:
+                    self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+                    self._egnDoStretch()
 
             img = self.sonDat
 

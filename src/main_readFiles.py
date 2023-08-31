@@ -34,7 +34,8 @@ import shutil
 from doodleverse_utils.imports import *
 
 #===========================================
-def read_master_func(project_mode=0,
+def read_master_func(logfilename='',
+                     project_mode=0,
                      script='',
                      humFile='',
                      sonFiles='',
@@ -209,28 +210,29 @@ def read_master_func(project_mode=0,
     |     |          water column present (wcp)
     '''
 
-    ########################
-    # Determine project_mode
-    printProjectMode(project_mode)
-    if project_mode == 0:
-        # Create new project
-        if not os.path.exists(projDir):
-            os.mkdir(projDir)
-        else:
-            projectMode_1_inval()
+    # ########################
+    # # Determine project_mode
+    # printProjectMode(project_mode)
+    # if project_mode == 0:
+    #     # Create new project
+    #     if not os.path.exists(projDir):
+    #         os.mkdir(projDir)
+    #     else:
+    #         projectMode_1_inval()
 
-    elif project_mode == 1:
-        # Update project
-        # Make sure project exists, exit if not.
-        if not os.path.exists(projDir):
-            projectMode_2_inval()
+    # elif project_mode == 1:
+    #     # Overwrite existing project
+    #     if os.path.exists(projDir):
+    #         shutil.rmtree(projDir)
 
-    elif project_mode == 2:
-        # Overwrite existing project
-        if os.path.exists(projDir):
-            shutil.rmtree(projDir)
+    #     os.mkdir(projDir)        
 
-        os.mkdir(projDir)
+    # elif project_mode == 2:
+    #     # Update project
+    #     # Make sure project exists, exit if not.
+        
+    #     if not os.path.exists(projDir):
+    #         projectMode_2_inval()
 
 
     ###############################################
@@ -252,7 +254,7 @@ def read_master_func(project_mode=0,
     # Decode DAT file (varies by model)                                        #
     ############################################################################
 
-    if (project_mode != 1):
+    if (project_mode != 2):
         printUsage()
         start_time = time.time()
         print("\nGetting DAT Metadata...")
@@ -787,7 +789,7 @@ def read_master_func(project_mode=0,
         printUsage()
 
     else:
-        if project_mode != 1:
+        if project_mode != 2:
             for son in sonObjs:
                 son.fixNoDat = fixNoDat
 
@@ -797,7 +799,7 @@ def read_master_func(project_mode=0,
     # Print a summary of min/max/avg metadata values. At same time, do simple
     ## check to make sure data are valid.
 
-    if project_mode != 1:
+    if project_mode != 2:
         print("\nSummary of Ping Metadata:\n")
 
         invalid = defaultdict() # store invalid values
@@ -1014,6 +1016,7 @@ def read_master_func(project_mode=0,
             print('\n\nEGN requires shadow removal')
             print('Setting remShadow==2...')
             remShadow = 2
+            
 
     # Need to detect shadows if mapping substrate
     if pred_sub:
@@ -1069,7 +1072,7 @@ def read_master_func(project_mode=0,
         printUsage()
 
     else:
-        if project_mode != 1:
+        if project_mode != 2:
             for son in sonObjs:
                 son.remShadow = False
 
@@ -1265,7 +1268,7 @@ def read_master_func(project_mode=0,
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
     else:
-        if project_mode != 1:
+        if project_mode != 2:
             for son in sonObjs:
                 son.egn=False
 
