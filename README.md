@@ -1,4 +1,4 @@
-# PING-Mapper
+# PING-Mapper v2.0.0-alpha
 {PING-Mapper is a Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.}
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/CameronBodine/PINGMapper)](https://github.com/CameronBodine/PINGMapper/commits)
