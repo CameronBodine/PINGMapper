@@ -117,6 +117,7 @@ pltBedPick = True #Plot bedpick on sonogram
 # Rectification Sonar Map Exports
 rect_wcp = True #Export rectified tiles with water column present
 rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+son_colorMap = 'Greys_r' # Specify colorramp for rectified imagery. '_r'==reverse the ramp: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 
 
 # Substrate Mapping
@@ -215,6 +216,7 @@ params = {
     'pltBedPick':pltBedPick,
     'rect_wcp':rect_wcp,
     'rect_wcr':rect_wcr,
+    'son_colorMap':son_colorMap,
     'pred_sub':pred_sub,
     'map_sub':map_sub,
     'export_poly':export_poly,

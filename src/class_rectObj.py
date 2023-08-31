@@ -36,6 +36,7 @@ from rasterio.enums import Resampling
 from PIL import Image
 
 from matplotlib import cm
+import cmocean
 
 class rectObj(sonObj):
     '''
@@ -1355,9 +1356,9 @@ class rectObj(sonObj):
 
         son_colorMap = {}
         try:
-            color = cm.get_cmap(name, 256)
+            color = cm.get_cmap(name, 256)            
         except:
-            print('****WARNING*****\n', son_colorMap, 'is not a valid colormap.\nSetting to Greys...')
+            print('****WARNING*****\n', name, 'is not a valid colormap.\nSetting to Greys...')
             color = cm.get_cmap('Greys', 256)
 
         # need to get values for 0-255 but test_color in 0-1
@@ -1365,7 +1366,7 @@ class rectObj(sonObj):
         color = rescale(color, 0, 255).astype('uint8')
 
         vals = range(0, 255)
-        for i,v in zip(vals, reversed(color)):
+        for i,v in zip(vals, (color)):
             son_colorMap[i] = tuple(v)
 
         self.son_colorMap = son_colorMap

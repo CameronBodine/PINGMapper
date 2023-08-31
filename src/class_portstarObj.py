@@ -37,7 +37,7 @@ from scipy import stats
 from skimage.transform import PiecewiseAffineTransform, warp
 from rasterio.transform import from_origin
 # from rasterio.enums import Resampling
-# from PIL import Image
+from PIL import ImageColor
 
 import matplotlib
 matplotlib.use('agg')
@@ -2404,6 +2404,27 @@ class portstarObj(object):
             out = out.astype('uint8')
             del binary_filled, binary_objects, l
 
+            # Prepare colors
+            # # Set colormap
+            # class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
+
+            # # Convert labels to colors
+            # color_label = label_to_colors(out, out[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
+
+            class_colormap = {0: '#3366CC',
+                              1: '#DC3912',
+                              2: '#FF9900',
+                              3: '#109618',
+                              4: '#990099', 
+                              5: '#0099C6',
+                              6: '#DD4477',
+                              7: '#66AA00',
+                              8: '#B82E2E'}
+            
+            for k, v in class_colormap.items():
+                rgb = ImageColor.getcolor(v, 'RGB')
+                class_colormap[k] = rgb
+
             #########################
             # Export Rectified Raster
             # Set output name
@@ -2426,6 +2447,7 @@ class portstarObj(object):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
+                    dst.write_colormap(1, class_colormap)
                     dst=None
 
             del out
