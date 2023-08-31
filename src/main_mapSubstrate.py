@@ -322,15 +322,22 @@ def map_master_func(logfilename='',
                 # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
 
                 if son.egn:
-                    son.weights = r'./models/substrate/EGN_Substrate_Segformer/weights/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5'
-                    son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                    son.weights = r'./models/substrate/EGN_Substrate_Segformer/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5'
+                    son.configfile = son.weights.replace('_fullmodel.h5', '.json')
+
+                    if not os.path.exists(son.weights):
+                        downloadSubstrateModels()
+
                 else:
                     # ! # !
                     # Update with Raw_Substrate_Segformer model once trained
                     # son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
                     # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
-                    son.weights = r'./models/substrate/Raw_Substrate_Segformer/weights/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5'
-                    son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                    son.weights = r'./models/substrate/Raw_Substrate_Segformer/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5'
+                    son.configfile = son.weights.replace('_fullmodel.h5', '.json')
+
+                    if not os.path.exists(son.weights):
+                        downloadSubstrateModels()
 
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')

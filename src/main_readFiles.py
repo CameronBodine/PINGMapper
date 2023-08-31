@@ -915,6 +915,10 @@ def read_master_func(logfilename='',
             psObj.configfile = psObj.weights.replace('.h5', '.json')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
+            # Download model if necessary
+            if not os.path.exists(psObj.configfile):
+                downloadBedpickModel()
+
         # With binary thresholding
         elif detectDep == 2:
             print('\n\tUsing binary thresholding...')
@@ -1052,6 +1056,10 @@ def read_master_func(logfilename='',
         # Model weights and config file
         psObj.configfile = r'./models/shadow/shadow_20230204_fold_4.json'
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
+
+        # Download model if necessary
+        if not os.path.exists(psObj.configfile):
+            downloadShadowModel()
 
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()
