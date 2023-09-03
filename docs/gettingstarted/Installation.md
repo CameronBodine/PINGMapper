@@ -31,7 +31,7 @@ Conda has released a new environment solver called [libmamba](https://www.anacon
 conda install -n base conda-libmamba-solver
 ```
 
-- Set `libmamba` as the default solver:
+Set `libmamba` as the default solver:
 ```
 conda config --set solver libmamba
 ```
@@ -44,7 +44,7 @@ conda config --set solver libmamba
 
 
 ## Step 5
-- Install git:
+Install git:
 ```
 conda install git
 ```

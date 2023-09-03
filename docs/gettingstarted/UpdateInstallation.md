@@ -14,19 +14,28 @@ If you have installed a previous version of PING-Mapper, follow these instructio
 
 ## Step 1
 
+Open the Anaconda Powershell prompt and run the following:
+```
+conda update -n base conda
+conda clean --all
+pip install --upgrade pip
+```
+
+## Step 2
+
 Navigate to the location where you previously installed PING-Mapper:
 ```
 cd C:\users\Cam\MyPythonRepos
 ``` 
 
-## Step 2
+## Step 3
 
 Stash any changes you may have made since downloading PING-Mapper (i.e. editing `main.py` script):
 ```
 git stash
 ```
 
-## Step 3
+## Step 4
 
 Download the latest updates:
 
@@ -34,7 +43,7 @@ Download the latest updates:
 git fetch
 ```
 
-## Step 4
+## Step 5
 
 Activate the `ping` virtual environment:
 
@@ -42,7 +51,7 @@ Activate the `ping` virtual environment:
 conda activate ping
 ```
 
-## Step 5
+## Step 6
 
 Update PING-Mapper dependencies:
 
