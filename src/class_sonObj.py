@@ -1405,6 +1405,7 @@ class sonObj(object):
 
             # Export water column present (wcp) image
             if self.wcp:
+                son_copy = self.sonDat.copy()
                 # self._doPPDRC()
 
                 # # Empirical gain normalization with wcp
@@ -1418,6 +1419,9 @@ class sonObj(object):
                     self._egnDoStretch()
 
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
+
+                self.sonDat = son_copy
+                del son_copy
 
             # Export slant range corrected (water column removed) imagery
             if self.wcr_src:
