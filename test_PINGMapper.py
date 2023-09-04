@@ -175,7 +175,7 @@ map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 
 # =========================================================
 # Determine project_mode
-printProjectMode(project_mode)
+print(project_mode)
 if project_mode == 0:
     # Create new project
     if not os.path.exists(projDir):
