@@ -140,41 +140,6 @@ map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 # End User Parameters
 #####################
 
-# =========================================================
-# Determine project_mode
-print(project_mode)
-if project_mode == 0:
-    # Create new project
-    if not os.path.exists(projDir):
-        os.mkdir(projDir)
-    else:
-        projectMode_1_inval()
-
-elif project_mode == 1:
-    # Overwrite existing project
-    if os.path.exists(projDir):
-        shutil.rmtree(projDir)
-
-    os.mkdir(projDir)        
-
-elif project_mode == 2:
-    # Update project
-    # Make sure project exists, exit if not.
-    
-    if not os.path.exists(projDir):
-        projectMode_2_inval()
-
-# =========================================================
-# For logging the console output
-
-logdir = os.path.join(projDir, 'meta', 'logs')
-if not os.path.exists(logdir):
-    os.makedirs(logdir)
-
-logfilename = os.path.join(logdir, logfilename)
-
-sys.stdout = Logger(logfilename)
-
 #============================================
 
 # Find all DAT and SON files in all subdirectories of inDir
@@ -236,7 +201,6 @@ for datFile in inFiles:
             'pred_sub':pred_sub,
             'map_sub':map_sub,
             'export_poly':export_poly,
-            'map_predict':map_predict,
             'pltSubClass':pltSubClass,
             'map_class_method':map_class_method,
             'pix_res':pix_res,
@@ -244,6 +208,43 @@ for datFile in inFiles:
             'mosaic':mosaic,
             'map_mosaic':map_mosaic
             }
+        
+        globals().update(params)
+        
+        # =========================================================
+        # Determine project_mode
+        print(project_mode)
+        if project_mode == 0:
+            # Create new project
+            if not os.path.exists(projDir):
+                os.mkdir(projDir)
+            else:
+                projectMode_1_inval()
+
+        elif project_mode == 1:
+            # Overwrite existing project
+            if os.path.exists(projDir):
+                shutil.rmtree(projDir)
+
+            os.mkdir(projDir)        
+
+        elif project_mode == 2:
+            # Update project
+            # Make sure project exists, exit if not.
+            
+            if not os.path.exists(projDir):
+                projectMode_2_inval()
+
+        # =========================================================
+        # For logging the console output
+
+        logdir = os.path.join(projDir, 'meta', 'logs')
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        logfilename = os.path.join(logdir, logfilename)
+
+        sys.stdout = Logger(logfilename)
 
         print('sonPath',sonPath)
         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
@@ -274,10 +275,10 @@ for datFile in inFiles:
             print("working on "+projDir)
             map_master_func(**params)
 
+        sys.stdout.log.close()
+
     except:
         print('Could not process:', datFile)
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
-
-    sys.stdout.log.close()

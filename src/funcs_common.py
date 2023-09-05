@@ -65,6 +65,7 @@ from skimage.filters import threshold_otsu, gaussian
 from skimage.morphology import remove_small_holes, remove_small_objects
 
 import psutil
+import json
 
 # from funcs_pyhum_correct import doPyhumCorrections
 
@@ -278,6 +279,51 @@ def downloadSubstrateModels():
     filename2 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer.json')
     r = requests.get(url2, allow_redirects=True)
     open(filename2, 'wb').write(r.content)
+
+def saveDefaultParams(values):
+    
+    params = {
+        'project_mode':int(values[3]),
+        'tempC':float(values[5]),
+        'nchunk':int(values[6]),
+        'cropRange':float(values[7]),
+        'exportUnknown':values[8],
+        'fixNoDat':values[9],
+        'threadCnt':int(values[10]),
+        'x_offset':float(values[12]),
+        'y_offset':float(values[14]),
+        'egn':values[16],
+        'egn_stretch':values[17],
+        'egn_stretch_factor':float(values[19]),
+        'wcp':values[21],
+        'wcr':values[22],
+        'tileFile':values[23],
+        'lbl_set':values[25],
+        'spdCor':float(values[26]),
+        'maxCrop':values[28],
+        'remShadow':values[30],
+        'detectDep':values[31],
+        'smthDep':values[33],
+        'adjDep':float(values[35]),
+        'pltBedPick':values[37],
+        'rect_wcp':values[39],
+        'rect_wcr':values[40],
+        'son_colorMap':values[41],
+        'pred_sub':values[43],
+        'pltSubClass':values[45],
+        'map_sub':values[46],
+        'export_poly':values[48],
+        'map_class_method':values[50],
+        'pix_res':float(values[52]),
+        'mosaic_nchunk':int(values[54]),
+        'mosaic':values[55],
+        'map_mosaic':values[57],
+    }
+
+    json_object = json.dumps(params, indent=4)
+
+    with open("./user_params.json", "w") as f:
+        f.write(json_object)
 
     
 
