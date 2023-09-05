@@ -36,7 +36,6 @@ from rasterio.enums import Resampling
 from PIL import Image
 
 from matplotlib import cm
-import cmocean
 
 class rectObj(sonObj):
     '''
