@@ -85,7 +85,7 @@ layout = [
 window = sg.Window('Process Single Humminbird Sonar Recording', layout)
 while True:
     event, values = window.read()
-    if event == "Quit":
+    if event == "Quit" or event == "Submit":
         break
     if event == "Save Defaults":
         saveDefaultParams(values)
