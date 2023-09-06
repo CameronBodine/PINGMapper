@@ -109,6 +109,7 @@ elif egn_stretch == 'Percent Clip':
     egn_stretch = 1
 elif egn_stretch == 'Standard Deviation':
     egn_stretch = 2
+egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
 lbl_set = values[24]
@@ -118,6 +119,7 @@ elif lbl_set == 'True: Keep WC & Shadows':
     lbl_set = 1
 elif lbl_set == 'True: Mask WC & Shadows':
     lbl_set = 2
+lbl_set = int(lbl_set)
 
 # Shadow removal
 remShadow = values[29]
@@ -127,6 +129,7 @@ elif remShadow == 'Remove all shadows':
     remShadow = 1
 elif remShadow == 'Remove only bank shadows':
     remShadow = 2
+remShadow = int(remShadow)
 
 # Depth detection
 detectDep = values[30]
@@ -134,6 +137,7 @@ if detectDep == 'Sensor':
     detectDep = 0
 elif detectDep == 'Auto':
     detectDep = 1
+detectDep = int(detectDep)
 
 # Sonar mosaic
 mosaic = values[54]
@@ -143,6 +147,7 @@ elif mosaic == 'GTiff':
     mosaic = 1
 elif mosaic == 'VRT':
     mosaic = 2
+mosaic = int(mosaic)
 
 # Substrate mosaic
 map_mosaic = values[56]
@@ -152,6 +157,7 @@ elif map_mosaic == 'GTiff':
     map_mosaic = 1
 elif map_mosaic == 'VRT':
     map_mosaic = 2
+map_mosaic = int(map_mosaic)
 
 
 params = {
