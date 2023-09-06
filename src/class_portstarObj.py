@@ -381,10 +381,12 @@ class portstarObj(object):
         None
         '''
 
-        if son:
-            resampleAlg='lanczos'
-        else:
-            resampleAlg='nearest'
+        # if son:
+        #     resampleAlg='lanczos' # Throws error after applying colormap
+        # else:
+        #     resampleAlg='nearest'
+        
+        resampleAlg = 'nearest'
 
         # Iterate each sublist of images
         outMosaic = []
