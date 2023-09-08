@@ -2748,7 +2748,15 @@ class sonObj(object):
         # wcp_pcnt = self.egn_wcp_hist_pcnt
         wcr_pcnt = self.egn_wcr_hist_pcnt
 
-        if egn_stretch == 1:
+        if egn_stretch == 0:
+
+            # Find Globabl mins and max
+            histIndex = np.where(wcr_pcnt[1:]>0)[0]
+            self.egn_wcr_stretch_min = histIndex[0]
+            self.egn_wcr_stretch_max = histIndex[-1]
+
+
+        elif egn_stretch == 1:
             # Percent clip
             egn_stretch_factor = egn_stretch_factor / 100
 

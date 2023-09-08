@@ -88,9 +88,8 @@ y_offset = 0.0 # [meters]
 
 # Sonar Intensity Corrections
 egn = True
-egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
-egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
-                         ## If std, the number of standard deviations to retain
+egn_stretch = 1 # 0==Min-Max; 1==% Clip
+egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%)
 
 
 # Sonogram Exports

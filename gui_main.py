@@ -53,7 +53,7 @@ layout = [
     [sg.HorizontalSeparator()],
     [sg.Text('Sonar Intensity Corrections')],
     [sg.Checkbox('Empiracal Gain Normalization (EGN)', default=default_params['egn'])],
-    [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['Min-Max', 'Percent Clip', 'Standard Deviation'], default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(default_params['egn_stretch_factor'], size=(10,1))],
+    [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['Min-Max', 'Percent Clip'], default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(default_params['egn_stretch_factor'], size=(10,1))],
     [sg.HorizontalSeparator()],
     [sg.Text('Sonagram Tile Exports')],
     [sg.Checkbox('WCP', default=default_params['wcp']), sg.Checkbox('WCR', default=default_params['wcr']), sg.Text('Image Format:', size=(12,1)), sg.Combo(['.jpg', '.png'], default_value=default_params['tileFile'])],
@@ -105,8 +105,6 @@ if egn_stretch == 'Min-Max':
     egn_stretch = 0
 elif egn_stretch == 'Percent Clip':
     egn_stretch = 1
-elif egn_stretch == 'Standard Deviation':
-    egn_stretch = 2
 egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
