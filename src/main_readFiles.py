@@ -1020,6 +1020,9 @@ def read_master_func(logfilename='',
             print('\n\nEGN requires shadow removal')
             print('Setting remShadow==2...')
             remShadow = 2
+            keepShadow = True
+        else:
+            keepShadow = False
             
 
     # Need to detect shadows if mapping substrate
@@ -1028,6 +1031,9 @@ def read_master_func(logfilename='',
             print('\n\nSubstrate mapping requires shadow removal')
             print('Setting remShadow==2...')
             remShadow = 2
+            keepShadow = True
+        else:
+            keepShadow = False
 
     if remShadow > 0:
         start_time = time.time()
@@ -1043,7 +1049,10 @@ def read_master_func(logfilename='',
         for son in sonObjs:
             beam = son.beamName
             if beam == "ss_port" or beam == "ss_star":
-                son.remShadow = remShadow
+                if keepShadow:
+                    son.remShadow = False
+                else:
+                    son.remShadow = remShadow
                 portstar.append(son)
             # Don't remove shadows from down scans
             else:
