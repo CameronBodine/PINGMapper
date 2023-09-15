@@ -39,11 +39,9 @@ import datetime
 
 # Get processing script's dir so we can save it to file
 scriptDir = os.getcwd()
-copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-script = os.path.join(scriptDir, os.path.basename(__file__))
 
 # For the logfile
-logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
+oldOutput = sys.stdout
 
 #============================================
 
@@ -154,130 +152,137 @@ for i, f in enumerate(inFiles):
     print(i, ":", f)
 
 for datFile in inFiles:
-    try:
-        start_time = time.time()
+#     try:
+    copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+    script = os.path.join(scriptDir, os.path.basename(__file__))
 
-        inPath = os.path.dirname(datFile)
-        humFile = datFile
-        recName = os.path.basename(humFile).split('.')[0]
-        sonPath = os.path.join(inDir, recName)
-        sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+    logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
+    
+    start_time = time.time()
 
-        projDir = os.path.join(outDir, recName)
+    inPath = os.path.dirname(datFile)
+    humFile = datFile
+    recName = os.path.basename(humFile).split('.')[0]
+    sonPath = os.path.join(inDir, recName)
+    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-        params = {
-            'logfilename':logfilename,
-            'project_mode':project_mode,
-            'script':[script, copied_script_name],
-            'humFile':humFile,
-            'sonFiles':sonFiles,
-            'projDir':projDir,
-            'tempC':tempC,
-            'nchunk':nchunk,
-            'exportUnknown':exportUnknown,
-            'fixNoDat':fixNoDat,
-            'threadCnt':threadCnt,
-            'x_offset':x_offset,
-            'y_offset':y_offset,
-            'egn':egn,
-            'egn_stretch':egn_stretch,
-            'egn_stretch_factor':egn_stretch_factor,
-            'tileFile':tileFile,
-            'wcp':wcp,
-            'wcr':wcr,
-            'lbl_set':lbl_set,
-            'spdCor':spdCor,
-            'maxCrop':maxCrop,
-            'USE_GPU':False,
-            'remShadow':remShadow,
-            'detectDep':detectDep,
-            'smthDep':smthDep,
-            'adjDep':adjDep,
-            'pltBedPick':pltBedPick,
-            'rect_wcp':rect_wcp,
-            'rect_wcr':rect_wcr,
-            'son_colorMap':son_colorMap,
-            'pred_sub':pred_sub,
-            'map_sub':map_sub,
-            'export_poly':export_poly,
-            'pltSubClass':pltSubClass,
-            'map_class_method':map_class_method,
-            'pix_res':pix_res,
-            'mosaic_nchunk':mosaic_nchunk,
-            'mosaic':mosaic,
-            'map_mosaic':map_mosaic
-            }
+    projDir = os.path.join(outDir, recName)
+
+    params = {
+        'logfilename':logfilename,
+        'project_mode':project_mode,
+        'script':[script, copied_script_name],
+        'humFile':humFile,
+        'sonFiles':sonFiles,
+        'projDir':projDir,
+        'tempC':tempC,
+        'nchunk':nchunk,
+        'exportUnknown':exportUnknown,
+        'fixNoDat':fixNoDat,
+        'threadCnt':threadCnt,
+        'x_offset':x_offset,
+        'y_offset':y_offset,
+        'egn':egn,
+        'egn_stretch':egn_stretch,
+        'egn_stretch_factor':egn_stretch_factor,
+        'tileFile':tileFile,
+        'wcp':wcp,
+        'wcr':wcr,
+        'lbl_set':lbl_set,
+        'spdCor':spdCor,
+        'maxCrop':maxCrop,
+        'USE_GPU':False,
+        'remShadow':remShadow,
+        'detectDep':detectDep,
+        'smthDep':smthDep,
+        'adjDep':adjDep,
+        'pltBedPick':pltBedPick,
+        'rect_wcp':rect_wcp,
+        'rect_wcr':rect_wcr,
+        'son_colorMap':son_colorMap,
+        'pred_sub':pred_sub,
+        'map_sub':map_sub,
+        'export_poly':export_poly,
+        'pltSubClass':pltSubClass,
+        'map_class_method':map_class_method,
+        'pix_res':pix_res,
+        'mosaic_nchunk':mosaic_nchunk,
+        'mosaic':mosaic,
+        'map_mosaic':map_mosaic
+        }
+    
+    globals().update(params)
+    
+    # =========================================================
+    # Determine project_mode
+    print(project_mode)
+    if project_mode == 0:
+        # Create new project
+        if not os.path.exists(projDir):
+            os.mkdir(projDir)
+        else:
+            projectMode_1_inval()
+
+    elif project_mode == 1:
+        # Overwrite existing project
+        if os.path.exists(projDir):
+            shutil.rmtree(projDir)
+
+        os.mkdir(projDir)        
+
+    elif project_mode == 2:
+        # Update project
+        # Make sure project exists, exit if not.
         
-        globals().update(params)
-        
-        # =========================================================
-        # Determine project_mode
-        print(project_mode)
-        if project_mode == 0:
-            # Create new project
-            if not os.path.exists(projDir):
-                os.mkdir(projDir)
-            else:
-                projectMode_1_inval()
+        if not os.path.exists(projDir):
+            projectMode_2_inval()
 
-        elif project_mode == 1:
-            # Overwrite existing project
-            if os.path.exists(projDir):
-                shutil.rmtree(projDir)
+    # =========================================================
+    # For logging the console output
 
-            os.mkdir(projDir)        
+    logdir = os.path.join(projDir, 'meta', 'logs')
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
 
-        elif project_mode == 2:
-            # Update project
-            # Make sure project exists, exit if not.
-            
-            if not os.path.exists(projDir):
-                projectMode_2_inval()
+    logfilename = os.path.join(logdir, logfilename)
 
-        # =========================================================
-        # For logging the console output
+    sys.stdout = Logger(logfilename)
 
-        logdir = os.path.join(projDir, 'meta', 'logs')
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
+    print('sonPath',sonPath)
+    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+    print('+++++++++++++++++++++++++++++++++++++++++++')
+    print('***** Working On *****')
+    print(humFile)
+    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-        logfilename = os.path.join(logdir, logfilename)
+    print('\n===========================================')
+    print('===========================================')
+    print('***** READING *****')
+    read_master_func(**params)
+    # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-        sys.stdout = Logger(logfilename)
-
-        print('sonPath',sonPath)
-        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-        print('+++++++++++++++++++++++++++++++++++++++++++')
-        print('***** Working On *****')
-        print(humFile)
-        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
-
+    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** READING *****')
-        read_master_func(**params)
-        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+        print('***** RECTIFYING *****')
+        rectify_master_func(**params)
+        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-        if rect_wcp or rect_wcr:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** RECTIFYING *****')
-            rectify_master_func(**params)
-            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+    #==================================================
+    #==================================================
+    if pred_sub or map_sub or export_poly or pltSubClass:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** MAPPING SUBSTRATE *****')
+        print("working on "+projDir)
+        map_master_func(**params)
 
-        #==================================================
-        #==================================================
-        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** MAPPING SUBSTRATE *****')
-            print("working on "+projDir)
-            map_master_func(**params)
+    sys.stdout.log.close()
 
-        sys.stdout.log.close()
+    # except:
+    #     print('Could not process:', datFile)
 
-    except:
-        print('Could not process:', datFile)
+    sys.stdout = oldOutput
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

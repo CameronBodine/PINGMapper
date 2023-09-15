@@ -246,7 +246,7 @@ if rect_wcp or rect_wcr:
     # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
 #==================================================
-if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+if pred_sub or map_sub or export_poly or pltSubClass:
     print('\n===========================================')
     print('===========================================')
     print('***** MAPPING SUBSTRATE *****')

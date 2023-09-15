@@ -13,11 +13,9 @@ import json
 
 # Get processing script's dir so we can save it to file
 scriptDir = os.getcwd()
-copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-script = os.path.join(scriptDir, os.path.basename(__file__))
 
 # For the logfile
-logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
+oldOutput = sys.stdout
 
 start_time = time.time()
 
@@ -216,6 +214,11 @@ for i, f in enumerate(inFiles):
 
 for datFile in inFiles:
     try:
+        copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+        script = os.path.join(scriptDir, os.path.basename(__file__))
+
+        logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
+
         start_time = time.time()  
 
         inPath = os.path.dirname(datFile)
@@ -298,7 +301,7 @@ for datFile in inFiles:
 
         #==================================================
         #==================================================
-        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+        if pred_sub or map_sub or export_poly or pltSubClass:
             print('\n===========================================')
             print('===========================================')
             print('***** MAPPING SUBSTRATE *****')
@@ -309,6 +312,8 @@ for datFile in inFiles:
 
     except:
         print('Could not process:', datFile)
+
+    sys.stdout = oldOutput
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

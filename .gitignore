@@ -3,7 +3,7 @@ __pycache__/*
 oldFiles/*
 testData/*
 /src/__pycache__/*
-exampleData/Test-Large-DS*
+exampleData/*
 models
 
 main_batch.py
@@ -17,6 +17,6 @@ main_batchFolder.py
 ping (*
 Python 3.7*
 
-*csb*.py
+*csb*
 
 user_params.json
