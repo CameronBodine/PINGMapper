@@ -163,7 +163,7 @@ for datFile in inFiles:
     inPath = os.path.dirname(datFile)
     humFile = datFile
     recName = os.path.basename(humFile).split('.')[0]
-    sonPath = os.path.join(inDir, recName)
+    sonPath = humFile.split('.DAT')[0]
     sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
     projDir = os.path.join(outDir, recName)
