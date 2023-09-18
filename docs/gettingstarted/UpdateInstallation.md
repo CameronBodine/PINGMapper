@@ -18,7 +18,7 @@ Open the Anaconda Powershell prompt and run the following:
 ```
 conda update -n base conda
 conda clean --all
-pip install --upgrade pip
+python.exe -m pip install --upgrade pip
 ```
 
 ## Step 2
