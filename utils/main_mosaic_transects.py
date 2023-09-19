@@ -65,8 +65,8 @@ threadCnt=cpu_count()
 #################
 
 # Directory and Project Name
-transectDir = r'Z:\MN_Mussel\EGN_Substrate'
-projName = 'Transect_Mosaic'
+transectDir = r'Z:\MN_Mussel\EGN_Mosaic_WBL'
+projName = 'Mosaic'
 
 
 # Rectification Parameters
@@ -76,10 +76,11 @@ rect_wcr = True #Export rectified tiles with water column removed/slant range co
 
 # Mosaic Parameters
 mosaic_transect = 1 #Export rectified tile mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
-mosaic_all_transects = False # True: Mosaic transects into one; False: Don't Mosaic
+mosaic_all_transects = True # True: Mosaic transects into one; False: Don't Mosaic
 resampleAlg = 'cubic' # mode, average, gauss, lanczos, bilinear, cubic, cubicspline, nearest
 pix_fn = 'average'
 overview = True
+son_colorMap = 'Greys_r'
 
 #################
 #################
@@ -289,6 +290,8 @@ del sonMetasPort, sonMetasStar
 rectObjs = []
 for m in sonMetas:
     son = rectObj(m) # Initialize object
+
+    son.son_colorMap = son_colorMap
 
     rectObjs.append(son) # add to rectObjs
 
@@ -585,6 +588,9 @@ for sons in portstar:
 
         # Load sonMetaDF
         son._loadSonMeta()
+
+        # Get colormap
+        son._getSonColorMap(son_colorMap)
 
         print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
         Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
