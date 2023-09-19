@@ -2187,13 +2187,13 @@ class sonObj(object):
 
         ################
         # remove shadows
-        # if self.remShadow:
-        # Get mask
-        self._SHW_mask(chunk)
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
 
-        # Mask out shadows
-        self.sonDat = self.sonDat*self.shadowMask
-        del self.shadowMask
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
 
         ########################
         # slant range correction
@@ -2312,13 +2312,13 @@ class sonObj(object):
 
         ################
         # remove shadows
-        # if self.remShadow:
-        # Get mask
-        self._SHW_mask(chunk)
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
 
-        # Mask out shadows
-        self.sonDat = self.sonDat*self.shadowMask
-        del self.shadowMask
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
 
         # ########
         # # Do EGN
@@ -2400,13 +2400,13 @@ class sonObj(object):
 
         ################
         # remove shadows
-        # if self.remShadow:
-        # Get mask
-        self._SHW_mask(chunk)
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
 
-        # Mask out shadows
-        self.sonDat = self.sonDat*self.shadowMask
-        del self.shadowMask
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
 
         #############
         # Do wc stats

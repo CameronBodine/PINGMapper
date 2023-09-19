@@ -1014,15 +1014,15 @@ def read_master_func(logfilename='',
     ## 2: Remove only contiguous shadows touching max range extent. May be
     ## useful for locating river banks...
 
-    # Need to detect shadows if EGN
-    if egn:
-        if remShadow == 0:
-            print('\n\nEGN requires shadow removal')
-            print('Setting remShadow==2...')
-            remShadow = 2
-            keepShadow = True
-        else:
-            keepShadow = False
+    # # Need to detect shadows if EGN
+    # if egn:
+    #     if remShadow == 0:
+    #         print('\n\nEGN requires shadow removal')
+    #         print('Setting remShadow==2...')
+    #         remShadow = 2
+    #         keepShadow = True
+    #     else:
+    #         keepShadow = False
             
 
     # Need to detect shadows if mapping substrate
