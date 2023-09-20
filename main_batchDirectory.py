@@ -248,6 +248,9 @@ for datFile in inFiles:
 
     sys.stdout = Logger(logfilename)
 
+    for k,v in params.items():
+        print(k, v)
+
     print('sonPath',sonPath)
     print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
     print('+++++++++++++++++++++++++++++++++++++++++++')
