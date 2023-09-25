@@ -20,8 +20,9 @@ import shutil
 ############
 # Parameters
 threadCnt = 0
-inDirs = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/EGN'
-rawDir = 'Raw'
+egnDir = 'WBL_EGN'
+inDirs = r'/home/cbodine/Desktop/MN_MusselProject/'+egnDir
+rawDir = 'WBL_Raw'
 outDir_parent = inDirs.replace('EGN', 'RawEGN_Avg')
 map_sub = True
 pltSubClass = False
@@ -160,11 +161,12 @@ def doWork(i, projDir, outDir_parent):
     if os.path.exists(metaDir):
         metaFiles = sorted(glob(metaDir+os.sep+"*.meta"))
 
-        if len(metaFiles) == 0:
-            projectMode_2a_inval()
+    #     if len(metaFiles) == 0:
+    #         projectMode_2a_inval()
 
     else:
-        projectMode_2a_inval()
+        # projectMode_2a_inval()
+        sys.exit('Meta dir does not exist')
     del metaDir
 
 
@@ -191,7 +193,7 @@ def doWork(i, projDir, outDir_parent):
     del son, beam, sonObjs
 
     if not os.path.exists(outDir):
-            os.mkdir(outDir)
+        os.mkdir(outDir)
 
 
     #############################################
@@ -212,7 +214,7 @@ def doWork(i, projDir, outDir_parent):
         # Update file paths for raw npzs
         npz_raw = {}
         for k, v in npz_egn.items():
-            npz_raw[k] = v.replace('EGN', rawDir)
+            npz_raw[k] = v.replace(egnDir, rawDir)
 
         # Prepare outDirectory
         son.substrateDir = outDir
@@ -435,6 +437,7 @@ projDirs = sorted(projDirs, reverse=True)
 proj_cnt = len(projDirs)
 
 for i, p in enumerate(projDirs):
+    print(i, p)
     doWork(i, p, outDir_parent)
 
 # Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p, outDir_parent) for i, p in enumerate(projDirs))
