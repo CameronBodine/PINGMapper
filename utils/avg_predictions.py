@@ -25,8 +25,8 @@ inDirs = r'/home/cbodine/Desktop/MN_MusselProject/'+egnDir
 rawDir = 'WBL_Raw'
 outDir_parent = inDirs.replace('EGN', 'RawEGN_Avg')
 map_sub = True
-pltSubClass = False
-cleanTempFiles = True
+pltSubClass = True
+cleanTempFiles = False
 
 if not os.path.exists(outDir_parent):
     os.mkdir(outDir_parent)
