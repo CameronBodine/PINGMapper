@@ -10,6 +10,9 @@ nav_exclude: false
 
 # Installation
 
+{: .g2k }
+> Ubuntu users can consider an [alternative installation](https://github.com/CameronBodine/PINGMapper/tree/main/ubuntu) method.
+
 ## Step 1
 Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html). When prompted, select the option to install for "me" insted of "all users". This will install miniconda into your user folder. 
 
