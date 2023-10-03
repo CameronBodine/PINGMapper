@@ -266,22 +266,26 @@ print("working on "+projDir)
 read_master_func(**params)
 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-#==================================================
-if rect_wcp or rect_wcr:
-    print('\n===========================================')
-    print('===========================================')
-    print('***** RECTIFYING *****')
-    print("working on "+projDir)
-    rectify_master_func(**params)
-    # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+try:
+    #==================================================
+    if rect_wcp or rect_wcr:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** RECTIFYING *****')
+        print("working on "+projDir)
+        rectify_master_func(**params)
+        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-#==================================================
-if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
-    print('\n===========================================')
-    print('===========================================')
-    print('***** MAPPING SUBSTRATE *****')
-    print("working on "+projDir)
-    map_master_func(**params)
+    #==================================================
+    if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** MAPPING SUBSTRATE *****')
+        print("working on "+projDir)
+        map_master_func(**params)
 
-gc.collect()
-print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+    gc.collect()
+    print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+except Exception as Argument:
+    unableToProcessError(logfilename)

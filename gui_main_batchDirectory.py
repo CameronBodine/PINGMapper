@@ -214,105 +214,106 @@ for i, f in enumerate(inFiles):
     print(i, ":", f)
 
 for datFile in inFiles:
-    # try:
-    copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-    script = os.path.join(scriptDir, os.path.basename(__file__))
-
     logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
-    start_time = time.time()  
+    try:
+        copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+        script = os.path.join(scriptDir, os.path.basename(__file__))
 
-    inPath = os.path.dirname(datFile)
-    humFile = datFile
-    recName = os.path.basename(humFile).split('.')[0]
-    sonPath = humFile.split('.DAT')[0]
-    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+        start_time = time.time()  
 
-    projDir = os.path.join(outDir, recName)
+        inPath = os.path.dirname(datFile)
+        humFile = datFile
+        recName = os.path.basename(humFile).split('.')[0]
+        sonPath = humFile.split('.DAT')[0]
+        sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-    #============================================
+        projDir = os.path.join(outDir, recName)
 
-    # =========================================================
-    # Determine project_mode
-    print(project_mode)
-    if project_mode == 0:
-        # Create new project
-        if not os.path.exists(projDir):
-            os.mkdir(projDir)
-        else:
-            projectMode_1_inval()
+        #============================================
 
-    elif project_mode == 1:
-        # Overwrite existing project
-        if os.path.exists(projDir):
-            shutil.rmtree(projDir)
+        # =========================================================
+        # Determine project_mode
+        print(project_mode)
+        if project_mode == 0:
+            # Create new project
+            if not os.path.exists(projDir):
+                os.mkdir(projDir)
+            else:
+                projectMode_1_inval()
 
-        os.mkdir(projDir)        
+        elif project_mode == 1:
+            # Overwrite existing project
+            if os.path.exists(projDir):
+                shutil.rmtree(projDir)
 
-    elif project_mode == 2:
-        # Update project
-        # Make sure project exists, exit if not.
-        
-        if not os.path.exists(projDir):
-            projectMode_2_inval()
+            os.mkdir(projDir)        
 
-    # =========================================================
-    # For logging the console output
+        elif project_mode == 2:
+            # Update project
+            # Make sure project exists, exit if not.
+            
+            if not os.path.exists(projDir):
+                projectMode_2_inval()
 
-    logdir = os.path.join(projDir, 'meta', 'logs')
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+        # =========================================================
+        # For logging the console output
 
-    logfilename = os.path.join(logdir, logfilename)
+        logdir = os.path.join(projDir, 'meta', 'logs')
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
 
-    sys.stdout = Logger(logfilename)
+        logfilename = os.path.join(logdir, logfilename)
 
-    for k, v in params.items():
-        print(k, v)
+        sys.stdout = Logger(logfilename)
 
-    #============================================
-    # Add ofther params
-    params['sonFiles'] = sonFiles
-    params['logfilename'] = logfilename
-    params['script'] = [script, copied_script_name]
-    params['projDir'] = projDir
-    params['humFile'] = humFile
+        for k, v in params.items():
+            print(k, v)
+
+        #============================================
+        # Add ofther params
+        params['sonFiles'] = sonFiles
+        params['logfilename'] = logfilename
+        params['script'] = [script, copied_script_name]
+        params['projDir'] = projDir
+        params['humFile'] = humFile
 
 
 
-    print('sonPath',sonPath)
-    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-    print('+++++++++++++++++++++++++++++++++++++++++++')
-    print('***** Working On *****')
-    print(humFile)
-    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+        print('sonPath',sonPath)
+        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+        print('+++++++++++++++++++++++++++++++++++++++++++')
+        print('***** Working On *****')
+        print(humFile)
+        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-    print('\n===========================================')
-    print('===========================================')
-    print('***** READING *****')
-    read_master_func(**params)
-    # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
-
-    if rect_wcp or rect_wcr:
         print('\n===========================================')
         print('===========================================')
-        print('***** RECTIFYING *****')
-        rectify_master_func(**params)
-        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+        print('***** READING *****')
+        read_master_func(**params)
+        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-    #==================================================
-    #==================================================
-    if pred_sub or map_sub or export_poly or pltSubClass:
-        print('\n===========================================')
-        print('===========================================')
-        print('***** MAPPING SUBSTRATE *****')
-        print("working on "+projDir)
-        map_master_func(**params)
+        if rect_wcp or rect_wcr:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** RECTIFYING *****')
+            rectify_master_func(**params)
+            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-    sys.stdout.log.close()
+        #==================================================
+        #==================================================
+        if pred_sub or map_sub or export_poly or pltSubClass:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
 
-    # except:
-    #     print('Could not process:', datFile)
+        sys.stdout.log.close()
+
+    except Exception as Argument:
+        unableToProcessError(logfilename)
+        print('\n\nCould not process:', datFile)
 
     sys.stdout = oldOutput
 

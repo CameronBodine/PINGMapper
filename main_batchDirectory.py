@@ -152,138 +152,139 @@ for i, f in enumerate(inFiles):
     print(i, ":", f)
 
 for datFile in inFiles:
-#     try:
-    copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-    script = os.path.join(scriptDir, os.path.basename(__file__))
+    try:
+        copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+        script = os.path.join(scriptDir, os.path.basename(__file__))
 
-    logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
-    
-    start_time = time.time()
-
-    inPath = os.path.dirname(datFile)
-    humFile = datFile
-    recName = os.path.basename(humFile).split('.')[0]
-    sonPath = humFile.split('.DAT')[0]
-    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-
-    projDir = os.path.join(outDir, recName)
-
-    params = {
-        'logfilename':logfilename,
-        'project_mode':project_mode,
-        'script':[script, copied_script_name],
-        'humFile':humFile,
-        'sonFiles':sonFiles,
-        'projDir':projDir,
-        'tempC':tempC,
-        'nchunk':nchunk,
-        'exportUnknown':exportUnknown,
-        'fixNoDat':fixNoDat,
-        'threadCnt':threadCnt,
-        'x_offset':x_offset,
-        'y_offset':y_offset,
-        'egn':egn,
-        'egn_stretch':egn_stretch,
-        'egn_stretch_factor':egn_stretch_factor,
-        'tileFile':tileFile,
-        'wcp':wcp,
-        'wcr':wcr,
-        'lbl_set':lbl_set,
-        'spdCor':spdCor,
-        'maxCrop':maxCrop,
-        'USE_GPU':False,
-        'remShadow':remShadow,
-        'detectDep':detectDep,
-        'smthDep':smthDep,
-        'adjDep':adjDep,
-        'pltBedPick':pltBedPick,
-        'rect_wcp':rect_wcp,
-        'rect_wcr':rect_wcr,
-        'son_colorMap':son_colorMap,
-        'pred_sub':pred_sub,
-        'map_sub':map_sub,
-        'export_poly':export_poly,
-        'pltSubClass':pltSubClass,
-        'map_class_method':map_class_method,
-        'pix_res':pix_res,
-        'mosaic_nchunk':mosaic_nchunk,
-        'mosaic':mosaic,
-        'map_mosaic':map_mosaic
-        }
-    
-    globals().update(params)
-    
-    # =========================================================
-    # Determine project_mode
-    print(project_mode)
-    if project_mode == 0:
-        # Create new project
-        if not os.path.exists(projDir):
-            os.mkdir(projDir)
-        else:
-            projectMode_1_inval()
-
-    elif project_mode == 1:
-        # Overwrite existing project
-        if os.path.exists(projDir):
-            shutil.rmtree(projDir)
-
-        os.mkdir(projDir)        
-
-    elif project_mode == 2:
-        # Update project
-        # Make sure project exists, exit if not.
+        logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
         
-        if not os.path.exists(projDir):
-            projectMode_2_inval()
+        start_time = time.time()
 
-    # =========================================================
-    # For logging the console output
+        inPath = os.path.dirname(datFile)
+        humFile = datFile
+        recName = os.path.basename(humFile).split('.')[0]
+        sonPath = humFile.split('.DAT')[0]
+        sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-    logdir = os.path.join(projDir, 'meta', 'logs')
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+        projDir = os.path.join(outDir, recName)
 
-    logfilename = os.path.join(logdir, logfilename)
+        params = {
+            'logfilename':logfilename,
+            'project_mode':project_mode,
+            'script':[script, copied_script_name],
+            'humFile':humFile,
+            'sonFiles':sonFiles,
+            'projDir':projDir,
+            'tempC':tempC,
+            'nchunk':nchunk,
+            'exportUnknown':exportUnknown,
+            'fixNoDat':fixNoDat,
+            'threadCnt':threadCnt,
+            'x_offset':x_offset,
+            'y_offset':y_offset,
+            'egn':egn,
+            'egn_stretch':egn_stretch,
+            'egn_stretch_factor':egn_stretch_factor,
+            'tileFile':tileFile,
+            'wcp':wcp,
+            'wcr':wcr,
+            'lbl_set':lbl_set,
+            'spdCor':spdCor,
+            'maxCrop':maxCrop,
+            'USE_GPU':False,
+            'remShadow':remShadow,
+            'detectDep':detectDep,
+            'smthDep':smthDep,
+            'adjDep':adjDep,
+            'pltBedPick':pltBedPick,
+            'rect_wcp':rect_wcp,
+            'rect_wcr':rect_wcr,
+            'son_colorMap':son_colorMap,
+            'pred_sub':pred_sub,
+            'map_sub':map_sub,
+            'export_poly':export_poly,
+            'pltSubClass':pltSubClass,
+            'map_class_method':map_class_method,
+            'pix_res':pix_res,
+            'mosaic_nchunk':mosaic_nchunk,
+            'mosaic':mosaic,
+            'map_mosaic':map_mosaic
+            }
+        
+        globals().update(params)
+        
+        # =========================================================
+        # Determine project_mode
+        print(project_mode)
+        if project_mode == 0:
+            # Create new project
+            if not os.path.exists(projDir):
+                os.mkdir(projDir)
+            else:
+                projectMode_1_inval()
 
-    sys.stdout = Logger(logfilename)
+        elif project_mode == 1:
+            # Overwrite existing project
+            if os.path.exists(projDir):
+                shutil.rmtree(projDir)
 
-    for k,v in params.items():
-        print(k, v)
+            os.mkdir(projDir)        
 
-    print('sonPath',sonPath)
-    print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-    print('+++++++++++++++++++++++++++++++++++++++++++')
-    print('***** Working On *****')
-    print(humFile)
-    print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+        elif project_mode == 2:
+            # Update project
+            # Make sure project exists, exit if not.
+            
+            if not os.path.exists(projDir):
+                projectMode_2_inval()
 
-    print('\n===========================================')
-    print('===========================================')
-    print('***** READING *****')
-    read_master_func(**params)
-    # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+        # =========================================================
+        # For logging the console output
 
-    if rect_wcp or rect_wcr:
+        logdir = os.path.join(projDir, 'meta', 'logs')
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        logfilename = os.path.join(logdir, logfilename)
+
+        sys.stdout = Logger(logfilename)
+
+        for k,v in params.items():
+            print(k, v)
+
+        print('sonPath',sonPath)
+        print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+        print('+++++++++++++++++++++++++++++++++++++++++++')
+        print('***** Working On *****')
+        print(humFile)
+        print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+
         print('\n===========================================')
         print('===========================================')
-        print('***** RECTIFYING *****')
-        rectify_master_func(**params)
-        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+        print('***** READING *****')
+        read_master_func(**params)
+        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-    #==================================================
-    #==================================================
-    if pred_sub or map_sub or export_poly or pltSubClass:
-        print('\n===========================================')
-        print('===========================================')
-        print('***** MAPPING SUBSTRATE *****')
-        print("working on "+projDir)
-        map_master_func(**params)
+        if rect_wcp or rect_wcr:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** RECTIFYING *****')
+            rectify_master_func(**params)
+            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-    sys.stdout.log.close()
+        #==================================================
+        #==================================================
+        if pred_sub or map_sub or export_poly or pltSubClass:
+            print('\n===========================================')
+            print('===========================================')
+            print('***** MAPPING SUBSTRATE *****')
+            print("working on "+projDir)
+            map_master_func(**params)
 
-    # except:
-    #     print('Could not process:', datFile)
+        sys.stdout.log.close()
+
+    except Exception as Argument:
+        unableToProcessError(logfilename)
+        print('\n\nCould not process:', datFile)
 
     sys.stdout = oldOutput
 

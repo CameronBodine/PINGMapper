@@ -67,6 +67,8 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 import psutil
 import json
 
+import logging
+
 # from funcs_pyhum_correct import doPyhumCorrections
 
 
@@ -326,6 +328,33 @@ def saveDefaultParams(values):
         f.write(json_object)
 
     
+# =========================================================
+def unableToProcessError(logfilename):
+    # error_logger = logging.getLogger('error_logger')
+    # errorfilename = logfilename.replace('log_', 'error_')
+    # logging.basicConfig(filename=errorfilename, level=logging.DEBUG)
+    # logging.exception("Error Thrown:")
+
+    # print("\n\n!!!!!!!!!!!!!!!!!\nAn Error Occured.\n\nPlease consult the logfile at:\n", errorfilename)
+    # logging.Handler.close()
+
+    
+    errorfilename = logfilename.replace('log_', 'error_')
+    # logging.basicConfig(filename=errorfilename, level=logging.DEBUG)
+
+    error_logger = logging.getLogger('error_logger')
+    myhandler = logging.FileHandler(errorfilename)
+    myhandler.setLevel(logging.DEBUG)
+    error_logger.addHandler(myhandler)
+    error_logger.exception("Error Thrown:")
+
+    print("\n\n!!!!!!!!!!!!!!!!!\nAn Error Occured.\n\nPlease consult the logfile at:\n", errorfilename)
+    
+    handlers = error_logger.handlers[:]
+    for handler in handlers:
+        error_logger.removeHandler(handler)
+        handler.close()
+
 
 
 

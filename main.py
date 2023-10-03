@@ -232,32 +232,36 @@ params = {
 for k,v in params.items():
     print(k, v)
     
-#==================================================
-print('\n===========================================')
-print('===========================================')
-print('***** READING *****')
-print("working on "+projDir)
-read_master_func(**params)
-# read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
-
-#==================================================
-if rect_wcp or rect_wcr:
+try:
+    #==================================================
     print('\n===========================================')
     print('===========================================')
-    print('***** RECTIFYING *****')
+    print('***** READING *****')
     print("working on "+projDir)
-    rectify_master_func(**params)
-    # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+    read_master_func(**params)
+    # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-#==================================================
-if pred_sub or map_sub or export_poly or pltSubClass:
-    print('\n===========================================')
-    print('===========================================')
-    print('***** MAPPING SUBSTRATE *****')
-    print("working on "+projDir)
-    map_master_func(**params)
+    #==================================================
+    if rect_wcp or rect_wcr:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** RECTIFYING *****')
+        print("working on "+projDir)
+        rectify_master_func(**params)
+        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-gc.collect()
-print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+    #==================================================
+    if pred_sub or map_sub or export_poly or pltSubClass:
+        print('\n===========================================')
+        print('===========================================')
+        print('***** MAPPING SUBSTRATE *****')
+        print("working on "+projDir)
+        map_master_func(**params)
 
-sys.stdout.log.close()
+    gc.collect()
+    print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+    sys.stdout.log.close()
+
+except Exception as Argument:
+    unableToProcessError(logfilename)
