@@ -79,8 +79,9 @@ layout = [
 ]
 
 
+layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
+window = sg.Window('Process Single Humminbird Sonar Recording', layout2, resizable=True)
 
-window = sg.Window('Process Single Humminbird Sonar Recording', layout)
 while True:
     event, values = window.read()
     if event == "Quit" or event == 'Submit':
