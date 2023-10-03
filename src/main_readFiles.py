@@ -1023,6 +1023,11 @@ def read_master_func(logfilename='',
     #         keepShadow = True
     #     else:
     #         keepShadow = False
+
+    if remShadow > 0:
+        keepShadow = False
+    else:
+        keepShadow = True
             
 
     # Need to detect shadows if mapping substrate
