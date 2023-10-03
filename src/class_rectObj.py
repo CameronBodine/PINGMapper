@@ -1187,7 +1187,9 @@ class rectObj(sonObj):
             # egn
             if self.egn:
                 self._egn_wcp(chunk, sonMeta)
-                self._egnDoStretch()
+
+                if self.egn_stretch > 0:
+                    self._egnDoStretch()
 
             img = self.sonDat.copy()
 
@@ -1253,7 +1255,9 @@ class rectObj(sonObj):
                 if self.egn:
                     self._egn()
                     self.sonDat = np.nan_to_num(self.sonDat, nan=0)
-                    self._egnDoStretch()
+
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
 
             img = self.sonDat
 

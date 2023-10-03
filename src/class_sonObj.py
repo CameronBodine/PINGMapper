@@ -1416,7 +1416,9 @@ class sonObj(object):
                 # egn
                 if self.egn:
                     self._egn_wcp(chunk, sonMeta)
-                    self._egnDoStretch()
+
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
 
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
 
@@ -1433,7 +1435,9 @@ class sonObj(object):
                 if self.egn:
                     self._egn()
                     self.sonDat = np.nan_to_num(self.sonDat, nan=0)
-                    self._egnDoStretch()
+
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
 
                 self._writeTiles(chunk, imgOutPrefix='wcr', tileFile=tileFile) # Save image
 
@@ -1934,7 +1938,9 @@ class sonObj(object):
                 # else:
                 #     stretch_wcp=True
                 # self._egnDoStretch(stretch_wcp=stretch_wcp)
-                self._egnDoStretch()
+
+                if self.egn_stretch > 0:
+                    self._egnDoStretch()
 
             # Remove shadows and crop
             # if self.remShadow and (lbl_set==2) and (maxCrop>0):
@@ -2748,7 +2754,7 @@ class sonObj(object):
         # wcp_pcnt = self.egn_wcp_hist_pcnt
         wcr_pcnt = self.egn_wcr_hist_pcnt
 
-        if egn_stretch == 0:
+        if egn_stretch == 1:
 
             # Find Globabl mins and max
             histIndex = np.where(wcr_pcnt[1:]>0)[0]
@@ -2756,7 +2762,7 @@ class sonObj(object):
             self.egn_wcr_stretch_max = histIndex[-1]
 
 
-        elif egn_stretch == 1:
+        elif egn_stretch == 2:
             # Percent clip
             egn_stretch_factor = egn_stretch_factor / 100
 
