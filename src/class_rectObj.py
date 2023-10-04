@@ -1046,7 +1046,8 @@ class rectObj(sonObj):
 
         if son:
             # Open image to rectify
-            self._loadSonChunk()
+            # self._loadSonChunk()
+            self._getScanChunkSingle(chunk)
         else:
             # Rectifying substrate classification
             pass
