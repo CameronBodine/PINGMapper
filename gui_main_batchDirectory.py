@@ -101,7 +101,7 @@ outDir = values[1]
 # Convert parameters if necessary
 
 # EGN Stretch
-egn_stretch = values[17]
+egn_stretch = values[16]
 if egn_stretch == 'None':
     egn_stretch = 0
 elif egn_stretch == 'Min-Max':
