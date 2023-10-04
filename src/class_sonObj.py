@@ -1418,6 +1418,7 @@ class sonObj(object):
                     self._egn_wcp(chunk, sonMeta)
 
                     if self.egn_stretch > 0:
+                        # self._egnDoStretch(stretch_wcp=True)
                         self._egnDoStretch()
 
                 self._writeTiles(chunk, imgOutPrefix='wcp', tileFile=tileFile) # Save image
@@ -1933,14 +1934,14 @@ class sonObj(object):
 
                 self._egn_wcp(chunk, sonMeta, do_rescale=True)
 
-                # if lbl_set == 2:
-                #     stretch_wcp=False
-                # else:
-                #     stretch_wcp=True
-                # self._egnDoStretch(stretch_wcp=stretch_wcp)
+                if lbl_set == 2:
+                    stretch_wcp=False
+                else:
+                    stretch_wcp=True
+                self._egnDoStretch(stretch_wcp=stretch_wcp)
 
-                if self.egn_stretch > 0:
-                    self._egnDoStretch()
+                # if self.egn_stretch > 0:
+                #     self._egnDoStretch()
 
             # Remove shadows and crop
             # if self.remShadow and (lbl_set==2) and (maxCrop>0):
@@ -2182,14 +2183,14 @@ class sonObj(object):
         # self._loadSonChunk()
         self._getScanChunkSingle(chunk)
 
-        # #####################################
-        # # Get wc avg (for wcp egn) before src
-        # self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
-        # bedMask = 1-self.wcMask # Invert zeros and ones
-        # wc = self.sonDat*bedMask # Mask bed pixels
-        # wc[wc == 0] = np.nan # Set zeros to nan
-        # mean_intensity_wc = np.nanmean(wc, axis=1) # get one avg for wc
-        # del bedMask, wc, self.wcMask
+        #####################################
+        # Get wc avg (for wcp egn) before src
+        self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
+        bedMask = 1-self.wcMask # Invert zeros and ones
+        wc = self.sonDat*bedMask # Mask bed pixels
+        wc[wc == 0] = np.nan # Set zeros to nan
+        mean_intensity_wc = np.nanmean(wc, axis=1) # get one avg for wc
+        del bedMask, wc, self.wcMask
 
         ################
         # remove shadows
@@ -2219,7 +2220,7 @@ class sonObj(object):
 
         del self.sonDat
         gc.collect()
-        return mean_intensity_wcr#, mean_intensity_wc
+        return mean_intensity_wcr, mean_intensity_wc
 
     # ======================================================================
     def _egnCalcGlobalMeans(self, chunk_means):
@@ -2230,60 +2231,49 @@ class sonObj(object):
         # ## All other chunks will have same length
         # chunk_means = chunk_means[:-1]
 
-        # #####################
-        # # Find largest vector, and store min/max
-        # lv = 0
-        # mins = []
-        # maxs = []
-        # for c, (c_min, c_max) in chunk_means:
-        #     mins.append(c_min)
-        #     maxs.append(c_max)
-        #     if c.shape[0] > lv:
-        #         lv = c.shape[0]
-
         #####################
         # Find largest vector
-        # lv = 0
-        # for c in chunk_means:
-        #     if c[0].shape[0] > lv:
-        #         lv = c[0].shape[0]
-
         lv = 0
         for c in chunk_means:
-            if c.shape[0] > lv:
-                lv = c.shape[0]
+            if c[0].shape[0] > lv:
+                lv = c[0].shape[0]
+
+        # lv = 0
+        # for c in chunk_means:
+        #     if c.shape[0] > lv:
+        #         lv = c.shape[0]
 
         ########################
         # Stack vectors in array
 
-        # # Create nan array
-        # wc_means = np.empty((lv, len(chunk_means)))
-        # wc_means[:] = np.nan
-        #
-        # bed_means = np.empty((lv, len(chunk_means)))
-        # bed_means[:] = np.nan
-        #
-        # # Stack arrays
-        # for i, m in enumerate(chunk_means):
-        #     ## Bed means
-        #     bed_means[:m[0].shape[0], i] = m[0]
-        #
-        #     ## WC means
-        #     wc_means[:m[1].shape[0], i] = m[1]
-
+        # Create nan array
+        wc_means = np.empty((lv, len(chunk_means)))
+        wc_means[:] = np.nan
+        
         bed_means = np.empty((lv, len(chunk_means)))
         bed_means[:] = np.nan
-
+        
+        # Stack arrays
         for i, m in enumerate(chunk_means):
-            bed_means[:m.shape[0], i] = m
+            ## Bed means
+            bed_means[:m[0].shape[0], i] = m[0]
+        
+            ## WC means
+            wc_means[:m[1].shape[0], i] = m[1]
+
+        # bed_means = np.empty((lv, len(chunk_means)))
+        # bed_means[:] = np.nan
+
+        # for i, m in enumerate(chunk_means):
+        #     bed_means[:m.shape[0], i] = m
 
         del chunk_means
 
         ################
         # Calculate mean
         self.egn_bed_means = np.nanmean(bed_means, axis=1)
-        # self.egn_wc_means = np.nanmean(wc_means, axis=1)
-        del bed_means#, wc_means
+        self.egn_wc_means = np.nanmean(wc_means, axis=1)
+        del bed_means, wc_means
 
         # ###############
         # # Store min/max
@@ -2326,23 +2316,25 @@ class sonObj(object):
             self.sonDat = self.sonDat*self.shadowMask
             del self.shadowMask
 
-        # ########
-        # # Do EGN
-        # self._egn_wcp(chunk, sonMeta, do_rescale=True)
-        #
-        #
-        # ######################
-        # # Calculate histograms
-        #
-        # # Histgram with water column present
-        # wcp_hist, _ = np.histogram(self.sonDat, bins=255, range=(0,255))
-        #
+        ########
+        # Do EGN
+        nonEGNSonDat = self.sonDat.copy()
+        self._egn_wcp(chunk, sonMeta, do_rescale=True)
+        
+        
+        ######################
+        # Calculate histograms
+        
+        # Histgram with water column present
+        wcp_hist, _ = np.histogram(self.sonDat, bins=255, range=(0,255))
+        
         # # Histogram with water column removed
         # self._WCR_SRC(sonMeta)
         # wcr_hist, _ = np.histogram(self.sonDat, bins=255, range=(0,255))
 
         ########
         # Do EGN
+        self.sonDat = nonEGNSonDat
         self._egn()
 
         ######################
@@ -2353,10 +2345,10 @@ class sonObj(object):
         wcr_hist, _ = np.histogram(self.sonDat, bins=255, range=(0,255))
 
 
-        del self.sonDat
+        del self.sonDat, nonEGNSonDat
 
-        # return wcp_hist, wcr_hist
-        return wcr_hist
+        return wcp_hist, wcr_hist
+        # return wcr_hist
 
     # ======================================================================
     def _egnCalcGlobalHist(self, hist):
@@ -2364,19 +2356,19 @@ class sonObj(object):
         '''
 
         # Zero arrays to store sum of histograms
-        # wcp_hist = np.zeros((hist[0][0].shape))
-        # wcr_hist = np.zeros((hist[0][0].shape))
-        wcr_hist = np.zeros((hist[0].shape))
+        wcp_hist = np.zeros((hist[0][0].shape))
+        wcr_hist = np.zeros((hist[0][0].shape))
+        # wcr_hist = np.zeros((hist[0].shape))
 
-        # for (wcp, wcr) in hist:
-        #     wcp_hist += wcp
-        #     wcr_hist += wcr
-
-        for wcr in hist:
+        for (wcp, wcr) in hist:
+            wcp_hist += wcp
             wcr_hist += wcr
+
+        # for wcr in hist:
+        #     wcr_hist += wcr
         del hist
 
-        # self.egn_wcp_hist = wcp_hist
+        self.egn_wcp_hist = wcp_hist
         self.egn_wcr_hist = wcr_hist
 
         return
@@ -2417,28 +2409,29 @@ class sonObj(object):
         #############
         # Do wc stats
 
-        # # Get wc pixels
-        # self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
-        # bedMask = 1-self.wcMask # Invert zeros and ones
-        # wc = self.sonDat*bedMask # Mask bed pixels
-        # wc[wc == 0] = np.nan # Set zeros to nan
-        #
-        # # Get copy of sonDat so we can calculate egn on wc pixels
-        # sonDat = self.sonDat.copy()
-        # self.sonDat = wc
-        #
-        # # Do EGN
-        # self._egn(do_rescale=False)
-        #
-        # # Calculate min and max
-        # wc_min = np.nanmin(self.sonDat)
-        # wc_max = np.nanmax(self.sonDat)
+        # Get wc pixels
+        self._WC_mask(chunk, son=False) # Son false because sonDat already loaded
+        bedMask = 1-self.wcMask # Invert zeros and ones
+        wc = self.sonDat*bedMask # Mask bed pixels
+        wc[wc == 0] = np.nan # Set zeros to nan
+        
+        # Get copy of sonDat so we can calculate egn on wc pixels
+        sonDat = self.sonDat.copy()
+        self.sonDat = wc
+        
+        # Do EGN
+        self._egn(wc=True, do_rescale=False)
+        # self._egn_wcp(chunk, sonMeta, do_rescale=False)
+
+        # Calculate min and max
+        wc_min = np.nanmin(self.sonDat)
+        wc_max = np.nanmax(self.sonDat)
 
         ##############
         # Do bed stats
 
-        # # Store sonDat
-        # self.sonDat = sonDat
+        # Store sonDat
+        self.sonDat = sonDat
 
         ########################
         # slant range correction
@@ -2455,7 +2448,7 @@ class sonObj(object):
 
         del self.sonDat
 
-        return (min, max)#, (wc_min, wc_max)
+        return (min, max), (wc_min, wc_max)
 
     # ======================================================================
     def _egnCalcGlobalMinMax(self, min_max):
@@ -2464,24 +2457,24 @@ class sonObj(object):
 
         bed_mins = []
         bed_maxs = []
-        # wc_mins = []
-        # wc_maxs = []
-        # for ((b_min, b_max), (w_min, w_max)) in min_max:
-        #     bed_mins.append(b_min)
-        #     bed_maxs.append(b_max)
-        #
-        #     wc_mins.append(w_min)
-        #     wc_maxs.append(w_max)
-
-        for b_min, b_max in min_max:
+        wc_mins = []
+        wc_maxs = []
+        for ((b_min, b_max), (w_min, w_max)) in min_max:
             bed_mins.append(b_min)
             bed_maxs.append(b_max)
+        
+            wc_mins.append(w_min)
+            wc_maxs.append(w_max)
+
+        # for b_min, b_max in min_max:
+        #     bed_mins.append(b_min)
+        #     bed_maxs.append(b_max)
 
         self.egn_bed_min = np.nanmin(bed_mins)
         self.egn_bed_max = np.nanmax(bed_maxs)
 
-        # self.egn_wc_min = np.nanmin(wc_mins)
-        # self.egn_wc_max = np.nanmax(wc_maxs)
+        self.egn_wc_min = np.nanmin(wc_mins)
+        self.egn_wc_max = np.nanmax(wc_maxs)
 
         return
 
@@ -2508,6 +2501,7 @@ class sonObj(object):
         #     t = np.ones((sonDat.shape[0]))
         #     t[:egn_means.shape[0]] = egn_means
         #     egn_means = t
+
         # Take last value of egn means and add to end if not long enough
         if sonDat.shape[0] > egn_means.shape[0]:
             t = np.ones((sonDat.shape[0]))
@@ -2664,16 +2658,19 @@ class sonObj(object):
         # Get sonar data
         sonDat = self.sonDat.astype(np.float32).copy()
 
-        # Get water column mask
-        self._WC_mask(chunk, son=False) # So we don't reload sonDat
-        wcMask = 1-self.wcMask # Get the mask, invert zeros and ones
-        del self.sonDat
+        # # Get water column mask
+        # self._WC_mask(chunk, son=False) # So we don't reload sonDat
+        # wcMask = 1-self.wcMask # Get the mask, invert zeros and ones
+        # del self.sonDat
 
-        # Get water column, mask bed
-        wc = sonDat * wcMask
+        # # Get water column, mask bed
+        # wc = sonDat * wcMask
 
-        # Get egn_means
+        # Get egn_bed_means
         egn_means = self.egn_bed_means.copy() # Don't want to overwrite
+
+        # Get egn_wc_means
+        egn_wc_means = self.egn_wc_means.copy()
 
         # Take last value of egn means and add to end if not long enough
         if sonDat.shape[0] > egn_means.shape[0]:
@@ -2699,7 +2696,8 @@ class sonObj(object):
             for i in range(sonDat.shape[0]):
                 # Set wc avgs to 1 (unchanged)
                 if i < depth:
-                    egn_p[i] = 1
+                    # egn_p[i] = 1
+                    egn_p[i] = egn_wc_means[i]
 
                 # Relocate egn mean based on slant range
                 else:
@@ -2711,15 +2709,29 @@ class sonObj(object):
 
             # Apply correction to ping
             sonDat[:,j] = sonDat[:,j] / egn_p
+
             del egn_p
 
         mn = 0
         mx = 255
 
+        # # Add wc back in
+        # # Mask water column in sonDat
+        # sonDat = sonDat * self.wcMask
+        # sonDat = np.nan_to_num(sonDat, nan=0) # replace nans with zero
+        # del wcMask, self.wcMask
+
+        # # Add water column pixels back in
+        # sonDat = sonDat + wc
+        # del wc
+
         if do_rescale:
             # Rescale by global min and max
-            m = self.egn_bed_min
-            M = self.egn_bed_max
+            # m = self.egn_bed_min
+            # M = self.egn_bed_max
+
+            m = min(self.egn_wc_min, self.egn_bed_min)
+            M = max(self.egn_wc_max, self.egn_bed_max)
 
             sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
@@ -2727,15 +2739,15 @@ class sonObj(object):
         sonDat = np.where(sonDat < mn, mn, sonDat)
         sonDat = np.where(sonDat > mx, mx, sonDat)
 
-        # Add wc back in
-        # Mask water column in sonDat
-        sonDat = sonDat * self.wcMask
-        sonDat = np.nan_to_num(sonDat, nan=0) # replace nans with zero
-        del wcMask, self.wcMask
+        # # Add wc back in
+        # # Mask water column in sonDat
+        # sonDat = sonDat * self.wcMask
+        # sonDat = np.nan_to_num(sonDat, nan=0) # replace nans with zero
+        # del wcMask, self.wcMask
 
-        # Add water column pixels back in
-        sonDat = sonDat + wc
-        del wc
+        # # Add water column pixels back in
+        # sonDat = sonDat + wc
+        # del wc
 
         self.sonDat = sonDat.astype('uint8')
         del sonDat
@@ -2751,7 +2763,7 @@ class sonObj(object):
         self.egn_stretch_factor = egn_stretch_factor
 
         # Get histogram percentages
-        # wcp_pcnt = self.egn_wcp_hist_pcnt
+        wcp_pcnt = self.egn_wcp_hist_pcnt
         wcr_pcnt = self.egn_wcr_hist_pcnt
 
         if egn_stretch == 1:
@@ -2761,50 +2773,54 @@ class sonObj(object):
             self.egn_wcr_stretch_min = histIndex[0]
             self.egn_wcr_stretch_max = histIndex[-1]
 
+            histIndex = np.where(wcp_pcnt[1:]>0)[0]
+            self.egn_wcr_stretch_min = histIndex[0]
+            self.egn_wcr_stretch_max = histIndex[-1]
+
 
         elif egn_stretch == 2:
             # Percent clip
             egn_stretch_factor = egn_stretch_factor / 100
 
-            # #####
-            # # WCP
-            #
-            # # Left tail
-            # m = 1 # Store pixel value (Don't count 0)
-            # mp = 0 # Store percentage
-            # v = wcp_pcnt[m]
-            # while (mp+v) < egn_stretch_factor:
-            # # while ((mp+v) < egn_stretch_factor) and (m < 255):
-            #     m += 1
-            #     mp += v
-            #     # v = wcp_pcnt[m]
-            #     try:
-            #         v = wcp_pcnt[m]
-            #     except:
-            #         v = 0
-            #         break
-            #
-            # self.egn_wcp_stretch_min = m
-            # del m, mp, v
-            #
-            # # Right tail
-            # m = 254
-            # mp = 0
-            # v = wcp_pcnt[m]
-            # while (mp+v) < egn_stretch_factor:
-            # # while ((mp+v) < egn_stretch_factor) and (m >= 0):
-            #     m -= 1
-            #     mp += v
-            #     # v = wcp_pcnt[m]
-            #     try:
-            #         v = wcp_pcnt[m]
-            #     except:
-            #         v = 0
-            #         break
-            #
-            #
-            # self.egn_wcp_stretch_max = m
-            # del m, mp, v
+            #####
+            # WCP
+            
+            # Left tail
+            m = 1 # Store pixel value (Don't count 0)
+            mp = 0 # Store percentage
+            v = wcp_pcnt[m]
+            while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m < 255):
+                m += 1
+                mp += v
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
+            
+            self.egn_wcp_stretch_min = m
+            del m, mp, v
+            
+            # Right tail
+            m = 254
+            mp = 0
+            v = wcp_pcnt[m]
+            while (mp+v) < egn_stretch_factor:
+            # while ((mp+v) < egn_stretch_factor) and (m >= 0):
+                m -= 1
+                mp += v
+                # v = wcp_pcnt[m]
+                try:
+                    v = wcp_pcnt[m]
+                except:
+                    v = 0
+                    break
+            
+            
+            self.egn_wcp_stretch_max = m
+            del m, mp, v
 
             #####
             # WCR
@@ -2845,12 +2861,12 @@ class sonObj(object):
             self.egn_wcr_stretch_max = m
             del m, mp, v
 
-        # return (self.egn_wcp_stretch_min, self.egn_wcp_stretch_max), (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
-        return (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
+        return (self.egn_wcp_stretch_min, self.egn_wcp_stretch_max), (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
+        # return (self.egn_wcr_stretch_min, self.egn_wcr_stretch_max)
 
 
     # ======================================================================
-    def _egnDoStretch(self):
+    def _egnDoStretch(self, stretch_wcp=False):
         '''
         '''
 
@@ -2860,16 +2876,16 @@ class sonObj(object):
         # Create mask from zero values
         mask = np.where(sonDat == 0, 0, 1)
 
-        # # Get stretch min max
-        # if stretch_wcp:
-        #     m = self.egn_wcp_stretch_min
-        #     M = self.egn_wcp_stretch_max
-        # else:
-        #     m = self.egn_wcr_stretch_min
-        #     M = self.egn_wcr_stretch_max
+        # Get stretch min max
+        if stretch_wcp:
+            m = self.egn_wcp_stretch_min
+            M = self.egn_wcp_stretch_max
+        else:
+            m = self.egn_wcr_stretch_min
+            M = self.egn_wcr_stretch_max
 
-        m = self.egn_wcr_stretch_min
-        M = self.egn_wcr_stretch_max
+        # m = self.egn_wcr_stretch_min
+        # M = self.egn_wcr_stretch_max
 
         mn = 0
         mx = 255

@@ -1164,18 +1164,18 @@ def read_master_func(logfilename='',
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
                 bed_mins.append(son.egn_bed_min)
                 bed_maxs.append(son.egn_bed_max)
-                # wc_mins.append(son.egn_wc_min)
-                # wc_maxs.append(son.egn_wc_max)
+                wc_mins.append(son.egn_wc_min)
+                wc_maxs.append(son.egn_wc_max)
         bed_min = np.min(bed_mins)
         bed_max = np.max(bed_maxs)
-        # wc_min = np.min(wc_mins)
-        # wc_max = np.max(wc_maxs)
+        wc_min = np.min(wc_mins)
+        wc_max = np.max(wc_maxs)
         for son in sonObjs:
             if son.beamName == 'ss_port' or son.beamName == 'ss_star':
                 son.egn_bed_min = bed_min
                 son.egn_bed_max = bed_max
-                # son.egn_wc_min = wc_min
-                # son.egn_wc_max = wc_max
+                son.egn_wc_min = wc_min
+                son.egn_wc_max = wc_max
 
             # Tidy up
             son._cleanup()
@@ -1193,52 +1193,52 @@ def read_master_func(logfilename='',
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
                     hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._egnCalcHist)(i) for i in chunks)
 
-                    # print('\n\tCalculating global EGN corrected histogram')
+                    print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
 
             # Now calculate true global histogram
-            # egn_wcp_hist = np.zeros((255))
+            egn_wcp_hist = np.zeros((255))
             egn_wcr_hist = np.zeros((255))
 
             for son in sonObjs:
                 if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                    # egn_wcp_hist += son.egn_wcp_hist
+                    egn_wcp_hist += son.egn_wcp_hist
                     egn_wcr_hist += son.egn_wcr_hist
 
             for son in sonObjs:
                 if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                    # son.egn_wcp_hist = egn_wcp_hist
+                    son.egn_wcp_hist = egn_wcp_hist
                     son.egn_wcr_hist = egn_wcr_hist
 
             # Calculate global percentages and standard deviation
-            # wcp_pcnt = np.zeros((egn_wcp_hist.shape))
+            wcp_pcnt = np.zeros((egn_wcp_hist.shape))
             wcr_pcnt = np.zeros((egn_wcr_hist.shape))
 
             # Calculate total pixels
-            # wcp_sum = np.sum(egn_wcp_hist)
+            wcp_sum = np.sum(egn_wcp_hist)
             wcr_sum = np.sum(egn_wcr_hist)
 
             # Caclulate percentages
-            # for i, v in enumerate(egn_wcp_hist):
-            #     wcp_pcnt[i] = egn_wcp_hist[i] / wcp_sum
+            for i, v in enumerate(egn_wcp_hist):
+                wcp_pcnt[i] = egn_wcp_hist[i] / wcp_sum
 
             for i, v in enumerate(egn_wcr_hist):
                 wcr_pcnt[i] = egn_wcr_hist[i] / wcr_sum
 
             for son in sonObjs:
                 if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                    # son.egn_wcp_hist_pcnt = wcp_pcnt
+                    son.egn_wcp_hist_pcnt = wcp_pcnt
                     son.egn_wcr_hist_pcnt = wcr_pcnt
 
 
-            # del egn_wcp_hist, egn_wcr_hist, wcp_pcnt, wcr_pcnt
-            del egn_wcr_hist, wcr_pcnt
+            del egn_wcp_hist, egn_wcr_hist, wcp_pcnt, wcr_pcnt
+            # del egn_wcr_hist, wcr_pcnt
 
             # Calculate min and max for rescale
             for son in sonObjs:
                 if son.beamName == 'ss_port':
-                    # wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
-                    wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
+                    wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
+                    # wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
 
                     # Tidy up
                     son._cleanup()
@@ -1250,14 +1250,15 @@ def read_master_func(logfilename='',
                     son.egn_stretch = egn_stretch
                     son.egn_stretch_factor = egn_stretch_factor
 
-                    # son.egn_wcp_stretch_min = wcp_stretch[0]
-                    # son.egn_wcp_stretch_max = wcp_stretch[1]
+                    son.egn_wcp_stretch_min = wcp_stretch[0]
+                    son.egn_wcp_stretch_max = wcp_stretch[1]
 
                     son.egn_wcr_stretch_min = wcr_stretch[0]
                     son.egn_wcr_stretch_max = wcr_stretch[1]
 
                     print('\n\n\nMinMax Global Stretch Vals')
-                    print(son.egn_wcr_stretch_min, son.egn_wcr_stretch_max)
+                    print('wcr', son.egn_wcr_stretch_min, son.egn_wcr_stretch_max)
+                    print('wcp', son.egn_wcp_stretch_min, son.egn_wcp_stretch_max)
 
                     # Tidy up
                     son._cleanup()
