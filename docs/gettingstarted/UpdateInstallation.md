@@ -25,7 +25,7 @@ python.exe -m pip install --upgrade pip
 
 Navigate to the location where you previously installed PING-Mapper:
 ```
-cd C:\users\Cam\MyPythonRepos
+cd C:\users\Cam\MyPythonRepos\PINGMapper
 ``` 
 
 ## Step 3
