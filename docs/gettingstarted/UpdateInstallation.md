@@ -41,6 +41,7 @@ Download the latest updates:
 
 ```
 git fetch
+git pull
 ```
 
 ## Step 5
