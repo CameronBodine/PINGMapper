@@ -40,7 +40,6 @@ git stash
 Download the latest updates:
 
 ```
-git fetch
 git pull
 ```
 
