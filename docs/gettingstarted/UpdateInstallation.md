@@ -43,6 +43,32 @@ Download the latest updates:
 git pull
 ```
 
+If PINGMapper has new updates, you should see an indication of that in the console outpute:
+```
+(base) PS E:\Python\PINGMapper> git pull
+Updating 0dce260..e5ac226
+Fast-forward
+ gui_main.py                         |  12 +-
+ gui_main_batchDirectory.py          | 168 ++++++-------
+ main.py                             |  56 ++---
+ main_batchDirectory.py              | 257 ++++++++++----------
+ src/class_rectObj.py                |  11 +-
+ src/class_sonObj.py                 | 382 ++++++++++++++++--------------
+ src/funcs_common.py                 |  29 +++
+ src/main_readFiles.py               | 142 +++++------
+ test_PINGMapper.py                  |  42 ++--
+ utils/avg_predictions_Mussel_WBL.py | 454 ++++++++++++++++++++++++++++++++++++
+ 10 files changed, 1044 insertions(+), 509 deletions(-)
+ create mode 100644 utils/avg_predictions_Mussel_WBL.py
+ ```
+
+ If there weren't any updates, you should see:
+ ```
+(base) PS E:\Python\PINGMapper> git pull
+Already up to date.
+ ```
+
+
 ## Step 5
 
 Activate the `ping` virtual environment:
