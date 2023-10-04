@@ -2696,8 +2696,19 @@ class sonObj(object):
             for i in range(sonDat.shape[0]):
                 # Set wc avgs to 1 (unchanged)
                 if i < depth:
-                    # egn_p[i] = 1
-                    egn_p[i] = egn_wc_means[i]
+                    # egn_p[i] = 1 # Original crappy method
+
+
+                    # Using the WC means is the 'correct' way to normalize the wc
+                    # but it ends up being brighter and 'noisier' which may be good
+                    # for looking at suspended sediments, but using the bed means
+                    # helps to eliminate the noise
+                    denoiseWC = True # Could be added as param in future
+
+                    if denoiseWC:
+                        egn_p[i] = egn_means[i] # Use bed means
+                    else:
+                        egn_p[i] = egn_wc_means[i] # Use wc means
 
                 # Relocate egn mean based on slant range
                 else:
@@ -2774,8 +2785,8 @@ class sonObj(object):
             self.egn_wcr_stretch_max = histIndex[-1]
 
             histIndex = np.where(wcp_pcnt[1:]>0)[0]
-            self.egn_wcr_stretch_min = histIndex[0]
-            self.egn_wcr_stretch_max = histIndex[-1]
+            self.egn_wcp_stretch_min = histIndex[0]
+            self.egn_wcp_stretch_max = histIndex[-1]
 
 
         elif egn_stretch == 2:
