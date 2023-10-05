@@ -11,6 +11,9 @@ nav_exclude: false
 # Installation
 
 {: .g2k }
+> If you need more information on the installation process, check out the [Detailed Installation](./InstallationDetailed.md) instructions!
+
+{: .note }
 > Ubuntu users can consider an [alternative installation](https://github.com/CameronBodine/PINGMapper/tree/main/ubuntu) method.
 
 ## Step 1
