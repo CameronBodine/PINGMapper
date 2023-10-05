@@ -12,7 +12,7 @@ nav_exclude: false
 
 Here is a set of installation instructions to help you get up and running with PINGMapper. Screenshots and additional detail are provided to aid navigating this somewhat cumbersome installation procedure.
 
-PINGMapper is a software (i.e. package) written in [Python](https://www.python.org/). PINGMapper uses a variety of Python packages ([NumPy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [Tensorflow](https://www.tensorflow.org/), etc.), or dependencies, that allow you to process Humminbird&reg sonar recordings and generate a variety of GIS datasets. To ensure that all the dependencies are configured correctly, we will first install a software called [Miniconda](https://docs.conda.io/en/latest/miniconda.html), the lightweight version of [Anaconda](https://www.anaconda.com/). Miniconda allows you to create [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) which are containers storing all the correct versions of the dependencies required to run Python software packages, ensuring everything runs as expected.
+PINGMapper is a software (i.e. package) written in [Python](https://www.python.org/). PINGMapper uses a variety of Python packages ([NumPy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [Tensorflow](https://www.tensorflow.org/), etc.), or dependencies, that allow you to process Humminbird&reg; sonar recordings and generate a variety of GIS datasets. To ensure that all the dependencies are configured correctly, we will first install a software called [Miniconda](https://docs.conda.io/en/latest/miniconda.html), the lightweight version of [Anaconda](https://www.anaconda.com/). Miniconda allows you to create [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) which are containers storing all the correct versions of the dependencies required to run Python software packages, ensuring everything runs as expected.
 
 After installing Miniconda, we will procede with downloading the [latest version of PINGMapper](https://github.com/CameronBodine/PINGMapper) hosted on [GitHub](https://github.com/). Then, we will create a virtual environment called `ping` and install all the required dependencies to run PINGMapper.
 
@@ -20,11 +20,11 @@ Let's get started!
 
 ## Step 1 - Install Miniconda
 
-[Click this](https://docs.conda.io/projects/miniconda/en/latest/) to open a web browser and navigate to the [Miniconda](https://docs.conda.io/en/latest/miniconda.html) download page.
+[Click this](https://docs.conda.io/projects/miniconda/en/latest/) to open a web browser and navigate to the Miniconda download page.
 
 <img src="../../assets/install/miniconda_website.PNG"/>
 
-There is a seperate installation file depending on the type of computer you are using. For this tutorial, we will use the Windows installation. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
+There is a seperate installation file depending on the type of computer you are using. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
 
 Double click the file to begin the installation file. This will open an installation window:
 
@@ -54,11 +54,11 @@ You can choose to see additional documentation on conda and Anaconda by keeping 
 
 ## Step 2
 
-Now for the scary part! We are going to open a console so that we can submit a series of commands to Miniconda. At this time, the console is the primary interface for installing and running PINGMapper. If you want to gain some familiarity with issueing console commands, you can watch this video:
+Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniconda. At this time, the prompt is the primary interface for installing and running PINGMapper. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/9zMWXD-xoxc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-Miniconda includes a console called Anaconda Powershell Prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find the `Miniconda3 folder`. 
+Miniconda includes a command prompt called Anaconda Powershell Prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find the `Miniconda3 folder`. 
 
 <img src="../../assets/install/miniconda_run.png"/>
 
@@ -66,9 +66,9 @@ Click the folder are click `Anaconda Powershell Prompt`. This will open the prom
 
 <img src="../../assets/install/shell_1.PNG"/>
 
-What are we seeing here? First we see the word `(base)`. The word that is in the parentheses tells us the name of the virtual environment that is currently activated. The `base` environment is activated by default. After we install PINGMapper, we will need to activate the `ping` environment, but more on that later. Next we see `PS` which I assume means `Power Shell`, but I'm not certain. Next, we can see what drive and folder the prompt is currently pointed to. In the case of the image above, the prompt is opened in the base of the `C` drive, as indicated with `C:\`. It may be possible that your prompt opened in your user folder, which might look like `C:\Users\Cam`. The key here is that whatever this path says, that is directory where the prompt is currently pointed to, and subsequently, where PINGMapper will be installed.
+What are we seeing here? First we see the word `(base)`. The word that is in the parenthesis tells us the name of the virtual environment that is currently activated. The `base` environment is activated by default. After we install PINGMapper, we will need to activate the `ping` environment, but more on that later. Next we see `PS` which I assume means `Power Shell`, but I'm not certain. Next, we can see what drive and folder the prompt is currently pointed to. In the case of the image above, the prompt is opened in the base of the `C` drive, as indicated with `C:\`. It may be possible that your prompt opened in your user folder, which might look like `C:\Users\Cam`. The key here is that whatever this path says, that is directory where the prompt is currently pointed to, and subsequently, where PINGMapper will be installed. Following the directory is the `>` which is where our typed commands will appear.
 
-We need to change to a directory where we have permission to edit files, so lets first navigate to the user folder using the `cd` (i.e., change directory) command. We can begin to type the word `us` and use the `tab` key on the keyboard to autocomplete (keep clicking tab to cycle through all folders in the current directory which begin with `us`) to see `.\Users\` and `Enter` or `Return` on the keyboard. Now we can see that we are in the directory `C:\Users` folder.
+We need to change to a directory where we have permission to edit files, so lets first navigate to the user folder by typing the `cd` (i.e., change directory) command. Insert a space with the spacebar. We can begin to type the word `us` and use the `tab` key on the keyboard to autocomplete (keep clicking tab to cycle through all folders in the current directory which begin with `us`) to see `.\Users\` and `Enter` or `Return` on the keyboard. Now we can see that we are in the directory `C:\Users` folder.
 
 <img src="../../assets/install/shell_2.PNG"/>
 
@@ -76,7 +76,7 @@ Now you want to go into your user folder by again issuing the `cd` command and b
 
 <img src="../../assets/install/shell_3.PNG"/>
 
-Now I am in a directory that I control and can make edits to. This is the location where your `Documents`, `Pictures`, etc. folders are located (if you are on Windows). Let's use the prompt to make a new folder, or directory, called `PythonPackages` (or whatever you like) to store PINGMapper and any other Python packages you may use in the future. Issue the following command to do so:
+Now I am in a directory that I control and can make edits to. This is the location where your `Documents`, `Pictures`, etc. folders are located (if you are on Windows). Let's use the prompt to make a new folder, or directory, called `PythonPackages` (or whatever you like) to store PINGMapper and any other Python packages you may use in the future. Issue the following command and hit `Enter`:
 
 ```
 mkdir PythonPackages
@@ -84,7 +84,7 @@ mkdir PythonPackages
 
 <img src="../../assets/install/shell_4.PNG"/>
 
-Now lets move the prompt into that new folder with:
+Now lets move the prompt into that new folder with the following command and hit `Enter`:
 
 ```
 cd PythonPackages
@@ -120,7 +120,7 @@ Hit `Enter` to accept the default answer of `yes` as indicated by a `y` in brack
 
 ## Step 4
 
-Miniconda has an environment solver that is built-in which it uses to make sure that the appropriate versions of package dependencies are correctly installed. It works (usually), but is pretty slow. Conda has released a new environment solver called [libmamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community) that is _considerably_ faster then installing environments with the classic installer. Install `libmamba` with:
+Miniconda has an environment solver that is built-in which it uses to make sure that the appropriate versions of package dependencies are correctly installed. It works (usually), but is pretty slow. Conda has released a new environment solver called [libmamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community) that is _considerably_ faster then installing environments with the classic installer. Install `libmamba` with the following command and hit `Enter`:
 
 ```
 conda install -n base conda-libmamba-solver
@@ -132,7 +132,7 @@ Hit `Enter` and Miniconda will download the necessary packages and ask if you wa
 
 <img src="../../assets/install/shell_12.PNG"/>
 
-Hit `Enter` to proceed. After succcessfully install `libmamba`, you will see the following:
+Hit `Enter` to proceed. After succcessfully installing `libmamba`, you will see the following indicating everything installed correctly:
 
 <img src="../../assets/install/shell_13.PNG"/>
 
@@ -148,11 +148,11 @@ conda config --set solver libmamba
 > You can revert to the classic installer by running:
 > ```
 > conda config --set solver classic
-> `
+> ```
 
 ## Step 5
 
-You shouldn't need to do this, but just in case, make sure that you have `git` installed by running the following, hitting `Enter`, and accepting by hitting `Enter` again:
+You shouldn't need to do this, but just in case, make sure that you have `git` installed by running the following, hitting `Enter`, and proceeding with the installation by hitting `Enter` again:
 
 ```
 conda install git
@@ -160,7 +160,7 @@ conda install git
 
 ## Step 6
 
-Great! Now we have Miniconda installed, we have installed `libmamba` to speed up installing package dependencies, and the prompt is located in the directory where we want to install PINGMapper (e.g., `C:\Users\Cam\PythonPackages`) as indicated in the prompt. Now we can download the latest version of PINGMapper by cloning the GitHub repository. We do that by issuing the following command and hitting `Enter`:
+Great! Now we have Miniconda installed, we are using `libmamba` to speed up installing package dependencies, and the prompt is located in the directory where we want to install PINGMapper (e.g., `C:\Users\Cam\PythonPackages`) as indicated in the prompt. Now we can download the latest version of PINGMapper by cloning the GitHub repository. We do that by issuing the following command and hitting `Enter`:
 
 ```
 git clone --depth 1 https://github.com/CameronBodine/PINGMapper
@@ -181,11 +181,11 @@ cd PINGMapper
 <img src="../../assets/install/shell_16.PNG"/>
 
 {: .g2k }
-> The prompt must always be pointing to the PINGMapper directory in order to use the software. Use the `cd` command to navigate to the PINGMapper folder evertime you start a session.
+> The prompt must always be pointing to the PINGMapper directory in order to use the software. Use the `cd` command to navigate to the PINGMapper folder every time you start a session.
 
 ## Step 8
 
-Now we are going to install all the necessary packages that PINGMapper depends on in order to run. We will create a virtual environment called `ping` and install all the packages that are listed in a file that was downloaded from the repository. We do this by running the following command and hitting `Enter`:
+Now we are going to install all the necessary packages that PINGMapper depends on in order to run. We will create a virtual environment called `ping` and install all the packages that are listed in a file that were previously downloaded from the repository. We do this by running the following command and hitting `Enter`:
 
 ```
 conda env create --file conda/PINGMapper.yml
@@ -197,9 +197,11 @@ conda env create --file conda/PINGMapper.yml
 
 <img src="../../assets/install/shell_18.PNG"/>
 
-To activate the newly installed environment and use PINGMapper, issue the following command and hit `Enter`:
+As instructed in the prompt, to activate the newly installed environment and use PINGMapper, issue the following command and hit `Enter`:
 
 <img src="../../assets/install/shell_19.PNG"/>
+
+We can see that `ping` is activated because it is listed in parenthesis `(ping)` instead of the default environment `(base)`.
 
 {: .g2k }
 > You must activate the `ping` environment every time you start a new PINGMapper session.
