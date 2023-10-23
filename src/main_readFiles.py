@@ -525,8 +525,9 @@ def read_master_func(logfilename='',
 
                 # Get sonMetaDF
                 son._loadSonMeta()
-                son.sonMetaDF['ping_cnt'] = d
-                son._saveSonMeta(son.sonMetaDF)
+                # son.sonMetaDF['ping_cnt'] = d
+                son.sonMetaDF.loc[son.sonMetaDF['ping_cnt'] > d, 'ping_cnt'] = d
+                son._saveSonMetaCSV(son.sonMetaDF)
 
         # Store flag to export un-rectified sonar tiles in each sonObj.
         for son in sonObjs:

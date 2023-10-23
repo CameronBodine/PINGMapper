@@ -177,6 +177,7 @@ for datFile in inFiles:
             'projDir':projDir,
             'tempC':tempC,
             'nchunk':nchunk,
+            'cropRange':cropRange,
             'exportUnknown':exportUnknown,
             'fixNoDat':fixNoDat,
             'threadCnt':threadCnt,
