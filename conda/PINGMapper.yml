@@ -1,9 +1,9 @@
-name: ping
+name: ping2
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python
+  - python==3.11.*
   - pandas
   - geopandas
   - rasterio
