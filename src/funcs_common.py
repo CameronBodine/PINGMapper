@@ -39,6 +39,7 @@ warnings.simplefilter("ignore")
 import numpy as np
 from array import array as arr
 
+from osgeo import gdal
 import pyproj
 import rasterio
 from rasterio.enums import Resampling
