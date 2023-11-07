@@ -53,8 +53,8 @@ start_time = time.time()
 
 # Path to data/output
 
-humFile = "/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data/Pascagoula/Bouie/BOU_20210402_USM1/030_023_Rec00003.DAT" # Path to sonar recording .DAT file
-projDir = "/home/cbodine/Desktop/test" # Directory where you want to export files
+humFile = r"C:/user/cam/myHumDat.DAT" # Path to sonar recording .DAT file
+projDir = r"C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to export files
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
@@ -141,6 +141,10 @@ map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 
 
 # =========================================================
+# Normalize paths
+humFile = os.path.normpath(humFile)
+projDir = os.path.normpath(projDir)
+
 # Determine project_mode
 print(project_mode)
 if project_mode == 0:

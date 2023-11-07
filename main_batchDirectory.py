@@ -50,7 +50,7 @@ oldOutput = sys.stdout
 #######################
 
 # Path to data/output
-inDir = r'./exampleData' # Parent folder of sonar recordings
+inDir = r'./exampleData/' # Parent folder of sonar recordings
 outDir = r'./procData' # Parent folder for export files
 
 # *** IMPORTANT ****
@@ -138,6 +138,9 @@ map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 #####################
 
 #============================================
+# Normalize paths
+inDir = os.path.normpath(inDir)
+outDir = os.path.normpath(outDir)
 
 # Find all DAT and SON files in all subdirectories of inDir
 inFiles=[]
