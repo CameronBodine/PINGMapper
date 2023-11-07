@@ -42,8 +42,8 @@ We are going to update this script with new parameters that we define, specifica
 
 # Path to data/output
 
-humFile = r"C:/users/Cam/SonarData/Rec00001.DAT" # Path to sonar recording .DAT file
-projDir = r"C:/users/Cam/SonarData_Processed/Rec00001" # Directory where you want to export files
+humFile = "C:/user/cam/myHumDat.DAT" # Path to sonar recording .DAT file
+projDir = "C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to export files
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
@@ -133,7 +133,7 @@ map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 Enter paths to .DAT file and output directory:
 ```
 humFile = "C:/user/cam/myHumDat.DAT" # Path to sonar recording .DAT file
-projDir = "C:/user/cam/myHumAnswerBox/myHumDat" # Directory where you want to export files
+projDir = "C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to export files
 ```
 
 {: .warning }
