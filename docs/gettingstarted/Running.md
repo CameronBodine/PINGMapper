@@ -42,8 +42,8 @@ We are going to update this script with new parameters that we define, specifica
 
 # Path to data/output
 
-humFile = "/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data/Pascagoula/Bouie/BOU_20210402_USM1/030_023_Rec00003.DAT" # Path to sonar recording .DAT file
-projDir = "/home/cbodine/Desktop/test" # Directory where you want to export files
+humFile = r"C:/users/Cam/SonarData/Rec00001.DAT" # Path to sonar recording .DAT file
+projDir = r"C:/users/Cam/SonarData_Processed/Rec00001" # Directory where you want to export files
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
