@@ -203,7 +203,7 @@ def downloadSegmentationModelsv1_0(modelDir):
         os.makedirs(modelDir)
 
     # Download
-    url = 'https://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1'
+    url = 'https://zenodo.org/records/10093642/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1'
     print('\n\nDownloading segmentation models (v1.0):\nhttps://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1')
 
     filename = modelDir+'.zip'
