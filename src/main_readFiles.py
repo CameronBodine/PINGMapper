@@ -235,6 +235,13 @@ def read_master_func(logfilename='',
     #         projectMode_2_inval()
 
 
+    #####################################
+    # Download models if they don't exist
+    modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
+    if not os.path.exists(modelDir):
+        downloadSegmentationModelsv1_0(modelDir)
+
+
     ###############################################
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -295,7 +302,7 @@ def read_master_func(logfilename='',
         son.metaDir = metaDir #Store metadata directory in sonObj
 
         # Save main script to metaDir
-        scriptDir = os.path.join(metaDir, 'processing_scripts')
+        scriptDir = os.path.join(os.path.dirname(logfilename), 'processing_scripts')
         if not os.path.exists(scriptDir):
             os.mkdir(scriptDir)
         outScript = os.path.join(scriptDir, script[1])
@@ -912,13 +919,17 @@ def read_master_func(logfilename='',
         # Zheng et al. 2021
         # Load model weights and configuration file
         if detectDep == 1:
-            psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
-            psObj.configfile = psObj.weights.replace('.h5', '.json')
-            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
+            # psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
+            # psObj.configfile = psObj.weights.replace('.h5', '.json')
+            # print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
-            # Download model if necessary
-            if not os.path.exists(psObj.configfile):
-                downloadBedpickModel()
+            # # Download model if necessary
+            # if not os.path.exists(psObj.configfile):
+            #     downloadBedpickModel()
+
+            psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Bedpick_Zheng2021_Segmentation_unet_v1.0/config/Bedpick_Zheng2021_Segmentation_unet_v1.0.json'
+            psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
+            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
         # With binary thresholding
         elif detectDep == 2:
@@ -1069,12 +1080,12 @@ def read_master_func(logfilename='',
         psObj = portstarObj(portstar)
 
         # Model weights and config file
-        psObj.configfile = r'./models/shadow/shadow_20230204_fold_4.json'
-        psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5')
+        psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Shadow_Segmentation_unet_v1.0/config/Shadow_Segmentation_unet_v1.0.json'
+        psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
-        # Download model if necessary
-        if not os.path.exists(psObj.configfile):
-            downloadShadowModel()
+        # # Download model if necessary
+        # if not os.path.exists(psObj.configfile):
+        #     downloadShadowModel()
 
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()

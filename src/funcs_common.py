@@ -29,7 +29,7 @@
 import os, sys, struct, gc
 from joblib import Parallel, delayed, cpu_count
 from glob import glob
-import requests
+import requests, zipfile
 
 ################################################################################
 import warnings
@@ -196,93 +196,117 @@ class Logger(object):
         pass
 
 # =========================================================
-def downloadBedpickModel():
+def downloadSegmentationModelsv1_0(modelDir):
 
-    modelDir = r'./models/bedpick/Zheng2021/'
-
-    # Create directory
+    # Create directories
     if not os.path.exists(modelDir):
         os.makedirs(modelDir)
 
     # Download
-    url1 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.h5?download=1'
-    url2 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.json?download=1'
-    print('Downloading Bedpick Model:\n', url1, '\n', url2)
+    url = 'https://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1'
+    print('\n\nDownloading segmentation models (v1.0):\nhttps://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1')
 
-    filename1 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.h5')
-    r = requests.get(url1, allow_redirects=True)
-    open(filename1, 'wb').write(r.content)
+    filename = modelDir+'.zip'
+    r = requests.get(url, allow_redirects=True)
+    open(filename, 'wb').write(r.content)
 
-    filename2 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.json')
-    r = requests.get(url2, allow_redirects=True)
-    open(filename2, 'wb').write(r.content)
+    with zipfile.ZipFile(filename, 'r') as z_fp:
+        z_fp.extractall(modelDir)
+    os.remove(filename)
+
+    print('Model download success!')
+    
+    return
+
+# # =========================================================
+# def downloadBedpickModel():
+
+#     modelDir = r'./models/bedpick/Zheng2021/'
+
+#     # Create directory
+#     if not os.path.exists(modelDir):
+#         os.makedirs(modelDir)
+
+#     # Download
+#     url1 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.h5?download=1'
+#     url2 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.json?download=1'
+#     print('Downloading Bedpick Model:\n', url1, '\n', url2)
+
+#     filename1 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.h5')
+#     r = requests.get(url1, allow_redirects=True)
+#     open(filename1, 'wb').write(r.content)
+
+#     filename2 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.json')
+#     r = requests.get(url2, allow_redirects=True)
+#     open(filename2, 'wb').write(r.content)
+
+# # =========================================================
+# def downloadShadowModel():
+
+#     modelDir = r'./models/shadow'
+
+#     # Create directory
+#     if not os.path.exists(modelDir):
+#         os.makedirs(modelDir)
+
+#     # Download
+#     url1 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4_fullmodel.h5?download=1'
+#     url2 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4.json?download=1'
+#     print('Downloading Shadow Model:\n', url1, '\n', url2)
+
+#     filename1 = os.path.join(modelDir, 'shadow_20230204_fold_4_fullmodel.h5')
+#     r = requests.get(url1, allow_redirects=True)
+#     open(filename1, 'wb').write(r.content)
+
+#     filename2 = os.path.join(modelDir, 'shadow_20230204_fold_4.json')
+#     r = requests.get(url2, allow_redirects=True)
+#     open(filename2, 'wb').write(r.content)
+
+# # =========================================================
+# def downloadSubstrateModels():
+
+#     # EGN
+#     modelDir = r'./models/substrate/EGN_Substrate_Segformer'
+
+#     # Create directory
+#     if not os.path.exists(modelDir):
+#         os.makedirs(modelDir)
+
+#     # Download
+#     url1 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
+#     url2 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer.json?download=1'
+#     print('Downloading EGN Substrate Model:\n', url1, '\n', url2)
+
+#     filename1 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5')
+#     r = requests.get(url1, allow_redirects=True)
+#     open(filename1, 'wb').write(r.content)
+
+#     filename2 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer.json')
+#     r = requests.get(url2, allow_redirects=True)
+#     open(filename2, 'wb').write(r.content)
+
+
+#     # Raw
+#     modelDir = r'./models/substrate/Raw_Substrate_Segformer'
+
+#     # Create directory
+#     if not os.path.exists(modelDir):
+#         os.makedirs(modelDir)
+
+#     # Download
+#     url1 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
+#     url2 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer.json?download=1'
+#     print('Downloading Raw Substrate Model:\n', url1, '\n', url2)
+
+#     filename1 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5')
+#     r = requests.get(url1, allow_redirects=True)
+#     open(filename1, 'wb').write(r.content)
+
+#     filename2 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer.json')
+#     r = requests.get(url2, allow_redirects=True)
+#     open(filename2, 'wb').write(r.content)
 
 # =========================================================
-def downloadShadowModel():
-
-    modelDir = r'./models/shadow'
-
-    # Create directory
-    if not os.path.exists(modelDir):
-        os.makedirs(modelDir)
-
-    # Download
-    url1 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4_fullmodel.h5?download=1'
-    url2 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4.json?download=1'
-    print('Downloading Shadow Model:\n', url1, '\n', url2)
-
-    filename1 = os.path.join(modelDir, 'shadow_20230204_fold_4_fullmodel.h5')
-    r = requests.get(url1, allow_redirects=True)
-    open(filename1, 'wb').write(r.content)
-
-    filename2 = os.path.join(modelDir, 'shadow_20230204_fold_4.json')
-    r = requests.get(url2, allow_redirects=True)
-    open(filename2, 'wb').write(r.content)
-
-# =========================================================
-def downloadSubstrateModels():
-
-    # EGN
-    modelDir = r'./models/substrate/EGN_Substrate_Segformer'
-
-    # Create directory
-    if not os.path.exists(modelDir):
-        os.makedirs(modelDir)
-
-    # Download
-    url1 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
-    url2 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer.json?download=1'
-    print('Downloading EGN Substrate Model:\n', url1, '\n', url2)
-
-    filename1 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5')
-    r = requests.get(url1, allow_redirects=True)
-    open(filename1, 'wb').write(r.content)
-
-    filename2 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer.json')
-    r = requests.get(url2, allow_redirects=True)
-    open(filename2, 'wb').write(r.content)
-
-
-    # Raw
-    modelDir = r'./models/substrate/Raw_Substrate_Segformer'
-
-    # Create directory
-    if not os.path.exists(modelDir):
-        os.makedirs(modelDir)
-
-    # Download
-    url1 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
-    url2 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer.json?download=1'
-    print('Downloading Raw Substrate Model:\n', url1, '\n', url2)
-
-    filename1 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5')
-    r = requests.get(url1, allow_redirects=True)
-    open(filename1, 'wb').write(r.content)
-
-    filename2 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer.json')
-    r = requests.get(url2, allow_redirects=True)
-    open(filename2, 'wb').write(r.content)
-
 def saveDefaultParams(values):
     
     params = {

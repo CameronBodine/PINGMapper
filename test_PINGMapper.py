@@ -200,7 +200,7 @@ elif project_mode == 2:
 # =========================================================
 # For logging the console output
 
-logdir = os.path.join(projDir, 'meta', 'logs')
+logdir = os.path.join(projDir, 'logs')
 if not os.path.exists(logdir):
     os.makedirs(logdir)
 
