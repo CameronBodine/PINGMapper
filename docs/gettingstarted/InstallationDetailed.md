@@ -152,7 +152,7 @@ conda config --set solver libmamba
 
 ## Step 5
 
-You shouldn't need to do this, but just in case, make sure that you have `git` installed by running the following, hitting `Enter`, and proceeding with the installation by hitting `Enter` again:
+Make sure that you have `git` installed by running the following, hitting `Enter`, and proceeding with the installation by hitting `Enter` again:
 
 ```
 conda install git
