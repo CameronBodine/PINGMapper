@@ -1,4 +1,4 @@
-# PING-Mapper v2.0.0-alpha
+# PING-Mapper v2.0.0
 {PING-Mapper is a Python interface for reading, processing, and mapping side scan sonar data from Humminbird&reg; sonar systems.}
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/CameronBodine/PINGMapper)](https://github.com/CameronBodine/PINGMapper/commits)
@@ -23,7 +23,7 @@
 
 `...into scientific datasets!`
 
-<img src="../main/docs/attach/GeorectifiedSon.PNG" width="800"/>
+<img src="../main/docs/attach/GithubMap.PNG" width="800"/>
 
 # Overview
 Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
@@ -55,6 +55,10 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 ## Website
 Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for more information.
 
+## PING-Mapper v2.0.0
+The second version of PING-Mapper is available now. Scientific articles documenting the new functionality will be posted here when available. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
+
+
 ## PING-Mapper v1.0.0
 An overview of PING-Mapper v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use PING-Mapper for your work, please cite the article!
 
@@ -68,8 +72,6 @@ A Preprint of the above article was first made available here:
 ### Code that made the paper and v1.0.0
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
-## PING-Mapper v2.0.0-alpha
-The second version of PING-Mapper is available now as an alpha release. Scientific articles documenting the new functionality will be posted here when available.
 
 # Installation
 View the [installation instructions](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
