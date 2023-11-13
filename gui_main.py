@@ -248,8 +248,9 @@ if not 'map_predict' in locals():
 
 #============================================
 
-for k, v in params.items():
-    print(k, v)
+print('\n\n', '***User Parameters***')
+for k,v in params.items():
+    print("| {:<20s} : {:<10s} |".format(k, str(v)))
 
 #============================================
 # Add ofther params

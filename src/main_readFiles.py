@@ -210,30 +210,6 @@ def read_master_func(logfilename='',
     |     |          water column present (wcp)
     '''
 
-    # ########################
-    # # Determine project_mode
-    # printProjectMode(project_mode)
-    # if project_mode == 0:
-    #     # Create new project
-    #     if not os.path.exists(projDir):
-    #         os.mkdir(projDir)
-    #     else:
-    #         projectMode_1_inval()
-
-    # elif project_mode == 1:
-    #     # Overwrite existing project
-    #     if os.path.exists(projDir):
-    #         shutil.rmtree(projDir)
-
-    #     os.mkdir(projDir)        
-
-    # elif project_mode == 2:
-    #     # Update project
-    #     # Make sure project exists, exit if not.
-        
-    #     if not os.path.exists(projDir):
-    #         projectMode_2_inval()
-
 
     #####################################
     # Download models if they don't exist
@@ -532,7 +508,6 @@ def read_master_func(logfilename='',
 
                 # Get sonMetaDF
                 son._loadSonMeta()
-                # son.sonMetaDF['ping_cnt'] = d
                 son.sonMetaDF.loc[son.sonMetaDF['ping_cnt'] > d, 'ping_cnt'] = d
                 son._saveSonMetaCSV(son.sonMetaDF)
 
@@ -541,11 +516,6 @@ def read_master_func(logfilename='',
             beam = son.beamName
 
             son.wcp = wcp
-            # if wcp:
-            #     son.wcp = True
-            # else:
-            #     son.wcp = False
-
 
             if wcr:
                 if beam == "ss_port" or beam == "ss_star":
@@ -669,11 +639,6 @@ def read_master_func(logfilename='',
                         print("\tDon't worry, substrate will still be predicted...")
                 else:
                     pass
-
-        # for son in sonObjs:
-        #     son.pred_sub = pred_sub
-        #     son.map_sub = map_sub
-        #     son.map_predict = map_predict
 
         for son in sonObjs:
             son.wcp = wcp
@@ -919,14 +884,9 @@ def read_master_func(logfilename='',
         # Zheng et al. 2021
         # Load model weights and configuration file
         if detectDep == 1:
-            # psObj.weights = r'./models/bedpick/Zheng2021/bedpick_ZhengApproach_20220629.h5'
-            # psObj.configfile = psObj.weights.replace('.h5', '.json')
-            # print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
-            # # Download model if necessary
-            # if not os.path.exists(psObj.configfile):
-            #     downloadBedpickModel()
-
+            # Store configuration file and model weights
+            # These were downloaded at the beginning of the script
             psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Bedpick_Zheng2021_Segmentation_unet_v1.0/config/Bedpick_Zheng2021_Segmentation_unet_v1.0.json'
             psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
@@ -1026,16 +986,6 @@ def read_master_func(logfilename='',
     ## 2: Remove only contiguous shadows touching max range extent. May be
     ## useful for locating river banks...
 
-    # # Need to detect shadows if EGN
-    # if egn:
-    #     if remShadow == 0:
-    #         print('\n\nEGN requires shadow removal')
-    #         print('Setting remShadow==2...')
-    #         remShadow = 2
-    #         keepShadow = True
-    #     else:
-    #         keepShadow = False
-
     if remShadow > 0:
         keepShadow = False
     else:
@@ -1083,16 +1033,10 @@ def read_master_func(logfilename='',
         psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Shadow_Segmentation_unet_v1.0/config/Shadow_Segmentation_unet_v1.0.json'
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
-        # # Download model if necessary
-        # if not os.path.exists(psObj.configfile):
-        #     downloadShadowModel()
-
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()
 
         r = Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in chunks)
-        # for chunk in chunks:
-        #     psObj._detectShadow(remShadow, int(chunk), USE_GPU, False, tileFile)
 
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
@@ -1313,11 +1257,6 @@ def read_master_func(logfilename='',
                 son._loadSonMeta()
 
                 Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._exportTiles)(i, tileFile) for i in chunks)
-
-                # if son.beamName == "ss_port":
-                #     for i in chunks:
-                #         son._exportTiles(i, tileFile)
-                #         sys.exit()
 
                 son._pickleSon()
 

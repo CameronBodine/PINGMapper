@@ -287,7 +287,6 @@ class portstarObj(object):
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if (len(map) > maxChunk) and (maxChunk != 0):
                     subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
-                    # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
                     subToMosaic = [map]
 
@@ -302,7 +301,6 @@ class portstarObj(object):
                 # Make multiple mosaics if number of input sonograms is greater than maxChunk
                 if (len(map) > maxChunk) and (maxChunk != 0):
                     predictToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
-                    # subToMosaic = [list(itertools.chain(*i)) for i in map]
                 else:
                     predictToMosaic = [map]
 
@@ -342,7 +340,7 @@ class portstarObj(object):
                     for i, pred in enumerate(predictToMosaic):
                         _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
-        return #self
+        return
 
 
     #=======================================================================
@@ -380,23 +378,12 @@ class portstarObj(object):
         --------------------
         None
         '''
-
-        # if son:
-        #     resampleAlg='lanczos' # Throws error after applying colormap
-        # else:
-        #     resampleAlg='nearest'
         
         resampleAlg = 'nearest'
 
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
-
-            # # Set output file names
-            # filePrefix = os.path.split(self.port.projDir)[-1]
-            # fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
-            # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
-            # outTIF = outVRT.replace('.vrt', '.tif')
 
             # Set output file names
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
@@ -411,7 +398,6 @@ class portstarObj(object):
                 outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
-                # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
@@ -512,7 +498,6 @@ class portstarObj(object):
                 outDir = os.path.join(self.port.substrateDir, 'map_logit_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
-                # outVRT = os.path.join(self.port.projDir, filePrefix+'_'+fileSuffix)
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
 
@@ -549,83 +534,7 @@ class portstarObj(object):
         bands = img.shape[2]
         del img
         return bands
-
-    ############################################################################
-    # General Model Functions                                                  #
-    ############################################################################
-
-    # #=======================================================================
-    # def _initModel(self,
-    #                USE_GPU=False):
-    #     '''
-    #     Compiles a Tensorflow model for bedpicking. Developed following:
-    #     https://github.com/Doodleverse/segmentation_gym
-    #
-    #     ----------
-    #     Parameters
-    #     ----------
-    #     None
-    #
-    #     ----------------------------
-    #     Required Pre-processing step
-    #     ----------------------------
-    #     self.__init__()
-    #
-    #     -------
-    #     Returns
-    #     -------
-    #     self.bedpickModel containing compiled model.
-    #
-    #     --------------------
-    #     Next Processing Step
-    #     --------------------
-    #     self._detectDepth()
-    #     '''
-    #     SEED=42
-    #     np.random.seed(SEED)
-    #     AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API
-    #
-    #     tf.random.set_seed(SEED)
-    #
-    #     if USE_GPU == True:
-    #         os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Use GPU
-    #     else:
-    #
-    #         os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # Use CPU
-    #
-    #     #suppress tensorflow warnings
-    #     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    #
-    #     #suppress tensorflow warnings
-    #     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-    #
-    #     # Open model configuration file
-    #     with open(self.configfile) as f:
-    #         config = json.load(f)
-    #     globals().update(config)
-    #
-    #
-    #     ########################################################################
-    #     ########################################################################
-    #
-    #     model =  custom_resunet((TARGET_SIZE[0], TARGET_SIZE[1], N_DATA_BANDS),
-    #                     FILTERS,
-    #                     nclasses=[NCLASSES+1 if NCLASSES==1 else NCLASSES][0],
-    #                     kernel_size=(KERNEL,KERNEL),
-    #                     strides=STRIDE,
-    #                     dropout=DROPOUT,#0.1,
-    #                     dropout_change_per_layer=DROPOUT_CHANGE_PER_LAYER,#0.0,
-    #                     dropout_type=DROPOUT_TYPE,#"standard",
-    #                     use_dropout_on_upsampling=USE_DROPOUT_ON_UPSAMPLING,#False,
-    #                     )
-    #
-    #     try:
-    #         model = tf.keras.models.load_model(self.weights)
-    #     except:
-    #         model.compile(optimizer = 'adam', loss = dice_coef_loss, metrics = [mean_iou, dice_coef])
-    #         model.load_weights(self.weights)
-    #
-    #     return model
+    
 
     #=======================================================================
     def _doPredict(self,
@@ -902,9 +811,6 @@ class portstarObj(object):
         self._getPortStarScanChunk(i)
         mergeSon = self.mergeSon
 
-        # Clean unneeded Attributes
-        # del self.headIdx, self.pingCnt
-
         ###################
         # Make 3-band array
         b1 = mergeSon.copy() # Band 1: no change
@@ -922,7 +828,6 @@ class portstarObj(object):
 
         ##########################################
         # Do initial prediction on entire sonogram
-        # init_label, init_prob = self._doPredict(model, son3bnd) ###############################
         init_label, init_prob = doPredict(model, MODEL, son3bnd, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
 
         ######################################
@@ -954,9 +859,6 @@ class portstarObj(object):
             minDep = 0
         if np.isnan(maxDep):
             maxDep = 0
-
-        # # Find ping-wise water column width from avg depth prediction
-        # Wp = avgDepths*2
 
         # Find ping-wise water column width from min and max depth prediction
         Wp = maxDepths+minDepths
@@ -1026,8 +928,6 @@ class portstarObj(object):
 
         #######################
         # Segment cropped image
-        # crop_label = self._doPredict(model, sonCrop)
-        # crop_label, crop_prob = self._doPredict(model, sonCrop)
         crop_label, crop_prob = doPredict(model, MODEL, sonCrop, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
 
 
@@ -1326,21 +1226,6 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        # # If reprocessing, delete existing depth columns
-        # try:
-        #     portDF.drop('dep_m')
-        #     portDF.drop('dep_m_Method')
-        #     portDF.drop('dep_m_smth')
-        #     portDF.drop('dep_m_adjBy')
-        #
-        #     starDF.drop('dep_m')
-        #     starDF.drop('dep_m_Method')
-        #     starDF.drop('dep_m_smth')
-        #     starDF.drop('dep_m_adjBy')
-        # except:
-        #     pass
-
-
         # Get all chunks
         chunks = pd.unique(portDF['chunk_id'])
 
@@ -1354,8 +1239,6 @@ class portstarObj(object):
                 starInstDepth = savgol_filter(starInstDepth, 51, 3)
 
             if adjDep != 0:
-                # print("\tIncreasing/Decreasing depth values by {} meters...".format(adjBy))
-                # adjBy = portDF['pix_m'][0]*adjDep
                 adjBy = self.port.pixM*adjDep
                 portInstDepth += adjBy
                 starInstDepth += adjBy
@@ -1388,11 +1271,6 @@ class portstarObj(object):
             portFinal = []
             starFinal = []
             for i in sorted(chunks):
-                # portDep = self.portDepDetect[i]
-                # starDep = self.starDepDetect[i]
-                #
-                # portFinal.extend(portDep)
-                # starFinal.extend(starDep)
 
                 if i in self.portDepDetect:
                     portDep = self.portDepDetect[i]
@@ -1439,15 +1317,10 @@ class portstarObj(object):
                 starFinal = savgol_filter(starFinal, 51, 3)
 
             # Convert pix to depth [m]
-            # portFinal = portFinal * portDF['pix_m']
-            # starFinal = starFinal * starDF['pix_m']
             portFinal = np.asarray(portFinal) * self.port.pixM
             starFinal = np.asarray(starFinal) * self.star.pixM
 
             # Set negatives to 0
-            # portFinal = np.asarray(portFinal)
-            # starFinal = np.asarray(starFinal)
-
             portFinal = np.where(portFinal<0, 0, portFinal)
             starFinal = np.where(starFinal<0, 0, starFinal)
 
@@ -1458,7 +1331,6 @@ class portstarObj(object):
             starDF['dep_m'] = starFinal
 
             if adjDep != 0:
-                # adjBy = portDF['pix_m'][0]*adjDep
                 adjBy = self.port.pixM*adjDep
                 portDF['dep_m'] += adjBy
                 starDF['dep_m'] += adjBy
@@ -1551,32 +1423,14 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        # if autoBank:
-        #     portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
-        #     starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'bank_m', 'pix_m']]
-        # else:
-        #     portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
-        #     starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pix_m']]
-
         portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
         starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
-
-        # Convert depth in meters to pixels
-        # portInst = (portDF['inst_dep_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
-        # portAuto = (portDF['dep_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
-        #
-        # starInst = (starDF['inst_dep_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
-        # starAuto = (starDF['dep_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
 
         portInst = (portDF['inst_dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
         portAuto = (portDF['dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
 
         starInst = (starDF['inst_dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
         starAuto = (starDF['dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
-
-        # if autoBank:
-        #     portBank = (portDF['bank_m'] / portDF['pix_m']).to_numpy(dtype=int, copy=True)
-        #     starBank = (starDF['bank_m'] / starDF['pix_m']).to_numpy(dtype=int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
@@ -1586,13 +1440,9 @@ class portstarObj(object):
             if (pL > sL):
                 starAuto = np.append(starAuto, portAuto[(sL-pL):])
                 starInst = np.append(starInst, portInst[(sL-pL):])
-                # if autoBank:
-                #     starBank = np.append(starBank, portBank[(sL-pL):])
             else:
                 portAuto = np.append(portAuto, starAuto[(pL-sL):])
                 portInst = np.append(portInst, starInst[(pL-sL):])
-                # if autoBank:
-                #     portBank = np.append(portBank, starBank[(pL-sL):])
 
         # Relocate depths relative to horizontal center of image
         c = int(mergeSon.shape[1]/2)
@@ -1609,13 +1459,6 @@ class portstarObj(object):
 
         starInst = np.flip(starInst)
         starAuto = np.flip(starAuto)
-
-        # if autoBank:
-        #     portBank = c - portBank
-        #     starBank = c + starBank
-        #
-        #     portBank = np.flip(portBank)
-        #     starBank = np.flip(starBank)
 
         #############
         # Export Plot
@@ -1635,11 +1478,9 @@ class portstarObj(object):
         outDir = os.path.join(self.port.projDir, 'Bedpick')
         try:
             os.mkdir(outDir)
-            # os.mkdir(os.path.join(outDir, '00_Bad'))
         except:
             pass
 
-        # projName = os.path.split(outDir)[-1]
         projName = os.path.split(self.port.projDir)[-1]
         outFile = os.path.join(outDir, projName+'_Bedpick_'+addZero+str(i)+tileFile)
 
@@ -1652,10 +1493,6 @@ class portstarObj(object):
             plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
             plt.plot(starAuto, y, 'b-.', lw=1)
             del portAuto, starAuto
-        # if autoBank:
-        #     plt.plot(portBank, y, 'g-.', lw=1, label='Bank Pick')
-        #     plt.plot(starBank, y, 'g-.', lw=1)
-        #     del portBank, starBank
 
         plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
@@ -1755,8 +1592,6 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         # Get depth/ pix scaler for given chunk
-        # portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
-        # starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pix_m']].reset_index()
         portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m']].reset_index()
         starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m']].reset_index()
 
@@ -1774,8 +1609,6 @@ class portstarObj(object):
 
         ###############
         # Do prediction
-        # port_label, port_prob = self._doPredict(model, self.port.sonDat, False)
-        # star_label, star_prob = self._doPredict(model, self.star.sonDat, False)
 
         port_label, port_prob = doPredict(model, MODEL, self.port.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
         star_label, star_prob = doPredict(model, MODEL, self.star.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
@@ -1786,8 +1619,6 @@ class portstarObj(object):
 
         ##############################################
         # Recover original dimensions for shadow label
-        # pMask = np.zeros((pR, pW))
-        # sMask = np.zeros((sR, sW))
         pMask = np.ones((pR, pW))
         sMask = np.ones((sR, sW))
 
@@ -1796,8 +1627,6 @@ class portstarObj(object):
 
         ###########################################
         # Remove shadow predictions in water column
-        # bedpickPort = round(portDF['dep_m'] / portDF['pix_m'], 0).astype(int)
-        # bedpickStar = round(starDF['dep_m'] / starDF['pix_m'], 0).astype(int)
         bedpickPort = round(portDF['dep_m'] / self.port.pixM, 0).astype(int)
         bedpickStar = round(starDF['dep_m'] / self.star.pixM, 0).astype(int)
 
@@ -1819,18 +1648,9 @@ class portstarObj(object):
         # Plot
         if doPlot:
             # color map
-            # class_label_colormap = ['#3366CC','#DC3912', '#000000']
             class_label_colormap = ['#3366CC', '#D3D3D3']
 
-            # Port
-            p_label = label_to_colors(port_label, self.port.sonDat[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-            # imsave(os.path.join(self.port.projDir, str(i)+"_initLabel_"+self.port.beamName+'_'+str(i)+".png"), (p_label).astype(np.uint8), check_contrast=False)
-            # imsave(os.path.join(self.port.projDir, str(i)+"_initImg_"+self.port.beamName+'_'+str(i)+".png"), (self.port.sonDat).astype(np.uint8), check_contrast=False)
-
-            s_label = label_to_colors(star_label, self.port.sonDat[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-            # imsave(os.path.join(self.star.projDir, str(i)+"_initLabel_"+self.star.beamName+'_'+str(i)+".png"), (s_label).astype(np.uint8), check_contrast=False)
-            # imsave(os.path.join(self.star.projDir, str(i)+"_initImg_"+self.star.beamName+'_'+str(i)+".png"), (self.star.sonDat).astype(np.uint8), check_contrast=False)
-
+            # Port            
             for son, lb in zip([self.port, self.star], [port_label, star_label]):
                 im = son.sonDat
                 plt.imshow(im, cmap='gray')
@@ -1860,18 +1680,7 @@ class portstarObj(object):
         '''
         '''
         # Set output directory
-        # outDir = os.path.join(self.port.substrateDir, 'map_substrate_raster')
-        # if not os.path.exists(outDir):
-        #     os.mkdir(outDir)
-        # self.outDir = outDir
         self.outDir = self.port.outDir
-
-
-        # # Test on sonar first...easier to check
-        # self.port._getScanChunkSingle(chunk)
-        # self.star._getScanChunkSingle(chunk)
-        # portSub = self.port.sonDat
-        # starSub = self.star.sonDat
 
         # Load npz's
         # Port is always first
@@ -1954,7 +1763,6 @@ class portstarObj(object):
             del label
 
             # Remove shadows
-            # if son.remShadow:
             # Get mask
             son._SHW_mask(chunk, son=False)
 
@@ -2002,13 +1810,6 @@ class portstarObj(object):
 
         # Get leading zeros for output name
         addZero = self.port._addZero(chunk)
-
-
-        # # Test on sonar first...easier to check
-        # self.port._getScanChunkSingle(chunk)
-        # self.star._getScanChunkSingle(chunk)
-        # portSub = self.port.sonDat
-        # starSub = self.star.sonDat
 
         # Load npz's
         # Port is always first
@@ -2089,21 +1890,6 @@ class portstarObj(object):
 
             # ####################################
             # # Do shadow and water column removal
-            #
-            # # if son.remShadow:
-            # # Get mask
-            # son._SHW_mask(chunk, son=False)
-            #
-            # # Mask out shadows
-            # son.sonDat = son.sonDat*son.shadowMask
-            #
-            # # Remove water column
-            # son._WCR_SRC(sonMeta)
-            #
-            # del sonObjs
-            #
-            # portSub = self.port.sonDat
-            # starSub = self.star.sonDat
 
             # Store pred stack in variable
             predStack = son.sonDat
@@ -2112,9 +1898,6 @@ class portstarObj(object):
             for c in range(classes):
                 # Get class prediction
                 son.sonDat = predStack[:,:,c]
-
-                # # Do gaussian blur to smooth between prediction windows
-                # son.sonDat = gaussian(son.sonDat, sigma=3, preserve_range=True)
 
                 # Remove shadows
                 # Get mask
@@ -2145,7 +1928,6 @@ class portstarObj(object):
             merge = np.concatenate((port, star[:,:,c]), axis=0)
 
             # Rectify #
-            # rect_pred, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
             # Try only passing first class to _rectify() to attempt speedup
             if 'transform' not in locals():
                 rect_pred, tform, outShape, epsg, transform = self._rectify(merge, chunk, '', return_rect=True)
@@ -2171,11 +1953,9 @@ class portstarObj(object):
                 out = np.dstack((out, rect_pred))
 
         # Reorder so band count is first
-        # out = np.moveaxis(out, [0,1,2], [1,2,0])
         out = np.rollaxis(out, axis=2)
 
         # Ensure output is right data type and nan's converted to no_data
-        # out = np.nan_to_num(out, nan=bg_val)
         out = out.astype(data_type)
         # out = np.nan_to_num(out, nan=no_data)
 
@@ -2343,9 +2123,6 @@ class portstarObj(object):
         # Calculate x,y resolution of a single pixel
         xres = (xMax - xMin) / outShape[0]
         yres = (yMax - yMin) / outShape[1]
-        # # Scale by factor for down/upsampling
-        # xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
-        # yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -2369,13 +2146,6 @@ class portstarObj(object):
             return out, tform, outShape, epsg, transform
 
         else:
-            ###
-            # Do filtering here
-            ###
-            # Set minimum patch size (in meters)
-            # min_size = 28
-            # out = self.port._filterLabel(out, min_size)
-            # min_size = int(min_size/pix_m)
 
             min_size = int((out.shape[0] + out.shape[1])/2)
 
@@ -2407,12 +2177,6 @@ class portstarObj(object):
             del binary_filled, binary_objects, l
 
             # Prepare colors
-            # # Set colormap
-            # class_label_colormap = ['#3366CC','#DC3912', '#FF9900', '#109618', '#990099', '#0099C6', '#DD4477', '#66AA00', '#B82E2E', '#316395', '#000000']
-
-            # # Convert labels to colors
-            # color_label = label_to_colors(out, out[:,:]==0, alpha=128, colormap=class_label_colormap, color_class_offset=0, do_alpha=False)
-
             class_colormap = {0: '#3366CC',
                               1: '#DC3912',
                               2: '#FF9900',
@@ -2478,48 +2242,6 @@ class portstarObj(object):
         print("\n\tExporting to shapefile...")
         _ = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createPolygon)(f, outDir) for f in rasterFiles)
 
-        # for rasterFile in rasterFiles:
-        #     # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
-        #     # Open raster
-        #     src_ds = gdal.Open(rasterFile)
-        #
-        #
-        #     ####################
-        #     # Polygon Conversion
-        #     # Set spatial reference
-        #     srs = osr.SpatialReference()
-        #     srs.ImportFromWkt(src_ds.GetProjection())
-        #
-        #     # Prepare layerfile
-        #     # dst_layername = rasterFile.replace('.vrt', '')
-        #     dst_layername = os.path.basename(rasterFile).replace('.vrt', '')
-        #     dst_layername = dst_layername.replace('_raster_mosaic', '')
-        #     dst_layername = os.path.join(outDir, dst_layername)
-        #
-        #     srcband = src_ds.GetRasterBand(1)
-        #     drv = ogr.GetDriverByName("ESRI Shapefile")
-        #     dst_ds = drv.CreateDataSource(dst_layername+'.shp')
-        #     dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
-        #     newField = ogr.FieldDefn('Substrate', ogr.OFTReal)
-        #     dst_layer.CreateField(newField)
-        #     gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
-        #
-        #     # Calculate Area
-        #     # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
-        #
-        #     # Delete NoData Polygon
-        #     # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
-        #     layer = dst_ds.GetLayer()
-        #     layer.SetAttributeFilter("Substrate = 0")
-        #
-        #     for feat in layer:
-        #         layer.DeleteFeature(feat.GetFID())
-        #
-        #
-        #     dst_ds.SyncToDisk()
-        #     dst_ds=None
-        #     # os.remove(rasterFile)
-
         return
 
     #=======================================================================
@@ -2544,7 +2266,6 @@ class portstarObj(object):
         srs.ImportFromWkt(src_ds.GetProjection())
 
         # Prepare layerfile
-        # dst_layername = rasterFile.replace('.vrt', '')
         dst_layername = os.path.basename(f).replace('.vrt', '')
         dst_layername = dst_layername.replace('_raster_mosaic', '')
         dst_layername = os.path.join(outDir, dst_layername)
@@ -2591,30 +2312,9 @@ class portstarObj(object):
         for feat in layer:
             layer.DeleteFeature(feat.GetFID())
 
-        # Calculate Area
-        # https://gis.stackexchange.com/questions/169186/calculate-area-of-polygons-using-ogr-in-python-script
-
-        # # Create field to store area
-        # newField = ogr.FieldDefn('Area_m', ogr.OFTReal)
-        # newField.SetWidth(32)
-        # newField.SetPrecision(2)
-        # dst_layer.CreateField(newField)
-
-        # layer = dst_ds.GetLayer()
-        # # Calculate Area
-        # for feature in dst_layer:
-        #     print(feature)
-        #     geom = feature.GetGeometryRef()
-        #     print(geom)
-        #     area = geom.GetArea()
-        #     print(area)
-        #     feature.SetField("Area", area)
-        #     layer.SetFeature(feature)
-
 
         dst_ds.SyncToDisk()
         dst_ds=None
-        # os.remove(rasterFile)
 
         return
 

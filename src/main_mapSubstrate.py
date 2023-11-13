@@ -315,41 +315,21 @@ def map_master_func(logfilename='',
 
             # Prepare model
             if pred_sub == 1:
-                # Load model weights
-                # son.weights = r'./models/substrate/substrate_202211219_v1.h5'
-                # son.configfile = son.weights.replace('.h5', '.json')
-                # son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
-                # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
-
+                # Load model weights and config file
                 if son.egn:
+                    # EGN model
                     son.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/EGN_Substrate_Segmentation_segformer_v1.0/config/EGN_Substrate_Segmentation_segformer_v1.0.json'
                     son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
-                    # if not os.path.exists(son.weights):
-                    #     downloadSubstrateModels()
-
                 else:
-                    # ! # !
-                    # Update with Raw_Substrate_Segformer model once trained
-                    # son.weights = r'./models/substrate/SegFormer_SpdCor_Substrate_inclShadow/weights/SegFormer_SpdCor_Substrate_inclShadow_fullmodel.h5'
-                    # son.configfile = son.weights.replace('weights', 'config').replace('_fullmodel.h5', '.json')
+                    # Raw model
                     son.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Raw_Substrate_Segmentation_segformer_v1.0/config/Raw_Substrate_Segmentation_segformer_v1.0.json'
                     son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
-
-                    # if not os.path.exists(son.weights):
-                    #     downloadSubstrateModels()
 
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')
 
             Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
-
-            # For debug
-            # for c in chunks:
-            #     print('\n\n\n\n****Chunk', c)
-            #     son._detectSubstrate(c, USE_GPU)
-            #     # sys.exit()
-            #     break
 
             son._cleanup()
             son._pickleSon()
@@ -396,11 +376,7 @@ def map_master_func(logfilename='',
 
             print('\n\tExporting substrate plots for', len(toMap), son.beamName, 'chunks:')
 
-            # Plot substrate classification
-            # for c, f in toMap.items():
-            #     print('\n\n\n\n****Chunk', c)
-            #     son._pltSubClass(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop)
-            # #     sys.exit()
+            # Plot substrate classification()
             # sys.exit()
             Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop, probs=probs) for c, f in toMap.items())
             son._pickleSon()
@@ -461,11 +437,6 @@ def map_master_func(logfilename='',
         psObj = portstarObj(mapObjs)
 
         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
-
-        # # For debug
-        # for c, f in toMap.items():
-        #     psObj._mapSubstrate(map_class_method, c, f)
-        # #     sys.exit()
 
         del toMap
         print("\nDone!")
@@ -592,10 +563,6 @@ def map_master_func(logfilename='',
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
-        # for c, f in toMap.items():
-        #     psObj._mapPredictions(map_predict, 'map_'+a, c, f)
-        #     sys.exit()
-
         Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in toMap.items())
 
         del toMap, psObj
@@ -613,10 +580,6 @@ def map_master_func(logfilename='',
     if map_predict > 0 and mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
-
-        # for son in mapObjs:
-        #     son.map_predict = map_predict
-        # del son
 
         # Create portstar object
         psObj = portstarObj(mapObjs)

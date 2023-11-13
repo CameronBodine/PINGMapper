@@ -259,6 +259,11 @@ params = {
     'mosaic':mosaic,
     'map_mosaic':map_mosaic
     }
+
+print('\n\n', '***User Parameters***')
+for k,v in params.items():
+    print("| {:<20s} : {:<10s} |".format(k, str(v)))
+
 #==================================================
 print('\n===========================================')
 print('===========================================')

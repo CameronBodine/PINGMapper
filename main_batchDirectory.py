@@ -252,8 +252,9 @@ for datFile in inFiles:
 
         sys.stdout = Logger(logfilename)
 
+        print('\n\n', '***User Parameters***')
         for k,v in params.items():
-            print(k, v)
+            print("| {:<20s} : {:<10s} |".format(k, str(v)))
 
         print('sonPath',sonPath)
         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')

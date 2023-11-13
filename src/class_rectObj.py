@@ -238,7 +238,6 @@ class rectObj(sonObj):
             tck, _ = splprep([x,y], u=t, k=deg, s=0)
             u_interp = dfOrig[zU].to_numpy()
 
-        # u_interp = dfOrig[zU].to_numpy() # Get all time ellapsed OR record number values from unfilterd df
         x_interp = splev(u_interp, tck) # Use u_interp to get smoothed x/y coordinates from spline
 
         u, indices, c = np.unique(u_interp, return_index= True,return_counts=True)
@@ -500,7 +499,6 @@ class rectObj(sonObj):
 
         # Get smoothed trackline
         if not hasattr(self, 'smthTrk'):
-        # if type(self.smthTrk) == str:
             self.smthTrk = pd.read_csv(self.smthTrkFile)
         else:
             pass
@@ -1004,8 +1002,7 @@ class rectObj(sonObj):
         # Get trackline/range extent file path
         trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
 
-        # What coordinates should be used?
-        ## Use WGS 1984 coordinates and set variables as needed
+        # Use WGS 1984 coordinates and set variables as needed
         if wgs is True:
             epsg = self.humDat['wgs']
             xRange = 'range_lons'
@@ -1035,24 +1032,18 @@ class rectObj(sonObj):
         sonMetaAll = self.sonMetaDF
         isChunk = sonMetaAll['chunk_id']==chunk
         sonMeta = sonMetaAll[isChunk].reset_index()
-        # Update class attributes based on current chunk
-        # self.pingMax = sonMeta['ping_cnt'].astype(int).max() # store to determine max range per chunk
-        # self.headIdx = sonMeta['index'].astype(int) # store byte offset per ping
-        # self.pingCnt = sonMeta['ping_cnt'].astype(int) # store ping count per ping
 
+        # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
 
         if son:
             # Open image to rectify
-            # self._loadSonChunk()
             self._getScanChunkSingle(chunk)
         else:
             # Rectifying substrate classification
             pass
-        # if filterIntensity:
-        #     self._doPPDRC()
 
         # Remove shadows
         if self.remShadow:
@@ -1062,11 +1053,6 @@ class rectObj(sonObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
             del self.shadowMask
-
-        # # Pyhum corrections
-        # do_correct = False
-        # if do_correct:
-        #     self.sonDat = doPyhumCorrections(self, sonMeta)
 
         img = self.sonDat
 
@@ -1098,7 +1084,6 @@ class rectObj(sonObj):
         # Open smoothed trackline/range extent file
         trkMeta = pd.read_csv(trkMetaFile)
         trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
-        # pix_m = trkMeta['pix_m'].min() # Get pixel size
         pix_m = self.pixM # Get pixel size
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
@@ -1168,9 +1153,6 @@ class rectObj(sonObj):
         # Calculate x,y resolution of a single pixel
         xres = (xMax - xMin) / outShape[0]
         yres = (yMax - yMin) / outShape[1]
-        # # Scale by factor for down/upsampling
-        # xres = (xMax - xMin) / (outShape[0]*pix_res_factor)
-        # yres = (yMax - yMin) / (outShape[1]*pix_res_factor)
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
@@ -1232,10 +1214,6 @@ class rectObj(sonObj):
                     dst.write(out,1)
                     dst.write_colormap(1, self.son_colorMap)
                     dst=None
-                    ## Uncomment below code if overviews should be created for each file
-                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
-                    # dst.update_tags(ns='rio_overview', resampling='nearest')
-                    # dst.close()
 
             del out, dst, img
 
@@ -1338,10 +1316,6 @@ class rectObj(sonObj):
                     dst.write(out,1)
                     dst.write_colormap(1, self.son_colorMap)
                     dst=None
-                    ## Uncomment below code if overviews should be created for each file
-                    # dst.build_overviews([2 ** j for j in range(1,8)], Resampling.nearest)
-                    # dst.update_tags(ns='rio_overview', resampling='nearest')
-                    # dst.close()
 
             del out, dst
 

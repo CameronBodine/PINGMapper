@@ -218,93 +218,6 @@ def downloadSegmentationModelsv1_0(modelDir):
     
     return
 
-# # =========================================================
-# def downloadBedpickModel():
-
-#     modelDir = r'./models/bedpick/Zheng2021/'
-
-#     # Create directory
-#     if not os.path.exists(modelDir):
-#         os.makedirs(modelDir)
-
-#     # Download
-#     url1 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.h5?download=1'
-#     url2 = 'https://zenodo.org/record/8305948/files/bedpick_ZhengApproach_20220629.json?download=1'
-#     print('Downloading Bedpick Model:\n', url1, '\n', url2)
-
-#     filename1 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.h5')
-#     r = requests.get(url1, allow_redirects=True)
-#     open(filename1, 'wb').write(r.content)
-
-#     filename2 = os.path.join(modelDir, 'bedpick_ZhengApproach_20220629.json')
-#     r = requests.get(url2, allow_redirects=True)
-#     open(filename2, 'wb').write(r.content)
-
-# # =========================================================
-# def downloadShadowModel():
-
-#     modelDir = r'./models/shadow'
-
-#     # Create directory
-#     if not os.path.exists(modelDir):
-#         os.makedirs(modelDir)
-
-#     # Download
-#     url1 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4_fullmodel.h5?download=1'
-#     url2 = 'https://zenodo.org/record/8305948/files/shadow_20230204_fold_4.json?download=1'
-#     print('Downloading Shadow Model:\n', url1, '\n', url2)
-
-#     filename1 = os.path.join(modelDir, 'shadow_20230204_fold_4_fullmodel.h5')
-#     r = requests.get(url1, allow_redirects=True)
-#     open(filename1, 'wb').write(r.content)
-
-#     filename2 = os.path.join(modelDir, 'shadow_20230204_fold_4.json')
-#     r = requests.get(url2, allow_redirects=True)
-#     open(filename2, 'wb').write(r.content)
-
-# # =========================================================
-# def downloadSubstrateModels():
-
-#     # EGN
-#     modelDir = r'./models/substrate/EGN_Substrate_Segformer'
-
-#     # Create directory
-#     if not os.path.exists(modelDir):
-#         os.makedirs(modelDir)
-
-#     # Download
-#     url1 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
-#     url2 = 'https://zenodo.org/record/8305948/files/1_EGN_Substrate_GoodLabel_Segformer.json?download=1'
-#     print('Downloading EGN Substrate Model:\n', url1, '\n', url2)
-
-#     filename1 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer_fullmodel.h5')
-#     r = requests.get(url1, allow_redirects=True)
-#     open(filename1, 'wb').write(r.content)
-
-#     filename2 = os.path.join(modelDir, '1_EGN_Substrate_GoodLabel_Segformer.json')
-#     r = requests.get(url2, allow_redirects=True)
-#     open(filename2, 'wb').write(r.content)
-
-
-#     # Raw
-#     modelDir = r'./models/substrate/Raw_Substrate_Segformer'
-
-#     # Create directory
-#     if not os.path.exists(modelDir):
-#         os.makedirs(modelDir)
-
-#     # Download
-#     url1 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5?download=1'
-#     url2 = 'https://zenodo.org/record/8305948/files/2_Raw_Substrate_GoodLabel_Segformer.json?download=1'
-#     print('Downloading Raw Substrate Model:\n', url1, '\n', url2)
-
-#     filename1 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer_fullmodel.h5')
-#     r = requests.get(url1, allow_redirects=True)
-#     open(filename1, 'wb').write(r.content)
-
-#     filename2 = os.path.join(modelDir, '2_Raw_Substrate_GoodLabel_Segformer.json')
-#     r = requests.get(url2, allow_redirects=True)
-#     open(filename2, 'wb').write(r.content)
 
 # =========================================================
 def saveDefaultParams(values):
@@ -355,17 +268,8 @@ def saveDefaultParams(values):
     
 # =========================================================
 def unableToProcessError(logfilename):
-    # error_logger = logging.getLogger('error_logger')
-    # errorfilename = logfilename.replace('log_', 'error_')
-    # logging.basicConfig(filename=errorfilename, level=logging.DEBUG)
-    # logging.exception("Error Thrown:")
-
-    # print("\n\n!!!!!!!!!!!!!!!!!\nAn Error Occured.\n\nPlease consult the logfile at:\n", errorfilename)
-    # logging.Handler.close()
-
     
     errorfilename = logfilename.replace('log_', 'error_')
-    # logging.basicConfig(filename=errorfilename, level=logging.DEBUG)
 
     error_logger = logging.getLogger('error_logger')
     myhandler = logging.FileHandler(errorfilename)
@@ -380,76 +284,3 @@ def unableToProcessError(logfilename):
         error_logger.removeHandler(handler)
         handler.close()
 
-
-
-
-
-# # =========================================================
-# # Keep
-# def norm_shape(shap):
-#    '''
-#    Normalize numpy array shapes so they're always expressed as a tuple,
-#    even for one-dimensional shapes.
-#    '''
-#    try:
-#       i = int(shap)
-#       return (i,)
-#    except TypeError:
-#       # shape was not a number
-#       pass
-#
-#    try:
-#       t = tuple(shap)
-#       return t
-#    except TypeError:
-#       # shape was not iterable
-#       pass
-#
-#    raise TypeError('shape must be an int, or a tuple of ints')
-
-# # =========================================================
-# # Keep
-# def sliding_window(a,ws,ss = None,flatten = True):
-#     '''
-#     Return a sliding window over a in any number of dimensions
-#     '''
-#     if None is ss:
-#         # ss was not provided. the windows will not overlap in any direction.
-#         ss = ws
-#     ws = norm_shape(ws)
-#     ss = norm_shape(ss)
-#     # convert ws, ss, and a.shape to numpy arrays
-#     ws = np.array(ws)
-#     ss = np.array(ss)
-#     shap = np.array(a.shape)
-#     # ensure that ws, ss, and a.shape all have the same number of dimensions
-#     ls = [len(shap),len(ws),len(ss)]
-#     if 1 != len(set(ls)):
-#         raise ValueError(\
-#         'a.shape, ws and ss must all have the same length. They were %s' % str(ls))
-#
-#     # ensure that ws is smaller than a in every dimension
-#     if np.any(ws > shap):
-#         raise ValueError(\
-#         'ws cannot be larger than a in any dimension.\
-#          a.shape was %s and ws was %s' % (str(a.shape),str(ws)))
-#     # how many slices will there be in each dimension?
-#     newshape = norm_shape(((shap - ws) // ss) + 1)
-#     # the shape of the strided array will be the number of slices in each dimension
-#     # plus the shape of the window (tuple addition)
-#     newshape += norm_shape(ws)
-#     # the strides tuple will be the array's strides multiplied by step size, plus
-#     # the array's strides (tuple addition)
-#     newstrides = norm_shape(np.array(a.strides) * ss) + a.strides
-#     a = ast(a,shape = newshape,strides = newstrides)
-#     if not flatten:
-#         return a
-#     # Collapse strided so that it has one more dimension than the window.  I.e.,
-#     # the new array is a flat list of slices.
-#     meat = len(ws) if ws.shape else 0
-#     firstdim = (np.product(newshape[:-meat]),) if ws.shape else ()
-#     dim = firstdim + (newshape[-meat:])
-#     # remove any dimensions with size 1
-#     #dim = filter(lambda i : i != 1,dim)
-#
-#     return a.reshape(dim), newshape

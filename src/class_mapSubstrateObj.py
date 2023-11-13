@@ -157,7 +157,6 @@ class mapSubObj(rectObj):
         # Expand softmax_score to dims of son3Chunk filled with nan's
         # Ensure softmax_score in correct location (win offset) in larger array
         # store each softmax in a list labels=[]
-        # np.nanmean(labels, axis=2)
 
         # Store each window's softmax
         winSoftMax = []
@@ -201,9 +200,6 @@ class mapSubObj(rectObj):
         fArr.fill(np.nan)
 
         # Need to determine if final array or softmax need to be sliced
-        # bOff < 0: slice fArr to fit smaller fSoftmax
-        # bOff > 0: slice softmax to fit small fArr
-        # bOff == 0: no slicing necessary
         bOff = sh - (h - tO)
 
         if bOff < 0:
@@ -283,14 +279,10 @@ class mapSubObj(rectObj):
             self._loadSonMeta()
         df = self.sonMetaDF
 
-        # Get sonar chunks, remove shadows and crop, remove water column and crop
-        ######
+        ########
         # Left
-        # # if i==0, use i for left also
-        # if i == 0:
-        #     l = i
-        # else:
-        #     l = i-1
+
+        # Get sonar chunks, remove shadows and crop, remove water column and crop
 
         # Get sonDat
         self._getScanChunkSingle(l)
@@ -317,9 +309,6 @@ class mapSubObj(rectObj):
 
         # Crop shadows
         _ = self._SHW_crop(l, False)
-
-        # # Remove water column and crop
-        # lMinDep = self._WCR_crop(lMetaDF)
 
         # Mask water column and find min depth for cropping
         self._WC_mask(l, False)
@@ -356,20 +345,13 @@ class mapSubObj(rectObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
 
-        # # Do egn
-        # if self.egn:
-        #     self._egn_wcr(c, cMetaDF)
         # Do egn
         if self.egn:
-            # self._egn_wcr(l, lMetaDF)
             self._egn_wcp(c, cMetaDF)
             self._egnDoStretch()
 
         # Crop shadows first
         _ = self._SHW_crop(c, False)
-
-        # # Remove water column and crop
-        # cMinDep = self._WCR_crop(cMetaDF)
 
         # Mask water column and find min depth for cropping
         self._WC_mask(c, False)
@@ -382,11 +364,6 @@ class mapSubObj(rectObj):
 
         ########
         # Right
-        # # if i is last chunk, use i for right also
-        # if i == self.chunkMax:
-        #     r = i
-        # else:
-        #     r = i+1
 
         # Get sonDat
         self._getScanChunkSingle(r)
@@ -402,9 +379,6 @@ class mapSubObj(rectObj):
             # Mask out shadows
             self.sonDat = self.sonDat*self.shadowMask
 
-        # # Do egn
-        # if self.egn:
-        #     self._egn_wcr(r, rMetaDF)
         # Do egn
         if self.egn:
             # self._egn_wcr(l, lMetaDF)
@@ -413,9 +387,6 @@ class mapSubObj(rectObj):
 
         # Crop shadows first
         _ = self._SHW_crop(r, False)
-
-        # # Remove water column and crop
-        # rMinDep = self._WCR_crop(rMetaDF)
 
         # Mask water column and find min depth for cropping
         self._WC_mask(r, False)
@@ -525,15 +496,6 @@ class mapSubObj(rectObj):
 
         # Insert right chunk
         fSonDat[:rSonDat.shape[0], lOffR:] = rSonDat
-
-        # # For Troubleshooting
-        # # Export image check
-        # try:
-        #     os.mkdir(self.outDir)
-        # except:
-        #     pass
-        # self.sonDat = fSonDat
-        # self._writeTiles(i, 'test')
 
         # Prepare necessary params for rebuilding orig dims and offsets
         origDims = [H, W] # Original dims of center chunk
@@ -931,7 +893,6 @@ class mapSubObj(rectObj):
 
             # Prepare color map
             color_map = plt.cm.get_cmap('viridis')
-            # color_map = color_map.reversed()
 
             im = ax.imshow(c, cmap=color_map, alpha=0.5, vmin=minSoft, vmax=maxSoft)
             ax.axis('off')
@@ -1013,40 +974,6 @@ class mapSubObj(rectObj):
                           # 5: 0.28
             }
 
-            # # means
-            # thresholds = {
-            #               1: 0.31,
-            #               2: 0.22,
-            #               3: 0.10,
-            #               4: 0.31,
-            #               5: 0.08,
-            #               6: 0.04
-            #               }
-
-            # # medians
-            # thresholds = {
-            #               1: 0.24,
-            #               2: 0.15,
-            #               3: 0.06,
-            #               4: 0.26,
-            #               5: 0.06,
-            #               6: 0.03
-            #               }
-
-
-            # # Do argmax to get classes we don't want to threshold
-            # lbl = np.argmax(arr, -1)
-            #
-            # for c in range(arr.shape[-1]):
-            #     if c not in label_order:
-            #         arr1 = np.where(lbl==c, c, 0)
-            #         if 'label' not in locals():
-            #             label = arr1
-            #         else:
-            #             label += arr1
-            #         del arr1
-            # del lbl
-
             # First do argmax
             label = np.argmax(arr, -1)
 
@@ -1077,85 +1004,7 @@ class mapSubObj(rectObj):
                 label[est == 1] = l
             label += 1
 
-        # elif map_class_method == 'thresh':
-        #     # Class: ProbThresh 1==no thresh
-        #     thresh = {0: 1,
-        #               1: 1,
-        #               2: 1,
-        #               3: .075,
-        #               4: .075,
-        #               5: 1,
-        #               6: 1,
-        #               7: 1}
-        #
-        #     # Least to most important
-        #     class_order = [0, 6, 7, 5, 1, 4, 3, 2]
-        #
-        #     # Convert logits to probability
-        #     arr = tf.nn.softmax(arr).numpy()
-        #
-        #     # # Iterate classes least to most important
-        #     # for k, t in thresh.items():
-        #     #
-        #     #     # If t == 1, use softmax directly
-        #     #     # Else t<1, set prob > t to 1
-        #     #     if t < 1:
-        #     #         s = softmax[:,:,k]
-        #     #         s = np.where(s>t, 1, s)
-        #     #
-        #     #         # Update softmax
-        #     #         softmax[:,:,k] = s
-        #
-        #     # Zero array to store label
-        #     label = np.zeros((arr.shape[0], arr.shape[1]))
-        #     for k in class_order:
-        #         # # Convert to probability
-        #         # # https://stackoverflow.com/questions/46416984/how-to-convert-logits-to-probability-in-binary-classification-in-tensorflow
-        #         # p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
-        #
-        #         # Get threshold
-        #         t = thresh[k]
-        #
-        #         # IF t==1, use otsu to set threshold
-        #         if t==1:
-        #             t = threshold_otsu(arr[:,:,k])
-        #             # t = threshold_otsu(p)
-        #
-        #         label[arr[:,:,k]>t]=k
-        #         # label[p>t]=k
-        #
-        #     label += 1
-        #
-        # elif map_class_method == 'pref':
-        #     # Class: pref 1==give pref, 0==don't
-        #     pref = {0: 0,
-        #             1: 0,
-        #             2: 1,
-        #             3: 1,
-        #             4: 1,
-        #             5: 0,
-        #             6: 0,
-        #             7: 0}
-        #
-        #     # Least to most important
-        #     class_order = [0, 6, 7, 5, 1, 2, 4, 3]
-
-        #     # First get label the normal way
-        #     label = np.argmax(arr, -1)
-        #
-        #     # Now iterate each class, if pref==1, do binary class, then mask
-        #     ## label with updated class
-        #     for k in class_order:
-        #         if pref[k] == 1:
-        #             # Get binary classification
-        #             p = tf.round(tf.nn.sigmoid(arr[:,:,k]))
-        #             # Update label
-        #             label[p==1]=k
-        #     label += 1
-        #
-        # else:
-        #     print('Invalid map_class_method provided:', map_class_method)
-        #     sys.exit()
+        
 
         ##################
         # Mask predictions
@@ -1178,81 +1027,6 @@ class mapSubObj(rectObj):
             shw_mask = np.where(shw_mask==0,8,shw_mask) # Set shadow mask value to 8
             shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-shadow mask value to 0
             label = (label+shw_mask).astype('uint8') # Add mask to label to get shadows classified in plt
-
-            # # The shadows segmented from the substrate model overestimate the
-            # ## presence of shadows along the range extent. We want to locate
-            # ## shadow regions predicted with substrate model that touch shadows
-            # ## predicted by the binary shadow model, remove those regions, then
-            # ## fill in the hole with adjacent substrate class.
-            # # Iterate each ping
-            # for p in range(label.shape[1]):
-            #     # Get current ping's classification
-            #     ping = label[:, p]
-            #
-            #     # # Get shadows as predicted by substrate model and set to zero
-            #     # ping = np.where(ping==8, 0, ping) # Substrate classification with shadows set to zero
-            #     #
-            #     # # Find zeros (shadows). Should be grouped in contiguous arrays
-            #     # zero = np.where(ping==0)
-            #
-            #     shw = np.where(ping==8) # Return shadow indices
-            #
-            #     if len(shw[0])>0:
-            #         # There are shadows
-            #         shw = shw[0] # Get array as list
-            #         # print("\n\n\n", p, shw)
-            #
-            #         # Get indices where shadow regions aren't continuous
-            #         break_idx = np.where(np.diff(shw) != 1)[0]
-            #         # print(break_idx)
-            #
-            #         if len(break_idx) > 0:
-            #             # There are non-continuous regions, so split into continuous arrays, and get the last continuous region
-            #             last_shadow_reg = np.split(shw, np.where(np.diff(shw) != 1)[0]+1)[-1]
-            #         else:
-            #             # Shadows are continous, so just set to shw
-            #             last_shadow_reg = shw
-            #         # print('last shadow', last_shadow_reg)
-            #
-            #         # Now we want to know if last_shadow_reg touches the shadow mask
-            #         ## If it does, we will fill shadow region with adjacent substrate classification
-            #         p_shw_mask = shw_mask[:, p]
-            #
-            #         p_shw_mask = np.where(p_shw_mask==0)[0]
-            #         if len(p_shw_mask) > 0:
-            #             # If last value in last_shadow_reg+1 is equal to first value in
-            #             ## p_shw_mask, the two regions touch
-            #             l_shw = last_shadow_reg[-1] + 1
-            #             l_shw_mask = p_shw_mask[0]
-            #         else:
-            #             l_shw = last_shadow_reg[-1]
-            #             l_shw_mask = ping.shape
-            #             print(l_shw, l_shw_mask)
-            #
-            #         if l_shw == l_shw_mask:
-            #             # Get last substrate class that touches last_shadow_reg
-            #             f_shw = last_shadow_reg[0] - 1 # Index of beginning of last_shadow_reg
-            #             c = ping[f_shw] # Substrate class
-            #
-            #             # print("Before", ping[f_shw-10:f_shw+10])
-            #             # Fill ping with class in last_shadow_reg
-            #             ping[f_shw+1:l_shw] = c
-            #
-            #             # print("After ", ping[f_shw-10:f_shw+10])
-            #
-            #             # Insert ping back into label
-            #             label[:, p] = ping
-            #
-            #         # sys.exit()
-            #
-            #
-            #     else:
-            #         # There are no shadows
-            #         pass
-
-            # shw_mask = np.where(shw_mask==0,8,shw_mask) # Set shadow mask value to 8
-            # shw_mask = np.where(shw_mask==1,0,shw_mask) # Set non-shadow mask value to 0
-            # label = (label+shw_mask).astype('uint8') # Add mask to label to get shadows classified in plt
 
         label -= 1
         # Filter small regions
