@@ -23,7 +23,7 @@
 
 `...into scientific datasets!`
 
-<img src="../main/docs/attach/GithubMap.PNG" width="800"/>
+<img src="../main/docs/attach/GithubMap.png" width="800"/>
 
 # Overview
 Running `main.py` (see [this section](#Running-PING-Mapper-on-your-own-data) for more information) carries out the following procedures:
