@@ -68,7 +68,7 @@ Export **ping attributes** from each sonar channel including sonar depth, latitu
 
 And create georectified mosaics of the sonar imagery and automatically generate substrate maps:
 
-<img src="./assets/GithubMap.PNG" width="800"/>
+<img src="./assets/GithubMap.png" width="800"/>
 
 ## Find out more!
 
