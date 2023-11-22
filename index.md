@@ -15,7 +15,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 
 ---
 
-`PING-Mapper` turns recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
+`PING-Mapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ## Compatible Sonar Systems
 
@@ -28,12 +28,31 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 - Solix
 - Onix
 
-## Current Features
+If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
 
-- Decode Humminbird&reg; side imaging sonar recordings from any model;
-- Export ping attributes (depth, latitude, longitude, vessel speed & heading, etc.) from every sonar channel;
-- Water column removal using the sonar depth;
-- Export of sonogram tiles and georectified mosaics.
+## Overview
+
+'PING-Mapper' can be run from a simple GUI with 'python gui_main.py' or from a stand-alone script with 'python main.py'. For batch processing multiply recordings, specify 'python gui_main_batchDirectory.py' or 'python main_batchDirectory.py'. 'PING-Mapper' provides the following functionality:
+
+- Export all metadata from .DAT and .SON files to .CSV.
+
+- Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels .
+
+- Correct sonar backscatter with Empiracle Gain Normalization.
+
+- Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonograms with water column removed (WCR) using Humminbird depth estimates OR automated depth detections.
+
+- Export speed corrected un-rectified sonograms.
+
+- Smooth and interpolate GPS track points.
+
+- Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
+
+- Mosaic georectified sonar imagery.
+
+- Automatically segment and classify substrate patches.
+
+More information on PING-Mapper exports can be found [here](/docs/gettingstarted/Exports.html).
 
 ## Examples
 
@@ -47,40 +66,43 @@ Export **ping attributes** from each sonar channel including sonar depth, latitu
 
 <img src="./assets/PingAttribute.png" width="800"/>
 
-And create georectified mosaics of the sonar imagery:
+And create georectified mosaics of the sonar imagery and automatically generate substrate maps:
 
-<img src="./assets/GeorectifiedSon.PNG" width="800"/>
-
-## Future Features
-
-`PING-Mapper` is actively maintained, with new functionality currently in development. New functionality in the pipeline includes:
-
-- Automatic depth detection
-- Automatic substrate classification
-- Imagery corrections (radiometric, attenuation, etc.)
-- GUI front-end, either as standalone software, or QGIS plugin
-- So much more...
+<img src="./assets/GithubMap.PNG" width="800"/>
 
 ## Find out more!
 
-There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the [scientific paper](#paper) and the [code that made the paper](#code-that-made-the-paper).
+There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use 'PING-Mapper' for your work, please cite the journal articles below.
 
 
-## Paper
+### PING-Mapper v2.0.0
+The second version of PING-Mapper is available now. Scientific articles documenting the new functionality will be posted here when available. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
 
-Peer Review: [![DOI](https://zenodo.org/badge/DOI/10.1029/2022EA002469.svg)](https://doi.org/10.1029/2022EA002469)
+#### Code
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10120054.svg)](https://doi.org/10.5281/zenodo.10120054)
 
-PrePrint: [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+#### Segmentation models
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10093642.svg)](https://doi.org/10.5281/zenodo.10093642)
 
-## Citation
-
-If you use `PING-Mapper` for your work, please cite the paper:
-
-Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
+#### Segmentation model training datasets
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119320.svg)](https://doi.org/10.5281/zenodo.10119320)
 
 
-## Code that made the paper
+### PING-Mapper v1.0.0
+An overview of PING-Mapper v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use PING-Mapper for your work, please cite the article!
+
+#### Journal Article
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
+
+#### Preprint
+[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+
+#### Code
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
+
+## Ready to get started?
+
+Follow the installation and testing instructions to [Get Started!](/docs/gettingstarted/gettingstarted.md)
 
 
 
