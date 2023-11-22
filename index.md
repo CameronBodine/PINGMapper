@@ -11,7 +11,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 `PING-Mapper` is an open-source software for reading and processing recreation-grade side scan sonar recordings
 {: .fs-6 .fw-300 }
 
-[Get started now](/docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Get started now](./docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
@@ -28,7 +28,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 - Solix
 - Onix
 
-If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](../main/docs/BinaryStructure.md).
+If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](./docs/advanced/HumFileStructure.md).
 
 ## Overview
 
@@ -52,7 +52,7 @@ If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Iss
 
 - Automatically segment and classify substrate patches.
 
-More information on PING-Mapper exports can be found [here](/docs/gettingstarted/Exports.html).
+More information on PING-Mapper exports can be found [here](./docs/gettingstarted/Exports.html).
 
 ## Examples
 
@@ -102,7 +102,7 @@ Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022).
 
 ## Ready to get started?
 
-Follow the installation and testing instructions to [Get Started!](/docs/gettingstarted/gettingstarted.md)
+Follow the installation and testing instructions to [Get Started!](./docs/gettingstarted/gettingstarted.md)
 
 
 
