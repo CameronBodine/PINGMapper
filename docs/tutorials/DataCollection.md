@@ -1,9 +1,8 @@
 ---
 layout: default
 title: Data Collection
-parent: tutorials
-
 nav_order: 1
+parent: tutorials
 
 nav_exclude: false
 ---
@@ -139,4 +138,3 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 {: .note }
 > Waypoints need to be exported to the SD card.  To do this, press Menu twice, navigate to diamond shape tab that says NAV.  Scroll down to export, select “Select All And..” and then select Save or Export or whatever it says.  Waypoints are now saved to the sd card.
 
----
