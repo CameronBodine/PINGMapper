@@ -2,7 +2,7 @@
 layout: default
 title: Data Collection
 nav_order: 1
-parent: tutorials
+parent: Tutorials
 
 nav_exclude: false
 ---
@@ -26,18 +26,18 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 ## Trandsducer
 - The image below shows the proper orientation of the transducer. The front of the mounting bracket is the "front" of the transducer, as indicated by the arrow, with port side-scan channel oriented to the left and starboard side-scan channel oriented to the right.
 
-<img src="../../assets/datacollection/DataCollection-Transducer.PNG"/>
+<img src="./assets/datacollection/DataCollection-Transducer.PNG"/>
 
 - We recommend locating the transducer at the bow of the survey vessel. This is to limit any turbulance caused by the boat or the motor. Turbulance in the water will lower the quality of the imagery. The tansducer should be mounted to a pole. The pole can be connected to the bow on the gunnel using a [transom mount](https://www.trollingmotorshop.com/minn-kota-bracket-hinge-assembly-2991815a/) or something similar. The image below shows the pole-mounted transducer, transom mount, and an external Humminbird&reg; [GPS reciever](https://humminbird.johnsonoutdoors.com/us/shop/accessories/boat-navigation/ice-as-gps-hs-ice-gps-receiver-heading-sensor) (optional) connected to the pole. The GPS reciever is attached to a PVC pipe to buffer any effects the pole may have on the magnetic compass. If using a GPS reciever, ensure the arrow is oriented to the front of the vessel (direction of travel).
 
-<img src="../../assets/datacollection/transducersetup_2.JPG"/>
+<img src="./assets/datacollection/transducersetup_2.JPG"/>
 
 - Once the transducer set-up is attached to the vessel, make sure to orient the transducer so that it is horizontal to the surface of the water. Place the transducer 6-12 inches underwater. If the transducer must be mounted on the side, make sure it is low enough so that the hull isn’t blocking the signal (verify on the imagery screen)
 
-<img src="../../assets/datacollection/TransducerOrientation.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/TransducerOrientation.png"/, alt="Credit: Johnson Outdoors">
 
 ## Control Head
-<img src="../../assets/datacollection/ControlHead.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/ControlHead.png"/, alt="Credit: Johnson Outdoors">
 
 - Insert an SD card into the control head. An SD card is required to save the recording.
 
@@ -46,22 +46,22 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 {: .g2k }
 > We found the wire cable collector made it so the power cable didn’t securely connect to the power head.  If you experience similar issues, remove wires from wire collector and connect each cable separately into the control head.
 
-<img src="../../assets/datacollection/CableCollector.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/CableCollector.png"/, alt="Credit: Johnson Outdoors">
 
 - The VIEW and EXIT buttons are used to move forward and backward, respectively, through the Humminbird&reg; views.  If you don’t see a View that you think you should, follow these directions:
 
-<img src="../../assets/datacollection/Views.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/Views.png"/, alt="Credit: Johnson Outdoors">
 
 {: .warning }
 > In the past, we have noticed data loss when toggling through different views, particularly on the later generation models. This may be due to limits in the processing over-head available on the control head. A potential fix may be to turn off all views which are not needed, limiting the number of views the control head must process.
 
 - Toggle through until you see the GPS Diagnostic view to make sure the Humminbird is receiving a signal from the External GPS. The image indicates the Internal GPS as the Source.  If attached, this should read External GPS.
 
-<img src="../../assets/datacollection/Views.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/Views.png"/, alt="Credit: Johnson Outdoors">
 
 - Toggle until you see the side scan screen.  While the transducer is in the water, you should see data appearing on the screen.  It will look strange until you the boat is moving.  Confirm that the control head is receiving a signal.
 
-<img src="../../assets/datacollection/SideScanView.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/SideScanView.png"/, alt="Credit: Johnson Outdoors">
 
 - While on this view, the “+” and “-“ buttons will change your range (displayed in top right and left of screen; 98 in the image above, resulting in 196 ft of total coverage)
 
@@ -81,11 +81,11 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 
 - Once ready to start collecting data, go to the Snapshot and Recording View screen:
 
-<img src="../../assets/datacollection/RecordingView.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/RecordingView.png"/, alt="Credit: Johnson Outdoors">
 
 - Follow these directions to start recording:
 
-<img src="../../assets/datacollection/StartRecording.png"/, alt="Credit: Johnson Outdoors">
+<img src="./assets/datacollection/StartRecording.png"/, alt="Credit: Johnson Outdoors">
 
 {: .note }
 > You can be on any view while collecting data, but to ensure bank to bank coverage is being collected, change to the side scan view. Also, see the warning above about data loss while switching views.
@@ -97,11 +97,11 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 
 - For single pass, travel down center of channel while ensuring both banks are in view.  If both banks are in view, you will have darker portions (no data) along the edge of the screen.  If both banks are not in view, you will have sonar returns all the way to the edge of the screen.  Adjust range (while keeping frequency/range relationship in mind) until both banks are in view. The imnage below shows both banks along a river channel.
 
-<img src="../../assets/datacollection/SideScanImage.png"/, alt="Side-scan screenshot with both banks visible">
+<img src="./assets/datacollection/SideScanImage.png"/, alt="Side-scan screenshot with both banks visible">
 
 - In the image below, the left bank is not visible. A portion of the right bank in the middle is not visible.
 
-<img src="../../assets/datacollection/SideScanImage.png"/, alt="Side-scan screenshot with right bank partially visible">
+<img src="./assets/datacollection/SideScanImage.png"/, alt="Side-scan screenshot with right bank partially visible">
 
 {: .g2k }
 > We recommend setting the range to a maximum extent of 120-150 feet per side (455 kHz) or 80-120 feet per side (MEGA) as this will result in high-quality imagery.
