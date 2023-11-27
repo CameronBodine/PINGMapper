@@ -26,7 +26,7 @@ This is a simple guide to collecting side-scan sonar data. This guide is specifi
 ## Trandsducer
 - The image below shows the proper orientation of the transducer. The front of the mounting bracket is the "front" of the transducer, as indicated by the arrow, with port side-scan channel oriented to the left and starboard side-scan channel oriented to the right.
 
-<img src="../../assets/datacollection/DataCollection-Transducer.PNG">
+<img src="../../assets/datacollection/DataCollection-Transducer1.PNG">
 
 - We recommend locating the transducer at the bow of the survey vessel. This is to limit any turbulance caused by the boat or the motor. Turbulance in the water will lower the quality of the imagery. The tansducer should be mounted to a pole. The pole can be connected to the bow on the gunnel using a [transom mount](https://www.trollingmotorshop.com/minn-kota-bracket-hinge-assembly-2991815a/) or something similar. The image below shows the pole-mounted transducer, transom mount, and an external Humminbird&reg; [GPS reciever](https://humminbird.johnsonoutdoors.com/us/shop/accessories/boat-navigation/ice-as-gps-hs-ice-gps-receiver-heading-sensor) (optional) connected to the pole. The GPS reciever is attached to a PVC pipe to buffer any effects the pole may have on the magnetic compass. If using a GPS reciever, ensure the arrow is oriented to the front of the vessel (direction of travel).
 
