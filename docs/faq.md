@@ -24,3 +24,12 @@ If you are having issue's with the software, take a look at the FAQ's. If you ca
 ## How do I install PING-Mapper?
 
 See the [installation](./gettingstarted/Installation.md) instructions.
+
+# Data Collection
+## How do I collect high-quality imagery?
+
+See the [data collection](./tutorials/DataCollection.md) tutorial.
+
+## How should I mount the transducer to a vessel?
+
+See the [data collection](./tutorials/DataCollection.md) tutorial.
