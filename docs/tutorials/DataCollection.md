@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Data Collection
+title: Sonar Data Collection Guide
 nav_order: 1
 parent: Tutorials
 
