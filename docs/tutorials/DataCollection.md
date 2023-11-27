@@ -7,7 +7,7 @@ parent: Tutorials
 nav_exclude: false
 ---
 
-# Sonar Data Collection
+# Sonar Data Collection Guide
 
 ## Materials
 - Humminbird&reg; control head
@@ -23,7 +23,7 @@ nav_exclude: false
 
 This is a simple guide to collecting side-scan sonar data. This guide is specifically focused on collecting imagery along a river channel, but much of the information is relevant for other systems. This was created a while ago and likely needs to be updated. But it should help you get started with collecting high-quality imagery. The guide is tailored to the Humminbird&reg; Helix G2N but should be similar for any other Humminbird&reg; system.
 
-## Trandsducer
+## Transducer
 - The image below shows the proper orientation of the transducer. The front of the mounting bracket is the "front" of the transducer, as indicated by the arrow, with port side-scan channel oriented to the left and starboard side-scan channel oriented to the right.
 
 <img src="../../assets/datacollection/DataCollection-Transducer1.PNG">
