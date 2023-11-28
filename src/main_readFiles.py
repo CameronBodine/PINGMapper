@@ -75,7 +75,8 @@ def read_master_func(logfilename='',
                      pix_res=0.0,
                      mosaic_nchunk=50,
                      mosaic=False,
-                     map_mosaic=0):
+                     map_mosaic=0,
+                     banklines=False):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
@@ -990,7 +991,12 @@ def read_master_func(logfilename='',
         keepShadow = False
     else:
         keepShadow = True
-            
+
+    if banklines and remShadow==0:
+        print('\n\nExporting banklines requires shadow removal')
+        print('Setting remShadow==2...')
+        remShadow = 2
+        keepShadow = False            
 
     # Need to detect shadows if mapping substrate
     if pred_sub:

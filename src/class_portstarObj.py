@@ -49,6 +49,8 @@ from doodleverse_utils.imports import *
 from doodleverse_utils.model_imports import *
 from doodleverse_utils.prediction_imports import *
 
+import geopandas as gpd
+
 class portstarObj(object):
     '''
     Python class to store port and starboard objects (sonObj() or rectObj()) in
@@ -2315,6 +2317,96 @@ class portstarObj(object):
 
         dst_ds.SyncToDisk()
         dst_ds=None
+
+        return
+    
+    #=======================================================================
+    def _exportBanklines(self, threadCnt, mosaic_nchunk):
+        '''
+        '''
+
+        # print("\n\tCreating vrt...")
+        # self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=True, maxChunk=mosaic_nchunk)
+
+        inDir = os.path.join(self.port.projDir, 'sonar_mosaic')
+        rasterFiles = glob(os.path.join(inDir, '*mosaic*tif'))
+
+        outDir = os.path.join(self.port.projDir, 'banklines')
+
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+
+        print("\n\tExporting to shapefile...")
+        _ = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createBanklinePolygon)(f, outDir) for f in rasterFiles)
+
+
+
+
+    #=======================================================================
+    def _createBanklinePolygon(self, f, outDir):
+
+        # https://gis.stackexchange.com/questions/340284/converting-raster-pixels-to-polygons-with-gdal-python
+        # Open raster
+        src_ds = gdal.Open(f)
+
+        ####################
+        # Polygon Conversion
+        # Set spatial reference
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(src_ds.GetProjection())
+
+        # Prepare layerfile
+        dst_layername = os.path.basename(f).replace('.tif', '')
+        dst_layername = dst_layername.replace('rect_wcr_mosaic', 'bankline')
+        dst_layername = os.path.join(outDir, dst_layername)
+
+        # Get raster data and reclass
+        srcband = src_ds.GetRasterBand(1)
+        mask = np.where(srcband.ReadAsArray()>0, 254, 0)
+        del srcband
+
+        tmp_ds = gdal.GetDriverByName('MEM').CreateCopy('', src_ds, 0)
+        tmp_ds.GetRasterBand(1).WriteArray(mask)
+        t = tmp_ds.GetRasterBand(1).ReadAsArray()
+        temp = os.path.join(os.path.dirname(dst_layername), 'temp.tif')
+        dst_ds1 = gdal.GetDriverByName('GTiff').CreateCopy(temp, tmp_ds, 0)
+        srcband = dst_ds1.GetRasterBand(1)
+
+        drv = ogr.GetDriverByName("ESRI Shapefile")
+        dst_ds = drv.CreateDataSource(dst_layername+'temp.shp')
+        dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
+
+        # Create Polygon
+        gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+
+        # Delete NoData poly (last feature)
+        ft_cnt = dst_layer.GetFeatureCount()-1
+        layer = dst_ds.GetLayer()
+        layer.SetAttributeFilter("FID = {}".format(ft_cnt))
+
+        for feat in layer:
+            layer.DeleteFeature(feat.GetFID())
+
+        dst_ds.SyncToDisk()
+        dst_ds=None
+        dst_ds1=None
+        tmp_ds=None
+        src_ds=None
+
+        # Open in geopandas
+        ds = gpd.read_file(dst_layername+'temp.shp')
+        # Dissolve all polygons
+        ds = ds.dissolve()
+        # Save
+        ds.to_file(dst_layername+'.shp', index=False)
+
+        # Delete temp files
+        outDir = os.path.join(self.port.projDir, 'banklines')
+        tempFiles = glob(os.path.join(outDir, '*temp*'))
+
+        for f in tempFiles:
+            os.remove(f)
+
 
         return
 

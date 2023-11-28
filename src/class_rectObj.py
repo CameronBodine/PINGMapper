@@ -1350,3 +1350,5 @@ class rectObj(sonObj):
         self.son_colorMap = son_colorMap
         del son_colorMap, color
         return
+    
+    

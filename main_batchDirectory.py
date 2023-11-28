@@ -133,6 +133,10 @@ mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mo
 map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
+# Miscellaneous Exports
+banklines = True # Export banklines from sonar imagery
+
+
 #####################
 # End User Parameters
 #####################
@@ -212,7 +216,8 @@ for datFile in inFiles:
             'pix_res':pix_res,
             'mosaic_nchunk':mosaic_nchunk,
             'mosaic':mosaic,
-            'map_mosaic':map_mosaic
+            'map_mosaic':map_mosaic,
+            'banklines':banklines,
             }
         
         globals().update(params)
@@ -269,7 +274,7 @@ for datFile in inFiles:
         read_master_func(**params)
         # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-        if rect_wcp or rect_wcr:
+        if rect_wcp or rect_wcr or banklines:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')

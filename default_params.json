@@ -33,5 +33,6 @@
     "pix_res":0,
     "mosaic_nchunk":0,
     "mosaic":false,
-    "map_mosaic":false
+    "map_mosaic":false,
+    "banklines":false
 }

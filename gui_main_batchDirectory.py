@@ -75,6 +75,9 @@ layout = [
     [sg.Text('Pixel Size [m, 0==Default Size]'), sg.Input(default_params['pix_res'], size=(10,1)), sg.VerticalSeparator(), sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(default_params['mosaic_nchunk'], size=(10,1))],
     [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['map_mosaic'])],
     [sg.HorizontalSeparator()],
+    [sg.Text('Miscellaneous Exports')],
+    [sg.Checkbox('Banklines', default=default_params['banklines'])],
+    [sg.HorizontalSeparator()],
     [sg.Submit(), sg.Quit()]
 ]
 
@@ -196,7 +199,8 @@ params = {
     'pix_res':float(values[51]),
     'mosaic_nchunk':int(values[53]),
     'mosaic':mosaic,
-    'map_mosaic':map_mosaic
+    'map_mosaic':map_mosaic,
+    'banklines':values[58]
 }
 
 globals().update(params)
@@ -296,7 +300,7 @@ for datFile in inFiles:
         read_master_func(**params)
         # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-        if rect_wcp or rect_wcr:
+        if rect_wcp or rect_wcr or banklines:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')

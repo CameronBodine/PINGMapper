@@ -258,6 +258,7 @@ def saveDefaultParams(values):
         'mosaic_nchunk':int(values[54]),
         'mosaic':values[55],
         'map_mosaic':values[57],
+        'banklines':values[59]
     }
 
     json_object = json.dumps(params, indent=4)

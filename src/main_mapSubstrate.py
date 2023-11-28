@@ -78,7 +78,8 @@ def map_master_func(logfilename='',
                      pix_res=0.0,
                      mosaic_nchunk=50,
                      mosaic=False,
-                     map_mosaic=0):
+                     map_mosaic=0,
+                     banklines=False):
 
     '''
     Main script to map substrates from side scan sonar imagery.

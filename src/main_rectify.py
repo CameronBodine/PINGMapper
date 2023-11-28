@@ -78,7 +78,8 @@ def rectify_master_func(logfilename='',
                         pix_res=0.0,
                         mosaic_nchunk=50,
                         mosaic=False,
-                        map_mosaic=0):
+                        map_mosaic=0,
+                        banklines=False):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
@@ -336,6 +337,11 @@ def rectify_master_func(logfilename='',
     start_time = time.time()
     print("\nRectifying and exporting GeoTiffs:\n")
 
+    if banklines and not (rect_wcp or rect_wcr):
+        print('\n\nExporting banklines requires rectified sonar imagery')
+        print('Setting rect_wcr==True...')
+        rect_wcr = True
+
     for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
@@ -384,6 +390,12 @@ def rectify_master_func(logfilename='',
     # Mosaic imagery                                                           #
     ############################################################################
     overview = True # False will reduce overall file size, but reduce performance in a GIS
+
+    if banklines and not mosaic:
+        print('\n\nExporting banklines requires sonar mosaic')
+        print('Setting mosaic==1...')
+        mosaic = 1
+
     if mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
@@ -395,6 +407,19 @@ def rectify_master_func(logfilename='',
         gc.collect()
         printUsage()
 
+    ############################################################################
+    # Export Banklines                                                         #
+    ############################################################################
+    if banklines: 
+        start_time = time.time()
+        print("\nExporting Banklines...")
+        psObj = portstarObj(portstar)
+        psObj._exportBanklines(threadCnt, mosaic_nchunk)
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        del psObj
+        gc.collect()
+        printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #
