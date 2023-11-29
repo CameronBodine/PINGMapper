@@ -2392,6 +2392,7 @@ class portstarObj(object):
         dst_ds1=None
         tmp_ds=None
         src_ds=None
+        temp=None
 
         # Open in geopandas
         ds = gpd.read_file(dst_layername+'temp.shp')
@@ -2399,6 +2400,8 @@ class portstarObj(object):
         ds = ds.dissolve()
         # Save
         ds.to_file(dst_layername+'.shp', index=False)
+
+        ds=None
 
         # Delete temp files
         outDir = os.path.join(self.port.projDir, 'banklines')
