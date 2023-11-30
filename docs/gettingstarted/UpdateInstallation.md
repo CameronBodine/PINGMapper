@@ -43,6 +43,17 @@ Download the latest updates:
 git pull
 ```
 
+{: .warning }
+> You may recieve the error below if you are connected to work network:
+>```
+>(base) C:\Users\Cam\MyPythonRepos\PINGMapper>git pull
+>fatal: unable to access 'https://github.com/CameronBodine/PINGMapper/': SSL certificate problem: unable to get local issuer certificate
+>```
+>If this happens, try the following:
+>'''
+>git -c http.sslVerify=false pull
+>''
+
 If PINGMapper has new updates, you should see an indication of that in the console outpute:
 ```
 (base) PS E:\Python\PINGMapper> git pull
