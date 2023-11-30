@@ -169,7 +169,6 @@ git clone --depth 1 https://github.com/CameronBodine/PINGMapper
 {: .warning }
 > You may recieve the error below if you are connected to work network:
 >```
->(base) C:\Users\Cam\MyPythonRepos\PINGMapper>git pull
 >fatal: unable to access 'https://github.com/CameronBodine/PINGMapper/': SSL certificate problem: unable to get local issuer certificate
 >```
 >If this happens, try the following:
