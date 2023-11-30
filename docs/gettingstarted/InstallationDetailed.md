@@ -175,7 +175,7 @@ git clone --depth 1 https://github.com/CameronBodine/PINGMapper
 >If this happens, try the following:
 >'''
 >git -c http.sslVerify=false clone --depth 1 https://github.com/CameronBodine/PINGMapper
->''
+>'''
 
 <img src="../../assets/install/shell_15.PNG"/>
 
