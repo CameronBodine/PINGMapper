@@ -65,13 +65,13 @@ threadCnt=cpu_count()
 #################
 
 # Directory and Project Name
-transectDir = r'/home/cbodine/Desktop/MN_MusselProject/WBL_EGN'
-projName = 'WBL_EGN_Mosaic'
+transectDir = r'./procData/test'
+projName = 'test'
 
 
 # Rectification Parameters
 rect_wcp = False #Export rectified tiles with water column present
-rect_wcr = True #Export rectified tiles with water column removed/slant range corrected
+rect_wcr = False #Export rectified tiles with water column removed/slant range corrected
 
 
 # Mosaic Parameters
@@ -335,9 +335,12 @@ egn_vals = defaultdict()
 son = rectObjs[0]
 temp = vars(son)
 for item in temp:
+    print(item)
     if 'egn_' in item:
         egn_vals[item] = []
 del son
+
+print(egn_vals)
 
 # Populate egn_vals with each sonObj
 for son in rectObjs:
@@ -350,214 +353,215 @@ for son in rectObjs:
 #     print(k)
 
 
-#============================================
+if egn_vals:
+    #============================================
 
-###########################
-# Calculate global egn vals
-
-
-#####################
-### egn_bed_means ###
-egn_val = 'egn_bed_means'
-# Find longest vector
-lv = 0
-for v in egn_vals[egn_val]:
-    if len(v) > lv:
-        lv = len(v)
-
-# Create nan array
-egn_bed_means = np.empty((lv, len(egn_vals[egn_val])))
-egn_bed_means[:] = np.nan
-
-# Stack arrays
-for i, v in enumerate(egn_vals[egn_val]):
-    egn_bed_means[:len(v), i] = v
-
-# Calculate mean
-egn_bed_means = np.nanmean(egn_bed_means, axis=1)
-
-# Update dictionary
-egn_vals[egn_val] = egn_bed_means
-del egn_bed_means
-# print('\n\n'+egn_val, egn_vals[egn_val])
+    ###########################
+    # Calculate global egn vals
 
 
-# ####################
-# ### egn_wc_means ###
-# egn_val = 'egn_wc_means'
-# # Find longest vector
-# lv = 0
-# for v in egn_vals[egn_val]:
-#     if len(v) > lv:
-#         lv = len(v)
-#
-# # Create nan array
-# egn_wc_means = np.empty((lv, len(egn_vals[egn_val])))
-# egn_wc_means[:] = np.nan
-#
-# # Stack arrays
-# for i, v in enumerate(egn_vals[egn_val]):
-#     egn_wc_means[:len(v), i] = v
-#
-# # Calculate mean
-# egn_wc_means = np.nanmean(egn_wc_means, axis=1)
-#
-# # Update dictionary
-# egn_vals[egn_val] = egn_wc_means
-# del egn_wc_means
-# # print('\n\n'+egn_val, egn_vals[egn_val])
+    #####################
+    ### egn_bed_means ###
+    egn_val = 'egn_bed_means'
+    # Find longest vector
+    lv = 0
+    for v in egn_vals[egn_val]:
+        if len(v) > lv:
+            lv = len(v)
+
+    # Create nan array
+    egn_bed_means = np.empty((lv, len(egn_vals[egn_val])))
+    egn_bed_means[:] = np.nan
+
+    # Stack arrays
+    for i, v in enumerate(egn_vals[egn_val]):
+        egn_bed_means[:len(v), i] = v
+
+    # Calculate mean
+    egn_bed_means = np.nanmean(egn_bed_means, axis=1)
+
+    # Update dictionary
+    egn_vals[egn_val] = egn_bed_means
+    del egn_bed_means
+    # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-###################
-### egn_bed_min ###
-egn_val = 'egn_bed_min'
-
-# Calculate min
-egn_bed_min = np.nanmin(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_bed_min
-del egn_bed_min
-# print('\n\n'+egn_val, egn_vals[egn_val])
-
-
-###################
-### egn_bed_max ###
-egn_val = 'egn_bed_max'
-
-# Calculate min
-egn_bed_max = np.nanmax(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_bed_max
-del egn_bed_max
-# print('\n\n'+egn_val, egn_vals[egn_val])
-
-
-# ##################
-# ### egn_wc_min ###
-# egn_val = 'egn_wc_min'
-#
-# # Calculate min
-# egn_wc_min = np.nanmin(egn_vals[egn_val])
-#
-# # Update dictionary
-# egn_vals[egn_val] = egn_wc_min
-# del egn_wc_min
-# # print('\n\n'+egn_val, egn_vals[egn_val])
-#
-#
-# ##################
-# ### egn_wc_max ###
-# egn_val = 'egn_wc_max'
-#
-# # Calculate min
-# egn_wc_max = np.nanmax(egn_vals[egn_val])
-#
-# # Update dictionary
-# egn_vals[egn_val] = egn_wc_max
-# del egn_wc_max
-# # print('\n\n'+egn_val, egn_vals[egn_val])
+    # ####################
+    # ### egn_wc_means ###
+    # egn_val = 'egn_wc_means'
+    # # Find longest vector
+    # lv = 0
+    # for v in egn_vals[egn_val]:
+    #     if len(v) > lv:
+    #         lv = len(v)
+    #
+    # # Create nan array
+    # egn_wc_means = np.empty((lv, len(egn_vals[egn_val])))
+    # egn_wc_means[:] = np.nan
+    #
+    # # Stack arrays
+    # for i, v in enumerate(egn_vals[egn_val]):
+    #     egn_wc_means[:len(v), i] = v
+    #
+    # # Calculate mean
+    # egn_wc_means = np.nanmean(egn_wc_means, axis=1)
+    #
+    # # Update dictionary
+    # egn_vals[egn_val] = egn_wc_means
+    # del egn_wc_means
+    # # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-# ####################
-# ### egn_wcp_hist ###
-# egn_val = 'egn_wcp_hist'
-#
-# # Delete because we don't need it
-# del egn_vals[egn_val]
+    ###################
+    ### egn_bed_min ###
+    egn_val = 'egn_bed_min'
+
+    # Calculate min
+    egn_bed_min = np.nanmin(egn_vals[egn_val])
+
+    # Update dictionary
+    egn_vals[egn_val] = egn_bed_min
+    del egn_bed_min
+    # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-# ####################
-# ### egn_wcp_hist ###
-# egn_val = 'egn_wcr_hist'
-#
-# # Delete because we don't need it
-# del egn_vals[egn_val]
+    ###################
+    ### egn_bed_max ###
+    egn_val = 'egn_bed_max'
+
+    # Calculate min
+    egn_bed_max = np.nanmax(egn_vals[egn_val])
+
+    # Update dictionary
+    egn_vals[egn_val] = egn_bed_max
+    del egn_bed_max
+    # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-# #########################
-# ### egn_wcp_hist_pcnt ###
-# egn_val = 'egn_wcp_hist_pcnt'
-#
-# # Delete because we don't need it
-# del egn_vals[egn_val]
+    # ##################
+    # ### egn_wc_min ###
+    # egn_val = 'egn_wc_min'
+    #
+    # # Calculate min
+    # egn_wc_min = np.nanmin(egn_vals[egn_val])
+    #
+    # # Update dictionary
+    # egn_vals[egn_val] = egn_wc_min
+    # del egn_wc_min
+    # # print('\n\n'+egn_val, egn_vals[egn_val])
+    #
+    #
+    # ##################
+    # ### egn_wc_max ###
+    # egn_val = 'egn_wc_max'
+    #
+    # # Calculate min
+    # egn_wc_max = np.nanmax(egn_vals[egn_val])
+    #
+    # # Update dictionary
+    # egn_vals[egn_val] = egn_wc_max
+    # del egn_wc_max
+    # # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
-#########################
-### egn_wcr_hist_pcnt ###
-egn_val = 'egn_wcr_hist_pcnt'
-
-# Delete because we don't need it
-del egn_vals[egn_val]
-
-
-###################
-### egn_stretch ###
-egn_val = 'egn_stretch'
-
-# Delete because we don't need it
-del egn_vals[egn_val]
+    # ####################
+    # ### egn_wcp_hist ###
+    # egn_val = 'egn_wcp_hist'
+    #
+    # # Delete because we don't need it
+    # del egn_vals[egn_val]
 
 
-##########################
-### egn_stretch_factor ###
-egn_val = 'egn_stretch_factor'
-
-# Delete because we don't need it
-del egn_vals[egn_val]
-
-
-# ###########################
-# ### egn_wcp_stretch_min ###
-# egn_val = 'egn_wcp_stretch_min'
-#
-# # Calculate min
-# egn_wcp_stretch_min = np.nanmin(egn_vals[egn_val])
-#
-# # Update dictionary
-# egn_vals[egn_val] = egn_wcp_stretch_min
-# del egn_wcp_stretch_min
-# # print('\n\n'+egn_val, egn_vals[egn_val])
-#
-#
-# ###########################
-# ### egn_wcp_stretch_max ###
-# egn_val = 'egn_wcp_stretch_max'
-#
-# # Calculate min
-# egn_wcp_stretch_max = np.nanmin(egn_vals[egn_val])
-#
-# # Update dictionary
-# egn_vals[egn_val] = egn_wcp_stretch_max
-# del egn_wcp_stretch_max
-# # print('\n\n'+egn_val, egn_vals[egn_val])
+    # ####################
+    # ### egn_wcp_hist ###
+    # egn_val = 'egn_wcr_hist'
+    #
+    # # Delete because we don't need it
+    # del egn_vals[egn_val]
 
 
-###########################
-### egn_wcr_stretch_min ###
-egn_val = 'egn_wcr_stretch_min'
-
-# Calculate min
-egn_wcr_stretch_min = np.nanmin(egn_vals[egn_val])
-
-# Update dictionary
-egn_vals[egn_val] = egn_wcr_stretch_min
-del egn_wcr_stretch_min
-# print('\n\n'+egn_val, egn_vals[egn_val])
+    # #########################
+    # ### egn_wcp_hist_pcnt ###
+    # egn_val = 'egn_wcp_hist_pcnt'
+    #
+    # # Delete because we don't need it
+    # del egn_vals[egn_val]
 
 
-###########################
-### egn_wcr_stretch_max ###
-egn_val = 'egn_wcr_stretch_max'
+    #########################
+    ### egn_wcr_hist_pcnt ###
+    egn_val = 'egn_wcr_hist_pcnt'
 
-# Calculate min
-egn_wcr_stretch_max = np.nanmin(egn_vals[egn_val])
+    # Delete because we don't need it
+    del egn_vals[egn_val]
 
-# Update dictionary
-egn_vals[egn_val] = egn_wcr_stretch_max
-del egn_wcr_stretch_max
-# print('\n\n'+egn_val, egn_vals[egn_val])
+
+    ###################
+    ### egn_stretch ###
+    egn_val = 'egn_stretch'
+
+    # Delete because we don't need it
+    del egn_vals[egn_val]
+
+
+    ##########################
+    ### egn_stretch_factor ###
+    egn_val = 'egn_stretch_factor'
+
+    # Delete because we don't need it
+    del egn_vals[egn_val]
+
+
+    # ###########################
+    # ### egn_wcp_stretch_min ###
+    # egn_val = 'egn_wcp_stretch_min'
+    #
+    # # Calculate min
+    # egn_wcp_stretch_min = np.nanmin(egn_vals[egn_val])
+    #
+    # # Update dictionary
+    # egn_vals[egn_val] = egn_wcp_stretch_min
+    # del egn_wcp_stretch_min
+    # # print('\n\n'+egn_val, egn_vals[egn_val])
+    #
+    #
+    # ###########################
+    # ### egn_wcp_stretch_max ###
+    # egn_val = 'egn_wcp_stretch_max'
+    #
+    # # Calculate min
+    # egn_wcp_stretch_max = np.nanmin(egn_vals[egn_val])
+    #
+    # # Update dictionary
+    # egn_vals[egn_val] = egn_wcp_stretch_max
+    # del egn_wcp_stretch_max
+    # # print('\n\n'+egn_val, egn_vals[egn_val])
+
+
+    ###########################
+    ### egn_wcr_stretch_min ###
+    egn_val = 'egn_wcr_stretch_min'
+
+    # Calculate min
+    egn_wcr_stretch_min = np.nanmin(egn_vals[egn_val])
+
+    # Update dictionary
+    egn_vals[egn_val] = egn_wcr_stretch_min
+    del egn_wcr_stretch_min
+    # print('\n\n'+egn_val, egn_vals[egn_val])
+
+
+    ###########################
+    ### egn_wcr_stretch_max ###
+    egn_val = 'egn_wcr_stretch_max'
+
+    # Calculate min
+    egn_wcr_stretch_max = np.nanmin(egn_vals[egn_val])
+
+    # Update dictionary
+    egn_vals[egn_val] = egn_wcr_stretch_max
+    del egn_wcr_stretch_max
+    # print('\n\n'+egn_val, egn_vals[egn_val])
 
 
 #============================================
@@ -565,43 +569,44 @@ del egn_wcr_stretch_max
 #######################
 # Rectify sonar imagery
 
-print("\nRectifying and exporting GeoTiffs:\n")
-for sons in portstar:
-    print("Working on:", os.path.basename(sons[0].projDir))
-    for son in sons:
-        filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
+if rect_wcp or rect_wcr:
+    print("\nRectifying and exporting GeoTiffs:\n")
+    for sons in portstar:
+        print("Working on:", os.path.basename(sons[0].projDir))
+        for son in sons:
+            filter = int(son.nchunk*0.1) #Filters trackline coordinates for smoothing
 
-        son.outDir = os.path.join(son.projDir, son.beamName)
-        if not os.path.exists(son.outDir):
-            os.mkdir(son.outDir)
+            son.outDir = os.path.join(son.projDir, son.beamName)
+            if not os.path.exists(son.outDir):
+                os.mkdir(son.outDir)
 
-        # # Overwrite local egn settings with global settings
-        for k, v in egn_vals.items():
-            son.k = v
+            # # Overwrite local egn settings with global settings
+            for k, v in egn_vals.items():
+                son.k = v
 
-        # Store rect_wcp and rect_wcr
-        son.rect_wcp = rect_wcp
-        son.rect_wcr = rect_wcr
+            # Store rect_wcp and rect_wcr
+            son.rect_wcp = rect_wcp
+            son.rect_wcr = rect_wcr
 
-        # Get chunk id's
-        chunks = son._getChunkID()
+            # Get chunk id's
+            chunks = son._getChunkID()
 
-        # Load sonMetaDF
-        son._loadSonMeta()
+            # Load sonMetaDF
+            son._loadSonMeta()
 
-        # Get colormap
-        son._getSonColorMap(son_colorMap)
+            # Get colormap
+            son._getSonColorMap(son_colorMap)
 
-        print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-        Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
 
-        del son.sonMetaDF
-        try:
-            del son.smthTrk
-        except:
-            pass
-        son._cleanup()
-        # son._pickleSon()
+            del son.sonMetaDF
+            try:
+                del son.smthTrk
+            except:
+                pass
+            son._cleanup()
+            # son._pickleSon()
 
 #============================================
 
