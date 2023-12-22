@@ -64,6 +64,8 @@ If `PING-Mapper` doesn't work for your Humminbird&reg; recording, submit an [Iss
 
 
 # Software Documentation
+There are several ways you can find out more about `PING-Mapper`. Check out the website, manuscripts, and Zenodo archives below. If you use `PING-Mapper` for your work, please cite the journal articles below.
+
 ## Website
 Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for more information.
 
@@ -100,6 +102,14 @@ Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022).
 # Ready to get started?
 
 Follow the installation and testing instructions to [Get Started!](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted)
+
+# Recognition
+
+Thanks to project collaborators Adam Kaeser (USFWS), Channing St. Aubin (USFWS), Mike Andres (USM), Kasea Price (USM), Alyssa Pagel (USM), Eric Haffey (USM), and Katherine Wright (USM).
+
+A special thanks to advocates and early-adoptors including, but not limited to, Jennylyn Redner, Adrian Pinchbeck, Art Trembanis, Dan Carlson, Alan Ryon, Mirko Denecke, Dan Haught, Dan Hamill, Mark Lundine, Elizabeth Greenheck, Hendra Kurnia Febriawan, Bryan Bozeman, Paul Grams, Matt Kaplinski, Jess Kozarek, Chris Milliren, Brett Connell and James Parham.
+
+Cameron wishes to thank his PhD dissertation committee chair Toby Hocking, co-chair and advisor Dan Buscombe, Rebecca Best, and Adam Kaeser.
 
 # PING-Mapper is part of the Doodleverse!
 ![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
