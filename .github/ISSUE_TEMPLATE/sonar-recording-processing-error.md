@@ -7,14 +7,14 @@ assignees: ''
 
 ---
 
-**Provide Log Files**
+### Provide Log Files
 Please attach all log files in the output project directory log folder. These files contain all the user parameters and the errors encountered during processing. For example: 
 
 Console Output Log: `C:/user/cam/myHumOutputs/myHumDat/logs/log_2023-11-28_0519.txt`
 AND
 Error Log: `C:/user/cam/myHumOutputs/myHumDat/logs/error_2023-11-28_0519.txt`
 
-**Provide Recording Files**
+### Provide Recording Files
 Please provide a link to a zipped folder to download the problematic recording. Please include the following files, for example:
 
 ```
@@ -30,3 +30,6 @@ Rec00001.DAT
 │   └── B004.IDX
 ```
 If the recordings contain sensitive content, you can email them or the link to me directly at csb67@nau.edu.
+
+### Additional Information
+Provide any additional detail that may be helpful.
