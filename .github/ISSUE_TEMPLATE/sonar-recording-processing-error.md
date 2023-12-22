@@ -1,6 +1,6 @@
 ---
 name: Sonar Recording Processing Error
-about: Describe this issue template's purpose here.
+about: Error encountered while processing your sonar recording.
 title: ''
 labels: 0_Code, end user issue - processing bug
 assignees: ''
