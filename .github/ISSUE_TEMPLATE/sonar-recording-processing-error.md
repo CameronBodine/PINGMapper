@@ -1,5 +1,5 @@
 ---
-name: Processing Error
+name: Sonar Recording Processing Error
 about: Describe this issue template's purpose here.
 title: ''
 labels: ''
