@@ -85,10 +85,12 @@ Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022).
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
 
-# Installation
+# Getting Started
+
+## Installation
 View the [installation instructions](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html).
 
-# Testing PING-Mapper
+## Testing PING-Mapper
 To determine if PING-Mapper is functioning as expected, run the [test scripts](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html) with example recordings shipped with the software.
 
 ## Running PING-Mapper on your own data
