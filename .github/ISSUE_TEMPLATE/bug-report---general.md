@@ -2,7 +2,7 @@
 name: Bug report - General
 about: Create a report to help us improve
 title: ''
-labels: ''
+labels: 0_Code, end user issue - general bug
 assignees: ''
 
 ---

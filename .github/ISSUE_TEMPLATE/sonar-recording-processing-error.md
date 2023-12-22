@@ -2,7 +2,7 @@
 name: Sonar Recording Processing Error
 about: Describe this issue template's purpose here.
 title: ''
-labels: ''
+labels: 0_Code, end user issue - processing bug
 assignees: ''
 
 ---
