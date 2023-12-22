@@ -58,7 +58,7 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 - Solix
 - Onix
 
-If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+If `PING-Mapper` doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
 # Software Documentation
