@@ -8,7 +8,7 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 # PING-Mapper
 {: .fs-9 }
 
-`PING-Mapper` is an open-source software for reading and processing recreation-grade side scan sonar recordings
+Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat
 {: .fs-6 .fw-300 }
 
 [Get started now](./docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
@@ -17,22 +17,11 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 
 `PING-Mapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
-## Compatible Sonar Systems
-
-`PING-Mapper` is currently compatible with Humminbird&reg; side imaging sonar systems. The software has been designed to work with any model, but has been specifically tested with the following models:
-
-- 998
-- 1198
-- 1199
-- Helix
-- Solix
-- Onix
-
-If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](./docs/advanced/HumFileStructure.md).
-
 ## Overview
 
-'PING-Mapper' can be run from a simple GUI with 'python gui_main.py' or from a stand-alone script with 'python main.py'. For batch processing multiply recordings, specify 'python gui_main_batchDirectory.py' or 'python main_batchDirectory.py'. 'PING-Mapper' provides the following functionality:
+### Key Functionality
+
+- Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onix).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](./docs/advanced/HumFileStructure.html).
 
 - Export all metadata from .DAT and .SON files to .CSV.
 
@@ -54,7 +43,22 @@ If 'PING-Mapper' doesn't work for your Humminbird&reg; recording, submit an [Iss
 
 More information on PING-Mapper exports can be found [here](./docs/gettingstarted/Exports.html).
 
-## Examples
+### Compatible Humminbird&reg; Systems
+
+`PING-Mapper` is currently compatible with Humminbird&reg; side imaging sonar systems. The software has been designed to work with any model, but has been specifically tested with the following models:
+
+- 998
+- 1198
+- 1199
+- Helix
+- Solix
+- Onix
+
+If `PING-Mapper` doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+
+
+
+### Examples
 
 `PING-Mapper` is designed to **decode sonar recordings** from a Humminbird&reg; like this:
 
@@ -66,13 +70,15 @@ Export **ping attributes** from each sonar channel including sonar depth, latitu
 
 <img src="./assets/PingAttribute.png" width="800"/>
 
-And create georectified mosaics of the sonar imagery and automatically generate substrate maps:
+And **export georectified mosaics** of the sonar imagery and **automatically generate substrate maps**:
 
 <img src="./assets/GithubMap.png" width="800"/>
 
+
+
 ## Find out more!
 
-There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use 'PING-Mapper' for your work, please cite the journal articles below.
+There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use `PING-Mapper` for your work, please cite the journal articles below.
 
 
 ### PING-Mapper v2.0.0
@@ -89,7 +95,7 @@ The second version of PING-Mapper is available now. Scientific articles document
 
 
 ### PING-Mapper v1.0.0
-An overview of PING-Mapper v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use PING-Mapper for your work, please cite the article!
+An overview of `PING-Mapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use `PING-Mapper` for your work, please cite the article!
 
 #### Journal Article
 Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
@@ -103,6 +109,11 @@ Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022).
 ## Ready to get started?
 
 Follow the installation and testing instructions to [Get Started!](./docs/gettingstarted/gettingstarted.md)
+
+## PING-Mapper is part of the Doodleverse!
+![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
+
+The Doodleverse is an opinionated collection of Python packages designed for geoscientific image segmentation. Find out more on [GitHub](https://github.com/Doodleverse).
 
 
 
