@@ -43,6 +43,9 @@ callouts:
   warning:
     title: Warning
     color: red
+  tldr:
+    title: TL;DR
+    color: blue
 
 plugins:
   - jekyll-seo-tag

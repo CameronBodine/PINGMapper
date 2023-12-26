@@ -1,7 +1,6 @@
 ---
 layout: default
-title: Installation
-nav_order: 1
+title: Installation (Minimal)
 parent: Getting Started
 
 nav_exclude: true
