@@ -1,7 +1,6 @@
 ---
 layout: default
-parent: Getting Started
-
+title: Installation (Minimal)
 nav_exclude: true
 
 ---
