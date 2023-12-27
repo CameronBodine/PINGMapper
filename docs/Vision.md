@@ -4,12 +4,36 @@ title: Vision
 nav_exclude: true
 ---
 
-# A vision for the future
+# Vision
+{: .no_toc }
 
-{: .tldr }
-> My time as a graduate student and primary developer of `PING-Mapper` is fast approaching (May 2024) but there are loads of improvements and additions that can be made! If your organization is interested in partnering with me to keep developing this software, please reach out to me at csb67@nau.edu. I look forward to hearing from you!
+An essay on how `PING-Mapper` can improve in the future through partnerships.
+{: .fs-6 .fw-300 }
+
+{: .summary }
+>`PING-Mapper` is an open-source software (that means <u>FREE!</u>) that can *automatically* do a lot of truly impressive things:
+> - Process sonar recordings from any Humminbird&reg; side imaging fishfinder
+> - Map and classify aquatic substrates
+> - Export georeference sonar mosaics
+> - Correct sonar intensities
+> - Detect depth and shadows from side scan channels
+> - Export sonar attributes (i.e., latitude, longitude, vessel heading, etc.) to CSV
+> - Export plots and sonograms
 >
->If you want to learn more about a vision for the future of low-cost aquatic imaging and mapping, read on!
+> This functionality, however, is just scratching the surface on what is possible in order to achieve the full potential of `PING-Mapper`. In order to realize this vision, we need to provide additional functionality, including:
+> - Support for a variety of sonar instruments
+> - Substrate and habitat mapping across a diversity of aquatic environments
+> - Automated identification, mapping, and enumeration of specific features (e.g., fish, ghost crab pots, cultural features, etc.)
+> - ...
+>
+> Do you share this vison? Can you benefit from additional development and application of these tools? Are there other features that I am missing that you would like to see supported? 
+>
+>**Are you interested in partnering to build the future of low-cost aquatic imaging and mapping with `PING-Mapper`?**
+>
+> I am interested to hear from you in order to discuss these possibilities. Please read on to find out more!
+
+
+## Introduction
 
 Hi! My name is [Cameron Bodine](https://cameronbodine.github.io/) and I am the primary developer of `PING-Mapper`. `PING-Mapper` has been the focus of my PhD dissertation research in Ecological Informatics at Northern Arizona University. I have wanted to build something like `PING-Mapper` ever since I started manually mapping substrates following the Kaeser and Litts ([2010](https://doi.org/10.1577/1548-8446-35.4.163); [2013](https://doi.org/10.1002/rra.2556)) method and discovered that there was a possibility of automating many, if not all, of the workflows as demonstrated by [Dan Buscombe](https://www.mardascience.com/docs/intro#dr-dan-buscombe) with his work on PyHum ([Buscombe et al., 2016](https://doi.org/10.1016/j.envsoft.2016.12.003); [Buscombe, 2017](https://doi.org/10.1016/j.envsoft.2016.12.003)). 
 
@@ -17,7 +41,7 @@ Let's examine a few of the features provided by `PING-Mapper`. The core function
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/AlebxkKn83c?si=dOVicn8zDsRSHXyP" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-With my nearly five-year tenure as a graduate student coming to a close in May 2024, I am proud to provide an open-source tool to the community to enable efficient imaging and mapping of aquatic systems. In fact, several researchers who are not direct collaborators with this project are already using `PING-Mapper`. This is largely due to the fact that the tools are easy to use and require little manual intervention. Additionally, the workflows are completely transparent because the code are housed in a public repository, allowing anyone with Python experience to evaluate and prototype new functionality. While these are important improvements to generating benthic datasets from recreation fish finders, we are just scratching the surface as there is much more that can be done. The following sections describe a vision of some of the improvements that can be developed, given interest and financial investment by potential collaborators and sponsors.
+With my nearly five-year tenure as a graduate student coming to a close in May 2024, I am proud to provide an open-source tool to the community to enable efficient imaging and mapping of aquatic systems. In fact, several researchers who are not direct collaborators with this project are already using `PING-Mapper`. This is largely due to the fact that the tools are easy to use and require little manual intervention. Additionally, the workflows are completely transparent because the code are housed in a public repository, allowing anyone with Python experience to evaluate and prototype new functionality. While these methods are important improvements to generating benthic datasets from recreation fish finders, we are just scratching the surface as there is much more that can be done. The following sections describe a vision of some of the improvements that can be developed, given interest and financial investment by potential collaborators and sponsors.
 
 
 ## Support for other sonar systems

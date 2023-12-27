@@ -43,8 +43,8 @@ callouts:
   warning:
     title: Warning
     color: red
-  tldr:
-    title: TL;DR
+  summary:
+    title: Summary
     color: blue
 
 plugins:
