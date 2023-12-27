@@ -8,6 +8,7 @@ nav_exclude: true
 ---
 
 # Minimal Installation Instructions
+{: .no_toc }
 
 {: .g2k }
 > If you need more information on the installation process, check out the [Detailed Installation](./Installation.md) instructions!
