@@ -113,13 +113,19 @@ Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022).
 
 Follow the installation and testing instructions to [Get Started!](./docs/gettingstarted/gettingstarted.md)
 
-## Recognition
+# Acknowledgements
+
+*This study was made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Trustee Implementation Group to restore natural resources injured by the 2010 Deepwater Horizon oil spill in the Gulf of Mexico. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University.*
+
+**Primary Developer:** [Cameron S. Bodine](https://github.com/CameronBodine)
+
+**Co-Developer:** [Daniel Buscombe](https://github.com/dbuscombe-usgs)
 
 Thanks to project collaborators Adam Kaeser (USFWS), Channing St. Aubin (USFWS), Mike Andres (USM), Kasea Price (USM), Alyssa Pagel (USM), Eric Haffey (USM), and Katherine Wright (USM).
 
 A special thanks to advocates and early-adoptors including, but not limited to, Jennylyn Redner, Adrian Pinchbeck, Art Trembanis, Dan Carlson, Alan Ryon, Mirko Denecke, Dan Haught, Dan Hamill, Mark Lundine, Elizabeth Greenheck, Hendra Kurnia Febriawan, Bryan Bozeman, Paul Grams, Matt Kaplinski, Jess Kozarek, Chris Milliren, Brett Connell and James Parham.
 
-Cameron wishes to thank his PhD dissertation committee chair Toby Hocking, primary advisor and co-chair Dan Buscombe, Rebecca Best, and Adam Kaeser.
+Cameron wishes to thank his PhD dissertation committee chair Toby Hocking, co-chair and advisor Dan Buscombe, Rebecca Best, and Adam Kaeser.
 
 ## PING-Mapper is part of the Doodleverse!
 ![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
