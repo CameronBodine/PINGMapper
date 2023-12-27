@@ -10,6 +10,8 @@ nav_exclude: true
 An essay on how `PING-Mapper` can improve in the future through partnerships.
 {: .fs-6 .fw-300 }
 
+---
+
 {: .summary }
 >`PING-Mapper` is an open-source software (that means <u>FREE!</u>) that can *automatically* do a lot of truly impressive things:
 > - Process sonar recordings from any Humminbird&reg; side imaging fishfinder
