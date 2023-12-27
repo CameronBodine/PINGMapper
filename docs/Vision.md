@@ -28,11 +28,10 @@ An essay on how `PING-Mapper` can improve in the future through partnerships.
 > - Automated identification, mapping, and enumeration of specific features (e.g., fish, ghost crab pots, cultural features, etc.)
 > - ...
 >
-> Do you share this vison? Can you benefit from additional development and application of these tools? Are there other features that I am missing that you would like to see supported? 
+>**Are you interested in partnering to build the future of low-cost aquatic imaging and mapping with PING-Mapper?**
+> ---
 >
->**Are you interested in partnering to build the future of low-cost aquatic imaging and mapping with `PING-Mapper`?**
->
-> I am interested to hear from you in order to discuss these possibilities. Please read on to find out more!
+> Do you share this vison? Can you benefit from additional development and application of these tools? Are there other features that I am missing that you would like to see supported? I am interested to hear from you in order to discuss these possibilities. Please read on to find out more!
 
 
 ## Introduction
@@ -74,7 +73,7 @@ Imagine you are interested in conducting a study on a new aquatic system and you
 
 ## Finding PING-Mapper's new home
 
-As I mentioned at the beginning of this long-winded and meandering essay, I will be ending my tenure as a graduate student in May 2024. I will be moving on to the next thing, which, at this point, is unknown. If afforded the opportunity, I would love to keep working on `PING-Mapper` and continuing to develop the software along the directions I have outlined above. If you or your organization are interested in partnering on this, please don't hesitate to reach out to me at csb67@nau.edu.
+As I mentioned at the beginning of this long-winded and meandering essay, I will be ending my tenure as a graduate student in May 2024. I will be moving on to the next thing, which, at this point, is unknown. If afforded the opportunity, I would love to keep working on `PING-Mapper` and continuing to develop the software along the directions I have outlined above. If you or your organization are interested in partnering on this, please reach out to me at csb67@nau.edu.
 
 ## References
 
