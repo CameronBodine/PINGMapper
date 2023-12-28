@@ -1,7 +1,8 @@
 ---
 layout: default
 title: Vision
-nav_exclude: true
+nav_order: 6
+nav_exclude: false
 ---
 
 # Vision
