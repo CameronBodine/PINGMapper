@@ -203,6 +203,10 @@ conda env create --file conda/PINGMapper.yml
 
 As instructed in the prompt, to activate the newly installed environment and use PINGMapper, issue the following command and hit `Enter`:
 
+```
+conda activate ping
+```
+
 <img src="../../assets/install/shell_19.PNG"/>
 
 We can see that `ping` is activated because it is listed in parenthesis `(ping)` instead of the default environment `(base)`.
