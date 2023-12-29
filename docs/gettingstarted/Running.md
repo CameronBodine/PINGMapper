@@ -15,7 +15,7 @@ nav_exclude: false
 Find out how to process your own sonar recordings.
 {: .fs-6 .fw-300 }
 
-{ :g2k }
+{: .g2k }
 > If you prefer to run from a Python Script, check out the [Script Instructions](./Running_script.md)
 
 After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you are ready to process your own sonar recordings! Two scripts have been included with `PING-Mapper` and are found in the top-level directory. The first is `gui_main.py` which allows you to process a single sonar recording. It is recommended that you start with this script when first processing sonar recordings with the software. A second script called `gui_main_batchDirectory.py` provides an example of how to batch process many sonar recordings at once. Both approaches are covered below.
@@ -47,8 +47,8 @@ Rec00001.DAT
 cd C:\users\Cam\MyPythonRepos\PINGMapper
 ```
 
-{ :g2k }
-> Take a look at [Step 2](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html#step-2) of the installation instructions if you need help navigating to the `PINGMapper` direcory.
+{: .g2k }
+> Take a look at [Step 2](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html#step-2) of the installation instructions if you need help navigating to the `PINGMapper` directory.
 
 2. Activate the `ping` virtual environment by running the following command and hit `Enter`:
 ```
@@ -134,7 +134,7 @@ Provide an x and y offset to account for position offset between the control hea
 
 Here is an example showing the transducer in relation to the control head. In this case, you would supply a positive `Transducer Offset [X]` AND and positive `Transducer Offset [Y]`.
 
-<img src="../../assets/running/TransducerOffset.PNG"/>
+<img src="../../assets/running/TransducerOffset.png"/>
 
 ### Step 6
 Decide if you want the sonar intensities to be corrected.
