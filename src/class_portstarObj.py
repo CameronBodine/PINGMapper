@@ -1805,7 +1805,7 @@ class portstarObj(object):
         '''
         '''
         # Set pixel down/upscale factor
-        pix_res_factor=self.port.pix_res_factor
+        pix_res_factor=self.port.pix_res
 
         # Set output directory
         self.outDir = self.port.outDir
@@ -1836,7 +1836,7 @@ class portstarObj(object):
             star = tf.nn.softmax(self.star.sonDat).numpy()
 
             # Rescale to digital number
-            dn = 10000
+            dn = 10000 # Convert 0.XXXX... to XXXX
             port = port * dn
             star = star * dn
 
@@ -1975,6 +1975,8 @@ class portstarObj(object):
             driver='GTiff',
             height=out.shape[1] * pix_res_factor,
             width=out.shape[2] * pix_res_factor,
+            # height=out.shape[1],
+            # width=out.shape[2],
             count=classes,
             dtype=out.dtype,
             crs=epsg,
