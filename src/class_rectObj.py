@@ -1337,7 +1337,7 @@ class rectObj(sonObj):
             color = cm.get_cmap(name, 256)            
         except:
             print('****WARNING*****\n', name, 'is not a valid colormap.\nSetting to Greys...')
-            color = cm.get_cmap('Greys', 256)
+            color = cm.get_cmap('Greys_r', 256)
 
         # need to get values for 0-255 but test_color in 0-1
         color = color(np.linspace(0, 1, 256))
