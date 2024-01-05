@@ -1804,8 +1804,13 @@ class portstarObj(object):
     def _mapPredictions(self, map_predict, imgOutPrefix, chunk, npzs):
         '''
         '''
-        # Set pixel down/upscale factor
-        pix_res_factor=self.port.pix_res
+        # Don't do this because it will create gaps between chunks
+        # Do rescale when mosaicing
+        # # Set pixel size [m]
+        # pix_res = self.port.pix_res
+
+        # if pix_res == 0:
+        #     pix_res = 0.25
 
         # Set output directory
         self.outDir = self.port.outDir
@@ -1968,15 +1973,15 @@ class portstarObj(object):
         imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
         gtiff = os.path.join(self.outDir, imgName)
 
-        # Export georectified image
+        # Export georectified image at raw resolution
         with rasterio.open(
             gtiff,
             'w',
             driver='GTiff',
-            height=out.shape[1] * pix_res_factor,
-            width=out.shape[2] * pix_res_factor,
-            # height=out.shape[1],
-            # width=out.shape[2],
+            # height=out.shape[1] * pix_res_factor,
+            # width=out.shape[2] * pix_res_factor,
+            height=out.shape[1],
+            width=out.shape[2],
             count=classes,
             dtype=out.dtype,
             crs=epsg,
@@ -1986,6 +1991,12 @@ class portstarObj(object):
                 dst.nodata=no_data
                 dst.write(out)
                 dst=None
+
+        # # Reopen and warp to xres
+        # gtiff = gtiff_temp.replace('temp', '')
+        # gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res)
+
+        # os.remove(gtiff_temp)
 
         return
 
@@ -2132,6 +2143,8 @@ class portstarObj(object):
         ## of upper left corner of the image and the pixel size
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
+        # Potential for warp speedup
+        # https://stackoverflow.com/a/49901710
         # Warp image from the input shape to output shape
         out = warp(dat.T,
                    tform.inverse,
