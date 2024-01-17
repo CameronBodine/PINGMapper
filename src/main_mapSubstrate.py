@@ -521,6 +521,14 @@ def map_master_func(logfilename='',
     if map_predict > 0:
         start_time = time.time()
 
+        # Reduce to avoid OOM
+        threadPrcnt = 0.75
+        if threadCnt == cpu_count():
+            threadCnt = int(threadCnt * threadPrcnt)
+
+            print("\nPrediction Map requires a lot of RAM...")
+            print("Lowering threadCnt to:", threadCnt)
+
         if map_predict == 1:
             a = 'probability'
         else:
