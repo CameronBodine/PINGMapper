@@ -1806,11 +1806,11 @@ class portstarObj(object):
         '''
         # Don't do this because it will create gaps between chunks
         # Do rescale when mosaicing
-        # # Set pixel size [m]
-        # pix_res = self.port.pix_res
+        # Set pixel size [m]
+        pix_res = self.port.pix_res
 
-        # if pix_res == 0:
-        #     pix_res = 0.25
+        if pix_res == 0:
+            pix_res = 0.25
 
         # Set output directory
         self.outDir = self.port.outDir
@@ -1970,12 +1970,12 @@ class portstarObj(object):
         # Export Rectified Raster
         # Set output name
         projName = os.path.split(self.port.projDir)[-1] # Get project name
-        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
-        gtiff = os.path.join(self.outDir, imgName)
+        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'temp.tif'
+        gtiff_temp = os.path.join(self.outDir, imgName)
 
         # Export georectified image at raw resolution
         with rasterio.open(
-            gtiff,
+            gtiff_temp,
             'w',
             driver='GTiff',
             # height=out.shape[1] * pix_res_factor,
@@ -1992,11 +1992,11 @@ class portstarObj(object):
                 dst.write(out)
                 dst=None
 
-        # # Reopen and warp to xres
-        # gtiff = gtiff_temp.replace('temp', '')
-        # gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res)
+        # Reopen and warp to xres
+        gtiff = gtiff_temp.replace('temp', '')
+        gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
 
-        # os.remove(gtiff_temp)
+        os.remove(gtiff_temp)
 
         return
 
