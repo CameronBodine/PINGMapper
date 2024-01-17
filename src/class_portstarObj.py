@@ -1992,9 +1992,11 @@ class portstarObj(object):
                 dst.write(out)
                 dst=None
 
+
         # Reopen and warp to xres
         gtiff = gtiff_temp.replace('temp', '')
         gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
+
 
         os.remove(gtiff_temp)
 
