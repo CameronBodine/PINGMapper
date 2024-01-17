@@ -1992,6 +1992,8 @@ class portstarObj(object):
                 dst.write(out)
                 dst=None
 
+        # Don't do this because it will create gaps between chunks
+        # Do rescale when mosaicing
         # # Reopen and warp to xres
         # gtiff = gtiff_temp.replace('temp', '')
         # gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res)
