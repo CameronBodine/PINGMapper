@@ -60,6 +60,22 @@ else:
 #################
 
 if ds == 1:
+    # Check if files have already been downloaded
+    if os.path.exists('./exampleData/Test-Small-DS') and os.path.exists('./exampleData/Test-Small-DS.DAT'):
+        print('Files already downloaded!')
+
+    else:
+        print('Need to download small recording dataset...\n')
+        url='https://github.com/CameronBodine/PINGMapper/releases/download/data/Test-Small-DS.zip'
+        filename = './exampleData/Test_Small_DS.zip'
+        r = requests.get(url, allow_redirects=True)
+        open(filename, 'wb').write(r.content)
+
+        with zipfile.ZipFile(filename, 'r') as z_fp:
+            z_fp.extractall('./exampleData/')
+        os.remove(filename)
+        print('Downloaded and extracted', filename)
+        
     # Path to data/output
     humFile = r'./exampleData/Test-Small-DS.DAT'
     sonPath = r'./exampleData/Test-Small-DS'
