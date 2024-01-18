@@ -48,7 +48,9 @@ def map_master_func(logfilename='',
                      cropRange=0,
                      exportUnknown=False,
                      fixNoDat=False,
-                     threadCnt=0,
+                     threadCnt=0,                     
+                     pix_res_son=0,
+                     pix_res_map=0,
                      x_offset=0,
                      y_offset=0,
                      tileFile=False,
@@ -152,6 +154,7 @@ def map_master_func(logfilename='',
     for son in mapObjs:
         son.substrateDir = os.path.join(son.projDir, 'substrate')
         # son.map_sub = map_sub
+        # son.pix_res_map = pix_res_map
 
     outDir = son.substrateDir
     if not os.path.exists(outDir):
@@ -581,38 +584,38 @@ def map_master_func(logfilename='',
         printUsage()
 
 
-    ############################################################################
-    # For Prediction Mosaic                                                    #
-    ############################################################################
+    # ############################################################################
+    # # For Prediction Mosaic                                                    #
+    # ############################################################################
 
-    overview = True # False will reduce overall file size, but reduce performance in a GIS
-    if map_predict > 0 and mosaic > 0:
-        start_time = time.time()
-        print("\nMosaicing GeoTiffs...")
+    # overview = True # False will reduce overall file size, but reduce performance in a GIS
+    # if map_predict > 0 and map_mosaic > 0:
+    #     start_time = time.time()
+    #     print("\nMosaicing GeoTiffs...")
 
-        # Create portstar object
-        psObj = portstarObj(mapObjs)
+    #     # Create portstar object
+    #     psObj = portstarObj(mapObjs)
 
-        # Switch off rect_wcp, rect_wcr, and mapSub
-        psObj.port.rect_wcp = False
-        psObj.port.rect_wcr = False
-        psObj.port.map_sub = True
-        psObj.port.map_predict = False
+    #     # Switch off rect_wcp, rect_wcr, and mapSub
+    #     psObj.port.rect_wcp = False
+    #     psObj.port.rect_wcr = False
+    #     psObj.port.map_sub = False
+    #     # psObj.port.map_predict = True
 
-        # Create the mosaic
-        psObj._createMosaic(mosaic=1, overview=overview, threadCnt=threadCnt, son=False, maxChunk=mosaic_nchunk)
+    #     # Create the mosaic
+    #     psObj._createMosaic(mosaic=1, overview=overview, threadCnt=threadCnt, son=False, maxChunk=mosaic_nchunk)
 
-        # Revert rect_wcp, rect_wcr, mapSub
-        psObj.port.rect_wcp = rect_wcp
-        psObj.port.rect_wcr = rect_wcr
-        psObj.port.map_sub = map_sub
-        psObj.port.map_predict = map_predict
+    #     # Revert rect_wcp, rect_wcr, mapSub
+    #     psObj.port.rect_wcp = rect_wcp
+    #     psObj.port.rect_wcr = rect_wcr
+    #     psObj.port.map_sub = map_sub
+    #     # psObj.port.map_predict = map_predict
 
-        del psObj
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
+    #     del psObj
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     gc.collect()
+    #     printUsage()
 
     ##############################################
     # Let's pickle sonObj so we can reload later #

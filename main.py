@@ -53,8 +53,11 @@ start_time = time.time()
 
 # Path to data/output
 
-humFile = r"C:/user/cam/myHumDat.DAT" # Path to sonar recording .DAT file
-projDir = r"C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to export files
+# humFile = r"C:/user/cam/myHumDat.DAT" # Path to sonar recording .DAT file
+# projDir = r"C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to export files
+
+humFile = r"E:\Python\PINGMapper\exampleData\RIV_20210102_NAU\580_559_Rec00018.DAT"
+projDir = r"./procData/test"
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
@@ -64,7 +67,7 @@ projDir = r"C:/user/cam/myHumOutputs/myHumDat" # Directory where you want to exp
 ## 1==OVERWRITE MODE: Create new project, regardless of previous project state.
 ##      If project exists, it will be DELETED and reprocessed.
 ##      If project does not exist, a new project will be created.
-project_mode = 1
+project_mode = 2
 
 # General Parameters
 tempC = 10 #Temperature in Celsius
@@ -73,6 +76,11 @@ cropRange = 0.0 #Crop imagery to specified range [in meters]; 0.0==No Cropping
 exportUnknown = False #Option to export Unknown ping metadata
 fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
+
+
+# Output Pixel Resolution
+pix_res_son = 0.05 # Sonar GeoTiff Resolution [in meters]; 0 = Default (~0.02 m)
+pix_res_map = 0.25 # Substrate GeoTiff Resolution [in meters]; 0 = Default (~0.02 m)
 
 
 # Position Corrections
@@ -124,13 +132,12 @@ son_colorMap = 'Greys_r' # Specify colorramp for rectified imagery. '_r'==revers
 pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==True, SegFormer Model
 pltSubClass = True # Export plots of substrate classification and predictions
 map_sub = True # Export substrate maps (as rasters). Requires substrate predictions saved to npz.
-map_predict = False # Export substrate heat maps (probabilities) for each class. Requires substrate predictions saved to npz.
 export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
 
 # Mosaic Exports
-pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
@@ -203,10 +210,11 @@ params = {
     'projDir':projDir,
     'tempC':tempC,
     'nchunk':nchunk,
-    'cropRange':cropRange,
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
+    'pix_res_son': pix_res_son,
+    'pix_res_map': pix_res_map,
     'x_offset':x_offset,
     'y_offset':y_offset,
     'egn':egn,
@@ -233,7 +241,6 @@ params = {
     'map_predict':map_predict,
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method,
-    'pix_res':pix_res,
     'mosaic_nchunk':mosaic_nchunk,
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,

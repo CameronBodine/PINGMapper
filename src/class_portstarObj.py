@@ -421,12 +421,15 @@ class portstarObj(object):
                       'creationOptions': ['NUM_THREADS=ALL_CPUS', 'COMPRESS=LZW', 'TILED=YES']
                       }
 
-            # Set output pixel resolution
-            xRes = self.port.pix_res
-            yRes = self.port.pix_res
+            # # Set output pixel resolution
+            # xRes = self.port.pix_res
+            # yRes = self.port.pix_res
+
+            # # Create geotiff
+            # gdal.Translate(outTIF, ds, xRes=xRes, yRes=yRes, **kwargs)
 
             # Create geotiff
-            gdal.Translate(outTIF, ds, xRes=xRes, yRes=yRes, **kwargs)
+            gdal.Translate(outTIF, ds, **kwargs)
 
             # Generate overviews
             if overview:
@@ -509,12 +512,13 @@ class portstarObj(object):
                 except:
                     pass
 
-            # Set output pixel resolution
-            xRes = self.port.pix_res
-            yRes = self.port.pix_res
+            # # Set output pixel resolution
+            # xRes = self.port.pix_res
+            # yRes = self.port.pix_res
 
             # Build VRT
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
+            # vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
@@ -1804,13 +1808,11 @@ class portstarObj(object):
     def _mapPredictions(self, map_predict, imgOutPrefix, chunk, npzs):
         '''
         '''
-        # Don't do this because it will create gaps between chunks
-        # Do rescale when mosaicing
         # Set pixel size [m]
-        pix_res = self.port.pix_res
+        pix_res_map = self.port.pix_res_map
 
-        if pix_res == 0:
-            pix_res = 0.25
+        if pix_res_map == 0:
+            pix_res_map = 0.25
 
         # Set output directory
         self.outDir = self.port.outDir
@@ -1825,6 +1827,8 @@ class portstarObj(object):
 
         self.port.sonDat = portSub['substrate'].astype('float32')
         self.star.sonDat = starSub['substrate'].astype('float32')
+
+        del portSub, starSub
 
         # For debugging
         # self.port.sonDat = portSub['substrate'].astype('float32')[:,:,1:3]
@@ -1872,6 +1876,7 @@ class portstarObj(object):
             self.port.sonDat = port.astype(data_type)
             self.star.sonDat = star.astype(data_type)
 
+        del port, star
 
         # Store number of bands, i.e. classes
         classes = self.port.sonDat.shape[2]
@@ -1919,6 +1924,8 @@ class portstarObj(object):
                 # Update predStack
                 predStack[:,:,c] = son.sonDat
 
+                del son.sonDat
+
             # Store in son.sonDat
             son.sonDat = predStack
 
@@ -1933,6 +1940,8 @@ class portstarObj(object):
             port = np.rot90(port[:,:,c], k=2, axes=(1,0))
             port = np.fliplr(port)
             merge = np.concatenate((port, star[:,:,c]), axis=0)
+
+            del port, star
 
             # Rectify #
             # Try only passing first class to _rectify() to attempt speedup
@@ -1953,11 +1962,15 @@ class portstarObj(object):
                 # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
                 rect_pred = np.flip(np.flip(np.flip(rect_pred,1),0),1)#.astype('uint8')
 
+            del merge
+
             # Stack #
             if 'out' not in locals():
                 out = rect_pred
             else:
                 out = np.dstack((out, rect_pred))
+
+            del rect_pred
 
         # Reorder so band count is first
         out = np.rollaxis(out, axis=2)
@@ -1970,16 +1983,17 @@ class portstarObj(object):
         # Export Rectified Raster
         # Set output name
         projName = os.path.split(self.port.projDir)[-1] # Get project name
-        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'temp.tif'
-        gtiff_temp = os.path.join(self.outDir, imgName)
+        imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
+        gtiff = os.path.join(self.outDir, imgName)
+
+        if pix_res_map != 0:
+            gtiff = gtiff.replace('.tif', 'temp.tif')
 
         # Export georectified image at raw resolution
         with rasterio.open(
-            gtiff_temp,
+            gtiff,
             'w',
             driver='GTiff',
-            # height=out.shape[1] * pix_res_factor,
-            # width=out.shape[2] * pix_res_factor,
             height=out.shape[1],
             width=out.shape[2],
             count=classes,
@@ -1992,13 +2006,11 @@ class portstarObj(object):
                 dst.write(out)
                 dst=None
 
+        del out
 
-        # Reopen and warp to xres
-        gtiff = gtiff_temp.replace('temp', '')
-        gdal.Warp(gtiff, gtiff_temp, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
-
-
-        os.remove(gtiff_temp)
+        # Resize pixels if necessary                
+        if pix_res_map != 0:
+            self.port._pixresResize(gtiff, son=False)
 
         return
 
@@ -2008,6 +2020,8 @@ class portstarObj(object):
     def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False, return_rect=False):
         '''
         '''
+
+        pix_res = self.port.pix_res_map
 
         # Get trackline/range extent file path
         portTrkMetaFile = os.path.join(self.port.metaDir, "Trackline_Smth_"+self.port.beamName+".csv")
@@ -2217,6 +2231,9 @@ class portstarObj(object):
             imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
             gtiff = os.path.join(self.outDir, imgName)
 
+            if pix_res != 0:
+                gtiff = gtiff.replace('.tif', 'temp.tif')
+
             # Export georectified image
             with rasterio.open(
                 gtiff,
@@ -2236,6 +2253,10 @@ class portstarObj(object):
                     dst=None
 
             del out
+
+            if pix_res != 0:
+                self.port._pixresResize(gtiff, son=False)
+
             gc.collect()
 
             return
@@ -2425,7 +2446,10 @@ class portstarObj(object):
         tempFiles = glob(os.path.join(outDir, '*temp*'))
 
         for f in tempFiles:
-            os.remove(f)
+            try:
+                os.remove(f)
+            except:
+                pass
 
 
         return

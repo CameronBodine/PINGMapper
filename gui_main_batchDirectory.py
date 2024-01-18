@@ -46,6 +46,9 @@ layout = [
     [sg.Checkbox('Locate and flag missing pings', default=default_params['fixNoDat'])],
     [sg.Text('Thread Count [0==All Threads]', size=(30,1)), sg.Input(default_params['threadCnt'], size=(10,1))],
     [sg.HorizontalSeparator()],
+    [sg.Text('GeoTiff Pixel Resolution [0==Default Resolution (~0.02m)]')],
+    [sg.Text('Sonar', size=(10,1)), sg.Input(default_params['pix_res_son'], size=(10,1)), sg.Text('Substrate', size=(10,1)), sg.Input(default_params['pix_res_map'], size=(10,1))],
+    [sg.HorizontalSeparator()],
     [sg.Text('Position Corrections')],
     [sg.Text('Transducer Offset [X]:', size=(22,1)), sg.Input(default_params['x_offset'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Transducer Offset [Y]:', size=(22,1)), sg.Input(default_params['y_offset'], size=(10,1))],
     [sg.HorizontalSeparator()],
@@ -70,9 +73,10 @@ layout = [
     [sg.Text('Substrate Mapping')],
     [sg.Checkbox('Predict Substrate', default=default_params['pred_sub']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', default=default_params['pltSubClass'])],
     [sg.Checkbox('Map Substrate [Raster]', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Text('Classification Method'), sg.Combo(['max'], default_value=default_params['map_class_method'])],
+    [sg.Text('Map Predictions', size=(20,1)), sg.Combo(['False', 'Logit', 'Probability'], default_value=default_params['map_predict'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Mosaic Exports')],
-    [sg.Text('Pixel Size [m, 0==Default Size]'), sg.Input(default_params['pix_res'], size=(10,1)), sg.VerticalSeparator(), sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(default_params['mosaic_nchunk'], size=(10,1))],
+    [sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(default_params['mosaic_nchunk'], size=(10,1))],
     [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['map_mosaic'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Miscellaneous Exports')],
@@ -104,7 +108,7 @@ outDir = values[1]
 # Convert parameters if necessary
 
 # EGN Stretch
-egn_stretch = values[16]
+egn_stretch = values[19]
 if egn_stretch == 'None':
     egn_stretch = 0
 elif egn_stretch == 'Min-Max':
@@ -114,7 +118,7 @@ elif egn_stretch == 'Percent Clip':
 egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
-lbl_set = values[24]
+lbl_set = values[27]
 if lbl_set == 'False':
     lbl_set = 0
 elif lbl_set == 'True: Keep WC & Shadows':
@@ -124,7 +128,7 @@ elif lbl_set == 'True: Mask WC & Shadows':
 lbl_set = int(lbl_set)
 
 # Shadow removal
-remShadow = values[29]
+remShadow = values[32]
 if remShadow == 'False':
     remShadow = 0
 elif remShadow == 'Remove all shadows':
@@ -134,15 +138,25 @@ elif remShadow == 'Remove only bank shadows':
 remShadow = int(remShadow)
 
 # Depth detection
-detectDep = values[30]
+detectDep = values[33]
 if detectDep == 'Sensor':
     detectDep = 0
 elif detectDep == 'Auto':
     detectDep = 1
 detectDep = int(detectDep)
 
+# Map predictions
+map_predict = values[53]
+if map_predict == 'False':
+    map_predict = 0
+elif map_predict == 'Probability':
+    map_predict = 1
+elif map_predict == 'Logit':
+    map_predict = 2
+map_predict = int(map_predict)
+
 # Sonar mosaic
-mosaic = values[54]
+mosaic = values[56]
 if mosaic == 'False':
     mosaic = 0
 elif mosaic == 'GTiff':
@@ -152,7 +166,7 @@ elif mosaic == 'VRT':
 mosaic = int(mosaic)
 
 # Substrate mosaic
-map_mosaic = values[56]
+map_mosaic = values[58]
 if map_mosaic == 'False':
     map_mosaic = 0
 elif map_mosaic == 'GTiff':
@@ -172,35 +186,37 @@ params = {
     'exportUnknown':values[7],
     'fixNoDat':values[8],
     'threadCnt':int(values[9]),
-    'x_offset':float(values[11]),
-    'y_offset':float(values[13]),
-    'egn':values[15],
+    'pix_res_son':float(values[11]),
+    'pix_res_map':float(values[12]),
+    'x_offset':float(values[14]),
+    'y_offset':float(values[16]),
+    'egn':values[18],
     'egn_stretch':egn_stretch,
-    'egn_stretch_factor':float(values[18]),
-    'wcp':values[20],
-    'wcr':values[21],
-    'tileFile':values[22],
+    'egn_stretch_factor':float(values[21]),
+    'wcp':values[23],
+    'wcr':values[24],
+    'tileFile':values[25],
     'lbl_set':lbl_set,
-    'spdCor':float(values[25]),
-    'maxCrop':values[27],
+    'spdCor':float(values[28]),
+    'maxCrop':values[30],
     'remShadow':remShadow,
     'detectDep':detectDep,
-    'smthDep':values[32],
-    'adjDep':float(values[34]),
-    'pltBedPick':values[36],
-    'rect_wcp':values[38],
-    'rect_wcr':values[39],
-    'son_colorMap':values[40],
-    'pred_sub':values[42],
-    'pltSubClass':values[44],
-    'map_sub':values[45],
-    'export_poly':values[47],
-    'map_class_method':values[49],
-    'pix_res':float(values[51]),
-    'mosaic_nchunk':int(values[53]),
+    'smthDep':values[35],
+    'adjDep':float(values[37]),
+    'pltBedPick':values[39],
+    'rect_wcp':values[41],
+    'rect_wcr':values[32],
+    'son_colorMap':values[43],
+    'pred_sub':values[45],
+    'pltSubClass':values[47],
+    'map_sub':values[48],
+    'export_poly':values[50],
+    'map_class_method':values[52],
+    'map_predict':map_predict,
+    'mosaic_nchunk':int(values[55]),
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
-    'banklines':values[58]
+    'banklines':values[60]
 }
 
 globals().update(params)

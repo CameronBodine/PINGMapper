@@ -1984,6 +1984,14 @@ class sonObj(object):
         except:
             pass
 
+        # Delete temp files
+        t = glob(os.path.join(self.projDir, '*', '*temp*'), recursive=True)
+        for f in t:
+            try:
+                os.remove(f)
+            except:
+                pass
+
     # ======================================================================
     def _pickleSon(self):
         '''

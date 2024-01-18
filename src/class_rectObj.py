@@ -29,6 +29,8 @@
 
 from funcs_common import *
 from class_sonObj import sonObj
+from osgeo import gdal, ogr, osr
+from osgeo_utils.gdal_sieve import gdal_sieve
 from scipy.interpolate import splprep, splev
 from skimage.transform import PiecewiseAffineTransform, warp
 from rasterio.transform import from_origin
@@ -990,6 +992,7 @@ class rectObj(sonObj):
         NA
         '''
         filterIntensity = False
+        pix_res = self.pix_res_son
 
         if son:
             # Create output directory if it doesn't exist
@@ -1197,6 +1200,9 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
+            if pix_res != 0:
+                gtiff = gtiff.replace('.tif', 'temp.tif')
+
             # Export georectified image
             with rasterio.open(
                 gtiff,
@@ -1216,6 +1222,9 @@ class rectObj(sonObj):
                     dst=None
 
             del out, dst, img
+
+            if pix_res != 0:
+                self._pixresResize(gtiff)
 
         if self.rect_wcr:
             imgOutPrefix = 'rect_wcr'
@@ -1297,6 +1306,8 @@ class rectObj(sonObj):
                 gtiff = os.path.join(outDir, imgName) # Output file name
                 gtiff = gtiff.replace(imgOutPrefix, 'sub_map')
 
+            if pix_res != 0:
+                gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
             with rasterio.open(
@@ -1318,6 +1329,9 @@ class rectObj(sonObj):
                     dst=None
 
             del out, dst
+
+            if pix_res != 0:
+                self._pixresResize(gtiff)
 
         gc.collect()
 
@@ -1350,5 +1364,84 @@ class rectObj(sonObj):
         self.son_colorMap = son_colorMap
         del son_colorMap, color
         return
+    
+    #===========================================================================
+    def _pixresResize(self, f, son=True):
+        '''
+        Resize x,y pixel resolution
+        '''
+
+        # Get pixel resolution
+        if son:
+            pix_res = self.pix_res_son
+        elif not son:
+            pix_res = self.pix_res_map
+
+        # Set output name
+        f_out = f.replace('temp.tif', '.tif')
+
+        # Reopen f and warp to pix_res
+        t = gdal.Warp(f_out, f, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
+
+        t = None
+
+        # # Determine band count for filling NoData
+        # bandCount, bandDtype, nodataVal = self._getTiffAttributes(f_out)
+
+        # ###################
+        # # Fill Small NoData
+        # searchDist = 3
+        # ds = gdal.Open(f_out, gdal.GA_Update)
+
+        # for b in range(1, bandCount+1):
+
+        #     band = ds.GetRasterBand(b)
+
+        #     # mask = band.GetMaskBand()
+        #     # print(mask, np.unique(mask.ReadAsArray(), return_counts=True))
+
+        #     gdal.FillNodata(targetBand = band, maskBand = None, maxSearchDist = searchDist, smoothingIterations = 0)
+
+        # ds = None
+
+
+
+        ##
+
+        ##
+        ##
+        # # Do a seive on final map output
+        # f_2 = f_out.replace('.tif', 'seive.tif')
+        # size = 3
+        # gdal_sieve(f_out, f_2, threshold=size, connectedness=8)
+
+        
+        try:
+            os.remove(f)
+        except:
+            pass
+
+        return
+
+    #===========================================================================
+    def _getTiffAttributes(self, tif):
+
+        # Open tif
+        t = gdal.Open(tif)
+
+        # Get Attributes
+        bandCount = t.RasterCount
+
+        band = t.GetRasterBand(1)
+        bandDtype = gdal.GetDataTypeName(band.DataType)
+        nodataVal = band.GetNoDataValue()
+
+        t = None
+
+        return bandCount, bandDtype, nodataVal
+
+
+
+
     
     

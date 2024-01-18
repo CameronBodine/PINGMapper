@@ -73,6 +73,11 @@ fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
+# Output Pixel Resolution [meters]
+pix_res_son = 0.05 # 0 = Default (~0.02 m)
+pix_res_map = 0.25 # 0 = Default (~0.02 m)
+
+
 # Position Corrections
 ## Provide an x and y offset to account for position offset between
 ## control head (or external GPS) and transducer.
@@ -123,14 +128,14 @@ pred_sub = 1 # Automatically predict substrates and save to npz: 0==False; 1==Tr
 pltSubClass = True # Export plots of substrate classification and predictions
 map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
 export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
+map_predict = 0 #Export rectified tiles of the model predictions: 0==False; 1==Probabilities; 2==Logits. Requires substrate predictions saved to npz.
 map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
 
 # Mosaic Exports
-pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
-map_mosaic = 0 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
+map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 
 
 # Miscellaneous Exports
@@ -158,6 +163,7 @@ inFiles = sorted(inFiles)
 for i, f in enumerate(inFiles):
     print(i, ":", f)
 
+errorRecording = []
 for datFile in inFiles:
     try:
         copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
@@ -184,10 +190,11 @@ for datFile in inFiles:
             'projDir':projDir,
             'tempC':tempC,
             'nchunk':nchunk,
-            'cropRange':cropRange,
             'exportUnknown':exportUnknown,
             'fixNoDat':fixNoDat,
             'threadCnt':threadCnt,
+            'pix_res_son': pix_res_son,
+            'pix_res_map': pix_res_map,
             'x_offset':x_offset,
             'y_offset':y_offset,
             'egn':egn,
@@ -211,9 +218,9 @@ for datFile in inFiles:
             'pred_sub':pred_sub,
             'map_sub':map_sub,
             'export_poly':export_poly,
+            'map_predict':map_predict,
             'pltSubClass':pltSubClass,
             'map_class_method':map_class_method,
-            'pix_res':pix_res,
             'mosaic_nchunk':mosaic_nchunk,
             'mosaic':mosaic,
             'map_mosaic':map_mosaic,
@@ -300,3 +307,8 @@ for datFile in inFiles:
 
     gc.collect()
     print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+if len(errorRecording) > 0:
+    print('\n\nUnable to process the following:')
+    for d in errorRecording:
+        print('\n',d)
