@@ -65,6 +65,8 @@ from skimage.transform import resize
 from skimage.filters import threshold_otsu, gaussian
 from skimage.morphology import remove_small_holes, remove_small_objects
 
+from skimage.transform import PiecewiseAffineTransform
+
 import psutil
 import json
 
@@ -286,4 +288,23 @@ def unableToProcessError(logfilename):
     for handler in handlers:
         error_logger.removeHandler(handler)
         handler.close()
+
+
+# =========================================================
+class FastPiecewiseAffineTransform(PiecewiseAffineTransform):
+    def __call__(self, coords):
+        coords = np.asarray(coords)
+
+        simplex = self._tesselation.find_simplex(coords)
+
+        affines = np.array(
+            [self.affines[i].params for i in range(len(self._tesselation.simplices))]
+        )[simplex]
+
+        pts = np.c_[coords, np.ones((coords.shape[0], 1))]
+
+        result = np.einsum("ij,ikj->ik", pts, affines)
+        result[simplex == -1, :] = -1
+
+        return result
 

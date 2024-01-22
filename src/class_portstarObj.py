@@ -2137,7 +2137,8 @@ class portstarObj(object):
         ########################
         # Perform transformation
         # PiecewiseAffineTransform
-        tform = PiecewiseAffineTransform()
+        # tform = PiecewiseAffineTransform()
+        tform = FastPiecewiseAffineTransform()
         tform.estimate(pix, dst) # Calculate H matrix
 
         ##############

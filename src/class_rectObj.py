@@ -32,12 +32,12 @@ from class_sonObj import sonObj
 from osgeo import gdal, ogr, osr
 from osgeo_utils.gdal_sieve import gdal_sieve
 from scipy.interpolate import splprep, splev
-from skimage.transform import PiecewiseAffineTransform, warp
+from skimage.transform import warp
 from rasterio.transform import from_origin
 from rasterio.enums import Resampling
 from PIL import Image
 
-from matplotlib import cm
+from matplotlib import cm    
 
 class rectObj(sonObj):
     '''
@@ -1140,6 +1140,7 @@ class rectObj(sonObj):
         # Perform transformation
         # PiecewiseAffineTransform
         tform = PiecewiseAffineTransform()
+        # tform = FastPiecewiseAffineTransform() # Huge speedup! From: https://github.com/scikit-image/scikit-image/issues/6864
         tform.estimate(pix, dst) # Calculate H matrix
 
         ##############
