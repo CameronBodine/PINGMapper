@@ -25,6 +25,53 @@ If you are having issue's with the software, take a look at the FAQ's. If you ca
 
 See the [installation](./gettingstarted/Installation.md) instructions.
 
+## ModuleNotFoundError
+
+It is possible that `miniconda` or `Anaconda` may not install all the packages required by `PINGMapper`. You will know that this is the case if you recieve a `ModuleNotFoundError` while running the [test script](./gettingstarted/Testing.md). For example, one user recieved the [following error](https://github.com/CameronBodine/PINGMapper/issues/105#issue-2093782805):
+
+```
+> Traceback (most recent call last):
+>   File "C:\Users\user-name\PINGMapper\test_PINGMapper.py", line 35, in <module>
+>     from main_readFiles import read_master_func
+>   File "C:\Users\user-name\PINGMapper\src\main_readFiles.py", line 32, in <module>
+>     from class_portstarObj import portstarObj
+>   File "C:\Users\user-name\PINGMapper\src\class_portstarObj.py", line 31, in <module>
+>     from funcs_model import *
+>   File "C:\Users\user-name\PINGMapper\src\funcs_model.py", line 42, in <module>
+>     from transformers import TFSegformerForSemanticSegmentation
+>   File "C:\Users\user-name\.conda\envs\ping\Lib\site-packages\transformers\__init__.py", line 26, in <module>
+>     from . import dependency_versions_check
+>   File "C:\Users\user-name\.conda\envs\ping\Lib\site-packages\transformers\dependency_versions_check.py", line 16, in <module>
+>     from .utils.versions import require_version, require_version_core
+>   File "C:\Users\user-name\.conda\envs\ping\Lib\site-packages\transformers\utils\__init__.py", line 32, in <module>
+>     from .generic import (
+>   File "C:\Users\user-name\.conda\envs\ping\Lib\site-packages\transformers\utils\generic.py", line 432, in <module>
+>     import torch.utils._pytree as _torch_pytree
+>   File "C:\Users\user-name\AppData\Roaming\Python\Python311\site-packages\torch\__init__.py", line 1504, in <module>
+>     from . import masked
+>   File "C:\Users\user-name\AppData\Roaming\Python\Python311\site-packages\torch\masked\__init__.py", line 3, in <module>
+>     from ._ops import (
+>   File "C:\Users\user-name\AppData\Roaming\Python\Python311\site-packages\torch\masked\_ops.py", line 11, in <module>
+>     from torch._prims_common import corresponding_real_dtype
+>   File "C:\Users\user-name\AppData\Roaming\Python\Python311\site-packages\torch\_prims_common\__init__.py", line 23, in <module>
+>     import sympy
+> ModuleNotFoundError: No module named 'sympy'
+```
+
+The last line of the error states that the `sympy` package was not found. You can attempt to resolve this by manually installing the package with `conda` or `pip`. Using the above as an example, with the `ping` environment activated (run `conda activate ping` in the console), try running the following:
+
+```
+conda install sympy
+```
+
+If this fails, try installing with `pip`:
+
+```
+pip install sympy
+```
+
+After successfully installing the missing package, try running the [test](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html). If this does not fix the problem, please submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+
 # Sonar Systems
 ## What sonar systems does PING-Mapper support?
 
