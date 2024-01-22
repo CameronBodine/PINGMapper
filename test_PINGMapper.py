@@ -124,6 +124,11 @@ fixNoDat = True # Locate and flag missing pings; add NoData to exported imagery.
 threadCnt = 0 #Number of compute threads to use; 0==All threads; <0==(Total threads + threadCnt); >0==Threads to use up to total threads
 
 
+# Output Pixel Resolution
+pix_res_son = 0.05 # Sonar GeoTiff Resolution [in meters]; 0 = Default (~0.02 m)
+pix_res_map = 0.25 # Substrate GeoTiff Resolution [in meters]; 0 = Default (~0.02 m)
+
+
 # Position Corrections
 ## Provide an x and y offset to account for position offset between
 ## control head (or external GPS) and transducer.
@@ -180,7 +185,6 @@ map_class_method = 'max' # 'max' only current option. Take argmax of substrate p
 
 
 # Mosaic Exports
-pix_res = 0 # Pixel resolution [meters]: 0 = Default (~0.02 m). ONLY APPLIES TO MOSAICS
 mosaic_nchunk = 0 # Number of chunks per mosaic: 0=All chunks. Specifying a value >0 generates multiple mosaics if number of chunks exceeds mosaic_nchunk.
 mosaic = 1 #Export sonar mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
 map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 2==Do Mosaic - VRT
@@ -244,10 +248,11 @@ params = {
     'projDir':projDir,
     'tempC':tempC,
     'nchunk':nchunk,
-    'cropRange':cropRange,
     'exportUnknown':exportUnknown,
     'fixNoDat':fixNoDat,
     'threadCnt':threadCnt,
+    'pix_res_son': pix_res_son,
+    'pix_res_map': pix_res_map,
     'x_offset':x_offset,
     'y_offset':y_offset,
     'egn':egn,
@@ -274,7 +279,6 @@ params = {
     'map_predict':map_predict,
     'pltSubClass':pltSubClass,
     'map_class_method':map_class_method,
-    'pix_res':pix_res,
     'mosaic_nchunk':mosaic_nchunk,
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
