@@ -1139,8 +1139,8 @@ class rectObj(sonObj):
         ########################
         # Perform transformation
         # PiecewiseAffineTransform
-        tform = PiecewiseAffineTransform()
-        # tform = FastPiecewiseAffineTransform() # Huge speedup! From: https://github.com/scikit-image/scikit-image/issues/6864
+        # tform = PiecewiseAffineTransform()
+        tform = FastPiecewiseAffineTransform() # Huge speedup! From: https://github.com/scikit-image/scikit-image/issues/6864
         tform.estimate(pix, dst) # Calculate H matrix
 
         ##############
