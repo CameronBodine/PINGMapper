@@ -23,7 +23,7 @@ python test_PINGMapper.py 1
 Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Small-DS`.
 
 {: .warning }
-> If you recieve a `ModuleNotFoundError`, try the [troubleshooting steps](../faq.md/modulenotfounderror)
+> If you recieve a `ModuleNotFoundError`, try the [troubleshooting steps](../faq.md/#modulenotfounderror)
 
 ## Large Dataset Test
 A test on a large (~0.5 GB; 1:00:06 duration) dataset can also be made.
