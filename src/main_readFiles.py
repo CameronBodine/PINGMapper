@@ -1001,11 +1001,15 @@ def read_master_func(logfilename='',
     else:
         keepShadow = True
 
+    # Exporting banklines require shadows
     if banklines and remShadow==0:
-        print('\n\nExporting banklines requires shadow removal')
-        print('Setting remShadow==2...')
-        remShadow = 2
-        keepShadow = False            
+        for son in sonObjs:
+            if son.beamName == "ss_port":
+                    if son.remShadow == 0:
+                        print('\n\nExporting banklines requires shadow removal')
+                        print('Setting remShadow==2...')
+                        remShadow = 2
+                        keepShadow = False            
 
     # Need to detect shadows if mapping substrate
     if pred_sub:
