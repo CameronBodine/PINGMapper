@@ -36,6 +36,7 @@ from skimage.transform import warp
 from rasterio.transform import from_origin
 from rasterio.enums import Resampling
 from PIL import Image
+from shapely.geometry import Polygon
 
 from matplotlib import cm    
 
@@ -938,6 +939,145 @@ class rectObj(sonObj):
         else:
             I = False
         return I
+    
+    ############################################################################
+    # Export Trackline and Coverage shapefiles                                 #
+    ############################################################################
+
+    def _exportTrkShp(self,
+                      wgs=False,
+                      ):
+        
+        '''
+        
+        '''
+
+        # Create output directory if it doesn't exist
+        outDir = os.path.join(self.metaDir, 'shapefiles')
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        # Get trackline/range extent file path
+        trkMetaFile = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xRange = 'range_lons'
+            yRange = 'range_lats'
+            xTrk = 'trk_lons'
+            yTrk = 'trk_lats'
+        ## Use projected coordinates and set variables as needed
+        else:
+            epsg = self.humDat['epsg']
+            xRange = 'range_es'
+            yRange = 'range_ns'
+            xTrk = 'trk_utm_es'
+            yTrk = 'trk_utm_ns'
+
+        # Open smoothed trackline/range extent file
+        trkMeta = pd.read_csv(trkMetaFile)
+
+        # Create geodataframe
+        gdf = gpd.GeoDataFrame(
+            trkMeta, geometry=gpd.points_from_xy(trkMeta[xTrk], trkMeta[yTrk], crs=epsg)
+        )
+        del trkMeta
+
+        # Save to shp
+        trkMetaShp = os.path.basename(trkMetaFile).replace('csv', 'shp')
+        trkMetaShp = os.path.join(outDir, trkMetaShp)
+        gdf.to_file(trkMetaShp)
+        del trkMetaFile        
+
+        return
+    
+    #===========================================================================
+    def _exportCovShp(self,
+                      covFiles,
+                      wgs=False):
+        
+        # Create output directory if it doesn't exist
+        outDir = os.path.join(self.metaDir, 'shapefiles')
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xRange = 'range_lons'
+            yRange = 'range_lats'
+            xTrk = 'trk_lons'
+            yTrk = 'trk_lats'
+        ## Use projected coordinates and set variables as needed
+        else:
+            epsg = self.humDat['epsg']
+            xRange = 'range_es'
+            yRange = 'range_ns'
+            xTrk = 'trk_utm_es'
+            yTrk = 'trk_utm_ns'
+
+        # max chunks
+        chunkMax = self.chunkMax
+
+        # Get df's
+        df1 = pd.read_csv(covFiles[0])
+        df2 = pd.read_csv(covFiles[1])
+        dfs = [df1, df2]
+
+        # Iterate chunks
+        for chunk in range(0, chunkMax+1):
+            # Iterate dfs
+            for df in dfs:
+                # Get chunk
+                isChunk = df['chunk_id'] == chunk
+                df = df[isChunk].reset_index()
+
+                if 'lat_list' not in locals():
+                    lat_list = df[xRange].tolist()
+                    lon_list = df[yRange].tolist()
+                else:
+                    lat_list += df[xRange].tolist()[::-1] #reverse order
+                    lon_list += df[yRange].tolist()[::-1]
+
+                del df
+
+            # Create polygon from points
+            chunk_geom = Polygon(zip(lon_list, lat_list))
+            chunk_geom = gpd.GeoDataFrame(index=[chunk], crs=epsg, geometry=[chunk_geom])
+            del lat_list, lon_list
+
+
+            # Append to final geodataframe
+            if 'gdf' not in locals():
+                gdf = chunk_geom.copy()
+            else:
+                gdf = pd.concat([gdf, chunk_geom])
+            del chunk_geom
+
+        gdf['chunk_id'] = gdf.index
+
+        # Save to shapefile
+        projName = os.path.basename(self.projDir)
+        outFile = os.path.join(self.metaDir, 'shapefiles', projName+"_coverage.shp")
+        gdf.to_file(outFile)
+        del gdf
+
+        return
+            
+            
+
+            
+
+
+        
+
+
+
 
     ############################################################################
     # Rectify sonar imagery                                                    #

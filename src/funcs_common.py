@@ -42,6 +42,7 @@ from array import array as arr
 from osgeo import gdal
 import pyproj
 import rasterio
+import geopandas as gpd
 from rasterio.enums import Resampling
 from numpy.lib.stride_tricks import as_strided as ast
 
