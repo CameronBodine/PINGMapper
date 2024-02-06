@@ -1000,6 +1000,8 @@ def read_master_func(logfilename='',
         keepShadow = False
     else:
         keepShadow = True
+        for son in sonObjs:
+            son.remShadow = 0
 
     # Exporting banklines require shadows
     if banklines and remShadow==0:
