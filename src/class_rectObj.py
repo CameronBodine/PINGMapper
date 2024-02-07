@@ -1038,11 +1038,11 @@ class rectObj(sonObj):
                 df = df[isChunk].reset_index()
 
                 if 'lat_list' not in locals():
-                    lat_list = df[xRange].tolist()
-                    lon_list = df[yRange].tolist()
+                    lat_list = df[yRange].tolist()
+                    lon_list = df[xRange].tolist()
                 else:
-                    lat_list += df[xRange].tolist()[::-1] #reverse order
-                    lon_list += df[yRange].tolist()[::-1]
+                    lat_list += df[yRange].tolist()[::-1] #reverse order
+                    lon_list += df[xRange].tolist()[::-1]
 
                 del df
 
