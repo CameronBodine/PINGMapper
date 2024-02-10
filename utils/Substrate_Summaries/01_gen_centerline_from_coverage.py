@@ -1,6 +1,17 @@
 
 '''
-Create centerline from coverage shapefiles
+***********************************************
+WARNING: Not intended for general use but may 
+serve as a template for creating new workflows.
+***********************************************
+
+
+Create centerline from coverage shapefiles.
+Centerlines need to be post-processed in a GIS.
+
+Additional GIS steps require generating points along
+the centerline for use in creating the summary stamps
+from coverage shapefiles.
 '''
 
 #########
@@ -140,28 +151,28 @@ for name, group in df.groupby('river_code'):
 
 
 
-        # ################
-        # # For Centerline
+        ################
+        # For Centerline
 
-        # # Get shapely geometry
-        # # geom = diss.iloc[0].geometry
-        # # geom = geom.iloc[0]
+        # Get shapely geometry
+        # geom = diss.iloc[0].geometry
+        # geom = geom.iloc[0]
 
-        # print('\n\nMaking Centerline...')
-        # centerline = Centerline(geom.iloc[0], interpolation_distance)
-        # print('Done!')
+        print('\n\nMaking Centerline...')
+        centerline = Centerline(geom.iloc[0], interpolation_distance)
+        print('Done!')
 
-        # centerline = gpd.GeoDataFrame(geometry=[centerline.geometry], crs=outEpsg)
+        centerline = gpd.GeoDataFrame(geometry=[centerline.geometry], crs=outEpsg)
 
-        # centerline = centerline.explode()
+        centerline = centerline.explode()
 
-        # outShp = os.path.join(tempDir, name+'_centerline.shp')
-        # centerline.to_file(outShp)
+        outShp = os.path.join(tempDir, name+'_centerline.shp')
+        centerline.to_file(outShp)
 
 
-        # geom = geom.buffer(buf_size*-1-10, join_style=1)
-        # outShp = os.path.join(tempDir, name+'_cov_buf-Neg.shp')
-        # geom.to_file(outShp)
+        geom = geom.buffer(buf_size*-1-10, join_style=1)
+        outShp = os.path.join(tempDir, name+'_cov_buf-Neg.shp')
+        geom.to_file(outShp)
 
 
 
