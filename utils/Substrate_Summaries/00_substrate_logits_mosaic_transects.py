@@ -27,6 +27,9 @@
 # SOFTWARE.
 
 '''
+WARNING: This is terribly inefficient on large areas.
+Ubuntu: gdal_calc doesn't run
+
 This script will mosaic substrate prediction maps from overlapping transects:
     1) Create a VRT for a rivers substrate predictions maps (logits)
     2) Apply a pixel function (average, min, max, etc.) to handle overlapping pixels
@@ -72,11 +75,12 @@ gdal.SetConfigOption('GDAL_VRT_ENABLE_PYTHON', 'YES')
 #################
 
 # Directory and Project Name
-transectDir = r'./procData/'
+transectDir = r'/mnt/md0/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/EGN_Test_Substrate_Mosaic'
 projName = 'Test_Transect_Mosaic'
 pix_fn = 'average'
 
-scriptFile = r"C:\Users\csb67\AppData\Local\miniconda3\envs\ping\Scripts\gdal_calc.py"
+# scriptFile = r"C:\Users\csb67\AppData\Local\miniconda3\envs\ping\Scripts\gdal_calc.py"
+scriptFile = "/home/cbodine/miniconda3/envs/ping/bin/gdal_calc.py"
 
 
 
@@ -370,6 +374,7 @@ for name, group in tifDF.groupby('river_code'):
     bandCount, bandDtype = getTiffAttributes(files[0])
 
     # Build vrt
+    print('Building VRT')
     vrtName = '_'.join([name, 'substrate', 'logit', 'rast', 'transect', 'mosaic']) + '.vrt'
     outVRT_mosaic = os.path.join(projDir, vrtName)
     build_vrt(outVRT_mosaic, files)
@@ -379,9 +384,12 @@ for name, group in tifDF.groupby('river_code'):
         add_pixel_fn(outVRT_mosaic, pix_fn, b, bandCount, bandDtype)
     
     # Create gtiff mosaic from vrt
+    print('Mosaic Logits')
     outTIF_mosaic = outVRT_mosaic.replace('.vrt', '.tif')
     build_gtiff(outVRT_mosaic, outTIF_mosaic)
 
+    # Do classification
+    print('Classifying Substrate')
     # https://courses.spatialthoughts.com/gdal-tools.html#calculate-pixel-wise-statistics-over-multiple-rasters
     # https://github.com/Doodleverse/dash_doodler/blob/41ce96b8c341c591bfa1c0d467dc6290b2e31963/website/blog/2020-08-01-blog-post.md
     # https://gis.stackexchange.com/questions/417936/gdal-calc-in-python-without-gdal-path
@@ -410,7 +418,6 @@ for name, group in tifDF.groupby('river_code'):
     expr = '"numpy.argmax((numpy.dstack((B,C,D,E,F,G,H))/100), axis=2)"'
     f = '"Int8"'
     outTIF_class = outTIF_mosaic.replace('.tif', '_class.tif')
-    scriptFile = r"C:\Users\csb67\AppData\Local\miniconda3\envs\ping\Scripts\gdal_calc.py"
 
     calc_process = gdal_calc_str.format(outTIF_mosaic, outTIF_class, expr, f, scriptFile)
 
