@@ -178,10 +178,25 @@ def map_master_func(logfilename='',
         maps = glob(os.path.join(mapPath, '*.tif'))
 
         if len(maps) == 0:
-            if export_poly:
-                error_noSubMap_poly()
-            if map_mosaic:
-                error_noSubMap_mosaic()
+            # if export_poly:
+            #     error_noSubMap_poly()
+            # if map_mosaic:
+            #     error_noSubMap_mosaic()
+            map_sub = True
+
+    #########################################################
+    # If map_sub == 0, make sure data was previously exported
+    if not map_sub and export_poly:
+        # Get directory
+        mapPath = os.path.join(mapObjs[0].substrateDir, 'map_substrate_raster')
+        maps = glob(os.path.join(mapPath, '*.tif'))
+
+        if len(maps) == 0:
+            # if export_poly:
+            #     error_noSubMap_poly()
+            # if map_mosaic:
+            #     error_noSubMap_mosaic()
+            map_sub = True
 
     #############################################
     # Determine if smoothed trackline was created
