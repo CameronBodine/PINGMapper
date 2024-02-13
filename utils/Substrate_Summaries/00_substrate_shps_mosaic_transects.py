@@ -24,8 +24,9 @@ from shapely import Point, LineString, MultiLineString
 # Parameters
 
 substrateOutput = 'EGN'
-transectDir = os.path.join(r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed', substrateOutput)
-projDir = os.path.join(r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate_Summaries/02_Substrate_Shps_Mosaic_Transects', substrateOutput)
+topDir = r'E:/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed'
+transectDir = os.path.join(topDir, substrateOutput)
+outDir = os.path.join(topDir, 'Substrate_Summaries', '02_Substrate_Shps_Mosaic_Transects', substrateOutput)
 
 subShpPattern = '*map_substrate*.shp'
 
@@ -33,7 +34,10 @@ least2mostImport = ['Other', 'Fines Flat', 'Fines Ripple', 'Hard Bottom', 'Cobbl
 
 outEpsg = 32616
 
-mmu = 28 # min map unit [m]
+# Normalize Paths
+topDir = os.path.normpath(topDir)
+transectDir = os.path.normpath(transectDir)
+outDir = os.path.normpath(outDir)
 
 ###########
 # Functions
@@ -161,16 +165,27 @@ def getBearingLine(x, y, rr, rl, d):
 
 # Prepare directories
 transectDir = os.path.abspath(os.path.normpath(transectDir))
-# projDir = os.path.join(transectDir, projName)
 
-if not os.path.exists(projDir):
-    os.makedirs(projDir)
+if not os.path.exists(outDir):
+    os.makedirs(outDir)
 
 # Get shps
 shpFiles = glob(os.path.join(transectDir, '**', subShpPattern), recursive=True)
 
 # Remove projName from dirs
-shpFiles = [f for f in shpFiles if projDir not in f]
+shpFiles = [f for f in shpFiles if outDir not in f]
+
+
+
+
+#############
+shpFiles = [f for f in shpFiles if 'PRL_' not in f]
+
+#############
+
+
+
+
 
 # Store shps in dataframe
 shpDF = pd.DataFrame()
@@ -199,62 +214,64 @@ for name, group in shpDF.groupby('river_code'):
 
     print('\n\nWorking On:', name)
 
-    # Get shapefiles
-    shpFiles = group.shp.values.tolist()
+    # # Get shapefiles
+    # shpFiles = group.shp.values.tolist()
 
-    # Iterate classes
-    for subClassName in least2mostImport:
-        print('\t', subClassName)
+    # # Iterate classes
+    # for subClassName in least2mostImport:
+    #     print('\t', subClassName)
 
-        allClassPolys = gpd.GeoDataFrame()
+    #     allClassPolys = gpd.GeoDataFrame()
 
-        for shpFile in shpFiles:
+    #     for shpFile in shpFiles:
 
-            # Open the shapefile
-            shp = gpd.read_file(shpFile)
+    #         # Open the shapefile
+    #         shp = gpd.read_file(shpFile)
 
-            print(shp.crs)
+    #         print(shp.crs)
 
-            if shp.crs is None:
-                shp = shp.set_crs(outEpsg)
+    #         if shp.crs is None:
+    #             shp = shp.set_crs(outEpsg)
 
-            # Reproject
-            shp = shp.to_crs(outEpsg)
+    #         # Reproject
+    #         shp = shp.to_crs(outEpsg)
 
-            # Get the class polys
-            classPolys = shp.loc[shp['Name'] == subClassName]
+    #         # Get the class polys
+    #         classPolys = shp.loc[shp['Name'] == subClassName]
 
-            # Explode
-            classPolys = classPolys.explode()
+    #         # Explode
+    #         classPolys = classPolys.explode()
 
-            # Concatenate with allClass Polys
-            allClassPolys = pd.concat([allClassPolys, classPolys])
+    #         # Concatenate with allClass Polys
+    #         allClassPolys = pd.concat([allClassPolys, classPolys])
 
-            del shp
+    #         del shp
 
-        # Calculate area
-        allClassPolys['Area_m'] = np.around(allClassPolys.geometry.area, 2)
+    #     # Calculate area
+    #     allClassPolys['Area_m'] = np.around(allClassPolys.geometry.area, 2)
 
-        # Dissolve
-        allClassPolys = allClassPolys.dissolve()
+    #     # Dissolve
+    #     allClassPolys = allClassPolys.dissolve()
 
-        # Explode
-        allClassPolys = allClassPolys.explode().reset_index(drop=True)
+    #     # Explode
+    #     allClassPolys = allClassPolys.explode().reset_index(drop=True)
 
-        # Overlay (opposite of clip)
-        if 'finalSubMap' not in locals():
-            finalSubMap = allClassPolys
-        else:
-            finalSubMap = finalSubMap.overlay(allClassPolys, how='difference', keep_geom_type=True)
-            finalSubMap = pd.concat([finalSubMap, allClassPolys])
+    #     # Overlay (opposite of clip)
+    #     if 'finalSubMap' not in locals():
+    #         finalSubMap = allClassPolys
+    #     else:
+    #         finalSubMap = finalSubMap.overlay(allClassPolys, how='difference', keep_geom_type=True)
+    #         finalSubMap = pd.concat([finalSubMap, allClassPolys])
 
-        del allClassPolys
+    #     del allClassPolys
             
     
     
     outShp = name+'_substrate_shps_mosaic.shp' 
-    outShp = os.path.join(projDir, outShp)
-    finalSubMap.to_file(outShp)
+    outShp = os.path.join(outDir, outShp)
+    # finalSubMap.to_file(outShp)
 
-    del finalSubMap
+    # del finalSubMap
+
+    print(outShp)
 

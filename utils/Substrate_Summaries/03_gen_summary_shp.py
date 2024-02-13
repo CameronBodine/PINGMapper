@@ -38,7 +38,7 @@ import pyproj
 ############
 # Parameters
 
-river_codes = ['BOU']
+river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
 summaryLengths = [500, 1000, 5000, 10000] # Create stamps at specified lengths
 extendDist = 100 # Distance to extend lines to clip stamp
 
