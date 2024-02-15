@@ -598,6 +598,22 @@ def read_master_func(logfilename='',
 
             sonObjs.append(son)
 
+        #################################################
+        # Gulf Sturgeon Project: Make sure paths match OS
+        if 'GulfSturgeonProject' in projDir:
+
+            toReplace = son.projDir.split('GulfSturgeonProject')[0]
+            replaceWith = projDir.split('GulfSturgeonProject')[0]
+            for son in sonObjs:
+                temp = vars(son)
+                for t in temp:
+                    if 'Dir' in t or 'File' in t or 'file' in t or 'Pickle' in t:
+                        dir = temp[t]
+                        dir = dir.replace(toReplace, replaceWith)
+                        dir = os.path.normpath(dir)
+                        setattr(son, t, dir)
+        
+
         #############################
         # Save main script to metaDir
         scriptDir = os.path.join(projDir, 'meta', 'processing_scripts')
@@ -1104,9 +1120,9 @@ def read_master_func(logfilename='',
     for son in sonObjs:
         son._pickleSon()
 
-    for son in sonObjs:
-        if son.beamName == 'ss_port':
-            son.remShadow = 2
+    # for son in sonObjs:
+    #     if son.beamName == 'ss_port':
+    #         son.remShadow = 2
 
     # Cleanup
     try:
