@@ -579,19 +579,17 @@ def read_master_func(logfilename='',
         #################################################
         # Gulf Sturgeon Project: Make sure paths match OS
         if 'GulfSturgeonProject' in projDir:
-            son = sonObjs[1]
-            temp = vars(son)
 
             toReplace = son.projDir.split('GulfSturgeonProject')[0]
             replaceWith = projDir.split('GulfSturgeonProject')[0]
             for son in sonObjs:
+                temp = vars(son)
                 for t in temp:
-                    if 'Dir' in t or 'File' in t or 'Pickle' in t:
+                    if 'Dir' in t or 'File' in t or 'file' in t or 'Pickle' in t:
                         dir = temp[t]
                         dir = dir.replace(toReplace, replaceWith)
                         dir = os.path.normpath(dir)
                         setattr(son, t, dir)
-                print(son)
         
 
         #############################
