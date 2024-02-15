@@ -1092,7 +1092,7 @@ def read_master_func(logfilename='',
                 son.remShadow = False
 
     if remShadow < 0:
-        for son in sonObj:
+        for son in sonObjs:
             son.remShadow = -1*son.remShadow
 
     for son in sonObjs:
