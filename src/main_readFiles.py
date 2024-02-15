@@ -622,9 +622,9 @@ def read_master_func(logfilename='',
             for son in sonObjs:
                 if son.beamName == "ss_port":
                     if son.remShadow == remShadow:
-                        remShadow = 0
+                        remShadow = -1*remShadow
                         print("\nUsing previous shadow settings. No need to re-process.")
-                        print("\tSetting remShadow to 0.")
+                        print("\tSetting remShadow to {}.".format(remShadow))
                 else:
                     pass
 
@@ -1075,8 +1075,16 @@ def read_master_func(logfilename='',
             for son in sonObjs:
                 son.remShadow = False
 
+    if remShadow < 0:
+        for son in sonObj:
+            son.remShadow = -1*son.remShadow
+
     for son in sonObjs:
         son._pickleSon()
+
+    for son in sonObjs:
+        if son.beamName == 'ss_port':
+            son.remShadow = 2
 
     # Cleanup
     try:
