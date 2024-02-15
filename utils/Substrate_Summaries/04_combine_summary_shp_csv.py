@@ -19,8 +19,8 @@ import pandas as pd
 
 ############
 # Parameters
-# river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
-river_codes = ['BCH', 'BOU']
+river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
+# river_codes = ['BCH', 'BOU']
 summaryLengths = [500, 1000, 5000, 10000]
 
 substrateOutput = 'EGN'
