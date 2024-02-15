@@ -218,6 +218,28 @@ def read_master_func(logfilename='',
     modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
     if not os.path.exists(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
+        getSegformer = True
+    else:
+        getSegformer = False
+
+    ###############
+    # Get segformer
+    if getSegformer:
+        NCLASSES = 8
+        id2label = {}
+        for k in range(NCLASSES):
+            id2label[k] = str(k)
+        
+        # try downloading segformer pretrained model
+        try:
+            _ = segformer(id2label, NCLASSES)
+        except:
+            print('\n\n\n\n')
+            print('ERROR! Unable to download pretrained SegFormer model!')
+            print('Your network settings are blocking the download.')
+            print('Please try running on a different network.')
+            print('Once the script has been run successfully, you should be able')
+            print('to run PING-Mapper on the current network.')
 
 
     ###############################################
