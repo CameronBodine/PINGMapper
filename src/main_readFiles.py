@@ -592,7 +592,6 @@ def read_master_func(logfilename='',
                         dir = os.path.normpath(dir)
                         setattr(son, t, dir)
                 print(son)
-                sys.exit()  
         
 
         #############################
