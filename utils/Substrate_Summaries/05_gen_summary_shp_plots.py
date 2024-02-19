@@ -53,12 +53,12 @@ rivBasin = {'PRL': '[PRL Basin]',
             'CHU': '[PAS Basin]'
             }
 
-substrateOutput = 'EGN'
+substrateOutput = 'Raw'
 csvDir = '04_Substrate_Shps_Summary_All_Plots'
 outDir = '04_Substrate_Shps_Summary_All_Plots'
 
-# topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
-topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+# topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
 csvDir = os.path.join(topDir, csvDir, substrateOutput)
 outDir = os.path.join(topDir, outDir, substrateOutput)
 
@@ -271,7 +271,7 @@ def makeDepRKMAreaPlot(df, out, length):
          p9.theme(legend_title=p9.element_blank())+\
          p9.ylim(-10, 0)+\
          p9.facet_grid('river_code+basin~.') +\
-         p9.ggtitle(title+" km Reach Summary")
+         p9.ggtitle(substrateOutput+': '+title+" km Reach Summary")
 
     p9.ggsave(gg, out, dpi=300)
     return
@@ -307,7 +307,7 @@ def makeDepRKMBoxPlot(df, out):
          p9.geom_errorbar(p9.aes(x='RKM', ymin='dep_m_whisklo', ymax='dep_m_whiskhi'), width=w, colour='royalblue', alpha=0.75, data=df)+\
          p9.ylim(0, 10)+\
          p9.facet_grid('river_code+basin~.')+\
-         p9.ggtitle(title+" km Reach Summary")
+         p9.ggtitle(substrateOutput+': '+title+" km Reach Summary")
     
     p9.ggsave(gg, out, dpi=300)
 
@@ -346,7 +346,7 @@ def makeWidRKMAreaPlot(df, out, length):
          p9.scale_fill_identity(guide='legend', name='Quantiles', breaks=['darkgrey', 'olivedrab'], labels=['98% Quantile', '50% Quantile'])+\
          p9.theme(legend_title=p9.element_blank())+\
          p9.facet_grid('river_code+basin~.') +\
-         p9.ggtitle(title+" km Reach Summary")
+         p9.ggtitle(substrateOutput+': '+title+" km Reach Summary")
 
     p9.ggsave(gg, out, dpi=300)
     return
@@ -380,7 +380,7 @@ def makeWidRKMBoxPlot(df, out, length):
          p9.geom_crossbar(p9.aes(x='RKM', y='width_q2', ymin='width_q1', ymax='width_q3'), width=w, colour='olivedrab', data=df)+\
          p9.geom_errorbar(p9.aes(x='RKM', ymin='width_whisklo', ymax='width_whiskhi'), width=w, colour='olivedrab', alpha=0.75, data=df)+\
          p9.facet_grid('river_code+basin~.')+\
-         p9.ggtitle(title+" km Reach Summary")
+         p9.ggtitle(substrateOutput+': '+title+" km Reach Summary")
     
     p9.ggsave(gg, out, dpi=300)
 
@@ -414,7 +414,7 @@ def makeSinRKMLinePlot(df, out, length):
          p9.labels.ylab('Sinuosity')+\
          p9.geom_line(p9.aes(x='RKM', y='sinuosity'), colour='darkorchid', data=df)+\
          p9.facet_grid('river_code+basin~.')+\
-         p9.ggtitle(title+" km Reach Summary")
+         p9.ggtitle(substrateOutput+': '+title+" km Reach Summary")
     
     p9.ggsave(gg, out, dpi=300)
 
