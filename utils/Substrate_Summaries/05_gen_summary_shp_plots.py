@@ -53,12 +53,12 @@ rivBasin = {'PRL': '[PRL Basin]',
             'CHU': '[PAS Basin]'
             }
 
-substrateOutput = 'Raw'
+substrateOutput = 'EGN'
 csvDir = '04_Substrate_Shps_Summary_All_Plots'
 outDir = '04_Substrate_Shps_Summary_All_Plots'
 
-topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
-# topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+# topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
 csvDir = os.path.join(topDir, csvDir, substrateOutput)
 outDir = os.path.join(topDir, outDir, substrateOutput)
 
@@ -218,6 +218,46 @@ def makeSubRKMPlot(df, out, length):
          p9.geom_col(width=w)+\
          p9.scale_fill_manual(values=subColors)+\
          p9.facet_grid('river_code+basin~.') +\
+         p9.ggtitle(title+" km Reach Summary")
+    
+    p9.ggsave(gg, out, dpi=300)
+    return
+
+def makeSubRKMPlot2(df, out, length):
+
+    # Bar width
+    if length == 500:
+        w=1
+        # Need decimals for half km
+        df['RKM'] = df['RKM'].astype(float)
+        title = str(np.round(length/1000, 1))
+    else:
+        w = length/1000
+        # Don't need decimal since whole km's
+        df['RKM'] = df['RKM'].astype(int)
+        title = str(int(np.round(length/1000, 0)))
+
+    # Tick labels
+    maxRkm = np.max(df['RKM'].to_numpy())
+    x_ticks = np.arange(0, maxRkm+10, 100)
+    x_ticks_labels = x_ticks.tolist()
+
+    subColors = {'Fines Ripple': '#DC3912', 
+                 'Fines Flat': '#FF9900',
+                 'Cobble Boulder': '#15C820',
+                 'Hard Bottom': '#990099',
+                 'Wood': '#0091BC',
+                 'Other': '#DD4477'}
+
+    gg = p9.ggplot(df, p9.aes(x='RKM', y='Proportion', fill='Substrate'))+\
+         p9.theme_bw()+\
+         p9.theme(figure_size=(10,12))+\
+         p9.theme(axis_text_x=p9.element_text(rotation=90, hjust=0.5, vjust=1))+\
+         p9.labels.xlab('In-stream Distance to Gulf of Mexico [km]')+\
+         p9.scale_x_continuous(breaks=x_ticks_labels, labels=x_ticks_labels)+\
+         p9.geom_col(width=w)+\
+         p9.scale_fill_manual(values=subColors)+\
+         p9.facet_grid('Substrate~river_code+basin', scales='free') +\
          p9.ggtitle(title+" km Reach Summary")
     
     p9.ggsave(gg, out, dpi=300)
@@ -449,6 +489,12 @@ for length in summaryLengths:
     outPlot = os.path.join(outDir, outPlot)
 
     makeSubRKMPlot(dfSub, outPlot, length)
+
+    # Make RKM summary
+    outPlot = '_'.join([substrateOutput, 'ALL', str(length), 'Substrate_RKM_Summary2.png'])
+    outPlot = os.path.join(outDir, outPlot)
+
+    makeSubRKMPlot2(dfSub, outPlot, length)
 
     del dfSub
 
