@@ -8,6 +8,7 @@ nav_exclude: false
 # Publications & Featured Projects
 
 The page lists all publications about PING-Mapper, all known publications that use PING-Mapper, or projects which are currently utilizing PING-Mapper. If you have used PING-Mapper for your project or used it as part of a publication, please submit additional information on [GitHub](https://github.com/CameronBodine/PINGMapper/discussions/76)
+{: .fs-6 .fw-300 }
 
 ## Publications about the Software
 
