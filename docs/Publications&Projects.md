@@ -21,3 +21,11 @@ The page lists all publications about PING-Mapper, all known publications that u
 ## Projects that Use the Software
 
 - [Sidescan Ghosts!](https://github.com/CameronBodine/PINGMapper/discussions/76#discussioncomment-6929745); By Adrian Pinchbeck
+
+## Location of known users:
+
+<iframe src="https://www.google.com/maps/d/embed?mid=1QnHI4vIA42VF48Ro2rgxVw7vMvEm0T0&ehbc=2E312F" width="640" height="480"></iframe>
+
+If you want to add your location, take this survey!.
+
+<iframe src="https://docs.google.com/forms/d/e/1FAIpQLSfUcOlQ5RmHcQA83XNanLR9-lj_7fD9CMhC-uIqstIAgpgwBw/viewform?embedded=true" width="640" height="2266" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
