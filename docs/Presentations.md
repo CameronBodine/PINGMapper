@@ -22,14 +22,10 @@ nav_exclude: false
 By Cameron S. Bodine<sup>1</sup> (March 29, 2024)
 
 Dissertation Committee:
-Toby D. Hocking<sup>1</sup>, Ph.D., Co-Chair
-Daniel Buscombe<sup>1,2</sup>, Ph.D., Co-Chair
-Rebecca J. Best<sup>2</sup>, Ph.D.
-Adam J. Kaeser<sup>3</sup>, Ph.D.
 
-<sup>1</sup>School of Informatics, Computing, and Cyber Systems, Northern Arizona University
-<sup>2</sup>School of Earth and Sustainability, Northern Arizona University
-<sup>3</sup>Panama City Fish and Wildlife Conservation Office, U.S. Fish and Wildlife Service 
+Toby D. Hocking<sup>1</sup>, Ph.D., Co-Chair; Daniel Buscombe<sup>1,2</sup>, Ph.D., Co-Chair; Rebecca J. Best<sup>2</sup>, Ph.D.; Adam J. Kaeser<sup>3</sup>, Ph.D.
+
+<sup>1</sup>School of Informatics, Computing, and Cyber Systems, Northern Arizona University; <sup>2</sup>School of Earth and Sustainability, Northern Arizona University; <sup>3</sup>Panama City Fish and Wildlife Conservation Office, U.S. Fish and Wildlife Service 
 
 ### Abstract
 {: .no_toc }
