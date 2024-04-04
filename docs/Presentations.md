@@ -19,7 +19,7 @@ nav_exclude: false
 
 ## Ph.D. Defense: Automated Mapping of Gulf Sturgeon Spawning Habitat in Coastal Plain Rivers
 
-By Cameron S. Bodine<sup>1</sup>
+By Cameron S. Bodine<sup>1</sup> (March 29, 2024)
 
 Dissertation Committee:
 Toby D. Hocking<sup>1</sup>, Ph.D., Co-Chair
