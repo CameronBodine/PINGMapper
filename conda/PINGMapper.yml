@@ -19,5 +19,6 @@ dependencies:
       - doodleverse_utils
       - psutil
       - tensorflow
+      - tf-keras
       - transformers
-      - pysimplegui
+      - pysimplegui==4.60.5
