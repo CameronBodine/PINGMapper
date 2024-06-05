@@ -406,11 +406,11 @@ class sonObj(object):
                 humDat['water_type'] = 'fresh'
                 S = 1
             elif waterCode == 2:
-                humDat['water_type'] = 'deep salt'
-                S = 35
-            elif waterCode == 3:
                 humDat['water_type'] = 'shallow salt'
                 S = 30
+            elif waterCode == 3:
+                humDat['water_type'] = 'deep salt'
+                S = 35
             else:
                 humDat['water_type'] = 'unknown'
 
