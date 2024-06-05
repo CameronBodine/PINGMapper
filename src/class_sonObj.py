@@ -383,23 +383,36 @@ class sonObj(object):
                 S = 30
             else:
                 humDat['water_type'] = 'unknown'
-        #Need to figure out water code for solix
-        elif datLen == 96:
-            if waterCode == 1:
-                humDat['water_type'] = 'fresh'
-                S = 1
-            else:
-                humDat['water_type'] = 'unknown'
-                c = 1475
+        # #Need to figure out water code for solix
+        # elif datLen == 96:
+        #     if waterCode == 1:
+        #         humDat['water_type'] = 'fresh'
+        #         S = 1
+        #     else:
+        #         humDat['water_type'] = 'unknown'
+        #         c = 1475
 
-        ###### TESTING ######
-        elif datLen == 100:
+        # ###### TESTING ######
+        # elif datLen == 100:
+        #     if waterCode == 1:
+        #         humDat['water_type'] = 'fresh'
+        #         S = 1
+        #     else:
+        #         humDat['water_type'] = 'unknown'
+        #         c = 1475
+
+        elif datLen >= 96:
             if waterCode == 1:
                 humDat['water_type'] = 'fresh'
                 S = 1
+            elif waterCode == 2:
+                humDat['water_type'] = 'deep salt'
+                S = 35
+            elif waterCode == 3:
+                humDat['water_type'] = 'shallow salt'
+                S = 30
             else:
                 humDat['water_type'] = 'unknown'
-                c = 1475
 
         # Calculate speed of sound based on temp & salinity
         c = 1449.05 + 45.7*t - 5.21*t**2 + 0.23*t**3 + (1.333 - 0.126*t + 0.009*t**2)*(S - 35)
