@@ -1019,10 +1019,13 @@ class sonObj(object):
                 # Store needed data in head dict
                 head['index'].append(sonIndex) # ping byte index
                 head['chunk_id'].append(chunk) # ping chunk id
-                headerDat = self._getHeader(sonIndex) # Get and decode header data in .SON file
-                for key, val in headerDat.items():
-                    head[key].append(val) # Store in dictionary
-                idx['record_num'].append(headerDat['record_num']) # Store ping number in idx dictionary
+                try:
+                    headerDat = self._getHeader(sonIndex) # Get and decode header data in .SON file
+                    for key, val in headerDat.items():
+                        head[key].append(val) # Store in dictionary
+                    idx['record_num'].append(headerDat['record_num']) # Store ping number in idx dictionary
+                except:
+                    pass
                 # Increment counters
                 i+=8
                 j+=1
@@ -1048,9 +1051,12 @@ class sonObj(object):
                 else:
                     sys.exit("Not at head of ping")
 
-                headerDat = self._getHeader(i) # Get and decode header data in .SON file
-                for key, val in headerDat.items():
-                    head[key].append(val) # Store in dictionary
+                try:
+                    headerDat = self._getHeader(i) # Get and decode header data in .SON file
+                    for key, val in headerDat.items():
+                        head[key].append(val) # Store in dictionary
+                except:
+                    pass
                 # Increment counters
                 i = i + self.headBytes + headerDat['ping_cnt'] # Determine location of next ping
                 j+=1
@@ -1069,13 +1075,32 @@ class sonObj(object):
         # Update caltime to timestamp
         sonTime = []
         sonDate = []
+        needToFilt = False
         for t in sonMetaAll['caltime'].to_numpy():
-            t = datetime.datetime.fromtimestamp(t)
-            sonDate.append(datetime.datetime.date(t))
-            sonTime.append(datetime.datetime.time(t))
+            try:
+                t = datetime.datetime.fromtimestamp(t)
+                sonDate.append(datetime.datetime.date(t))
+                sonTime.append(datetime.datetime.time(t))
+            except:
+                sonDate.append(-1)
+                sonTime.append(-1)
+                needToFilt = True
+            
         sonMetaAll = sonMetaAll.drop('caltime', axis=1)
         sonMetaAll['date'] = sonDate
         sonMetaAll['time'] = sonTime
+
+        if needToFilt:
+            sonMetaAll = sonMetaAll[sonMetaAll['date'] != -1]
+            sonMetaAll = sonMetaAll[sonMetaAll['time'] != -1]
+
+            sonMetaAll = sonMetaAll.dropna()
+
+        sonMetaAll = sonMetaAll[sonMetaAll['e'] != np.inf]
+        sonMetaAll = sonMetaAll[sonMetaAll['record_num'] >= 0]
+
+        lastIdx = sonMetaAll['index'].iloc[-1]
+        sonMetaAll = sonMetaAll[sonMetaAll['index'] <= lastIdx]
 
         # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
         sonMetaAll = self._calcTrkDistTS(sonMetaAll)
@@ -1122,6 +1147,7 @@ class sonObj(object):
 
         sonHead = defaultdict() # Create dictionary to store ping metadata
         file = open(self.sonFile, 'rb') # Open .SON file
+        fixCorrupt = False
         # Traverse .SON file based on known headStruct
         for key, val in headStruct.items():
             byteIndex = val[0] # Offset to ping attribute spacer value
