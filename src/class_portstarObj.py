@@ -306,7 +306,177 @@ class portstarObj(object):
                 else:
                     predictToMosaic = [map]
 
-        print(mosaic)
+        # Create geotiff
+        if mosaic == 1:
+            if son:
+                if self.port.rect_wcp:
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                if self.port.rect_wcr:
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+            else:
+                if self.port.map_sub:
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
+
+                if self.port.map_predict:
+                    # Determine number of bands, i.e. substrate classes
+                    bands = self._getBandCount(predictToMosaic[0][0])
+                    for i, pred in enumerate(predictToMosaic):
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+
+        # Create vrt
+        elif mosaic == 2:
+            if son:
+                if self.port.rect_wcp:
+                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                if self.port.rect_wcr:
+                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+            else:
+                if self.port.map_sub:
+                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
+
+                if self.port.map_predict:
+                    # Determine number of bands, i.e. substrate classes
+                    bands = self._getBandCount(predictToMosaic[0][0])
+                    for i, pred in enumerate(predictToMosaic):
+                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+
+        return
+
+
+    def _createMosaicTransect(self,
+                      mosaic=1,
+                      overview=True,
+                      threadCnt=cpu_count(),
+                      son=True,
+                      maxChunk = 50):
+        '''
+        Main function to mosaic exported rectified sonograms into a mosaic. If
+        overview=True, overviews of the mosaic will be built, enhancing view
+        performance in a GIS. Generating overviews will increase mosaic file size.
+
+        ----------
+        Parameters
+        ----------
+        mosaic : int : [Default=1]
+            DESCRIPTION - Type of mosaic to create.
+                          1 = GeoTiff;
+                          2 = VRT (Virtual raster table), an xml that references
+                            each individual rectified sonogram chunk and mosaics
+                            on the fly.
+        overview : bool : [Default=True]
+            DESCRIPTION - Flag indicating if mosaic overviews should be generated.
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        rectObj._rectSonParallel()
+
+        -------
+        Returns
+        -------
+        Exports mosaics of rectified sonograms.
+
+        --------------------
+        Next Processing Step
+        --------------------
+        Calls self._mosaicGtiff() or self._mosaicVRT() to generate mosaics.
+        '''
+        # maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
+        self.imgsToMosaic = [] # List to store files to mosaic.
+
+        if son:
+            if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
+                self.port._loadSonMeta()
+                df = self.port.sonMetaDF
+
+                portPath = os.path.join(self.port.outDir, 'rect_wcp')
+
+                port = []
+                for name, group in df.groupby('transect'):
+                    chunks = pd.unique(group['chunk_id'])
+                    port_transect = []
+                    for chunk in chunks:
+                        img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
+                        img = glob(img_path)[0]
+                        port_transect.append(img)
+                    port.append(port_transect)
+
+                self.star._loadSonMeta()
+                df = self.star.sonMetaDF
+
+                starPath = os.path.join(self.star.outDir, 'rect_wcp')
+
+                star = []
+                for name, group in df.groupby('transect'):
+                    chunks = pd.unique(group['chunk_id'])
+                    star_transect = []
+                    for chunk in chunks:
+                        img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
+                        img = glob(img_path)[0]
+                        star_transect.append(img)
+                    star.append(star_transect)
+
+                wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+
+            if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
+
+                self.port._loadSonMeta()
+                df = self.port.sonMetaDF
+
+                portPath = os.path.join(self.port.outDir, 'rect_wcr')
+
+                port = []
+                for name, group in df.groupby('transect'):
+                    chunks = pd.unique(group['chunk_id'])
+                    port_transect = []
+                    for chunk in chunks:
+                        img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
+                        img = glob(img_path)[0]
+                        port_transect.append(img)
+                    port.append(port_transect)
+
+                self.star._loadSonMeta()
+                df = self.star.sonMetaDF
+
+                starPath = os.path.join(self.star.outDir, 'rect_wcr')
+
+                star = []
+                for name, group in df.groupby('transect'):
+                    chunks = pd.unique(group['chunk_id'])
+                    star_transect = []
+                    for chunk in chunks:
+                        img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
+                        img = glob(img_path)[0]
+                        star_transect.append(img)
+                    star.append(star_transect)
+
+                srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+
+        else:
+            if self.port.map_sub:
+                # Locate map files
+                mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+                map = sorted(glob(os.path.join(mapPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if (len(map) > maxChunk) and (maxChunk != 0):
+                    subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                else:
+                    subToMosaic = [map]
+
+            if self.port.map_predict:
+                # Locate map files
+                if self.port.map_predict == 1:
+                    mapPath = os.path.join(self.port.substrateDir, 'map_probability_raster')
+                elif self.port.map_predict == 2:
+                    mapPath = os.path.join(self.port.substrateDir, 'map_logit_raster')
+                map = sorted(glob(os.path.join(mapPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if (len(map) > maxChunk) and (maxChunk != 0):
+                    predictToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                else:
+                    predictToMosaic = [map]
 
         # Create geotiff
         if mosaic == 1:

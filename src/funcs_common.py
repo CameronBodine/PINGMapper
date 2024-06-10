@@ -44,6 +44,7 @@ import pyproj
 import rasterio
 import geopandas as gpd
 from rasterio.enums import Resampling
+from shapely.geometry import Polygon
 from numpy.lib.stride_tricks import as_strided as ast
 
 import pandas as pd

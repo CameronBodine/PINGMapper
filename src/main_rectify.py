@@ -43,6 +43,7 @@ def rectify_master_func(logfilename='',
                         humFile='',
                         sonFiles='',
                         projDir='',
+                        aoi=False,
                         tempC=10,
                         nchunk=500,
                         cropRange=0,
@@ -258,7 +259,12 @@ def rectify_master_func(logfilename='',
         # Now we will smooth using sonar beam w/ most records.
         son0 = portstar[maxRec]
         sonDF = son0.sonMetaDF # Get ping metadata
-        sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
+        # sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
+        sDF = pd.DataFrame()
+        for name, group in sonDF.groupby('transect'):
+            smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
+            smoothed['transect'] = int(name)
+            sDF = pd.concat([sDF, smoothed], ignore_index=True)
         del sonDF
 
         ####################################
@@ -266,21 +272,46 @@ def rectify_master_func(logfilename='',
         # To remove gap between sonar tiles:
         # For chunk > 0, use coords from previous chunks second to last ping
         # and assign as current chunk's first ping coords
+        # chunks = pd.unique(sDF['chunk_id'])
+
+        # i = 1
+        # while i <= max(chunks):
+        #     # Get second to last row of previous chunk
+        #     lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+        #     # Get index of first row of current chunk
+        #     curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+        #     curRow = curRow.index[0]
+        #     # Update current chunks first row from lastRow
+        #     sDF.at[curRow, "lons"] = lastRow["lons"]
+        #     sDF.at[curRow, "lats"] = lastRow["lats"]
+        #     sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+        #     sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+        #     sDF.at[curRow, "cog"] = lastRow["cog"]
+
+        #     i+=1
+        # del lastRow, curRow, i
+
         chunks = pd.unique(sDF['chunk_id'])
 
         i = 1
+        t = 0
         while i <= max(chunks):
             # Get second to last row of previous chunk
             lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
             # Get index of first row of current chunk
             curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+            curTransect = curRow['transect'].values[0]
             curRow = curRow.index[0]
-            # Update current chunks first row from lastRow
-            sDF.at[curRow, "lons"] = lastRow["lons"]
-            sDF.at[curRow, "lats"] = lastRow["lats"]
-            sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-            sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-            sDF.at[curRow, "cog"] = lastRow["cog"]
+            
+            if curTransect == t:
+                # Update current chunks first row from lastRow
+                sDF.at[curRow, "lons"] = lastRow["lons"]
+                sDF.at[curRow, "lats"] = lastRow["lats"]
+                sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+                sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+                sDF.at[curRow, "cog"] = lastRow["cog"]
+            else:
+                t += 1
 
             i+=1
         del lastRow, curRow, i
@@ -402,7 +433,10 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
+        if not aoi:
+            psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
+        else:
+            psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj

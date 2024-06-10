@@ -40,6 +40,7 @@ def read_master_func(logfilename='',
                      humFile='',
                      sonFiles='',
                      projDir='',
+                     aoi=False,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -888,6 +889,119 @@ def read_master_func(logfilename='',
 
     for son in sonObjs:
         son._pickleSon()
+
+    
+    ############################################################################
+    # For AOI                                                                  #
+    ############################################################################
+    # Use AOI to clip metadata to facilitate processing multiple transects in a
+    ## single sonar recording.
+
+    if aoi: 
+
+        print('\n\nProcessing AOI...')
+
+        # For extracting value from nested dictionaries and lists
+        def getPolyCoords(nested_dict, value):
+            for k, v in nested_dict.items():
+                if k == value:
+                    return v
+                elif hasattr(v, 'items'):
+                    p = getPolyCoords(v, value)
+                    if p is not None:
+                        return p
+                elif isinstance(v, list):
+                    for i in v:
+                        if hasattr(i, 'items'):
+                            p = getPolyCoords(i, value)
+                            if p is not None:
+                                return p
+
+        # If .plan file (from Hydronaulix)
+        if os.path.basename(aoi.split('.')[-1]) == 'plan':            
+            with open(aoi, 'r', encoding='utf-8') as f:
+                f = json.load(f)
+                # Find 'polygon' coords in nested json
+                poly_coords = getPolyCoords(f, 'polygon')
+                
+                # Extract coordinates
+                lat_coords = [i[0] for i in poly_coords]
+                lon_coords = [i[1] for i in poly_coords]
+
+                polygon_geom = Polygon(zip(lon_coords, lat_coords))
+                aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+
+                # Reproject to utm
+                epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
+                aoi_poly = aoi_poly.to_crs(crs=epsg)
+
+        # If shapefile
+        elif os.path.basename(aoi.split('.')[-1]) == 'shp':
+            aoi_poly = gpd.read_file(aoi)
+
+            # need to add a dissolve (if multiple polys)
+
+            # need to add reproject to 4326
+
+        else:
+            print(os.path.basename, ' is not a valid aoi file type.')
+            sys.exit()
+
+        # Buffer aoi
+        buf_dist = 0.5
+        aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
+
+        # Iterate each son file, clip with aoi, and save
+        for son in sonObjs:
+            son._loadSonMeta()
+            sonDF = son.sonMetaDF
+
+            # Convert to geodataframe
+            epsg = int(son.humDat['epsg'].split(':')[-1])
+            sonDF = gpd.GeoDataFrame(sonDF, geometry=gpd.points_from_xy(sonDF.e, sonDF.n), crs=epsg)
+
+            # Clip with aoi
+            sonDF = gpd.clip(sonDF, aoi_poly, keep_geom_type=False)
+            sonDF = sonDF.sort_index()
+
+            # Make transects from consective pings using dataframe index
+            idx = sonDF.index.values
+            transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
+
+            # Assign transect
+            transect = 0
+            for t in transect_groups:
+                sonDF.loc[sonDF.index>=t[0], 'transect'] = transect
+                transect += 1
+
+            # Set chunks
+            lastChunk = 0
+            newChunk = []
+            for name, group in sonDF.groupby('transect'):
+
+                if (len(group)%nchunk) != 0:
+                    rdr = nchunk-(len(group)%nchunk)
+                    chunkCnt = int(len(group)/nchunk)
+                    chunkCnt += 1
+                else:
+                    rdr = False
+                    chunkCnt = int(len(group)/nchunk)
+
+                chunks = np.arange(chunkCnt) + lastChunk
+                chunks = np.repeat(chunks, nchunk)
+                
+                if rdr:
+                    chunks = chunks[:-rdr]
+                
+                newChunk += list(chunks)
+                lastChunk = chunks[-1] + 1
+                del chunkCnt
+
+            sonDF['chunk_id'] = newChunk
+
+            son._saveSonMetaCSV(sonDF)
+            son._cleanup()
+
 
     ############################################################################
     # For Depth Detection                                                      #

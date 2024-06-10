@@ -1105,6 +1105,8 @@ class sonObj(object):
         # Calculate along-track distance from 'time's and 'speed_ms'. Approximate distance estimate
         sonMetaAll = self._calcTrkDistTS(sonMetaAll)
 
+        # Add transect number (for aoi processing)
+        sonMetaAll['transect'] = 0
 
         self._saveSonMetaCSV(sonMetaAll)
 
