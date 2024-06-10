@@ -256,7 +256,9 @@ class rectObj(sonObj):
                   'pix_m': self.pixM,
                   lons: x_interp[0],
                   lats: x_interp[1],
-                  'dep_m': dfOrig['dep_m']}
+                  'dep_m': dfOrig['dep_m'],
+                  'instr_heading': dfOrig['instr_heading']
+                  }
 
         sDF = pd.DataFrame(smooth) # Convert dictionary to Pandas df
 
@@ -518,7 +520,11 @@ class rectObj(sonObj):
             rotate *= -1
 
         # Calculate ping bearing and normalize to range 0-360
-        sDF[ping_bearing] = (sDF['cog']+rotate) % 360
+        cog = True
+        if cog:
+            sDF[ping_bearing] = (sDF['cog']+rotate) % 360
+        else:
+            sDF[ping_bearing] = (sDF['instr_heading']+rotate) % 360
 
         ############################################
         # Calculate range (in meters) for each chunk
@@ -689,7 +695,7 @@ class rectObj(sonObj):
         ##################################################
         # Join smoothed trackline to smoothed range extent
         # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
-        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
+        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
         rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
