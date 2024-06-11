@@ -901,39 +901,60 @@ def read_master_func(logfilename='',
 
         print('\n\nProcessing AOI...')
 
-        # For extracting value from nested dictionaries and lists
-        def getPolyCoords(nested_dict, value):
-            for k, v in nested_dict.items():
-                if k == value:
-                    return v
-                elif hasattr(v, 'items'):
-                    p = getPolyCoords(v, value)
-                    if p is not None:
-                        return p
-                elif isinstance(v, list):
-                    for i in v:
-                        if hasattr(i, 'items'):
-                            p = getPolyCoords(i, value)
-                            if p is not None:
-                                return p
+        # # # For extracting value from nested dictionaries and lists
+        # def getPolyCoords(nested_dict, value):
+        #     # polys = []
+        #     for k, v in nested_dict.items():
+        #         if k == value:
+        #             return v
+        #         elif hasattr(v, 'items'):
+        #             p = getPolyCoords(v, value)
+        #             if p is not None and p:
+        #                 # return p
+        #                 polys.append(p)
+        #         elif isinstance(v, list):
+        #             for i in v:
+        #                 if hasattr(i, 'items'):
+        #                     p = getPolyCoords(i, value)
+        #                     if p is not None and p:
+        #                         # return p
+        #                         polys.append(p)
+        #     return polys
 
         # If .plan file (from Hydronaulix)
         if os.path.basename(aoi.split('.')[-1]) == 'plan':            
             with open(aoi, 'r', encoding='utf-8') as f:
                 f = json.load(f)
                 # Find 'polygon' coords in nested json
-                poly_coords = getPolyCoords(f, 'polygon')
-                
-                # Extract coordinates
-                lat_coords = [i[0] for i in poly_coords]
-                lon_coords = [i[1] for i in poly_coords]
+                # polys = []
+                # poly_coords = getPolyCoords(f, 'polygon')
+                # print(poly_coords)
 
-                polygon_geom = Polygon(zip(lon_coords, lat_coords))
-                aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+                f = f['mission']
+                f = f['items']
+                poly_coords = []
+                for i in f:
+                    for k, v in i.items():
+                        if k == 'polygon':
+                            poly_coords.append(v)
+
+                aoi_poly_all = gpd.GeoDataFrame()
+
+                for poly in poly_coords:
+                
+                    # Extract coordinates
+                    lat_coords = [i[0] for i in poly]
+                    lon_coords = [i[1] for i in poly]
+
+                    polygon_geom = Polygon(zip(lon_coords, lat_coords))
+                    aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+
+                    aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
 
                 # Reproject to utm
                 epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
-                aoi_poly = aoi_poly.to_crs(crs=epsg)
+                aoi_poly = aoi_poly_all.to_crs(crs=epsg)
+                aoi_poly = aoi_poly.dissolve()
 
         # If shapefile
         elif os.path.basename(aoi.split('.')[-1]) == 'shp':
