@@ -1003,6 +1003,8 @@ class rectObj(sonObj):
     #===========================================================================
     def _exportCovShp(self,
                       covFiles,
+                      dissolve=True,
+                      filt=10,
                       wgs=False):
         
         # Create output directory if it doesn't exist
@@ -1033,6 +1035,12 @@ class rectObj(sonObj):
         # Get df's
         df1 = pd.read_csv(covFiles[0])
         df2 = pd.read_csv(covFiles[1])
+
+        # Filter
+        if filt > 0:
+            df1 = df1[::filt]
+            df2 = df2[::filt]
+
         dfs = [df1, df2]
 
         # Iterate chunks
@@ -1057,6 +1065,10 @@ class rectObj(sonObj):
             chunk_geom = gpd.GeoDataFrame(index=[chunk], crs=epsg, geometry=[chunk_geom])
             del lat_list, lon_list
 
+            # Do buffer to help fix geometry issues
+            chunk_geom['geometry'] = chunk_geom.buffer(10)
+            chunk_geom['geometry'] = chunk_geom.buffer(-9)
+
 
             # Append to final geodataframe
             if 'gdf' not in locals():
@@ -1066,6 +1078,13 @@ class rectObj(sonObj):
             del chunk_geom
 
         gdf['chunk_id'] = gdf.index
+
+        if dissolve:
+            try:
+                gdf = gdf.dissolve()
+            except:
+                gdf = gdf.loc[gdf.geometry.is_valid]
+                gdf = gdf.dissolve()
 
         # Save to shapefile
         projName = os.path.basename(self.projDir)

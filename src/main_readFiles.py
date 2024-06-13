@@ -40,6 +40,7 @@ def read_master_func(logfilename='',
                      humFile='',
                      sonFiles='',
                      projDir='',
+                     coverage=False,
                      aoi=False,
                      tempC=10,
                      nchunk=500,
@@ -851,7 +852,7 @@ def read_master_func(logfilename='',
 
                     # Store number of chunks
                     if (att == 'chunk_id'):
-                        son.chunkMax = attMax
+                        son.chunkMax = int(attMax)
 
                 # Check if data are valid.
                 if (att == "date") or (att == "time"):

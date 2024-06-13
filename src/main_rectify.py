@@ -43,6 +43,7 @@ def rectify_master_func(logfilename='',
                         humFile='',
                         sonFiles='',
                         projDir='',
+                        coverage=False,
                         aoi=False,
                         tempC=10,
                         nchunk=500,
@@ -363,6 +364,26 @@ def rectify_master_func(logfilename='',
 
     else:
         print("\nUsing existing smoothed trackline.")
+
+    ############################################################################
+    # Export Coverage and Trackline                                            #
+    ############################################################################
+
+    if coverage:
+        start_time = time.time()
+        print("\nExporting coverage and trackline shapefiles:\n")
+        portstar[0]._exportTrkShp()
+
+        trk_files = []
+        for son in portstar:
+            trk_files.append(son.smthTrkFile)
+
+        portstar[0]._exportCovShp(trk_files)
+
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()     
 
     ############################################################################
     # Rectify sonar imagery                                                    #
