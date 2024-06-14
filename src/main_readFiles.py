@@ -952,22 +952,18 @@ def read_master_func(logfilename='',
 
                     aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
 
-                # Reproject to utm
-                epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
-                aoi_poly = aoi_poly_all.to_crs(crs=epsg)
-                aoi_poly = aoi_poly.dissolve()
-
         # If shapefile
         elif os.path.basename(aoi.split('.')[-1]) == 'shp':
-            aoi_poly = gpd.read_file(aoi)
-
-            # need to add a dissolve (if multiple polys)
-
-            # need to add reproject to 4326
+            aoi_poly_all = gpd.read_file(aoi)
 
         else:
             print(os.path.basename, ' is not a valid aoi file type.')
             sys.exit()
+
+        # Reproject to utm
+        epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
+        aoi_poly = aoi_poly_all.to_crs(crs=epsg)
+        aoi_poly = aoi_poly.dissolve()
 
         # Buffer aoi
         buf_dist = 0.5
