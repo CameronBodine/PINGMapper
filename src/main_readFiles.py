@@ -969,6 +969,15 @@ def read_master_func(logfilename='',
         buf_dist = 0.5
         aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
 
+        # Save aoi
+        aoi_dir = os.path.join(sonObjs[0].projDir, 'aoi')
+        projName = os.path.basename(sonObjs[0].projDir) + '.shp'
+        if not os.path.exists(aoi_dir):
+            os.makedirs(aoi_dir)
+
+        aoiOut = os.path.join(aoi_dir, projName)
+        aoi_poly.to_file(aoiOut)
+
         # Iterate each son file, clip with aoi, and save
         for son in sonObjs:
             son._loadSonMeta()
