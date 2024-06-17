@@ -52,6 +52,7 @@ oldOutput = sys.stdout
 # Path to data/output
 inDir = r'./exampleData/' # Parent folder of sonar recordings
 outDir = r'./procData' # Parent folder for export files
+aoi = False #r"path/to/.shp"
 
 # *** IMPORTANT ****
 # Export Mode: project_mode

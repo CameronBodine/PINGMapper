@@ -35,8 +35,10 @@ with open(default_params_file) as f:
 layout = [
     [sg.Text('Recording to Process')],
     [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("DAT File", "*.DAT"),))],
+    [sg.Text('AOI')],
+    [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
     [sg.Text('Output Folder')],
-    [sg.In(size=(80,1)), sg.FolderBrowse(initial_folder=os.path.join(os.getcwd(), 'procData'))],
+    [sg.In(size=(80,1)), sg.FolderBrowse()],
     [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
     [sg.Checkbox('Overwrite Existing Project', default=default_params['project_mode'])],
     [sg.HorizontalSeparator()],
@@ -108,8 +110,13 @@ if event == "Quit":
 #################################
 # Convert parameters if necessary
 
+# AOI
+aoi = values[1]
+if aoi == '':
+    aoi = False
+
 # EGN Stretch
-egn_stretch = values[20]
+egn_stretch = values[21]
 if egn_stretch == 'None':
     egn_stretch = 0
 elif egn_stretch == 'Min-Max':
@@ -119,7 +126,7 @@ elif egn_stretch == 'Percent Clip':
 egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
-lbl_set = values[28]
+lbl_set = values[29]
 if lbl_set == 'False':
     lbl_set = 0
 elif lbl_set == 'True: Keep WC & Shadows':
@@ -129,7 +136,7 @@ elif lbl_set == 'True: Mask WC & Shadows':
 lbl_set = int(lbl_set)
 
 # Shadow removal
-remShadow = values[33]
+remShadow = values[34]
 if remShadow == 'False':
     remShadow = 0
 elif remShadow == 'Remove all shadows':
@@ -139,7 +146,7 @@ elif remShadow == 'Remove only bank shadows':
 remShadow = int(remShadow)
 
 # Depth detection
-detectDep = values[34]
+detectDep = values[35]
 if detectDep == 'Sensor':
     detectDep = 0
 elif detectDep == 'Auto':
@@ -147,7 +154,7 @@ elif detectDep == 'Auto':
 detectDep = int(detectDep)
 
 # Map predictions
-map_predict = values[54]
+map_predict = values[55]
 if map_predict == 'False':
     map_predict = 0
 elif map_predict == 'Probability':
@@ -157,7 +164,7 @@ elif map_predict == 'Logit':
 map_predict = int(map_predict)
 
 # Sonar mosaic
-mosaic = values[57]
+mosaic = values[58]
 if mosaic == 'False':
     mosaic = int(0)
 elif mosaic == 'GTiff':
@@ -167,7 +174,7 @@ elif mosaic == 'VRT':
 mosaic = int(mosaic)
 
 # Substrate mosaic
-map_mosaic = values[59]
+map_mosaic = values[60]
 if map_mosaic == 'False':
     map_mosaic = 0
 elif map_mosaic == 'GTiff':
@@ -179,45 +186,46 @@ map_mosaic = int(map_mosaic)
 
 params = {
     'humFile':values[0],
-    'projDir':os.path.join(values[1], values[2]),
-    'project_mode':int(values[3]),
-    'tempC':float(values[5]),
-    'nchunk':int(values[6]),
-    'cropRange':float(values[7]),
-    'exportUnknown':values[8],
-    'fixNoDat':values[9],
-    'threadCnt':int(values[10]),
-    'pix_res_son':float(values[12]),
-    'pix_res_map':float(values[13]),
-    'x_offset':float(values[15]),
-    'y_offset':float(values[17]),
-    'egn':values[19],
+    'aoi':aoi,
+    'projDir':os.path.join(values[2], values[3]),
+    'project_mode':int(values[4]),
+    'tempC':float(values[6]),
+    'nchunk':int(values[7]),
+    'cropRange':float(values[8]),
+    'exportUnknown':values[9],
+    'fixNoDat':values[10],
+    'threadCnt':int(values[11]),
+    'pix_res_son':float(values[13]),
+    'pix_res_map':float(values[14]),
+    'x_offset':float(values[16]),
+    'y_offset':float(values[18]),
+    'egn':values[21],
     'egn_stretch':egn_stretch,
-    'egn_stretch_factor':float(values[22]),
-    'wcp':values[24],
-    'wcr':values[25],
-    'tileFile':values[26],
+    'egn_stretch_factor':float(values[23]),
+    'wcp':values[25],
+    'wcr':values[26],
+    'tileFile':values[27],
     'lbl_set':lbl_set,
-    'spdCor':float(values[29]),
-    'maxCrop':values[31],
+    'spdCor':float(values[30]),
+    'maxCrop':values[32],
     'remShadow':remShadow,
     'detectDep':detectDep,
-    'smthDep':values[36],
-    'adjDep':float(values[38]),
-    'pltBedPick':values[40],
-    'rect_wcp':values[42],
-    'rect_wcr':values[43],
-    'son_colorMap':values[44],
-    'pred_sub':values[46],
-    'pltSubClass':values[48],
-    'map_sub':values[49],
-    'export_poly':values[51],
-    'map_class_method':values[53],
+    'smthDep':values[37],
+    'adjDep':float(values[39]),
+    'pltBedPick':values[41],
+    'rect_wcp':values[43],
+    'rect_wcr':values[44],
+    'son_colorMap':values[45],
+    'pred_sub':values[47],
+    'pltSubClass':values[49],
+    'map_sub':values[50],
+    'export_poly':values[52],
+    'map_class_method':values[54],
     'map_predict':map_predict,
-    'mosaic_nchunk':int(values[56]),
+    'mosaic_nchunk':int(values[57]),
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
-    'banklines':values[61]
+    'banklines':values[62]
 }
 
 globals().update(params)

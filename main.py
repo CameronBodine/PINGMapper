@@ -58,6 +58,7 @@ start_time = time.time()
 
 humFile = r"E:\Python\PINGMapper\exampleData\RIV_20210102_NAU\580_559_Rec00018.DAT"
 projDir = r"./procData/test"
+aoi = False #r"path/to/.shp"
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
@@ -206,6 +207,7 @@ params = {
         'project_mode':project_mode,
         'script':[script, copied_script_name],
         'humFile':humFile,
+        'aoi':aoi,
         'sonFiles':sonFiles,
         'projDir':projDir,
         'tempC':tempC,
