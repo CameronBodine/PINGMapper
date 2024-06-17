@@ -52,6 +52,8 @@ oldOutput = sys.stdout
 # Path to data/output
 inDir = r'./exampleData/' # Parent folder of sonar recordings
 outDir = r'./procData' # Parent folder for export files
+prefix = r''
+suffix = r''
 aoi = False #r"path/to/.shp"
 
 # *** IMPORTANT ****
@@ -179,6 +181,8 @@ for datFile in inFiles:
         recName = os.path.basename(humFile).split('.')[0]
         sonPath = humFile.split('.DAT')[0]
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+
+        recName = prefix + recName + suffix
 
         projDir = os.path.join(outDir, recName)
 

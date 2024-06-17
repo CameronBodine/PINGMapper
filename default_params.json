@@ -1,10 +1,12 @@
 {
     "project_mode":true,
+    "prefix":"",
+    "suffix":"",
     "tempC":10,
     "nchunk":500,
     "cropRange":0.0,
     "exportUnknown":false,
-    "fixNoDat":true,
+    "fixNoDat":false,
     "threadCnt":0,
     "pix_res_son":0.05,
     "pix_res_map":0.25,

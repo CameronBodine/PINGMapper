@@ -37,6 +37,7 @@ layout = [
     [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
     [sg.Text('Output Folder')],
     [sg.In(size=(80,1)), sg.FolderBrowse()],
+    [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(default_params['prefix'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(default_params['suffix'], size=(10,1))],
     # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
     [sg.Checkbox('Overwrite Existing Project', default=default_params['project_mode'])],
     [sg.HorizontalSeparator()],
@@ -103,6 +104,11 @@ window.close()
 if event == "Quit":
     sys.exit()
 
+for k, v in values.items():
+    print(k, v, '\n\n')
+
+# sys.exit()
+
 inDir = values[0]
 outDir = values[2]
 
@@ -115,7 +121,7 @@ if aoi == '':
     aoi = False
 
 # EGN Stretch
-egn_stretch = values[20]
+egn_stretch = values[23]
 if egn_stretch == 'None':
     egn_stretch = 0
 elif egn_stretch == 'Min-Max':
@@ -125,7 +131,7 @@ elif egn_stretch == 'Percent Clip':
 egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
-lbl_set = values[28]
+lbl_set = values[31]
 if lbl_set == 'False':
     lbl_set = 0
 elif lbl_set == 'True: Keep WC & Shadows':
@@ -135,7 +141,7 @@ elif lbl_set == 'True: Mask WC & Shadows':
 lbl_set = int(lbl_set)
 
 # Shadow removal
-remShadow = values[33]
+remShadow = values[36]
 if remShadow == 'False':
     remShadow = 0
 elif remShadow == 'Remove all shadows':
@@ -145,7 +151,7 @@ elif remShadow == 'Remove only bank shadows':
 remShadow = int(remShadow)
 
 # Depth detection
-detectDep = values[34]
+detectDep = values[37]
 if detectDep == 'Sensor':
     detectDep = 0
 elif detectDep == 'Auto':
@@ -153,7 +159,7 @@ elif detectDep == 'Auto':
 detectDep = int(detectDep)
 
 # Map predictions
-map_predict = values[54]
+map_predict = values[57]
 if map_predict == 'False':
     map_predict = 0
 elif map_predict == 'Probability':
@@ -163,7 +169,7 @@ elif map_predict == 'Logit':
 map_predict = int(map_predict)
 
 # Sonar mosaic
-mosaic = values[57]
+mosaic = values[60]
 if mosaic == 'False':
     mosaic = 0
 elif mosaic == 'GTiff':
@@ -173,7 +179,7 @@ elif mosaic == 'VRT':
 mosaic = int(mosaic)
 
 # Substrate mosaic
-map_mosaic = values[59]
+map_mosaic = values[62]
 if map_mosaic == 'False':
     map_mosaic = 0
 elif map_mosaic == 'GTiff':
@@ -187,44 +193,44 @@ params = {
     # 'humFile':values[0],
     # 'projDir':os.path.join(values[1], values[2]),
     'aoi':aoi,
-    'project_mode':int(values[3]),
-    'tempC':float(values[5]),
-    'nchunk':int(values[6]),
-    'cropRange':float(values[7]),
-    'exportUnknown':values[8],
-    'fixNoDat':values[9],
-    'threadCnt':int(values[10]),
-    'pix_res_son':float(values[12]),
-    'pix_res_map':float(values[13]),
-    'x_offset':float(values[15]),
-    'y_offset':float(values[17]),
-    'egn':values[19],
+    'project_mode':int(values[6]),
+    'tempC':float(values[8]),
+    'nchunk':int(values[9]),
+    'cropRange':float(values[10]),
+    'exportUnknown':values[11],
+    'fixNoDat':values[12],
+    'threadCnt':int(values[13]),
+    'pix_res_son':float(values[15]),
+    'pix_res_map':float(values[16]),
+    'x_offset':float(values[18]),
+    'y_offset':float(values[20]),
+    'egn':values[22],
     'egn_stretch':egn_stretch,
-    'egn_stretch_factor':float(values[22]),
-    'wcp':values[24],
-    'wcr':values[25],
-    'tileFile':values[26],
+    'egn_stretch_factor':float(values[25]),
+    'wcp':values[27],
+    'wcr':values[28],
+    'tileFile':values[29],
     'lbl_set':lbl_set,
-    'spdCor':float(values[29]),
-    'maxCrop':values[31],
+    'spdCor':float(values[32]),
+    'maxCrop':values[34],
     'remShadow':remShadow,
     'detectDep':detectDep,
-    'smthDep':values[36],
-    'adjDep':float(values[38]),
-    'pltBedPick':values[40],
-    'rect_wcp':values[42],
-    'rect_wcr':values[33],
-    'son_colorMap':values[44],
-    'pred_sub':values[46],
-    'pltSubClass':values[48],
-    'map_sub':values[49],
-    'export_poly':values[51],
-    'map_class_method':values[53],
+    'smthDep':values[39],
+    'adjDep':float(values[41]),
+    'pltBedPick':values[43],
+    'rect_wcp':values[45],
+    'rect_wcr':values[46],
+    'son_colorMap':values[47],
+    'pred_sub':values[49],
+    'pltSubClass':values[51],
+    'map_sub':values[52],
+    'export_poly':values[54],
+    'map_class_method':values[56],
     'map_predict':map_predict,
-    'mosaic_nchunk':int(values[56]),
+    'mosaic_nchunk':int(values[59]),
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
-    'banklines':values[61]
+    'banklines':values[64]
 }
 
 globals().update(params)
@@ -257,6 +263,8 @@ for datFile in inFiles:
         recName = os.path.basename(humFile).split('.')[0]
         sonPath = humFile.split('.DAT')[0]
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+
+        recName = values[3] + recName + values[5]
 
         projDir = os.path.join(outDir, recName)
 
