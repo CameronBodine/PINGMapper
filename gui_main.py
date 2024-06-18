@@ -199,7 +199,7 @@ params = {
     'pix_res_map':float(values[14]),
     'x_offset':float(values[16]),
     'y_offset':float(values[18]),
-    'egn':values[21],
+    'egn':values[20],
     'egn_stretch':egn_stretch,
     'egn_stretch_factor':float(values[23]),
     'wcp':values[25],
