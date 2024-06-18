@@ -1036,10 +1036,10 @@ class rectObj(sonObj):
         df1 = pd.read_csv(covFiles[0])
         df2 = pd.read_csv(covFiles[1])
 
-        # Filter
-        if filt > 0:
-            df1 = df1[::filt]
-            df2 = df2[::filt]
+        # # Filter
+        # if filt > 0:
+        #     df1 = df1[::filt]
+        #     df2 = df2[::filt]
 
         dfs = [df1, df2]
 
@@ -1050,6 +1050,13 @@ class rectObj(sonObj):
                 # Get chunk
                 isChunk = df['chunk_id'] == chunk
                 df = df[isChunk].reset_index()
+
+                # Get last row
+                dfLast = df.iloc[-1]
+
+                if filt > 0:
+                    df = df[::filt]
+                    df = pd.concat([df, dfLast])
 
                 if 'lat_list' not in locals():
                     lat_list = df[yRange].tolist()
@@ -1066,8 +1073,8 @@ class rectObj(sonObj):
             del lat_list, lon_list
 
             # Do buffer to help fix geometry issues
-            chunk_geom['geometry'] = chunk_geom.buffer(10)
-            chunk_geom['geometry'] = chunk_geom.buffer(-9)
+            chunk_geom['geometry'] = chunk_geom.buffer(10, join_style=2)
+            chunk_geom['geometry'] = chunk_geom.buffer(-10, join_style=2)
 
 
             # Append to final geodataframe
@@ -1079,12 +1086,16 @@ class rectObj(sonObj):
 
         gdf['chunk_id'] = gdf.index
 
+        gdf['geometry'] = gdf.buffer(10, join_style=2)
+
         if dissolve:
             try:
                 gdf = gdf.dissolve()
             except:
                 gdf = gdf.loc[gdf.geometry.is_valid]
                 gdf = gdf.dissolve()
+
+        gdf['geometry'] = gdf.buffer(-10, join_style=2)
 
         # Save to shapefile
         projName = os.path.basename(self.projDir)

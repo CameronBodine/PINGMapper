@@ -966,16 +966,17 @@ def read_master_func(logfilename='',
         aoi_poly = aoi_poly.dissolve()
 
         # Buffer aoi
-        buf_dist = 0.5
-        aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
+        if os.path.basename(aoi.split('.')[-1]) == 'plan': 
+            buf_dist = 0.5
+            aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
 
         # Save aoi
         aoi_dir = os.path.join(sonObjs[0].projDir, 'aoi')
-        projName = os.path.basename(sonObjs[0].projDir) + '.shp'
+        aoiOut = os.path.basename(sonObjs[0].projDir) + '_aoi.shp'
         if not os.path.exists(aoi_dir):
             os.makedirs(aoi_dir)
 
-        aoiOut = os.path.join(aoi_dir, projName)
+        aoiOut = os.path.join(aoi_dir, aoiOut)
         aoi_poly.to_file(aoiOut)
 
         # Iterate each son file, clip with aoi, and save
