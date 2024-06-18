@@ -26,11 +26,11 @@ layout = [
     [sg.Text('Recording to Process')],
     # [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("DAT File", "*.DAT"),), initial_folder=test)],
     [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("DAT File", "*.DAT"),))],
-    [sg.Submit(), sg.Quit(), sg.Button('Save Defaults')]
+    [sg.Submit(), sg.Quit()]
     ]
 
 layout2 =[[sg.Column(layout, size_subsample_height=2)]]
-window = sg.Window('Process Single Humminbird Sonar Recording', layout2, resizable=True)
+window = sg.Window('Generate Recording Coverage', layout2, resizable=True)
 
 while True:
     event, values = window.read()
