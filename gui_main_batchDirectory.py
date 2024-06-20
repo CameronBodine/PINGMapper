@@ -32,60 +32,62 @@ with open(default_params_file) as f:
 
 layout = [
     [sg.Text('Parent Folder of Recordings to Process')],
-    [sg.In(size=(80,1)), sg.FolderBrowse()],
+    [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse()],
     [sg.Text('AOI')],
-    [sg.In(size=(80,1)), sg.FileBrowse(file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
+    [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
     [sg.Text('Output Folder')],
-    [sg.In(size=(80,1)), sg.FolderBrowse()],
-    [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(default_params['prefix'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(default_params['suffix'], size=(10,1))],
+    [sg.In(size=(80,1)), sg.FolderBrowse(key='proj')],
+    [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(key='prefix', size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(key='suffix', size=(10,1))],
     # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
-    [sg.Checkbox('Overwrite Existing Project', default=default_params['project_mode'])],
+    [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
     [sg.HorizontalSeparator()],
     [sg.Text('General Parameters')],
-    [sg.Text('Temperature [C]', size=(20,1)), sg.Input(default_params['tempC'], size=(10,1))],
-    [sg.Text('Chunk Size', size=(20,1)), sg.Input(default_params['nchunk'], size=(10,1))],
-    [sg.Text('Crop Range [m]', size=(20,1)), sg.Input(default_params['cropRange'], size=(10,1))],
-    [sg.Checkbox('Export Unknown Ping Attributes', default=default_params['exportUnknown'])],
-    [sg.Checkbox('Locate and flag missing pings', default=default_params['fixNoDat'])],
-    [sg.Text('Thread Count [0==All Threads]', size=(30,1)), sg.Input(default_params['threadCnt'], size=(10,1))],
+    [sg.Text('Temperature [C]', size=(20,1)), sg.Input(key='tempC', default_text=default_params['tempC'], size=(10,1))],
+    [sg.Text('Chunk Size', size=(20,1)), sg.Input(key='nchunk', default_text=default_params['nchunk'], size=(10,1))],
+    [sg.Text('Crop Range [m]', size=(20,1)), sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1))],
+    [sg.Checkbox('Export Unknown Ping Attributes', key='exportUnknown', default=default_params['exportUnknown'])],
+    [sg.Checkbox('Locate and flag missing pings', key='fixNoDat', default=default_params['fixNoDat'])],
+    [sg.Text('Thread Count [0==All Threads]', size=(30,1)), sg.Input(key='threadCnt', default_text=default_params['threadCnt'], size=(10,1))],
     [sg.HorizontalSeparator()],
     [sg.Text('GeoTiff Pixel Resolution [0==Default Resolution (~0.02m)]')],
-    [sg.Text('Sonar', size=(10,1)), sg.Input(default_params['pix_res_son'], size=(10,1)), sg.Text('Substrate', size=(10,1)), sg.Input(default_params['pix_res_map'], size=(10,1))],
+    [sg.Text('Sonar', size=(10,1)), sg.Input(key='pix_res_son', default_text=default_params['pix_res_son'], size=(10,1)), sg.Text('Substrate', size=(10,1)), sg.Input(key='pix_res_map', default_text=default_params['pix_res_map'], size=(10,1))],
     [sg.HorizontalSeparator()],
     [sg.Text('Position Corrections')],
-    [sg.Text('Transducer Offset [X]:', size=(22,1)), sg.Input(default_params['x_offset'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Transducer Offset [Y]:', size=(22,1)), sg.Input(default_params['y_offset'], size=(10,1))],
+    [sg.Text('Transducer Offset [X]:', size=(22,1)), sg.Input(key='x_offset', default_text=default_params['x_offset'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Transducer Offset [Y]:', size=(22,1)), sg.Input(key='y_offset', default_text=default_params['y_offset'], size=(10,1))],
     [sg.HorizontalSeparator()],
     [sg.Text('Sonar Intensity Corrections')],
-    [sg.Checkbox('Empiracal Gain Normalization (EGN)', default=default_params['egn'])],
-    [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['None', 'Min-Max', 'Percent Clip'], default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(default_params['egn_stretch_factor'], size=(10,1))],
+    [sg.Checkbox('Empiracal Gain Normalization (EGN)', key='egn', default=default_params['egn'])],
+    [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['None', 'Min-Max', 'Percent Clip'], key='egn_stretch', default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(key='egn_stretch_factor', default_text=default_params['egn_stretch_factor'], size=(10,1))],
     [sg.HorizontalSeparator()],
     [sg.Text('Sonagram Tile Exports')],
-    [sg.Checkbox('WCP', default=default_params['wcp']), sg.Checkbox('WCR', default=default_params['wcr']), sg.Text('Image Format:', size=(12,1)), sg.Combo(['.jpg', '.png'], default_value=default_params['tileFile'])],
+    [sg.Checkbox('WCP', key='wcp', default=default_params['wcp']), sg.Checkbox('WCR', key='wcr', default=default_params['wcr']), sg.Text('Image Format:', size=(12,1)), sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Speed Corrected Sonagram Exports')],
-    [sg.Text('Export Sonograms', size=(20,1)), sg.Combo(['False', 'True: Keep WC & Shadows', 'True: Mask WC & Shadows'], default_value=default_params['lbl_set'])],
-    [sg.Text('Speed Correction', size=(20,1)), sg.Input(default_params['spdCor'], size=(10,1)), sg.VerticalSeparator(), sg.Checkbox('Max Crop', default=default_params['maxCrop'])],
+    [sg.Text('Export Sonograms', size=(20,1)), sg.Combo(['False', 'True: Keep WC & Shadows', 'True: Mask WC & Shadows'], key='lbl_set', default_value=default_params['lbl_set'])],
+    [sg.Text('Speed Correction', size=(20,1)), sg.Input(key='spdCor', default_text=default_params['spdCor'], size=(10,1)), sg.VerticalSeparator(), sg.Checkbox('Max Crop', key='maxCrop', default=default_params['maxCrop'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Depth Detection and Shadow Removal')],
-    [sg.Text('Shadow Removal', size=(20,1)), sg.Combo(['False', 'Remove all shadows', 'Remove only bank shadows'], default_value=default_params['remShadow'])],
-    [sg.Text('Depth Detection', size=(20,1)), sg.Combo(['Sensor', 'Auto'], default_value=default_params['detectDep']), sg.VerticalSeparator(), sg.Checkbox('Smooth Depth', default=default_params['smthDep']), sg.VerticalSeparator(), sg.Text('Adjust Depth [m]'), sg.Input(default_params['adjDep'], size=(10,1)), sg.VerticalSeparator(()), sg.Checkbox('Plot Bedpick', default=default_params['pltBedPick'])],
+    [sg.Text('Shadow Removal', size=(20,1)), sg.Combo(['False', 'Remove all shadows', 'Remove only bank shadows'], key='remShadow', default_value=default_params['remShadow'])],
+    [sg.Text('Depth Detection', size=(20,1)), sg.Combo(['Sensor', 'Auto'], key='detectDep', default_value=default_params['detectDep']), sg.VerticalSeparator(), sg.Checkbox('Smooth Depth', key='smthDep', default=default_params['smthDep']), sg.VerticalSeparator(), sg.Text('Adjust Depth [m]'), sg.Input(key='adjDep', default_text=default_params['adjDep'], size=(10,1)), sg.VerticalSeparator(()), sg.Checkbox('Plot Bedpick', key='pltBedPick', default=default_params['pltBedPick'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Sonar Georectification Exports')],
-    [sg.Checkbox('WCP', default=default_params['rect_wcp']), sg.Checkbox('WCR', default=default_params['rect_wcr']), sg.Text('Sonar Colormap'), sg.Combo(plt.colormaps(), default_value=default_params['son_colorMap'])],
+    [sg.Checkbox('WCP', key='rect_wcp', default=default_params['rect_wcp']), sg.Checkbox('WCR', key='rect_wcr', default=default_params['rect_wcr']), sg.Text('Sonar Colormap'), sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Substrate Mapping')],
-    [sg.Checkbox('Predict Substrate', default=default_params['pred_sub']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', default=default_params['pltSubClass'])],
-    [sg.Checkbox('Map Substrate [Raster]', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Text('Classification Method'), sg.Combo(['max'], default_value=default_params['map_class_method'])],
-    [sg.Text('Map Predictions', size=(20,1)), sg.Combo(['False', 'Logit', 'Probability'], default_value=default_params['map_predict'])],
+    # [sg.Checkbox('Predict Substrate', key='pred_sub', default=default_params['pred_sub']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
+    # [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Text('Classification Method'), sg.Combo(['max'], key='map_class_method', default_value=default_params['map_class_method'])],
+    # [sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
+    # [sg.Text('Map Predictions', size=(20,1)), sg.Combo(['False', 'Logit', 'Probability'], key='map_predict', default_value=default_params['map_predict'])],
+    [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Mosaic Exports')],
-    [sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(default_params['mosaic_nchunk'], size=(10,1))],
-    [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], default_value=default_params['map_mosaic'])],
+    [sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1))],
+    [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='map_mosaic', default_value=default_params['map_mosaic'])],
     [sg.HorizontalSeparator()],
     [sg.Text('Miscellaneous Exports')],
-    [sg.Checkbox('Banklines', default=default_params['banklines'])],
+    [sg.Checkbox('Banklines', key='banklines', default=default_params['banklines'])],
     [sg.HorizontalSeparator()],
-    [sg.Submit(), sg.Quit()]
+    [sg.Submit(), sg.Quit(), sg.Button('Save Defaults')]
 ]
 
 
@@ -109,19 +111,19 @@ for k, v in values.items():
 
 # sys.exit()
 
-inDir = values[0]
-outDir = values[2]
+inDir = values['inDir']
+outDir = values['proj']
 
 #################################
 # Convert parameters if necessary
 
 # AOI
-aoi = values[1]
+aoi = values['aoi']
 if aoi == '':
     aoi = False
 
 # EGN Stretch
-egn_stretch = values[23]
+egn_stretch = values['egn_stretch']
 if egn_stretch == 'None':
     egn_stretch = 0
 elif egn_stretch == 'Min-Max':
@@ -131,7 +133,7 @@ elif egn_stretch == 'Percent Clip':
 egn_stretch = int(egn_stretch)
 
 # Speed Corrected Sonograms
-lbl_set = values[31]
+lbl_set = values['lbl_set']
 if lbl_set == 'False':
     lbl_set = 0
 elif lbl_set == 'True: Keep WC & Shadows':
@@ -141,7 +143,7 @@ elif lbl_set == 'True: Mask WC & Shadows':
 lbl_set = int(lbl_set)
 
 # Shadow removal
-remShadow = values[36]
+remShadow = values['remShadow']
 if remShadow == 'False':
     remShadow = 0
 elif remShadow == 'Remove all shadows':
@@ -151,35 +153,50 @@ elif remShadow == 'Remove only bank shadows':
 remShadow = int(remShadow)
 
 # Depth detection
-detectDep = values[37]
+detectDep = values['detectDep']
 if detectDep == 'Sensor':
     detectDep = 0
 elif detectDep == 'Auto':
     detectDep = 1
 detectDep = int(detectDep)
 
-# Map predictions
-map_predict = values[57]
-if map_predict == 'False':
-    map_predict = 0
-elif map_predict == 'Probability':
-    map_predict = 1
-elif map_predict == 'Logit':
-    map_predict = 2
-map_predict = int(map_predict)
+# Predict substrate
+if values['map_sub']:
+    values['pred_sub'] = True
+elif values['export_poly']:
+    values['pred_sub'] = True
+    values['map_sub'] = True
+elif values['pltSubClass']:
+    values['pred_sub'] = True
+else:
+    values['pred_sub'] = False
+
+# Map class method
+values['map_class_method'] = 'max'
+
+# Map predictions #### DISABLED ####
+# map_predict = values['map_predict']
+# if map_predict == 'False':
+#     map_predict = 0
+# elif map_predict == 'Probability':
+#     map_predict = 1
+# elif map_predict == 'Logit':
+#     map_predict = 2
+# map_predict = int(map_predict)
+map_predict = 0 # Disable workflow
 
 # Sonar mosaic
-mosaic = values[60]
+mosaic = values['mosaic']
 if mosaic == 'False':
-    mosaic = 0
+    mosaic = int(0)
 elif mosaic == 'GTiff':
-    mosaic = 1
+    mosaic = int(1)
 elif mosaic == 'VRT':
-    mosaic = 2
+    mosaic = int(2)
 mosaic = int(mosaic)
 
 # Substrate mosaic
-map_mosaic = values[62]
+map_mosaic = values['map_mosaic']
 if map_mosaic == 'False':
     map_mosaic = 0
 elif map_mosaic == 'GTiff':
@@ -193,44 +210,44 @@ params = {
     # 'humFile':values[0],
     # 'projDir':os.path.join(values[1], values[2]),
     'aoi':aoi,
-    'project_mode':int(values[6]),
-    'tempC':float(values[8]),
-    'nchunk':int(values[9]),
-    'cropRange':float(values[10]),
-    'exportUnknown':values[11],
-    'fixNoDat':values[12],
-    'threadCnt':int(values[13]),
-    'pix_res_son':float(values[15]),
-    'pix_res_map':float(values[16]),
-    'x_offset':float(values[18]),
-    'y_offset':float(values[20]),
-    'egn':values[22],
+    'project_mode':int(values['project_mode']),
+    'tempC':float(values['tempC']),
+    'nchunk':int(values['nchunk']),
+    'cropRange':float(values['cropRange']),
+    'exportUnknown':values['exportUnknown'],
+    'fixNoDat':values['fixNoDat'],
+    'threadCnt':int(values['threadCnt']),
+    'pix_res_son':float(values['pix_res_son']),
+    'pix_res_map':float(values['pix_res_map']),
+    'x_offset':float(values['x_offset']),
+    'y_offset':float(values['y_offset']),
+    'egn':values['egn'],
     'egn_stretch':egn_stretch,
-    'egn_stretch_factor':float(values[25]),
-    'wcp':values[27],
-    'wcr':values[28],
-    'tileFile':values[29],
+    'egn_stretch_factor':float(values['egn_stretch_factor']),
+    'wcp':values['wcp'],
+    'wcr':values['wcr'],
+    'tileFile':values['tileFile'],
     'lbl_set':lbl_set,
-    'spdCor':float(values[32]),
-    'maxCrop':values[34],
+    'spdCor':float(values['spdCor']),
+    'maxCrop':values['maxCrop'],
     'remShadow':remShadow,
     'detectDep':detectDep,
-    'smthDep':values[39],
-    'adjDep':float(values[41]),
-    'pltBedPick':values[43],
-    'rect_wcp':values[45],
-    'rect_wcr':values[46],
-    'son_colorMap':values[47],
-    'pred_sub':values[49],
-    'pltSubClass':values[51],
-    'map_sub':values[52],
-    'export_poly':values[54],
-    'map_class_method':values[56],
+    'smthDep':values['smthDep'],
+    'adjDep':float(values['adjDep']),
+    'pltBedPick':values['pltBedPick'],
+    'rect_wcp':values['rect_wcp'],
+    'rect_wcr':values['rect_wcr'],
+    'son_colorMap':values['son_colorMap'],
+    'pred_sub':values['pred_sub'],
+    'pltSubClass':values['pltSubClass'],
+    'map_sub':values['map_sub'],
+    'export_poly':values['export_poly'],
+    'map_class_method':values['map_class_method'],
     'map_predict':map_predict,
-    'mosaic_nchunk':int(values[59]),
+    'mosaic_nchunk':int(values['mosaic_nchunk']),
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
-    'banklines':values[64]
+    'banklines':values['banklines']
 }
 
 globals().update(params)
@@ -264,7 +281,7 @@ for datFile in inFiles:
         sonPath = humFile.split('.DAT')[0]
         sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
 
-        recName = values[3] + recName + values[5]
+        recName = values['prefix'] + recName + values['suffix']
 
         projDir = os.path.join(outDir, recName)
 
