@@ -348,7 +348,8 @@ class portstarObj(object):
                       overview=True,
                       threadCnt=cpu_count(),
                       son=True,
-                      maxChunk = 50):
+                      maxChunk = 50,
+                      cog=True):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -384,6 +385,13 @@ class portstarObj(object):
         # maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
+        if cog:
+            chunkField = 'chunk_id'
+        else:
+            chunkField = 'chunk_id_2'
+
+        print(chunkField)
+
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
                 self.port._loadSonMeta()
@@ -393,7 +401,7 @@ class portstarObj(object):
 
                 port = []
                 for name, group in df.groupby('transect'):
-                    chunks = pd.unique(group['chunk_id'])
+                    chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
                         img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
@@ -408,7 +416,7 @@ class portstarObj(object):
 
                 star = []
                 for name, group in df.groupby('transect'):
-                    chunks = pd.unique(group['chunk_id'])
+                    chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
                         img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
@@ -427,12 +435,15 @@ class portstarObj(object):
 
                 port = []
                 for name, group in df.groupby('transect'):
-                    chunks = pd.unique(group['chunk_id'])
+                    chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
-                        img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
-                        img = glob(img_path)[0]
-                        port_transect.append(img)
+                        try:
+                            img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
+                            img = glob(img_path)[0]
+                            port_transect.append(img)
+                        except:
+                            pass
                     port.append(port_transect)
 
                 self.star._loadSonMeta()
@@ -442,12 +453,15 @@ class portstarObj(object):
 
                 star = []
                 for name, group in df.groupby('transect'):
-                    chunks = pd.unique(group['chunk_id'])
+                    chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
-                        img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
-                        img = glob(img_path)[0]
-                        star_transect.append(img)
+                        try:
+                            img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
+                            img = glob(img_path)[0]
+                            star_transect.append(img)
+                        except:
+                            pass
                     star.append(star_transect)
 
                 srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]

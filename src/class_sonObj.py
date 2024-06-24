@@ -1909,6 +1909,7 @@ class sonObj(object):
     # ======================================================================
     def _getScanChunkSingle(self,
                             chunk,
+                            cog=True,
                             filterIntensity = False,
                             remWater = False):
         '''
@@ -1946,7 +1947,11 @@ class sonObj(object):
         sonMetaAll = pd.read_csv(self.sonMetaFile)
 
         # Filter df by chunk
-        isChunk = sonMetaAll['chunk_id']==chunk
+        if cog:
+            isChunk = sonMetaAll['chunk_id']==chunk
+        else:
+            isChunk = sonMetaAll['chunk_id_2']==chunk
+            isChunk.iloc[chunk+1] = True
         sonMeta = sonMetaAll[isChunk].reset_index()
 
         # Update class attributes based on current chunk
@@ -1991,6 +1996,29 @@ class sonObj(object):
         # Get unique chunk id's
         df = self.sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
         chunks = pd.unique(df['chunk_id']).astype(int)
+
+        del self.sonMetaDF, df
+        return chunks
+    
+    # ======================================================================
+    def _getChunkID_Update(self):
+        '''
+        Utility to load unique chunk ID's from son obj and return in a list
+        '''
+
+        # Load son metadata csv to df
+        self._loadSonMeta()
+
+        # # Get unique chunk id's
+        # df = self.sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+        # chunks = pd.unique(df['chunk_id']).astype(int)
+
+        # Use index as chunk id
+        df = self.sonMetaDF
+        chunks = df.index.values.astype(int)
+
+        df['chunk_id_2'] = chunks
+        self._saveSonMetaCSV(df)
 
         del self.sonMetaDF, df
         return chunks

@@ -70,6 +70,7 @@ def rectify_master_func(logfilename='',
                         smthDep=0,
                         adjDep=0,
                         pltBedPick=False,
+                        cog=False,
                         rect_wcp=False,
                         rect_wcr=False,
                         son_colorMap='Greys',
@@ -354,9 +355,14 @@ def rectify_master_func(logfilename='',
         ############################################################################
         # Calculate range extent coordinates                                       #
         ############################################################################
+        # cog=True
+
         start_time = time.time()
-        print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange) for son in portstar)
+        if cog:
+            print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+        else:
+            print("\nCalculating range extent coordinates from vessel heading...")
+        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()
@@ -406,7 +412,11 @@ def rectify_master_func(logfilename='',
             son.outDir = os.path.join(son.projDir, son.beamName)
 
             # Get chunk id's
-            chunks = son._getChunkID()
+            if cog:
+                chunks = son._getChunkID()
+            else:
+                chunks = son._getChunkID_Update()
+                chunks = chunks[:-1]
 
             # Load sonMetaDF
             son._loadSonMeta()
@@ -416,9 +426,9 @@ def rectify_master_func(logfilename='',
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             # for i in chunks:
-            #     son._rectSonParallel(i, filter, wgs=False)
+            #     son._rectSonParallel(i, filter, cog, wgs=False)
             #     sys.exit()
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, cog, wgs=False) for i in chunks)
             son._cleanup()
             gc.collect()
             printUsage()
@@ -457,7 +467,7 @@ def rectify_master_func(logfilename='',
         if not aoi:
             psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
         else:
-            psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
+            psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj

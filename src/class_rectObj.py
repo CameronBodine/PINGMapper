@@ -447,7 +447,8 @@ class rectObj(sonObj):
     #===========================================
     def _getRangeCoords(self,
                         flip = False,
-                        filt = 25):
+                        filt = 25,
+                        cog = True):
         '''
         Humminbird SSS store one set geographic coordinates where each ping
         orriginates from (assuming GPS is located directly above sonar transducer).
@@ -520,7 +521,7 @@ class rectObj(sonObj):
             rotate *= -1
 
         # Calculate ping bearing and normalize to range 0-360
-        cog = True
+        # cog = False
         if cog:
             sDF[ping_bearing] = (sDF['cog']+rotate) % 360
         else:
@@ -586,7 +587,20 @@ class rectObj(sonObj):
 
         ##########################################
         # Smooth and interpolate range coordinates
-        self._interpRangeCoords(filt)
+        if cog:
+            self._interpRangeCoords(filt)
+        else:
+            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n']].copy()
+            sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog', 'range_lat':'range_lats', 'range_lon':'range_lons', 'range_e':'range_es', 'range_n':'range_ns'}, inplace=True)
+            sDF['chunk_id_2'] = sDF.index.astype(int)
+
+            ###########################################
+            # Overwrite Trackline_Smth_son.beamName.csv
+            # outCSV = os.path.join(self.metaDir, "Trackline_Smth_"+self.beamName+".csv")
+            outCSV = self.smthTrkFile
+            sDF.to_csv(outCSV, index=True, float_format='%.14f')
+
+        # sys.exit()
         gc.collect()
         self._pickleSon()
         return #self
@@ -1122,6 +1136,7 @@ class rectObj(sonObj):
     def _rectSonParallel(self,
                          chunk,
                          filt=50,
+                         cog=True,
                          wgs=False,
                          son=True):
         '''
@@ -1209,7 +1224,14 @@ class rectObj(sonObj):
             self._loadSonMeta()
 
         sonMetaAll = self.sonMetaDF
-        isChunk = sonMetaAll['chunk_id']==chunk
+        if cog:
+            isChunk = sonMetaAll['chunk_id']==chunk
+        else:
+            isChunk = sonMetaAll['chunk_id_2']==chunk
+            # next = sonMetaAll['chunk_id_2']==(chunk+1)
+            # isChunk = pd.concat([isChunk, next], ignore_index=True)
+            isChunk.iloc[chunk+1] = True
+
         sonMeta = sonMetaAll[isChunk].reset_index()
 
         # Update class attributes based on current chunk
@@ -1219,7 +1241,7 @@ class rectObj(sonObj):
 
         if son:
             # Open image to rectify
-            self._getScanChunkSingle(chunk)
+            self._getScanChunkSingle(chunk, cog)
         else:
             # Rectifying substrate classification
             pass
@@ -1234,6 +1256,9 @@ class rectObj(sonObj):
             del self.shadowMask
 
         img = self.sonDat
+        # if not cog:
+        #     # Zero out second ping
+        #     img[:,1] = 0
 
         # For each ping, we need the pixel coordinates where the sonar
         ## originates on the trackline, and where it terminates based on the
@@ -1248,9 +1273,12 @@ class rectObj(sonObj):
         # Create mask for filtering array. This makes fitting PiecewiseAffineTransform
         ## more efficient
         mask = np.zeros(len(pixAll), dtype=bool) # Create mask same size as pixAll
-        mask[0::filt] = 1 # Filter row coordinates
-        mask[1::filt] = 1 # Filter column coordinates
-        mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
+        if cog:
+            mask[0::filt] = 1 # Filter row coordinates
+            mask[1::filt] = 1 # Filter column coordinates
+            mask[-2], mask[-1] = 1, 1 # Make sure we keep last row/col coordinates
+        else:
+            mask[:] = 1
 
         # Filter pix
         pix = pixAll[mask]
@@ -1262,7 +1290,16 @@ class rectObj(sonObj):
 
         # Open smoothed trackline/range extent file
         trkMeta = pd.read_csv(trkMetaFile)
-        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        if cog:
+            trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        else:
+            # trkMeta = trkMeta[trkMeta['chunk_id_2']==chunk].reset_index(drop=False)
+            # next = trkMeta[trkMeta['chunk_id_2']==chunk+1].reset_index(drop=False)
+            # trkMeta = pd.concat([trkMeta, next], ignore_index=True)
+            isChunk = trkMeta['chunk_id_2']==chunk
+            isChunk.iloc[chunk+1] = True
+            trkMeta = trkMeta[isChunk].reset_index(drop=False)
+
         pix_m = self.pixM # Get pixel size
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
