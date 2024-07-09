@@ -82,7 +82,10 @@ There are several ways you can find out more about `PING-Mapper`. The first of w
 
 
 ### PING-Mapper v2.0.0
-The second version of PING-Mapper is available now. Scientific articles documenting the new functionality will be posted here when available. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
+The second version of PING-Mapper is available now, including automated substrate mapping. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
+
+#### Journal Article
+ Bodine, C. S., Buscombe, D., & Hocking, T. D. (2024). Automated river substrate mapping from sonar imagery with machine learning. Journal of Geophysical Research: Machine Learning and Computation, 1, e2024JH000135. [https://doi.org/10.1029/2024JH000135](https://doi.org/10.1029/2024JH000135) 
 
 #### Preprint
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5K402-%23FF7F2A)](https://doi.org/10.31223/X5K402)
@@ -98,7 +101,7 @@ The second version of PING-Mapper is available now. Scientific articles document
 
 
 ### PING-Mapper v1.0.0
-An overview of `PING-Mapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use `PING-Mapper` for your work, please cite the article!
+An overview of `PING-Mapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal.
 
 #### Journal Article
 Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
