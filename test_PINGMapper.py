@@ -191,7 +191,7 @@ map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 
 
 # Miscellaneous Exports
-banklines = True # Export banklines from sonar imagery
+banklines = False # Export banklines from sonar imagery
 
 
 #################

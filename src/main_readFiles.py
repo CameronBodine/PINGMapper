@@ -512,7 +512,7 @@ def read_master_func(logfilename='',
 
         # Get metadata for each beam in parallel.
         if len(toProcess) > 0:
-            # r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+            r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
                 son.pixM = pix_m # Sonar instrument pixel resolution
