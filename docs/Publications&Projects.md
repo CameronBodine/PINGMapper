@@ -14,6 +14,8 @@ The page lists all publications about PING-Mapper, all known publications that u
 
 - Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
 
+- Bodine, C. S., Buscombe, D., & Hocking, T. D. (2024). Automated river substrate mapping from sonar imagery with machine learning. Journal of Geophysical Research: Machine Learning and Computation, 1, e2024JH000135. [https://doi.org/10.1029/2024JH000135](https://doi.org/10.1029/2024JH000135) 
+
 ## Publications that Use the Software
 
 - Biber, P., Oguntuase, J., Raber, G., & Waldron, M. (2023). Assessing the Effectiveness of Seagrass Detection Using Drone and Sonar Based Methods. OCEANS 2023 - MTS/IEEE U.S. Gulf Coast, 1–6. [https://doi.org/10.23919/OCEANS52994.2023.10337091](https://doi.org/10.23919/OCEANS52994.2023.10337091)
