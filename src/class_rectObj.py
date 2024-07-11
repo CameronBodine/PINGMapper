@@ -38,7 +38,7 @@ from rasterio.enums import Resampling
 from PIL import Image
 from shapely.geometry import Polygon
 
-from matplotlib import cm    
+from matplotlib import colormaps    
 
 class rectObj(sonObj):
     '''
@@ -1562,10 +1562,10 @@ class rectObj(sonObj):
 
         son_colorMap = {}
         try:
-            color = cm.get_cmap(name, 256)            
+            color = colormaps.get_cmap(name)            
         except:
             print('****WARNING*****\n', name, 'is not a valid colormap.\nSetting to Greys...')
-            color = cm.get_cmap('Greys_r', 256)
+            color = colormaps.get_cmap('Greys_r')
 
         # need to get values for 0-255 but test_color in 0-1
         color = color(np.linspace(0, 1, 256))
