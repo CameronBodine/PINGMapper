@@ -404,7 +404,8 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
-                        img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
+                        zero = self._addZero(chunk)
+                        img_path = os.path.join(portPath, '*{}{}.tif'.format(zero, chunk))
                         img = glob(img_path)[0]
                         port_transect.append(img)
                     port.append(port_transect)
@@ -419,7 +420,8 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
-                        img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
+                        zero = self._addZero(chunk)
+                        img_path = os.path.join(portPath, '*{}{}.tif'.format(zero, chunk))
                         img = glob(img_path)[0]
                         star_transect.append(img)
                     star.append(star_transect)
@@ -438,12 +440,14 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
-                        try:
-                            img_path = os.path.join(portPath, '*{}.tif'.format(chunk))
-                            img = glob(img_path)[0]
-                            port_transect.append(img)
-                        except:
-                            pass
+                        # try:
+                        zero = self.port._addZero(chunk)
+                        img_path = os.path.join(portPath, '*{}{}.tif'.format(zero, chunk))
+                        img = glob(img_path)[0]
+                        print(img_path, img)
+                        port_transect.append(img)
+                        # except:
+                        #     pass
                     port.append(port_transect)
 
                 self.star._loadSonMeta()
@@ -456,12 +460,13 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
-                        try:
-                            img_path = os.path.join(starPath, '*{}.tif'.format(chunk))
-                            img = glob(img_path)[0]
-                            star_transect.append(img)
-                        except:
-                            pass
+                        # try:
+                        zero = self.star._addZero(chunk)
+                        img_path = os.path.join(portPath, '*{}{}.tif'.format(zero, chunk))
+                        img = glob(img_path)[0]
+                        star_transect.append(img)
+                        # except:
+                        #     pass
                     star.append(star_transect)
 
                 srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
