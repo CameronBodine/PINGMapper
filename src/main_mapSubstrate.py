@@ -29,7 +29,6 @@
 
 from funcs_common import *
 
-from class_rectObj import rectObj
 from class_mapSubstrateObj import mapSubObj
 from class_portstarObj import portstarObj
 from funcs_model import *
