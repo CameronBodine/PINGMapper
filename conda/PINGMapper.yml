@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - python==3.11.*
-  - numpy<2.0
+  - numpy
   - git
   - pandas
   - geopandas
@@ -22,4 +22,4 @@ dependencies:
       - tensorflow
       - tf-keras
       - transformers
-      - pysimplegui==4.60.5
+      - pysimplegui == 5.0.*
