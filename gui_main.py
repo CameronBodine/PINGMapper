@@ -35,12 +35,12 @@ with open(default_params_file) as f:
 
 layout = [
     [sg.Text('Recording to Process')],
-    [sg.In(size=(80,1)), sg.FileBrowse(key='humFile', file_types=(("DAT File", "*.DAT"),))],
+    [sg.In(size=(80,1)), sg.FileBrowse(key='humFile', file_types=(("DAT File", "*.DAT"), ), initial_folder=os.path.dirname(default_params['humFile']))],
     [sg.Text('AOI')],
-    [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
+    [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))],
     [sg.Text('Output Folder')],
-    [sg.In(size=(80,1)), sg.FolderBrowse(key='proj')],
-    [sg.Text('Project Name', size=(15,1)), sg.InputText(key='projName', size=(50,1))],
+    [sg.In(size=(80,1)), sg.FolderBrowse(key='proj', initial_folder=os.path.dirname(default_params['projDir']))],
+    [sg.Text('Project Name', size=(15,1)), sg.InputText(key='projName', size=(50,1), default_text=os.path.basename(default_params['projDir']))],
     [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
     [sg.HorizontalSeparator()],
     [sg.Text('General Parameters')],

@@ -225,46 +225,120 @@ def downloadSegmentationModelsv1_0(modelDir):
 
 # =========================================================
 def saveDefaultParams(values):
+
+    # # AOI
+    # aoi = values['aoi']
+    # if aoi == '':
+    #     aoi = False
+
+    # # EGN Stretch
+    # egn_stretch = values['egn_stretch']
+    # if egn_stretch == 'None':
+    #     egn_stretch = 0
+    # elif egn_stretch == 'Min-Max':
+    #     egn_stretch = 1
+    # elif egn_stretch == 'Percent Clip':
+    #     egn_stretch = 2
+    # egn_stretch = int(egn_stretch)
+
+    # # Speed Corrected Sonograms
+    # lbl_set = values['lbl_set']
+    # if lbl_set == 'False':
+    #     lbl_set = 0
+    # elif lbl_set == 'True: Keep WC & Shadows':
+    #     lbl_set = 1
+    # elif lbl_set == 'True: Mask WC & Shadows':
+    #     lbl_set = 2
+    # lbl_set = int(lbl_set)
+
+    # # Shadow removal
+    # remShadow = values['remShadow']
+    # if remShadow == 'False':
+    #     remShadow = 0
+    # elif remShadow == 'Remove all shadows':
+    #     remShadow = 1
+    # elif remShadow == 'Remove only bank shadows':
+    #     remShadow = 2
+    # remShadow = int(remShadow)
+
+    # # Depth detection
+    # detectDep = values['detectDep']
+    # if detectDep == 'Sensor':
+    #     detectDep = 0
+    # elif detectDep == 'Auto':
+    #     detectDep = 1
+    # detectDep = int(detectDep)
+
+    # # Predict substrate
+    # if values['map_sub']:
+    #     values['pred_sub'] = True
+    # elif values['export_poly']:
+    #     values['pred_sub'] = True
+    #     values['map_sub'] = True
+    # elif values['pltSubClass']:
+    #     values['pred_sub'] = True
+    # else:
+    #     values['pred_sub'] = False
+
+    # # Sonar mosaic
+    # mosaic = values['mosaic']
+    # if mosaic == 'False':
+    #     mosaic = int(0)
+    # elif mosaic == 'GTiff':
+    #     mosaic = int(1)
+    # elif mosaic == 'VRT':
+    #     mosaic = int(2)
+    # mosaic = int(mosaic)
+
+    # # Substrate mosaic
+    # map_mosaic = values['map_mosaic']
+    # if map_mosaic == 'False':
+    #     map_mosaic = 0
+    # elif map_mosaic == 'GTiff':
+    #     map_mosaic = 1
+    # elif map_mosaic == 'VRT':
+    #     map_mosaic = 2
+    # map_mosaic = int(map_mosaic)
     
     params = {
-        'project_mode':int(values[4]),
-        'tempC':float(values[6]),
-        'nchunk':int(values[7]),
-        'cropRange':float(values[8]),
-        'exportUnknown':values[9],
-        'fixNoDat':values[10],
-        'threadCnt':int(values[11]),
-        'pix_res_son':float(values[13]),
-        'pix_res_map':float(values[14]),
-        'x_offset':float(values[16]),
-        'y_offset':float(values[18]),
-        'egn':values[20],
-        'egn_stretch':values[21],
-        'egn_stretch_factor':float(values[23]),
-        'wcp':values[25],
-        'wcr':values[26],
-        'tileFile':values[27],
-        'lbl_set':values[29],
-        'spdCor':float(values[30]),
-        'maxCrop':values[32],
-        'remShadow':values[34],
-        'detectDep':values[35],
-        'smthDep':values[37],
-        'adjDep':float(values[39]),
-        'pltBedPick':values[41],
-        'rect_wcp':values[43],
-        'rect_wcr':values[44],
-        'son_colorMap':values[45],
-        'pred_sub':values[47],
-        'pltSubClass':values[49],
-        'map_sub':values[50],
-        'export_poly':values[52],
-        'map_class_method':values[54],
-        'map_predict':values[55],
-        'mosaic_nchunk':int(values[57]),
-        'mosaic':values[58],
-        'map_mosaic':values[60],
-        'banklines':values[62]
+        'humFile':values['humFile'],
+        'aoi':values['aoi'],
+        'projDir':os.path.join(values['proj'], values['projName']),
+        'project_mode':int(values['project_mode']),
+        'tempC':float(values['tempC']),
+        'nchunk':int(values['nchunk']),
+        'cropRange':float(values['cropRange']),
+        'exportUnknown':values['exportUnknown'],
+        'fixNoDat':values['fixNoDat'],
+        'threadCnt':int(values['threadCnt']),
+        'pix_res_son':float(values['pix_res_son']),
+        'pix_res_map':float(values['pix_res_map']),
+        'x_offset':float(values['x_offset']),
+        'y_offset':float(values['y_offset']),
+        'egn':values['egn'],
+        'egn_stretch':values['egn_stretch'],
+        'egn_stretch_factor':float(values['egn_stretch_factor']),
+        'wcp':values['wcp'],
+        'wcr':values['wcr'],
+        'tileFile':values['tileFile'],
+        'lbl_set':values['lbl_set'],
+        'spdCor':float(values['spdCor']),
+        'maxCrop':values['maxCrop'],
+        'remShadow':values['remShadow'],
+        'detectDep':values['detectDep'],
+        'smthDep':values['smthDep'],
+        'adjDep':float(values['adjDep']),
+        'pltBedPick':values['pltBedPick'],
+        'rect_wcp':values['rect_wcp'],
+        'rect_wcr':values['rect_wcr'],
+        'son_colorMap':values['son_colorMap'],
+        'pltSubClass':values['pltSubClass'],
+        'map_sub':values['map_sub'],
+        'export_poly':values['export_poly'],
+        'mosaic_nchunk':int(values['mosaic_nchunk']),
+        'mosaic':values['mosaic'],
+        'map_mosaic':values['map_mosaic'],
+        'banklines':values['banklines']
     }
 
     json_object = json.dumps(params, indent=4)
