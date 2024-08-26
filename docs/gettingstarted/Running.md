@@ -132,7 +132,7 @@ Provide an x and y offset to account for position offset between the control hea
 -  X-axis runs from bow (fore, or front) to stern (aft, or rear) with positive offset towards the bow, negative towards stern
 - Y-axis runs from portside (left) to starboard (right), with negative values towards the portside, positive towards starboard
 
-Here is an example showing the transducer in relation to the control head. In this case, you would supply a positive `Transducer Offset [X]` AND and positive `Transducer Offset [Y]`.
+Here is an example showing the transducer in relation to the control head. In this case, you would supply a positive `Transducer Offset [X]` AND a positive `Transducer Offset [Y]`.
 
 <img src="../../assets/running/TransducerOffset.png"/>
 
