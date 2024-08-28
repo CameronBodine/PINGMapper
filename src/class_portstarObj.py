@@ -404,7 +404,7 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
-                        zero = self._addZero(chunk)
+                        zero = self.port._addZero(chunk)
                         img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
                         img = glob(img_path)[0]
                         port_transect.append(img)
@@ -420,7 +420,7 @@ class portstarObj(object):
                     chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
-                        zero = self._addZero(chunk)
+                        zero = self.port._addZero(chunk)
                         img_path = os.path.join(starPath, '*_{}{}.tif'.format(zero, chunk))
                         img = glob(img_path)[0]
                         star_transect.append(img)
@@ -1911,6 +1911,7 @@ class portstarObj(object):
 
             # Do classification
             label = son._classifySoftmax(chunk, son.sonDat, map_class_method, mask_wc=True, mask_shw=True)
+            del son.sonDat
 
             # Get rid of zeros along water column area
             for p in range(label.shape[1]):
@@ -1966,6 +1967,7 @@ class portstarObj(object):
 
             # Mask out shadows
             son.sonDat = son.sonDat*son.shadowMask
+            del son.shadowMask
 
             # Remove water column
             son._WCR_SRC(sonMeta)
