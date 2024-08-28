@@ -1,4 +1,7 @@
-{
+{   
+    "humFile":"",
+    "aoi":"",
+    "projDir":"",
     "project_mode":true,
     "tempC":10,
     "nchunk":500,
