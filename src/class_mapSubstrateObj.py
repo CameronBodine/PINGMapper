@@ -411,64 +411,68 @@ class mapSubObj(rectObj):
         # Find min depth
         minDep = min(lMinDep, cMinDep, rMinDep)
 
-        # Pad arrays if chunk's minDep > minDep and fill with zero's
-        # Left
-        if lMinDep > minDep:
-            # Get current sonDat shape
-            r, c = lSonDat.shape
+        # # Pad arrays if chunk's minDep > minDep and fill with zero's
+        # # Left
+        # if lMinDep > minDep:
+        #     # Get current sonDat shape
+        #     r, c = lSonDat.shape
 
-            # Determine pad size (actual offset from top)
-            pad = lMinDep - minDep
+        #     # Determine pad size (actual offset from top)
+        #     pad = lMinDep - minDep
 
-            # Make new zero array w/ pad added in
-            newArr = np.zeros((pad+r, c))
-            # Fill with nan to prevent unneeded prediction
-            newArr.fill(np.nan)
+        #     # Make new zero array w/ pad added in
+        #     newArr = np.zeros((pad+r, c))
+        #     # Fill with nan to prevent unneeded prediction
+        #     newArr.fill(np.nan)
 
-            # Fill sonDat in appropriate location
-            newArr[pad:,:] = lSonDat
-            lSonDat = newArr.copy()
-            del newArr
+        #     # Fill sonDat in appropriate location
+        #     newArr[pad:,:] = lSonDat
+        #     lSonDat = newArr.copy()
+        #     del newArr
 
-        # Center
-        if cMinDep > minDep:
-            # Get current sonDat shape
-            r, c = cSonDat.shape
+        # # Center
+        # if cMinDep > minDep:
+        #     # Get current sonDat shape
+        #     r, c = cSonDat.shape
 
-            # Determine pad size
-            pad = cMinDep - minDep
+        #     # Determine pad size
+        #     pad = cMinDep - minDep
 
-            # Make new zero array w/ pad added in
-            newArr = np.zeros((pad+r, c))
-            # Fill with nan to prevent unneeded prediction
-            newArr.fill(np.nan)
+        #     # Make new zero array w/ pad added in
+        #     newArr = np.zeros((pad+r, c))
+        #     # Fill with nan to prevent unneeded prediction
+        #     newArr.fill(np.nan)
 
-            # Fill sonDat in appropriate location
-            newArr[pad:,:] = cSonDat
-            cSonDat = newArr.copy()
-            del newArr
+        #     # Fill sonDat in appropriate location
+        #     newArr[pad:,:] = cSonDat
+        #     cSonDat = newArr.copy()
+        #     del newArr
 
-            # Return cpad to recover original dims
-            cpad = pad
-        else:
-            cpad = cMinDep
+        #     # Return cpad to recover original dims
+        #     cpad = pad
+        # else:
+        #     cpad = cMinDep
 
-        # Right
-        if rMinDep > minDep:
-            # Get current sonDat shape
-            r, c = rSonDat.shape
-            # Determine pad size
-            pad = rMinDep - minDep
+        # # Right
+        # if rMinDep > minDep:
+        #     # Get current sonDat shape
+        #     r, c = rSonDat.shape
+        #     # Determine pad size
+        #     pad = rMinDep - minDep
 
-            # Make new zero array w/ pad added in
-            newArr = np.zeros((pad+r, c))
-            # Fill with nan to prevent unneeded prediction
-            newArr.fill(np.nan)
+        #     # Make new zero array w/ pad added in
+        #     newArr = np.zeros((pad+r, c))
+        #     # Fill with nan to prevent unneeded prediction
+        #     newArr.fill(np.nan)
 
-            # Fill sonDat in appropriate location
-            newArr[pad:,:] = rSonDat
-            rSonDat = newArr.copy()
-            del newArr
+        #     # Fill sonDat in appropriate location
+        #     newArr[pad:,:] = rSonDat
+        #     rSonDat = newArr.copy()
+        #     del newArr
+
+        lSonDat = lSonDat[minDep:]
+        cSonDat = cSonDat[minDep:]
+        rSonDat = rSonDat[minDep:]
 
         ####
         # Arrays are now aligned along the water bed interface.
@@ -500,8 +504,11 @@ class mapSubObj(rectObj):
         # Prepare necessary params for rebuilding orig dims and offsets
         origDims = [H, W] # Original dims of center chunk
         lOff = [lOffL, lOffR] # Left/right offset of center chunk
-        tOff = cpad # Offset from top
+        # tOff = cpad # Offset from top
+        tOff = minDep
 
+        # # save big image
+        # imsave(os.path.join(self.outDir, 'son3Chunk_{}_{}.png'.format(self.beam, i)), fSonDat.astype(np.uint8), check_contrast=False)
 
         return fSonDat, origDims, lOff, tOff
 
