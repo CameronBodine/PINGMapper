@@ -33,11 +33,11 @@ with open(default_params_file) as f:
 
 layout = [
     [sg.Text('Parent Folder of Recordings to Process')],
-    [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse()],
+    [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse(initial_folder=(default_params['inDir']))],
     [sg.Text('AOI')],
-    [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")))],
+    [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))],
     [sg.Text('Output Folder')],
-    [sg.In(size=(80,1)), sg.FolderBrowse(key='proj')],
+    [sg.In(size=(80,1)), sg.FolderBrowse(key='proj', initial_folder=os.path.dirname(default_params['projDir']))],
     [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(key='prefix', size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(key='suffix', size=(10,1))],
     # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
     [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
@@ -97,6 +97,9 @@ window = sg.Window('Process Single Humminbird Sonar Recording', layout2, resizab
 
 while True:
     event, values = window.read()
+
+    values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
+
     if event == "Quit" or event == 'Submit':
         break
     if event == "Save Defaults":
