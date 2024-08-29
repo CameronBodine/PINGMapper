@@ -264,9 +264,7 @@ def rectify_master_func(logfilename='',
         # sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
         sDF = pd.DataFrame()
         for name, group in sonDF.groupby('transect'):
-            print(group)
             smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
-            print(smoothed)
             smoothed['transect'] = int(name)
             sDF = pd.concat([sDF, smoothed], ignore_index=True)
         del sonDF
