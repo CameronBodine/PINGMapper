@@ -476,15 +476,31 @@ class portstarObj(object):
 
         else:
             if self.port.map_sub:
-                # Locate map files
-                mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
-                map = sorted(glob(os.path.join(mapPath, '*.tif')))
+                # # Locate map files
+                # mapPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+                # map = sorted(glob(os.path.join(mapPath, '*.tif')))
 
-                # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if (len(map) > maxChunk) and (maxChunk != 0):
-                    subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
-                else:
-                    subToMosaic = [map]
+                # # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                # if (len(map) > maxChunk) and (maxChunk != 0):
+                #     subToMosaic = [map[i:i+maxChunk] for i in range(0, len(map), maxChunk)]
+                # else:
+                #     subToMosaic = [map]
+
+                self.port._loadSonMeta()
+                df = self.port.sonMetaDF
+
+                portPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
+
+                subToMosaic = []
+                for name, group in df.groupby('transect'):
+                    chunks = pd.unique(group[chunkField])
+                    port_transect = []
+                    for chunk in chunks:
+                        zero = self.port._addZero(chunk)
+                        img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
+                        img = glob(img_path)[0]
+                        port_transect.append(img)
+                    subToMosaic.append(port_transect)
 
             if self.port.map_predict:
                 # Locate map files
