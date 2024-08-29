@@ -299,11 +299,17 @@ def saveDefaultParams(values):
     # elif map_mosaic == 'VRT':
     #     map_mosaic = 2
     # map_mosaic = int(map_mosaic)
+
+    try:
+        projDir = os.path.join(values['proj'], values['projName'])
+    except:
+        projDir = os.path.join(values['proj'], values['prefix'])
     
     params = {
+        'inDir':values['inDir'],
         'humFile':values['humFile'],
         'aoi':values['aoi'],
-        'projDir':os.path.join(values['proj'], values['projName']),
+        'projDir':projDir,
         'project_mode':int(values['project_mode']),
         'tempC':float(values['tempC']),
         'nchunk':int(values['nchunk']),
