@@ -304,9 +304,14 @@ def saveDefaultParams(values):
         projDir = os.path.join(values['proj'], values['projName'])
     except:
         projDir = os.path.join(values['proj'], values['prefix'])
+
+    try:
+        inDir = values['inDir']
+    except:
+        inDir = ''
     
     params = {
-        'inDir':values['inDir'],
+        'inDir':inDir,
         'humFile':values['humFile'],
         'aoi':values['aoi'],
         'projDir':projDir,
