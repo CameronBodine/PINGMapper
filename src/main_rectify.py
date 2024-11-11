@@ -225,151 +225,151 @@ def rectify_master_func(logfilename='',
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, rectObjs
 
-    #############################################
-    # Determine if smoothed trackline was created
-    if hasattr(portstar[0], 'smthTrkFile'):
-        smthTrk = False
-    else:
-        smthTrk = True
+    # #############################################
+    # # Determine if smoothed trackline was created
+    # if hasattr(portstar[0], 'smthTrkFile'):
+    #     smthTrk = False
+    # else:
+    #     smthTrk = True
 
-    ############################################################################
-    # Smooth GPS trackpoint coordinates                                        #
-    ############################################################################
+    # ############################################################################
+    # # Smooth GPS trackpoint coordinates                                        #
+    # ############################################################################
 
-    if smthTrk:
-        #####################
-        #####################
-        # Smoothing Trackline
-        # Tool:
-        # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
-        # Adapted from:
-        # https://github.com/remisalmon/gpx_interpolate
-        start_time = time.time()
-        print("\nSmoothing trackline...")
+    # if smthTrk:
+    #     #####################
+    #     #####################
+    #     # Smoothing Trackline
+    #     # Tool:
+    #     # https://docs.scipy.org/doc/scipy-0.14.0/reference/tutorial/interpolate.html#spline-interpolation
+    #     # Adapted from:
+    #     # https://github.com/remisalmon/gpx_interpolate
+    #     start_time = time.time()
+    #     print("\nSmoothing trackline...")
 
-        # As side scan beams use same transducer/gps coords, we will smooth one
-        ## beam's trackline and use for both. Use the beam with the most sonar records.
-        maxRec = 0 # Stores index of recording w/ most sonar records.
-        maxLen = 0 # Stores length of ping
-        for i, son in enumerate(portstar):
-            son._loadSonMeta() # Load ping metadata
-            sonLen = len(son.sonMetaDF) # Number of sonar records
-            if sonLen > maxLen:
-                maxLen = sonLen
-                maxRec = i
+    #     # As side scan beams use same transducer/gps coords, we will smooth one
+    #     ## beam's trackline and use for both. Use the beam with the most sonar records.
+    #     maxRec = 0 # Stores index of recording w/ most sonar records.
+    #     maxLen = 0 # Stores length of ping
+    #     for i, son in enumerate(portstar):
+    #         son._loadSonMeta() # Load ping metadata
+    #         sonLen = len(son.sonMetaDF) # Number of sonar records
+    #         if sonLen > maxLen:
+    #             maxLen = sonLen
+    #             maxRec = i
 
-        # Now we will smooth using sonar beam w/ most records.
-        son0 = portstar[maxRec]
-        sonDF = son0.sonMetaDF # Get ping metadata
-        # sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
-        sDF = pd.DataFrame()
-        for name, group in sonDF.groupby('transect'):
-            smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
-            smoothed['transect'] = int(name)
-            sDF = pd.concat([sDF, smoothed], ignore_index=True)
-        del sonDF
+    #     # Now we will smooth using sonar beam w/ most records.
+    #     son0 = portstar[maxRec]
+    #     sonDF = son0.sonMetaDF # Get ping metadata
+    #     # sDF = son._interpTrack(df=sonDF, dropDup=True, filt=filter, deg=3) # Smooth trackline and reinterpolate trackpoints along spline
+    #     sDF = pd.DataFrame()
+    #     for name, group in sonDF.groupby('transect'):
+    #         smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
+    #         smoothed['transect'] = int(name)
+    #         sDF = pd.concat([sDF, smoothed], ignore_index=True)
+    #     del sonDF
 
-        ####################################
-        ####################################
-        # To remove gap between sonar tiles:
-        # For chunk > 0, use coords from previous chunks second to last ping
-        # and assign as current chunk's first ping coords
-        # chunks = pd.unique(sDF['chunk_id'])
+    #     ####################################
+    #     ####################################
+    #     # To remove gap between sonar tiles:
+    #     # For chunk > 0, use coords from previous chunks second to last ping
+    #     # and assign as current chunk's first ping coords
+    #     # chunks = pd.unique(sDF['chunk_id'])
 
-        # i = 1
-        # while i <= max(chunks):
-        #     # Get second to last row of previous chunk
-        #     lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-        #     # Get index of first row of current chunk
-        #     curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-        #     curRow = curRow.index[0]
-        #     # Update current chunks first row from lastRow
-        #     sDF.at[curRow, "lons"] = lastRow["lons"]
-        #     sDF.at[curRow, "lats"] = lastRow["lats"]
-        #     sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-        #     sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-        #     sDF.at[curRow, "cog"] = lastRow["cog"]
+    #     # i = 1
+    #     # while i <= max(chunks):
+    #     #     # Get second to last row of previous chunk
+    #     #     lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+    #     #     # Get index of first row of current chunk
+    #     #     curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+    #     #     curRow = curRow.index[0]
+    #     #     # Update current chunks first row from lastRow
+    #     #     sDF.at[curRow, "lons"] = lastRow["lons"]
+    #     #     sDF.at[curRow, "lats"] = lastRow["lats"]
+    #     #     sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+    #     #     sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+    #     #     sDF.at[curRow, "cog"] = lastRow["cog"]
 
-        #     i+=1
-        # del lastRow, curRow, i
+    #     #     i+=1
+    #     # del lastRow, curRow, i
 
-        chunks = pd.unique(sDF['chunk_id'])
+    #     chunks = pd.unique(sDF['chunk_id'])
 
-        i = 1
-        t = 0
-        while i <= max(chunks):
-            # Get second to last row of previous chunk
-            lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-            # Get index of first row of current chunk
-            curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-            curTransect = curRow['transect'].values[0]
-            curRow = curRow.index[0]
+    #     i = 1
+    #     t = 0
+    #     while i <= max(chunks):
+    #         # Get second to last row of previous chunk
+    #         lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+    #         # Get index of first row of current chunk
+    #         curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+    #         curTransect = curRow['transect'].values[0]
+    #         curRow = curRow.index[0]
             
-            if curTransect == t:
-                # Update current chunks first row from lastRow
-                sDF.at[curRow, "lons"] = lastRow["lons"]
-                sDF.at[curRow, "lats"] = lastRow["lats"]
-                sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-                sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-                sDF.at[curRow, "cog"] = lastRow["cog"]
-            else:
-                t += 1
+    #         if curTransect == t:
+    #             # Update current chunks first row from lastRow
+    #             sDF.at[curRow, "lons"] = lastRow["lons"]
+    #             sDF.at[curRow, "lats"] = lastRow["lats"]
+    #             sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+    #             sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+    #             sDF.at[curRow, "cog"] = lastRow["cog"]
+    #         else:
+    #             t += 1
 
-            i+=1
-        del lastRow, curRow, i
+    #         i+=1
+    #     del lastRow, curRow, i
 
-        son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
+    #     son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
 
-        # Do positional correction
-        if x_offset != 0.0 or y_offset != 0.0:
-            son0._applyPosOffset(x_offset, y_offset)
+    #     # Do positional correction
+    #     if x_offset != 0.0 or y_offset != 0.0:
+    #         son0._applyPosOffset(x_offset, y_offset)
 
-        # Update other channel with smoothed coordinates
-        # Determine which rectObj we need to update
-        for i, son in enumerate(portstar):
-            if i != maxRec:
-                son1 = son # rectObj to update
+    #     # Update other channel with smoothed coordinates
+    #     # Determine which rectObj we need to update
+    #     for i, son in enumerate(portstar):
+    #         if i != maxRec:
+    #             son1 = son # rectObj to update
 
-        sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
-        # Update with correct record_num
-        son1._loadSonMeta() # Load ping metadata
-        df = son1.sonMetaDF
-        sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
-        sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
-        son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
+    #     sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
+    #     # Update with correct record_num
+    #     son1._loadSonMeta() # Load ping metadata
+    #     df = son1.sonMetaDF
+    #     sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
+    #     sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
+    #     son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
-        del sDF, df, son0, son1
+    #     del sDF, df, son0, son1
 
-        # Save smoothed trackline coordinates to file
-        for son in portstar:
-            outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
-            son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
-            son.smthTrkFile = outCSV
-            son._cleanup()
-        del son, outCSV
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
+    #     # Save smoothed trackline coordinates to file
+    #     for son in portstar:
+    #         outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
+    #         son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
+    #         son.smthTrkFile = outCSV
+    #         son._cleanup()
+    #     del son, outCSV
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     gc.collect()
+    #     printUsage()
 
-        ############################################################################
-        # Calculate range extent coordinates                                       #
-        ############################################################################
-        # cog=True
+    #     ############################################################################
+    #     # Calculate range extent coordinates                                       #
+    #     ############################################################################
+    #     # cog=True
 
-        start_time = time.time()
-        if cog:
-            print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-        else:
-            print("\nCalculating range extent coordinates from vessel heading...")
-        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
+    #     start_time = time.time()
+    #     if cog:
+    #         print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+    #     else:
+    #         print("\nCalculating range extent coordinates from vessel heading...")
+    #     Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     gc.collect()
+    #     printUsage()
 
-    else:
-        print("\nUsing existing smoothed trackline.")
+    # else:
+    #     print("\nUsing existing smoothed trackline.")
 
     ############################################################################
     # Export Coverage and Trackline                                            #
