@@ -288,10 +288,12 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         del sDF, df, son0, son1
 
         # Save smoothed trackline coordinates to file
+        csvNames = {}
         for son in portstar:
             outCSV = os.path.join(son.metaDir, "Trackline_Smth_"+son.beamName+".csv")
             son.smthTrk.to_csv(outCSV, index=False, float_format='%.14f')
             son.smthTrkFile = outCSV
+            csvNames[son.beamName] = outCSV
             son._cleanup()
         del son, outCSV
         print("Done!")
@@ -314,6 +316,8 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()
         printUsage()
+
+        return csvNames
 
     else:
         print("\nUsing existing smoothed trackline.")

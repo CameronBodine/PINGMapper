@@ -1285,7 +1285,11 @@ def read_master_func(logfilename='',
     # Smooth Trackline                                                         #
     ############################################################################
 
-    smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    for son in sonObjs:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            son.smthTrkFile = smthTrkFilenames[beam]
 
     ############################################################################
     # For sonar intensity corrections/normalization                            #
