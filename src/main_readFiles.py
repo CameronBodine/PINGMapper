@@ -43,6 +43,8 @@ def read_master_func(logfilename='',
                      projDir='',
                      coverage=False,
                      aoi=False,
+                     max_heading_deviation = False,
+                     max_heading_distance = False,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -515,6 +517,8 @@ def read_master_func(logfilename='',
         # Get metadata for each beam in parallel.
         if len(toProcess) > 0:
             r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+            # for son in toProcess:
+            #     son._getSonMeta()
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
                 son.pixM = pix_m # Sonar instrument pixel resolution
@@ -533,6 +537,11 @@ def read_master_func(logfilename='',
         for i in range(0,len(sonObjs)): # Iterate each metadata file
             sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
         del i, sonMeta
+
+
+        ###################################
+        # Above can be ported to PINGVerter
+        ###################################
 
 
         # Store cropRange in object
@@ -1290,6 +1299,100 @@ def read_master_func(logfilename='',
         beam = son.beamName
         if beam == "ss_port" or beam == "ss_star":
             son.smthTrkFile = smthTrkFilenames[beam]
+
+
+    ############################################################################
+    # For Filtering                                                            #
+    ############################################################################
+
+    if max_heading_deviation > 0:
+
+        # Do port/star and down beams seperately
+        downbeams = []
+        portstar = []
+        for son in sonObjs:
+            beam = son.beamName
+            if beam == "ss_port" or beam == "ss_star":
+                portstar.append(son)
+            else:
+                # pass # Don't add non-port/star objects since they can't be rectified
+                downbeams.append(son)
+        del son, beam
+
+        # Find longest recording
+        minRec = 0
+        maxRec = 0 # Stores index of recording w/ most sonar records.
+        maxLen = 0 # Stores length of ping
+        for i, son in enumerate(portstar):
+            son._loadSonMeta() # Load ping metadata
+            sonLen = len(son.sonMetaDF) # Number of sonar records
+            if sonLen > maxLen:
+                maxLen = sonLen
+                maxRec = i
+            else:
+                minRec = i
+
+        # Do filtering on longest recording
+        son0 = portstar[maxRec]
+        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance)
+
+        # # Determine pings to filter
+        # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._doSonarFiltering)(max_heading_deviation, max_heading_distance) for son in portstar)
+
+        # Add filter to other beam
+        son1 = portstar[minRec]
+        son1._loadSonMeta()
+        df1 = son1.sonMetaDF
+        df1['filter'] = df0['filter']
+
+        # Add filter to smoothed tracklines
+        csv0 = son0.smthTrkFile
+        sDF0 = pd.read_csv(csv0)
+        sDF0['filter'] = df0['filter']
+
+        csv1 = son1.smthTrkFile
+        sDF1 = pd.read_csv(csv1)
+        sDF1['filter'] = df1['filter']
+
+        # Apply the filter
+        df0 = df0[df0['filter'] == True]
+        df1 = df1[df1['filter'] == True]
+
+        sDF0 = sDF0[sDF0['filter'] == True]
+        sDF1 = sDF1[sDF1['filter'] == True]
+
+        # Reasign the chunks
+        df0 = son0._reassignChunks(df0)
+        df1['chunk_id'] = df0['chunk_id']
+        df1['transect'] = df0['transect']
+
+        sDF0['chunk_id'] = df0['chunk_id']
+        sDF0['transect'] = df0['transect']
+
+        sDF1['chunk_id'] = df1['chunk_id']
+        sDF1['transect'] = df1['transect']
+
+        # Save the csvs
+        son0._saveSonMetaCSV(df0)
+        son1._saveSonMetaCSV(df1)
+
+        sDF0.to_csv(csv0, index=False)
+        sDF1.to_csv(csv1, index=False)
+
+        del df0, df1, #sDF0, sDF1
+        son0._cleanup()
+        son1._cleanup()
+
+
+        # # Add filtering to smth track files
+        # for son in portstar:
+        #     son._loadSonMeta()
+        #     df = son.sonMetaDF
+
+        #     csv = son.smthTrkFile
+        #     sDF = pd.read_csv(csv)
+
+        #     sDF['filter'] = df['filter']
 
     ############################################################################
     # For sonar intensity corrections/normalization                            #

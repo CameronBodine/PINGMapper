@@ -709,7 +709,7 @@ class rectObj(sonObj):
         ##################################################
         # Join smoothed trackline to smoothed range extent
         # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
-        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m']].copy()
+        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'transect']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
         rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
@@ -794,7 +794,8 @@ class rectObj(sonObj):
         ## subsequent sonar records to overlap current ping if they are
         ## further then the threshold distance.
         rowIx, rowIy = rowI[x], rowI[y] # Get current ping range extent coordinates
-        dfx, dfy = df[x].to_numpy(), df[y].to_numpy() # Get subsequent ping range extent coordinates
+        # dfx, dfy = df[x].to_numpy(), df[y].to_numpy() # Get subsequent ping range extent coordinates
+        dfx, dfy = df[x].values.astype(np.float64), df[y].values.astype(np.float64)
         dist = self._getDist(rowIx, rowIy, dfx, dfy) # Calculate distance from current ping
 
         # Check if dist < distThresh. True==Check for possible overlap; False==No need to check

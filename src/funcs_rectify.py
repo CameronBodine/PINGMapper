@@ -122,7 +122,8 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
             smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
 
             # smooth trackline fit
-            if smoothed is not None:
+            # if smoothed is not None:
+            if len(smoothed.columns) > 4:
                 smoothed['transect'] = int(name)
                 sDF = pd.concat([sDF, smoothed], ignore_index=False)
 
@@ -140,7 +141,6 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
 
         # Save sonDF
         if len(transect_dropped) > 0:
-            print(transect_dropped)
 
             # Reassign chunk, save sonDF, update sDF (chunk/transect)
             # son0._reassignChunks(sonDF)
@@ -210,30 +210,9 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         # To remove gap between sonar tiles:
         # For chunk > 0, use coords from previous chunks second to last ping
         # and assign as current chunk's first ping coords
-        # chunks = pd.unique(sDF['chunk_id'])
-
-        # i = 1
-        # while i <= max(chunks):
-        #     # Get second to last row of previous chunk
-        #     lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-        #     # Get index of first row of current chunk
-        #     curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-        #     curRow = curRow.index[0]
-        #     # Update current chunks first row from lastRow
-        #     sDF.at[curRow, "lons"] = lastRow["lons"]
-        #     sDF.at[curRow, "lats"] = lastRow["lats"]
-        #     sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-        #     sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-        #     sDF.at[curRow, "cog"] = lastRow["cog"]
-
-        #     i+=1
-        # del lastRow, curRow, i
 
         chunks = pd.unique(sDF['chunk_id'])
         transects = pd.unique(sDF['transect'])
-
-        print(chunks)
-        print(sDF)
 
         i = 1
         t = 0
@@ -301,21 +280,21 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         gc.collect()
         printUsage()
 
-        ############################################################################
-        # Calculate range extent coordinates                                       #
-        ############################################################################
-        # cog=True
+        # ############################################################################
+        # # Calculate range extent coordinates                                       #
+        # ############################################################################
+        # # cog=True
 
-        start_time = time.time()
-        if cog:
-            print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-        else:
-            print("\nCalculating range extent coordinates from vessel heading...")
-        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
+        # start_time = time.time()
+        # if cog:
+        #     print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+        # else:
+        #     print("\nCalculating range extent coordinates from vessel heading...")
+        # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
+        # print("Done!")
+        # print("Time (s):", round(time.time() - start_time, ndigits=1))
+        # gc.collect()
+        # printUsage()
 
         return csvNames
 

@@ -33,6 +33,7 @@ from funcs_common import *
 
 from class_rectObj import rectObj
 from class_portstarObj import portstarObj
+from funcs_rectify import smoothTrackline
 
 import inspect
 
@@ -45,6 +46,8 @@ def rectify_master_func(logfilename='',
                         projDir='',
                         coverage=False,
                         aoi=False,
+                        max_heading_deviation = False,
+                        max_heading_distance = False,
                         tempC=10,
                         nchunk=500,
                         cropRange=0,
@@ -371,6 +374,81 @@ def rectify_master_func(logfilename='',
     # else:
     #     print("\nUsing existing smoothed trackline.")
 
+    # ############################################################################
+    # # Smooth Trackline                                                         #
+    # ############################################################################
+
+    # smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    # for son in portstar:
+    #     beam = son.beamName
+    #     if beam == "ss_port" or beam == "ss_star":
+    #         son.smthTrkFile = smthTrkFilenames[beam]
+
+    # ####################################
+    # ####################################
+    # # To remove gap between sonar tiles:
+    # # For chunk > 0, use coords from previous chunks second to last ping
+    # # and assign as current chunk's first ping coords
+
+    # for son in portstar:
+    #     csv = son.smthTrkFile
+    #     sDF = pd.read_csv(csv)
+
+    #     chunks = pd.unique(sDF['chunk_id'])
+    #     transects = pd.unique(sDF['transect'])
+
+    #     i = 1
+    #     t = 0
+    #     while i <= max(chunks):
+
+    #     # for i in chunks:
+    #         print(i)
+
+    #         # # Get second to last row of previous chunk
+    #         # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+    #         # Get index of first row of current chunk
+    #         curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+    #         curTransect = curRow['transect'].values[0]
+    #         curRow = curRow.index[0]
+            
+    #         if curTransect == t:
+    #             # Get second to last row of previous chunk
+    #             lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+
+    #             # Update current chunks first row from lastRow
+    #             sDF.at[curRow, "lons"] = lastRow["lons"]
+    #             sDF.at[curRow, "lats"] = lastRow["lats"]
+    #             sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+    #             sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+    #             sDF.at[curRow, "cog"] = lastRow["cog"]
+    #         else:
+    #             t += 1
+
+    #         i+=1
+    #     del lastRow, curRow, i
+
+    #     sDF.to_csv(csv, index=False)
+    #     del sDF
+
+
+    ############################################################################
+    # Calculate range extent coordinates                                       #
+    ############################################################################
+    # cog=True
+
+    start_time = time.time()
+    if cog:
+        print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+    else:
+        print("\nCalculating range extent coordinates from vessel heading...")
+    Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
+    # for son in portstar:
+    #     son._getRangeCoords(flip, filterRange, cog)
+    print("Done!")
+    print("Time (s):", round(time.time() - start_time, ndigits=1))
+    gc.collect()
+    printUsage()
+
     ############################################################################
     # Export Coverage and Trackline                                            #
     ############################################################################
@@ -464,10 +542,10 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        if not aoi:
-            psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
-        else:
+        if aoi or max_heading_deviation:
             psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
+        else:
+            psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj
