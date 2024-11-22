@@ -1324,6 +1324,9 @@ class sonObj(object):
     def _doSonarFiltering(self, 
                           max_heading_dev,
                           distance,
+                          min_speed,
+                          max_speed,
+                          aoi,
                           ):
         '''
         '''
@@ -1337,13 +1340,18 @@ class sonObj(object):
 
         #############################
         # Do Heading Deviation Filter
-        sonDF = self._filterHeading(sonDF, max_heading_dev, distance)
+        if max_heading_dev > 0:
+            sonDF = self._filterHeading(sonDF, max_heading_dev, distance)
 
         #################
         # Do Speed Filter
+        if min_speed > 0 or max_speed > 0:
+            sonDF = self._filterSpeed(sonDF, min_speed, max_speed)
 
         ###############
         # Do AOI Filter
+        if aoi:
+            sonDF = self._filterAOI(sonDF, aoi)
 
         # self._reassignChunks(sonDF)
 
@@ -1440,6 +1448,114 @@ class sonObj(object):
         except:
             sys.exit('\n\n\nERROR:\nMax heading standard deviation too small.\nPlease specify a larger value.')
 
+
+    # ======================================================================
+    def _filterSpeed(self,
+                     sonDF,
+                     min_speed,
+                     max_speed):
+        
+        '''
+        
+        '''
+
+        speed_col = 'speed_ms'
+        filtCol = 'filter'
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+
+        # Filter min_speed
+        if min_speed > 0:
+            # sonDF = sonDF[sonDF['speed_ms'] >= min_speed]
+            sonDF.loc[sonDF[speed_col] < min_speed] = False
+
+        # Filter max_speed
+        if max_speed > 0:
+            # sonDF = sonDF[sonDF['speed_ms'] <= max_speed]
+            sonDF.loc[sonDF[speed_col] > max_speed] = False
+
+        return sonDF
+
+    # ======================================================================
+    def _filterAOI(self,
+                   sonDF,
+                   aoi):
+        
+        filtCol = 'filter'
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+        
+        # If .plan file (from Hydronaulix)
+        if os.path.basename(aoi.split('.')[-1]) == 'plan':            
+            with open(aoi, 'r', encoding='utf-8') as f:
+                f = json.load(f)
+                # Find 'polygon' coords in nested json
+                # polys = []
+                # poly_coords = getPolyCoords(f, 'polygon')
+                # print(poly_coords)
+
+                f = f['mission']
+                f = f['items']
+                poly_coords = []
+                for i in f:
+                    for k, v in i.items():
+                        if k == 'polygon':
+                            poly_coords.append(v)
+
+                aoi_poly_all = gpd.GeoDataFrame()
+
+                for poly in poly_coords:
+                
+                    # Extract coordinates
+                    lat_coords = [i[0] for i in poly]
+                    lon_coords = [i[1] for i in poly]
+
+                    polygon_geom = Polygon(zip(lon_coords, lat_coords))
+                    aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+
+                    aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
+
+        # If shapefile
+        elif os.path.basename(aoi.split('.')[-1]) == 'shp':
+            aoi_poly_all = gpd.read_file(aoi)
+
+        else:
+            print(os.path.basename, ' is not a valid aoi file type.')
+            sys.exit()
+
+        # Reproject to utm
+        epsg = int(self.humDat['epsg'].split(':')[-1])
+        aoi_poly = aoi_poly_all.to_crs(crs=epsg)
+        aoi_poly = aoi_poly.dissolve()
+
+        # Buffer aoi
+        if os.path.basename(aoi.split('.')[-1]) == 'plan': 
+            buf_dist = 0.5
+            aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
+
+        # Save aoi
+        aoi_dir = os.path.join(self.projDir, 'aoi')
+        aoiOut = os.path.basename(self.projDir) + '_aoi.shp'
+        if not os.path.exists(aoi_dir):
+            os.makedirs(aoi_dir)
+
+        aoiOut = os.path.join(aoi_dir, aoiOut)
+        aoi_poly.to_file(aoiOut)
+
+        # Convert to geodataframe
+        epsg = int(self.humDat['epsg'].split(':')[-1])
+        sonDF = gpd.GeoDataFrame(sonDF, geometry=gpd.points_from_xy(sonDF.e, sonDF.n), crs=epsg)
+
+        # Get polygon
+        aoi_poly = aoi_poly.geometry[0]
+
+        # Subset
+        mask = sonDF.within(aoi_poly)
+        sonDF[filtCol] *= mask
+
+        return sonDF
 
     # ======================================================================
     def _reassignChunks(self,

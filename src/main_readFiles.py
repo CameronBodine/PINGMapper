@@ -45,6 +45,8 @@ def read_master_func(logfilename='',
                      aoi=False,
                      max_heading_deviation = False,
                      max_heading_distance = False,
+                     min_speed = False,
+                     max_speed = False,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -1305,7 +1307,7 @@ def read_master_func(logfilename='',
     # For Filtering                                                            #
     ############################################################################
 
-    if max_heading_deviation > 0:
+    if max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi:
 
         # Do port/star and down beams seperately
         downbeams = []
@@ -1334,7 +1336,7 @@ def read_master_func(logfilename='',
 
         # Do filtering on longest recording
         son0 = portstar[maxRec]
-        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance)
+        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi)
 
         # # Determine pings to filter
         # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._doSonarFiltering)(max_heading_deviation, max_heading_distance) for son in portstar)

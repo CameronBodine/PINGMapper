@@ -219,7 +219,6 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         while i <= max(chunks):
 
         # for i in chunks:
-            print(i)
 
             # # Get second to last row of previous chunk
             # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]

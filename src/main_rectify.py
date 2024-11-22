@@ -48,6 +48,8 @@ def rectify_master_func(logfilename='',
                         aoi=False,
                         max_heading_deviation = False,
                         max_heading_distance = False,
+                        min_speed = False,
+                        max_speed = False,
                         tempC=10,
                         nchunk=500,
                         cropRange=0,
@@ -384,51 +386,51 @@ def rectify_master_func(logfilename='',
     #     if beam == "ss_port" or beam == "ss_star":
     #         son.smthTrkFile = smthTrkFilenames[beam]
 
-    # ####################################
-    # ####################################
-    # # To remove gap between sonar tiles:
-    # # For chunk > 0, use coords from previous chunks second to last ping
-    # # and assign as current chunk's first ping coords
+    ####################################
+    ####################################
+    # To remove gap between sonar tiles:
+    # For chunk > 0, use coords from previous chunks second to last ping
+    # and assign as current chunk's first ping coords
 
-    # for son in portstar:
-    #     csv = son.smthTrkFile
-    #     sDF = pd.read_csv(csv)
+    for son in portstar:
+        csv = son.smthTrkFile
+        sDF = pd.read_csv(csv)
 
-    #     chunks = pd.unique(sDF['chunk_id'])
-    #     transects = pd.unique(sDF['transect'])
+        chunks = pd.unique(sDF['chunk_id'])
+        transects = pd.unique(sDF['transect'])
 
-    #     i = 1
-    #     t = 0
-    #     while i <= max(chunks):
+        i = 1
+        t = 0
+        while i <= max(chunks):
 
-    #     # for i in chunks:
-    #         print(i)
+        # for i in chunks:
+            print(i)
 
-    #         # # Get second to last row of previous chunk
-    #         # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-    #         # Get index of first row of current chunk
-    #         curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-    #         curTransect = curRow['transect'].values[0]
-    #         curRow = curRow.index[0]
+            # # Get second to last row of previous chunk
+            # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+            # Get index of first row of current chunk
+            curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
+            curTransect = curRow['transect'].values[0]
+            curRow = curRow.index[0]
             
-    #         if curTransect == t:
-    #             # Get second to last row of previous chunk
-    #             lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+            if curTransect == t:
+                # Get second to last row of previous chunk
+                lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
 
-    #             # Update current chunks first row from lastRow
-    #             sDF.at[curRow, "lons"] = lastRow["lons"]
-    #             sDF.at[curRow, "lats"] = lastRow["lats"]
-    #             sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-    #             sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-    #             sDF.at[curRow, "cog"] = lastRow["cog"]
-    #         else:
-    #             t += 1
+                # Update current chunks first row from lastRow
+                sDF.at[curRow, "lons"] = lastRow["lons"]
+                sDF.at[curRow, "lats"] = lastRow["lats"]
+                sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
+                sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
+                sDF.at[curRow, "cog"] = lastRow["cog"]
+            else:
+                t += 1
 
-    #         i+=1
-    #     del lastRow, curRow, i
+            i+=1
+        del lastRow, curRow, i
 
-    #     sDF.to_csv(csv, index=False)
-    #     del sDF
+        sDF.to_csv(csv, index=False)
+        del sDF
 
 
     ############################################################################
@@ -542,7 +544,7 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        if aoi or max_heading_deviation:
+        if aoi or max_heading_deviation or min_speed or max_speed:
             psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
         else:
             psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
