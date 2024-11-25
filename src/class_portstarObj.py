@@ -2570,15 +2570,27 @@ class portstarObj(object):
         return
     
     #=======================================================================
-    def _exportBanklines(self, threadCnt, mosaic_nchunk):
+    def _exportBanklines(self, threadCnt):
         '''
         '''
 
         # print("\n\tCreating vrt...")
         # self._createMosaic(mosaic=2, overview=False, threadCnt=threadCnt, son=True, maxChunk=mosaic_nchunk)
 
-        inDir = os.path.join(self.port.projDir, 'sonar_mosaic')
-        rasterFiles = glob(os.path.join(inDir, '*mosaic*tif'))
+        # inDir = os.path.join(self.port.projDir, 'sonar_mosaic')
+        # rasterFiles = glob(os.path.join(inDir, '*mosaic*tif'))
+
+        if self.port.rect_wcr:
+            inDirPort = os.path.join(self.port.projDir, self.port.beamName, 'rect_wcr')
+            inDirStar = os.path.join(self.star.projDir, self.star.beamName, 'rect_wcr')
+        else:
+            inDirPort = os.path.join(self.port.projDir, self.beamName, 'rect_wcp')
+            inDirStar = os.path.join(self.star.projDir, self.beamName, 'rect_wcp')
+
+        portFiles = glob(os.path.join(inDirPort, '*.tif'))
+        starFiles = glob(os.path.join(inDirStar, '*.tif'))
+
+        rasterFiles = portFiles + starFiles
 
         outDir = os.path.join(self.port.projDir, 'banklines')
 
@@ -2586,8 +2598,36 @@ class portstarObj(object):
             os.mkdir(outDir)
 
         print("\n\tExporting to shapefile...")
-        _ = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createBanklinePolygon)(f, outDir) for f in rasterFiles)
+        # r = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createBanklinePolygon)(f, outDir) for f in rasterFiles)
+        r = []
+        for f in rasterFiles:
+            ds = self._createBanklinePolygon(f, outDir)
+            r.append(ds)
 
+
+        for ds in r:
+
+            if not 'outDS' in locals():
+                outDS = ds
+            else:
+                outDS = pd.concat([outDS, ds], ignore_index=True)
+
+        # Dissolve
+        outDS['geometry'] = outDS.simplify(0.1)
+        outDS['geometry'] = outDS.buffer(0.1, join_style=2)
+        outDS = outDS.dissolve()
+        outDS['geometry'] = outDS.buffer(-0.1, join_style=2)
+
+        # Save
+        projName = os.path.split(self.port.projDir)[-1] 
+        fileName = projName + '_bankline.shp'
+        fileName = os.path.join(outDir, fileName)
+
+        outDS.to_file(fileName, index=False)
+
+        outDS = None
+
+        return
 
 
 
@@ -2606,12 +2646,14 @@ class portstarObj(object):
 
         # Prepare layerfile
         dst_layername = os.path.basename(f).replace('.tif', '')
-        dst_layername = dst_layername.replace('rect_wcr_mosaic', 'bankline')
+        # dst_layername = dst_layername.replace('rect_wcr_mosaic', 'bankline')
+        dst_layername = dst_layername.replace('rect_wcr', 'bankline')
         dst_layername = os.path.join(outDir, dst_layername)
 
         # Get raster data and reclass
         srcband = src_ds.GetRasterBand(1)
-        mask = np.where(srcband.ReadAsArray()>0, 254, 0)
+        # mask = np.where(srcband.ReadAsArray()>0, 254, 0)
+        mask = np.where(srcband.ReadAsArray()>0, 1, 0)
         del srcband
 
         tmp_ds = gdal.GetDriverByName('MEM').CreateCopy('', src_ds, 0)
@@ -2625,13 +2667,23 @@ class portstarObj(object):
         dst_ds = drv.CreateDataSource(dst_layername+'temp.shp')
         dst_layer = dst_ds.CreateLayer(dst_layername, srs = srs, geom_type=ogr.wkbMultiPolygon)
 
-        # Create Polygon
-        gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+        # Try storing pixel value in field
+        fd = ogr.FieldDefn("Value", ogr.OFTInteger)
+        dst_layer.CreateField(fd)
+        dst_field = dst_layer.GetLayerDefn().GetFieldIndex('Value')
 
-        # Delete NoData poly (last feature)
-        ft_cnt = dst_layer.GetFeatureCount()-1
+        # Create Polygon
+        # gdal.Polygonize(srcband, None, dst_layer, 0, [], callback=None)
+        gdal.Polygonize(srcband, None, dst_layer, dst_field, [], callback=None)
+
+        # # Delete NoData poly (last feature)
+        # ft_cnt = dst_layer.GetFeatureCount()-1
+        # layer = dst_ds.GetLayer()
+        # layer.SetAttributeFilter("FID = {}".format(ft_cnt))
+
+        # Delete NoData poly (Value = 0)
         layer = dst_ds.GetLayer()
-        layer.SetAttributeFilter("FID = {}".format(ft_cnt))
+        layer.SetAttributeFilter("Value = 0")
 
         for feat in layer:
             layer.DeleteFeature(feat.GetFID())
@@ -2647,10 +2699,8 @@ class portstarObj(object):
         ds = gpd.read_file(dst_layername+'temp.shp')
         # Dissolve all polygons
         ds = ds.dissolve()
-        # Save
-        ds.to_file(dst_layername+'.shp', index=False)
-
-        ds=None
+        # # Save
+        # ds.to_file(dst_layername+'.shp', index=False)
 
         # Delete temp files
         outDir = os.path.join(self.port.projDir, 'banklines')
@@ -2663,7 +2713,7 @@ class portstarObj(object):
                 pass
 
 
-        return
+        return ds
 
 
     #=======================================================================

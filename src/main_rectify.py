@@ -560,7 +560,7 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nExporting Banklines...")
         psObj = portstarObj(portstar)
-        psObj._exportBanklines(threadCnt, mosaic_nchunk)
+        psObj._exportBanklines(threadCnt)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         del psObj
