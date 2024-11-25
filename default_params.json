@@ -1,7 +1,6 @@
 {   
     "inDir":"",
     "humFile":"",
-    "aoi":"",
     "projDir":"",
     "project_mode":true,
     "tempC":10,
@@ -10,6 +9,11 @@
     "exportUnknown":false,
     "fixNoDat":false,
     "threadCnt":0,
+    "aoi":"",
+    "max_heading_deviation":0,
+    "max_heading_distance":0,
+    "min_speed":0,
+    "max_speed":0,
     "pix_res_son":0.05,
     "pix_res_map":0.25,
     "x_offset":0.0,
@@ -40,5 +44,6 @@
     "mosaic_nchunk":0,
     "mosaic":"False",
     "map_mosaic":"False",
-    "banklines":false
+    "banklines":false,
+    "coverage":false
 }

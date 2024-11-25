@@ -534,10 +534,10 @@ def rectify_master_func(logfilename='',
     ############################################################################
     overview = True # False will reduce overall file size, but reduce performance in a GIS
 
-    if banklines and not mosaic:
-        print('\n\nExporting banklines requires sonar mosaic')
-        print('Setting mosaic==1...')
-        mosaic = 1
+    # if banklines and not mosaic:
+    #     print('\n\nExporting banklines requires sonar mosaic')
+    #     print('Setting mosaic==1...')
+    #     mosaic = 1
 
     if mosaic > 0:
         start_time = time.time()
