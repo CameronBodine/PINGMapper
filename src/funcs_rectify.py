@@ -129,15 +129,12 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
 
             # Smooth trackline not fit. Need to remove transect from df
             else:
-                print('Dropping:', name)
                 # sonDF = sonDF.drop(group.get_group(group).index)
                 # sonDF = sonDF.drop(group.index)
                 sonDF = sonDF[sonDF['transect'] != name]
                 transect_dropped.append(name)
 
             del smoothed
-
-        print(transect_dropped)
 
         # Save sonDF
         if len(transect_dropped) > 0:

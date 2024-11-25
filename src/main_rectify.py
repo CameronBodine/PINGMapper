@@ -376,15 +376,15 @@ def rectify_master_func(logfilename='',
     # else:
     #     print("\nUsing existing smoothed trackline.")
 
-    # ############################################################################
-    # # Smooth Trackline                                                         #
-    # ############################################################################
+    ############################################################################
+    # Smooth Trackline                                                         #
+    ############################################################################
 
-    # smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
-    # for son in portstar:
-    #     beam = son.beamName
-    #     if beam == "ss_port" or beam == "ss_star":
-    #         son.smthTrkFile = smthTrkFilenames[beam]
+    smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    for son in portstar:
+        beam = son.beamName
+        if beam == "ss_port" or beam == "ss_star":
+            son.smthTrkFile = smthTrkFilenames[beam]
 
     ####################################
     ####################################
@@ -404,7 +404,6 @@ def rectify_master_func(logfilename='',
         while i <= max(chunks):
 
         # for i in chunks:
-            print(i)
 
             # # Get second to last row of previous chunk
             # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]

@@ -1292,15 +1292,15 @@ def read_master_func(logfilename='',
         pass
 
 
-    ############################################################################
-    # Smooth Trackline                                                         #
-    ############################################################################
+    # ############################################################################
+    # # Smooth Trackline                                                         #
+    # ############################################################################
 
-    smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
-    for son in sonObjs:
-        beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
-            son.smthTrkFile = smthTrkFilenames[beam]
+    # smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    # for son in sonObjs:
+    #     beam = son.beamName
+    #     if beam == "ss_port" or beam == "ss_star":
+    #         son.smthTrkFile = smthTrkFilenames[beam]
 
 
     ############################################################################
@@ -1347,39 +1347,39 @@ def read_master_func(logfilename='',
         df1 = son1.sonMetaDF
         df1['filter'] = df0['filter']
 
-        # Add filter to smoothed tracklines
-        csv0 = son0.smthTrkFile
-        sDF0 = pd.read_csv(csv0)
-        sDF0['filter'] = df0['filter']
+        # # Add filter to smoothed tracklines
+        # csv0 = son0.smthTrkFile
+        # sDF0 = pd.read_csv(csv0)
+        # sDF0['filter'] = df0['filter']
 
-        csv1 = son1.smthTrkFile
-        sDF1 = pd.read_csv(csv1)
-        sDF1['filter'] = df1['filter']
+        # csv1 = son1.smthTrkFile
+        # sDF1 = pd.read_csv(csv1)
+        # sDF1['filter'] = df1['filter']
 
         # Apply the filter
         df0 = df0[df0['filter'] == True]
         df1 = df1[df1['filter'] == True]
 
-        sDF0 = sDF0[sDF0['filter'] == True]
-        sDF1 = sDF1[sDF1['filter'] == True]
+        # sDF0 = sDF0[sDF0['filter'] == True]
+        # sDF1 = sDF1[sDF1['filter'] == True]
 
         # Reasign the chunks
         df0 = son0._reassignChunks(df0)
         df1['chunk_id'] = df0['chunk_id']
         df1['transect'] = df0['transect']
 
-        sDF0['chunk_id'] = df0['chunk_id']
-        sDF0['transect'] = df0['transect']
+        # sDF0['chunk_id'] = df0['chunk_id']
+        # sDF0['transect'] = df0['transect']
 
-        sDF1['chunk_id'] = df1['chunk_id']
-        sDF1['transect'] = df1['transect']
+        # sDF1['chunk_id'] = df1['chunk_id']
+        # sDF1['transect'] = df1['transect']
 
         # Save the csvs
         son0._saveSonMetaCSV(df0)
         son1._saveSonMetaCSV(df1)
 
-        sDF0.to_csv(csv0, index=False)
-        sDF1.to_csv(csv1, index=False)
+        # sDF0.to_csv(csv0, index=False)
+        # sDF1.to_csv(csv1, index=False)
 
         del df0, df1, #sDF0, sDF1
         son0._cleanup()
