@@ -28,6 +28,7 @@
 
 
 from funcs_common import *
+from funcs_rectify import smoothTrackline
 from class_sonObj import sonObj
 from class_portstarObj import portstarObj
 import shutil
@@ -42,6 +43,10 @@ def read_master_func(logfilename='',
                      projDir='',
                      coverage=False,
                      aoi=False,
+                     max_heading_deviation = False,
+                     max_heading_distance = False,
+                     min_speed = False,
+                     max_speed = False,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -67,6 +72,7 @@ def read_master_func(logfilename='',
                      smthDep=0,
                      adjDep=0,
                      pltBedPick=False,
+                     cog=True,
                      rect_wcp=False,
                      rect_wcr=False,
                      son_colorMap='Greys',
@@ -513,6 +519,8 @@ def read_master_func(logfilename='',
         # Get metadata for each beam in parallel.
         if len(toProcess) > 0:
             r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+            # for son in toProcess:
+            #     son._getSonMeta()
             # Store pix_m in object
             for son, pix_m in zip(sonObjs, r):
                 son.pixM = pix_m # Sonar instrument pixel resolution
@@ -531,6 +539,11 @@ def read_master_func(logfilename='',
         for i in range(0,len(sonObjs)): # Iterate each metadata file
             sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
         del i, sonMeta
+
+
+        ###################################
+        # Above can be ported to PINGVerter
+        ###################################
 
 
         # Store cropRange in object
@@ -897,143 +910,143 @@ def read_master_func(logfilename='',
         son._pickleSon()
 
     
-    ############################################################################
-    # For AOI                                                                  #
-    ############################################################################
-    # Use AOI to clip metadata to facilitate processing multiple transects in a
-    ## single sonar recording.
+    # ############################################################################
+    # # For AOI                                                                  #
+    # ############################################################################
+    # # Use AOI to clip metadata to facilitate processing multiple transects in a
+    # ## single sonar recording.
 
-    if aoi: 
+    # if aoi: 
 
-        print('\n\nProcessing AOI...')
+    #     print('\n\nProcessing AOI...')
 
-        # # # For extracting value from nested dictionaries and lists
-        # def getPolyCoords(nested_dict, value):
-        #     # polys = []
-        #     for k, v in nested_dict.items():
-        #         if k == value:
-        #             return v
-        #         elif hasattr(v, 'items'):
-        #             p = getPolyCoords(v, value)
-        #             if p is not None and p:
-        #                 # return p
-        #                 polys.append(p)
-        #         elif isinstance(v, list):
-        #             for i in v:
-        #                 if hasattr(i, 'items'):
-        #                     p = getPolyCoords(i, value)
-        #                     if p is not None and p:
-        #                         # return p
-        #                         polys.append(p)
-        #     return polys
+    #     # # # For extracting value from nested dictionaries and lists
+    #     # def getPolyCoords(nested_dict, value):
+    #     #     # polys = []
+    #     #     for k, v in nested_dict.items():
+    #     #         if k == value:
+    #     #             return v
+    #     #         elif hasattr(v, 'items'):
+    #     #             p = getPolyCoords(v, value)
+    #     #             if p is not None and p:
+    #     #                 # return p
+    #     #                 polys.append(p)
+    #     #         elif isinstance(v, list):
+    #     #             for i in v:
+    #     #                 if hasattr(i, 'items'):
+    #     #                     p = getPolyCoords(i, value)
+    #     #                     if p is not None and p:
+    #     #                         # return p
+    #     #                         polys.append(p)
+    #     #     return polys
 
-        # If .plan file (from Hydronaulix)
-        if os.path.basename(aoi.split('.')[-1]) == 'plan':            
-            with open(aoi, 'r', encoding='utf-8') as f:
-                f = json.load(f)
-                # Find 'polygon' coords in nested json
-                # polys = []
-                # poly_coords = getPolyCoords(f, 'polygon')
-                # print(poly_coords)
+    #     # If .plan file (from Hydronaulix)
+    #     if os.path.basename(aoi.split('.')[-1]) == 'plan':            
+    #         with open(aoi, 'r', encoding='utf-8') as f:
+    #             f = json.load(f)
+    #             # Find 'polygon' coords in nested json
+    #             # polys = []
+    #             # poly_coords = getPolyCoords(f, 'polygon')
+    #             # print(poly_coords)
 
-                f = f['mission']
-                f = f['items']
-                poly_coords = []
-                for i in f:
-                    for k, v in i.items():
-                        if k == 'polygon':
-                            poly_coords.append(v)
+    #             f = f['mission']
+    #             f = f['items']
+    #             poly_coords = []
+    #             for i in f:
+    #                 for k, v in i.items():
+    #                     if k == 'polygon':
+    #                         poly_coords.append(v)
 
-                aoi_poly_all = gpd.GeoDataFrame()
+    #             aoi_poly_all = gpd.GeoDataFrame()
 
-                for poly in poly_coords:
+    #             for poly in poly_coords:
                 
-                    # Extract coordinates
-                    lat_coords = [i[0] for i in poly]
-                    lon_coords = [i[1] for i in poly]
+    #                 # Extract coordinates
+    #                 lat_coords = [i[0] for i in poly]
+    #                 lon_coords = [i[1] for i in poly]
 
-                    polygon_geom = Polygon(zip(lon_coords, lat_coords))
-                    aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+    #                 polygon_geom = Polygon(zip(lon_coords, lat_coords))
+    #                 aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
 
-                    aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
+    #                 aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
 
-        # If shapefile
-        elif os.path.basename(aoi.split('.')[-1]) == 'shp':
-            aoi_poly_all = gpd.read_file(aoi)
+    #     # If shapefile
+    #     elif os.path.basename(aoi.split('.')[-1]) == 'shp':
+    #         aoi_poly_all = gpd.read_file(aoi)
 
-        else:
-            print(os.path.basename, ' is not a valid aoi file type.')
-            sys.exit()
+    #     else:
+    #         print(os.path.basename, ' is not a valid aoi file type.')
+    #         sys.exit()
 
-        # Reproject to utm
-        epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
-        aoi_poly = aoi_poly_all.to_crs(crs=epsg)
-        aoi_poly = aoi_poly.dissolve()
+    #     # Reproject to utm
+    #     epsg = int(sonObjs[0].humDat['epsg'].split(':')[-1])
+    #     aoi_poly = aoi_poly_all.to_crs(crs=epsg)
+    #     aoi_poly = aoi_poly.dissolve()
 
-        # Buffer aoi
-        if os.path.basename(aoi.split('.')[-1]) == 'plan': 
-            buf_dist = 0.5
-            aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
+    #     # Buffer aoi
+    #     if os.path.basename(aoi.split('.')[-1]) == 'plan': 
+    #         buf_dist = 0.5
+    #         aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
 
-        # Save aoi
-        aoi_dir = os.path.join(sonObjs[0].projDir, 'aoi')
-        aoiOut = os.path.basename(sonObjs[0].projDir) + '_aoi.shp'
-        if not os.path.exists(aoi_dir):
-            os.makedirs(aoi_dir)
+    #     # Save aoi
+    #     aoi_dir = os.path.join(sonObjs[0].projDir, 'aoi')
+    #     aoiOut = os.path.basename(sonObjs[0].projDir) + '_aoi.shp'
+    #     if not os.path.exists(aoi_dir):
+    #         os.makedirs(aoi_dir)
 
-        aoiOut = os.path.join(aoi_dir, aoiOut)
-        aoi_poly.to_file(aoiOut)
+    #     aoiOut = os.path.join(aoi_dir, aoiOut)
+    #     aoi_poly.to_file(aoiOut)
 
-        # Iterate each son file, clip with aoi, and save
-        for son in sonObjs:
-            son._loadSonMeta()
-            sonDF = son.sonMetaDF
+    #     # Iterate each son file, clip with aoi, and save
+    #     for son in sonObjs:
+    #         son._loadSonMeta()
+    #         sonDF = son.sonMetaDF
 
-            # Convert to geodataframe
-            epsg = int(son.humDat['epsg'].split(':')[-1])
-            sonDF = gpd.GeoDataFrame(sonDF, geometry=gpd.points_from_xy(sonDF.e, sonDF.n), crs=epsg)
+    #         # Convert to geodataframe
+    #         epsg = int(son.humDat['epsg'].split(':')[-1])
+    #         sonDF = gpd.GeoDataFrame(sonDF, geometry=gpd.points_from_xy(sonDF.e, sonDF.n), crs=epsg)
 
-            # Clip with aoi
-            sonDF = gpd.clip(sonDF, aoi_poly, keep_geom_type=False)
-            sonDF = sonDF.sort_index()
+    #         # Clip with aoi
+    #         sonDF = gpd.clip(sonDF, aoi_poly, keep_geom_type=False)
+    #         sonDF = sonDF.sort_index()
 
-            # Make transects from consective pings using dataframe index
-            idx = sonDF.index.values
-            transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
+    #         # Make transects from consective pings using dataframe index
+    #         idx = sonDF.index.values
+    #         transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
 
-            # Assign transect
-            transect = 0
-            for t in transect_groups:
-                sonDF.loc[sonDF.index>=t[0], 'transect'] = transect
-                transect += 1
+    #         # Assign transect
+    #         transect = 0
+    #         for t in transect_groups:
+    #             sonDF.loc[sonDF.index>=t[0], 'transect'] = transect
+    #             transect += 1
 
-            # Set chunks
-            lastChunk = 0
-            newChunk = []
-            for name, group in sonDF.groupby('transect'):
+    #         # Set chunks
+    #         lastChunk = 0
+    #         newChunk = []
+    #         for name, group in sonDF.groupby('transect'):
 
-                if (len(group)%nchunk) != 0:
-                    rdr = nchunk-(len(group)%nchunk)
-                    chunkCnt = int(len(group)/nchunk)
-                    chunkCnt += 1
-                else:
-                    rdr = False
-                    chunkCnt = int(len(group)/nchunk)
+    #             if (len(group)%nchunk) != 0:
+    #                 rdr = nchunk-(len(group)%nchunk)
+    #                 chunkCnt = int(len(group)/nchunk)
+    #                 chunkCnt += 1
+    #             else:
+    #                 rdr = False
+    #                 chunkCnt = int(len(group)/nchunk)
 
-                chunks = np.arange(chunkCnt) + lastChunk
-                chunks = np.repeat(chunks, nchunk)
+    #             chunks = np.arange(chunkCnt) + lastChunk
+    #             chunks = np.repeat(chunks, nchunk)
                 
-                if rdr:
-                    chunks = chunks[:-rdr]
+    #             if rdr:
+    #                 chunks = chunks[:-rdr]
                 
-                newChunk += list(chunks)
-                lastChunk = chunks[-1] + 1
-                del chunkCnt
+    #             newChunk += list(chunks)
+    #             lastChunk = chunks[-1] + 1
+    #             del chunkCnt
 
-            sonDF['chunk_id'] = newChunk
+    #         sonDF['chunk_id'] = newChunk
 
-            son._saveSonMetaCSV(sonDF)
-            son._cleanup()
+    #         son._saveSonMetaCSV(sonDF)
+    #         son._cleanup()
 
 
     ############################################################################
@@ -1277,6 +1290,111 @@ def read_master_func(logfilename='',
         del psObj, portstar
     except:
         pass
+
+
+    # ############################################################################
+    # # Smooth Trackline                                                         #
+    # ############################################################################
+
+    # smthTrkFilenames = smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt)
+    # for son in sonObjs:
+    #     beam = son.beamName
+    #     if beam == "ss_port" or beam == "ss_star":
+    #         son.smthTrkFile = smthTrkFilenames[beam]
+
+
+    ############################################################################
+    # For Filtering                                                            #
+    ############################################################################
+
+    if max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi:
+
+        # Do port/star and down beams seperately
+        downbeams = []
+        portstar = []
+        for son in sonObjs:
+            beam = son.beamName
+            if beam == "ss_port" or beam == "ss_star":
+                portstar.append(son)
+            else:
+                # pass # Don't add non-port/star objects since they can't be rectified
+                downbeams.append(son)
+        del son, beam
+
+        # Find longest recording
+        minRec = 0
+        maxRec = 0 # Stores index of recording w/ most sonar records.
+        maxLen = 0 # Stores length of ping
+        for i, son in enumerate(portstar):
+            son._loadSonMeta() # Load ping metadata
+            sonLen = len(son.sonMetaDF) # Number of sonar records
+            if sonLen > maxLen:
+                maxLen = sonLen
+                maxRec = i
+            else:
+                minRec = i
+
+        # Do filtering on longest recording
+        son0 = portstar[maxRec]
+        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi)
+
+        # # Determine pings to filter
+        # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._doSonarFiltering)(max_heading_deviation, max_heading_distance) for son in portstar)
+
+        # Add filter to other beam
+        son1 = portstar[minRec]
+        son1._loadSonMeta()
+        df1 = son1.sonMetaDF
+        df1['filter'] = df0['filter']
+
+        # # Add filter to smoothed tracklines
+        # csv0 = son0.smthTrkFile
+        # sDF0 = pd.read_csv(csv0)
+        # sDF0['filter'] = df0['filter']
+
+        # csv1 = son1.smthTrkFile
+        # sDF1 = pd.read_csv(csv1)
+        # sDF1['filter'] = df1['filter']
+
+        # Apply the filter
+        df0 = df0[df0['filter'] == True]
+        df1 = df1[df1['filter'] == True]
+
+        # sDF0 = sDF0[sDF0['filter'] == True]
+        # sDF1 = sDF1[sDF1['filter'] == True]
+
+        # Reasign the chunks
+        df0 = son0._reassignChunks(df0)
+        df1['chunk_id'] = df0['chunk_id']
+        df1['transect'] = df0['transect']
+
+        # sDF0['chunk_id'] = df0['chunk_id']
+        # sDF0['transect'] = df0['transect']
+
+        # sDF1['chunk_id'] = df1['chunk_id']
+        # sDF1['transect'] = df1['transect']
+
+        # Save the csvs
+        son0._saveSonMetaCSV(df0)
+        son1._saveSonMetaCSV(df1)
+
+        # sDF0.to_csv(csv0, index=False)
+        # sDF1.to_csv(csv1, index=False)
+
+        del df0, df1, #sDF0, sDF1
+        son0._cleanup()
+        son1._cleanup()
+
+
+        # # Add filtering to smth track files
+        # for son in portstar:
+        #     son._loadSonMeta()
+        #     df = son.sonMetaDF
+
+        #     csv = son.smthTrkFile
+        #     sDF = pd.read_csv(csv)
+
+        #     sDF['filter'] = df['filter']
 
     ############################################################################
     # For sonar intensity corrections/normalization                            #

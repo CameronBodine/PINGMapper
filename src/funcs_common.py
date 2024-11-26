@@ -313,7 +313,6 @@ def saveDefaultParams(values):
     params = {
         'inDir':inDir,
         'humFile':values['humFile'],
-        'aoi':values['aoi'],
         'projDir':projDir,
         'project_mode':int(values['project_mode']),
         'tempC':float(values['tempC']),
@@ -322,6 +321,11 @@ def saveDefaultParams(values):
         'exportUnknown':values['exportUnknown'],
         'fixNoDat':values['fixNoDat'],
         'threadCnt':int(values['threadCnt']),
+        'max_heading_deviation':float(values['max_heading_deviation']),
+        'max_heading_distance':float(values['max_heading_distance']),
+        'min_speed':float(values['min_speed']),
+        'max_speed':float(values['max_speed']),
+        'aoi':values['aoi'],
         'pix_res_son':float(values['pix_res_son']),
         'pix_res_map':float(values['pix_res_map']),
         'x_offset':float(values['x_offset']),
@@ -349,7 +353,8 @@ def saveDefaultParams(values):
         'mosaic_nchunk':int(values['mosaic_nchunk']),
         'mosaic':values['mosaic'],
         'map_mosaic':values['map_mosaic'],
-        'banklines':values['banklines']
+        'banklines':values['banklines'],
+        'coverage':values['coverage'],
     }
 
     json_object = json.dumps(params, indent=4)

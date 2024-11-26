@@ -1019,6 +1019,7 @@ class sonObj(object):
                 # Store needed data in head dict
                 head['index'].append(sonIndex) # ping byte index
                 head['chunk_id'].append(chunk) # ping chunk id
+
                 try:
                     headerDat = self._getHeader(sonIndex) # Get and decode header data in .SON file
                     for key, val in headerDat.items():
@@ -1181,7 +1182,7 @@ class sonObj(object):
         # Now calculate hdop from n/e variances
         sonHead['hdop'] = np.round(np.sqrt(sonHead['e_err_m']+sonHead['n_err_m']), 2)
 
-        # Convert eastings/northings to latitude/longitude
+        # Convert eastings/northings to latitude/longitude (from Py3Hum - convert using International 1924 spheroid)
         lat = np.arctan(np.tan(np.arctan(np.exp(sonHead['utm_n']/ 6378388.0)) * 2.0 - 1.570796326794897) * 1.0067642927) * 57.295779513082302
         lon = (sonHead['utm_e'] * 57.295779513082302) / 6378388.0
 
@@ -1276,6 +1277,8 @@ class sonObj(object):
 
         return pix_m[0]
 
+        # return (18.0136795075313/1400) Lowrance hack...
+
     #=======================================================================
     def _calcTrkDistTS(self,
                        sonMetaAll):
@@ -1311,6 +1314,299 @@ class sonObj(object):
             self.sonMetaFile = outCSV
         else:
             sonMetaAll.to_csv(self.sonMetaFile, index=False, float_format='%.14f')
+
+
+    ############################################################################
+    # Filter sonar recording from user params                                  #
+    ############################################################################
+
+    # ======================================================================
+    def _doSonarFiltering(self, 
+                          max_heading_dev,
+                          distance,
+                          min_speed,
+                          max_speed,
+                          aoi,
+                          ):
+        '''
+        '''
+        #################
+        # Get metadata df
+        self._loadSonMeta()
+        sonDF = self.sonMetaDF
+
+        # print('len', len(sonDF))
+        # print(sonDF)
+
+        #############################
+        # Do Heading Deviation Filter
+        if max_heading_dev > 0:
+            sonDF = self._filterHeading(sonDF, max_heading_dev, distance)
+
+        #################
+        # Do Speed Filter
+        if min_speed > 0 or max_speed > 0:
+            sonDF = self._filterSpeed(sonDF, min_speed, max_speed)
+
+        ###############
+        # Do AOI Filter
+        if aoi:
+            sonDF = self._filterAOI(sonDF, aoi)
+
+        # self._reassignChunks(sonDF)
+
+        # ##################################
+        # # Add filter to smoothed trackline
+        # csv = self.smthTrkFile
+        # sDF = pd.read_csv(csv)
+        # sDF['filter'] = sonDF['filter']
+
+        # # Apply filter
+        # sonDF = sonDF[sonDF['filter'] == True]
+        # sDF = sDF[sDF['filter'] == True]
+
+        # #################
+        # # Reassign chunks
+        # sonDF = self._reassignChunks(sonDF)
+
+        # # Update chunk and transect
+        # sDF['chunk_id'] = sonDF['chunk_id']
+        # sDF['transect'] = sonDF['transect']
+
+        # ############
+        # # Save files
+        # self._saveSonMetaCSV(sonDF)
+        # sDF.to_csv(csv, index=False)
+
+        # self._cleanup()
+
+        return sonDF
+
+
+    # ======================================================================
+    def _filterHeading(self,
+                       df,
+                       dev,
+                       d,
+                       ):
+        '''
+        '''
+
+        #######
+        # Setup
+
+        # Set Fields for Filtering
+        trk_dist = 'trk_dist'       # Along track distance
+        head = 'instr_heading'      # Heading reported by instrument
+        filtCol = 'filter'
+
+        # Get max distance
+        max_dist = df[trk_dist].max()
+
+        # Set counters
+        win = 1                     # stride of moving window
+        dist_start = 0              # Counter for beginning of current window
+        dist_end = dist_start + d   # Counbter for end of current window
+
+        df[filtCol] = False
+
+        ##############################
+        # Iterator through each window
+
+        # Compare heading deviation from first and last ping for current window
+        while dist_end < max_dist:
+
+            # Filter df by window
+            dfFilt = df[(df[trk_dist] >= dist_start) & (df[trk_dist] < dist_end)]
+
+            # Get difference between start and end heading
+            start = dfFilt[head].iloc[0]
+            end = dfFilt[head].iloc[-1]
+            vessel_dev = np.abs(start - end)
+
+            # Compare vessel deviation to threshold deviation
+            if vessel_dev < dev:
+                # Keep these pings
+                df[filtCol].loc[dfFilt.index] = True
+
+                # dist_start += win
+                dist_start = dist_end
+
+            else:
+                dist_start = dist_end
+
+                # df[filtCol].loc[dfFilt.index] = False
+
+                # dist_start += win
+                
+
+
+            dist_end = dist_start + d
+
+        try:
+            return df
+        except:
+            sys.exit('\n\n\nERROR:\nMax heading standard deviation too small.\nPlease specify a larger value.')
+
+
+    # ======================================================================
+    def _filterSpeed(self,
+                     sonDF,
+                     min_speed,
+                     max_speed):
+        
+        '''
+        
+        '''
+
+        speed_col = 'speed_ms'
+        filtCol = 'filter'
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+
+        # Filter min_speed
+        if min_speed > 0:
+            # sonDF = sonDF[sonDF['speed_ms'] >= min_speed]
+            sonDF.loc[sonDF[speed_col] < min_speed] = False
+
+        # Filter max_speed
+        if max_speed > 0:
+            # sonDF = sonDF[sonDF['speed_ms'] <= max_speed]
+            sonDF.loc[sonDF[speed_col] > max_speed] = False
+
+        return sonDF
+
+    # ======================================================================
+    def _filterAOI(self,
+                   sonDF,
+                   aoi):
+        
+        filtCol = 'filter'
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+        
+        # If .plan file (from Hydronaulix)
+        if os.path.basename(aoi.split('.')[-1]) == 'plan':            
+            with open(aoi, 'r', encoding='utf-8') as f:
+                f = json.load(f)
+                # Find 'polygon' coords in nested json
+                # polys = []
+                # poly_coords = getPolyCoords(f, 'polygon')
+                # print(poly_coords)
+
+                f = f['mission']
+                f = f['items']
+                poly_coords = []
+                for i in f:
+                    for k, v in i.items():
+                        if k == 'polygon':
+                            poly_coords.append(v)
+
+                aoi_poly_all = gpd.GeoDataFrame()
+
+                for poly in poly_coords:
+                
+                    # Extract coordinates
+                    lat_coords = [i[0] for i in poly]
+                    lon_coords = [i[1] for i in poly]
+
+                    polygon_geom = Polygon(zip(lon_coords, lat_coords))
+                    aoi_poly = gpd.GeoDataFrame(index=[0], crs='epsg:4326', geometry=[polygon_geom])
+
+                    aoi_poly_all = pd.concat([aoi_poly_all, aoi_poly], ignore_index=True)
+
+        # If shapefile
+        elif os.path.basename(aoi.split('.')[-1]) == 'shp':
+            aoi_poly_all = gpd.read_file(aoi)
+
+        else:
+            print(os.path.basename, ' is not a valid aoi file type.')
+            sys.exit()
+
+        # Reproject to utm
+        epsg = int(self.humDat['epsg'].split(':')[-1])
+        aoi_poly = aoi_poly_all.to_crs(crs=epsg)
+        aoi_poly = aoi_poly.dissolve()
+
+        # Buffer aoi
+        if os.path.basename(aoi.split('.')[-1]) == 'plan': 
+            buf_dist = 0.5
+            aoi_poly['geometry'] = aoi_poly.geometry.buffer(buf_dist)
+
+        # Save aoi
+        aoi_dir = os.path.join(self.projDir, 'aoi')
+        aoiOut = os.path.basename(self.projDir) + '_aoi.shp'
+        if not os.path.exists(aoi_dir):
+            os.makedirs(aoi_dir)
+
+        aoiOut = os.path.join(aoi_dir, aoiOut)
+        aoi_poly.to_file(aoiOut)
+
+        # Convert to geodataframe
+        epsg = int(self.humDat['epsg'].split(':')[-1])
+        sonDF = gpd.GeoDataFrame(sonDF, geometry=gpd.points_from_xy(sonDF.e, sonDF.n), crs=epsg)
+
+        # Get polygon
+        aoi_poly = aoi_poly.geometry[0]
+
+        # Subset
+        mask = sonDF.within(aoi_poly)
+        sonDF[filtCol] *= mask
+
+        return sonDF
+
+    # ======================================================================
+    def _reassignChunks(self,
+                        sonDF):
+        
+        #################
+        # Reassign Chunks
+        nchunk = self.nchunk
+
+        # Make transects from consective pings using dataframe index
+        idx = sonDF.index.values
+        transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
+
+        # print(transect_groups)
+
+        # Assign transect
+        transect = 0
+        for t in transect_groups:
+            sonDF.loc[sonDF.index>=t[0], 'transect'] = transect
+            transect += 1
+
+        # Set chunks
+        lastChunk = 0
+        newChunk = []
+        for name, group in sonDF.groupby('transect'):
+
+            if (len(group)%nchunk) != 0:
+                rdr = nchunk-(len(group)%nchunk)
+                chunkCnt = int(len(group)/nchunk)
+                chunkCnt += 1
+            else:
+                rdr = False
+                chunkCnt = int(len(group)/nchunk)
+
+            chunks = np.arange(chunkCnt) + lastChunk
+            chunks = np.repeat(chunks, nchunk)
+            
+            if rdr:
+                chunks = chunks[:-rdr]
+            
+            newChunk += list(chunks)
+            lastChunk = chunks[-1] + 1
+            del chunkCnt
+
+        sonDF['chunk_id'] = newChunk
+
+        # self._saveSonMetaCSV(sonDF)
+        # self._cleanup()
+
+        return sonDF
+
 
     ############################################################################
     # Fix corrupt recording w/ missing pings                                   #
@@ -1971,6 +2267,17 @@ class sonObj(object):
         if remWater:
             self._WCR(sonMeta)
 
+        # if 'filter' in sonMeta.columns:
+        #     # Mask filtered pings
+        #     idxs = sonMeta[sonMeta['filter'] == False].index
+
+        #     mask = np.ones(self.sonDat.shape)
+
+        #     for idx in idxs:
+        #         mask[:, idx] = 0
+
+        #     self.sonDat = self.sonDat * mask       
+
         del self.headIdx, self.pingCnt
 
         return
@@ -1993,8 +2300,14 @@ class sonObj(object):
         # Load son metadata csv to df
         self._loadSonMeta()
 
+        df = self.sonMetaDF
+
+        if 'filter' in df.columns:
+            # Remove filtered pings
+            df = df[df['filter'] == True]
+
         # Get unique chunk id's
-        df = self.sonMetaDF.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
+        df = df.groupby(['chunk_id', 'index']).size().reset_index().rename(columns={0:'count'})
         chunks = pd.unique(df['chunk_id']).astype(int)
 
         del self.sonMetaDF, df
