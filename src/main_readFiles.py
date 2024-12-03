@@ -34,6 +34,11 @@ from class_portstarObj import portstarObj
 import shutil
 from doodleverse_utils.imports import *
 
+sys.path.insert(0, r'C:\Users\cbodine\PythonRepos\PINGVerter')
+
+from pingverter import hum2pingmapper, low2pingmapper
+
+
 #===========================================
 def read_master_func(logfilename='',
                      project_mode=0,
@@ -265,285 +270,367 @@ def read_master_func(logfilename='',
         threadCnt=cpu_count();
         print("\nWARNING: Specified more process threads then available, \nusing {} threads instead.".format(threadCnt))
 
+
+    #######################################
+    # Use PINGVerter to read the sonar file
+    #######################################
+
+    start_time = time.time()
+    # Determine sonar recording type
+    _, file_type = os.path.splitext(humFile)
+
+    # Prepare Humminbird file for PINGMapper
+    if file_type == '.DAT':
+        sonar_obj = hum2pingmapper(humFile, projDir, nchunk, tempC, exportUnknown)
+
+    # Prepare Lowrance file for PINGMapper    
+    elif file_type == '.sl2' or file_type == '.sl3':
+        sonar_obj = low2pingmapper(humFile, projDir)
+
+    ####################
+    # Create son objects
+    ####################
+
+    # Get available beams and metadata
+    beamMeta = sonar_obj.beamMeta
+
+    # Create son objects
+    sonObjs = []
+    for beam, meta in beamMeta.items():
+
+        # Create the sonObj
+        son = sonObj(meta['sonFile'], sonar_obj.humFile, projDir, sonar_obj.tempC, sonar_obj.nchunk)
+
+        son.flip_port = False
+        if beam == 'B002':
+            if file_type == '.sl2' or file_type == '.sl3':
+                son.flip_port = True
+
+        # Store other parameters as attributes
+        son.fixNotDat = fixNoDat
+        # son.datLen = meta['datLen']
+        # son.humDatStruct = meta['humDatStruct']
+        son.metaDir = sonar_obj.metaDir
+        son.beamName = meta['beamName']
+        son.beam = beam
+        son.headBytes = sonar_obj.headBytes
+        son.pixM = sonar_obj.pixM
+        son.isOnix = sonar_obj.isOnix
+        son.trans = sonar_obj.trans
+        son.humDat = sonar_obj.humDat
+
+        if pix_res_son == 0:
+            son.pix_res_son = son.pixM
+        else:
+            son.pix_res_son = pix_res_son
+        if pix_res_map == 0:
+            son.pix_res_map = son.pixM
+        else:
+            son.pix_res_map = pix_res_map
+
+        son.sonMetaFile = meta['metaCSV']
+
+        sonObjs.append(son)
+
+    ####
+    # OLD    
+
     ############################################################################
     # Decode DAT file (varies by model)                                        #
     ############################################################################
 
     if (project_mode != 2):
-        printUsage()
-        start_time = time.time()
-        print("\nGetting DAT Metadata...")
-        print(humFile)
-        # Create sonObj to store sonar attributes, access processing functions,
-        ## and access sonar data.  We will use the first sonar beam to make an
-        ## initial sonar object, then create a copy for each beam.
-        tempC = float(tempC)/10 # Divide temperature by 10
+        # printUsage()
+        # start_time = time.time()
+        # print("\nGetting DAT Metadata...")
+        # print(humFile)
+        # # Create sonObj to store sonar attributes, access processing functions,
+        # ## and access sonar data.  We will use the first sonar beam to make an
+        # ## initial sonar object, then create a copy for each beam.
+        # tempC = float(tempC)/10 # Divide temperature by 10
 
-        # cog = False
-        # if not cog:
-        #     nchunk= 1
+        # # cog = False
+        # # if not cog:
+        # #     nchunk= 1
 
-        son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk) # Initialize sonObj instance from first sonar beam
+        # son = sonObj(sonFiles[0], humFile, projDir, tempC, nchunk) # Initialize sonObj instance from first sonar beam
 
-        #######################################
-        # Store needed parameters as attributes
-        # son.pix_res_factor = pix_res_factor
-        son.fixNoDat = fixNoDat
+        # #######################################
+        # # Store needed parameters as attributes
+        # # son.pix_res_factor = pix_res_factor
+        # son.fixNoDat = fixNoDat
 
 
-        son.datLen = os.path.getsize(son.humFile) #Length (in bytes) of .DAT
+        # son.datLen = os.path.getsize(son.humFile) #Length (in bytes) of .DAT
 
-        # Determine .DAT (humDat) structure
-        son._getHumDatStruct()
+        # # Determine .DAT (humDat) structure
+        # son._getHumDatStruct()
 
-        # Read in the humdat data
-        if son.isOnix == 0:
-            son._getHumdat()
+        # # Read in the humdat data
+        # if son.isOnix == 0:
+        #     son._getHumdat()
 
-            # Determine epsg code and transformation (if we can, ONIX doesn't have
-            ## lat/lon in DAT, so will determine at a later processing step).
-            son._getEPSG()
-        else:
-            son._decodeOnix()
+        #     # Determine epsg code and transformation (if we can, ONIX doesn't have
+        #     ## lat/lon in DAT, so will determine at a later processing step).
+        #     son._getEPSG()
+        # else:
+        #     son._decodeOnix()
 
-        # Create 'meta' directory if it doesn't exist
-        metaDir = os.path.join(projDir, 'meta')
-        try:
-            os.mkdir(metaDir)
-        except:
-            pass
-        son.metaDir = metaDir #Store metadata directory in sonObj
+        # # Create 'meta' directory if it doesn't exist
+        # metaDir = os.path.join(projDir, 'meta')
+        # try:
+        #     os.mkdir(metaDir)
+        # except:
+        #     pass
+        # son.metaDir = metaDir #Store metadata directory in sonObj
 
+        # # Save main script to metaDir
+        # scriptDir = os.path.join(os.path.dirname(logfilename), 'processing_scripts')
+        # if not os.path.exists(scriptDir):
+        #     os.mkdir(scriptDir)
+        # outScript = os.path.join(scriptDir, script[1])
+        # shutil.copy(script[0], outScript)
+
+        # # Save DAT metadata to file (csv)
+        # outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name
+        # pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
+        # son.datMetaFile = outFile # Store metadata file path in sonObj
+        # del outFile
+
+
+        # # Cleanup
+        # son._cleanup()
+
+        # print("\nDone!")
+        # print("Time (s):", round(time.time() - start_time, ndigits=1))
+        # printUsage()
+
+        #######################################################
+        # Try copying sonObj instance for every sonar channel #
+        #######################################################
+
+        # # Determine which sonar beams are present (B000,B001,..)
+        # chanAvail = {}
+        # for s in sonFiles:
+        #     beam = os.path.split(s)[-1].split('.')[0] #Get beam number (B000,B001,..)
+        #     chanAvail[beam] = s
+        # del s, beam
+
+        # # Copy the previously created sonObj instance to make a unique sonObj for
+        # ## each beam.  Then update sonObj attributes specific to each beam.
+        # sonObjs = []
+        # for chan, file in chanAvail.items():
+        #     if chan == 'B000':
+        #         B000 = deepcopy(son)
+        #         B000.beamName = 'ds_lowfreq' #Update beam name
+        #         B000.outDir = os.path.join(B000.projDir, B000.beamName) #Update output directory
+        #         B000.beam = chan #Update beam number
+        #         B000.sonFile = file #Update sonar file path
+        #         sonObjs.append(B000) #Store in sonObjs list
+
+        #     elif chan == 'B001':
+        #         B001 = deepcopy(son)
+        #         B001.beamName = 'ds_highfreq' #Update beam name
+        #         B001.outDir = os.path.join(B001.projDir, B001.beamName) #Update output directory
+        #         B001.beam = chan #Update beam number
+        #         B001.sonFile = file #Update sonar file path
+        #         sonObjs.append(B001) #Store in sonObjs list
+
+        #     elif chan == 'B002':
+        #         B002 = deepcopy(son)
+        #         B002.beamName = 'ss_port' #Update beam name
+        #         B002.outDir = os.path.join(B002.projDir, B002.beamName) #Update output directory
+        #         B002.beam = chan #Update beam number
+        #         B002.sonFile = file #Update sonar file path
+        #         sonObjs.append(B002) #Store in sonObjs list
+
+        #     elif chan == 'B003':
+        #         B003 = deepcopy(son)
+        #         B003.beamName = 'ss_star' #Update beam name
+        #         B003.outDir = os.path.join(B003.projDir, B003.beamName) #Update output directory
+        #         B003.beam = chan #Update beam number
+        #         B003.sonFile = file #Update sonar file path
+        #         sonObjs.append(B003) #Store in sonObjs list
+
+        #     elif chan == 'B004':
+        #         B004 = deepcopy(son)
+        #         B004.beamName = 'ds_vhighfreq' #Update beam name
+        #         B004.outDir = os.path.join(B004.projDir, B004.beamName) #Update output directory
+        #         B004.beam = chan #Update beam number
+        #         B004.sonFile = file #Update sonar file path
+        #         sonObjs.append(B004) #Store in sonObjs list
+
+        #     else:
+        #         pass
+
+        # del chanAvail, chan, file
+
+        ############################################################################
+        # Determine ping header length (varies by model)                           #
+        ############################################################################
+
+        # start_time = time.time()
+        # print("\nGetting Header Structure...")
+        # cntSON = len(sonObjs) # Number of sonar files
+        # gotHeader = False # Flag indicating if length of header is found
+        # i = 0 # Counter for iterating son files
+        # while gotHeader is False: # Iterate each sonObj until header length determined
+        #     try:
+        #         son = sonObjs[i] # Get current sonObj
+        #         headbytes = son._cntHead() # Try counting head bytes
+        #         # Determine if header length was determined
+        #         if headbytes > 0: # Header length found
+        #             print("Header Length: {}".format(headbytes))
+        #             gotHeader = True
+        #         else: # Header length not found, iterate i to load next sonObj
+        #             i+=1
+        #     # Terminate program if header length not determined
+        #     except:
+        #         sys.exit("\n#####\nERROR: Out of SON files... \n"+
+        #         "Unable to determine header length.")
+        # del i, gotHeader, cntSON
+
+        # # Update each sonObj with header length
+        # if headbytes > 0:
+        #     for son in sonObjs:
+        #         son.headBytes = headbytes
+
+        # # Cleanup
+        # del son, headbytes
+
+        ############################################################################
+        # Get the SON header structure and attributes                              #
+        ############################################################################
+
+        # # The number of ping header bytes indicates the structure and order
+        # ## of ping attributes.  For known structures, the ping
+        # ## header structure will be stored in the sonObj.
+        # for son in sonObjs:
+        #     son._getHeadStruct(exportUnknown)
+        # del son
+
+        # # Let's check and make sure the header structure is correct.
+        # for son in sonObjs:
+        #     son._checkHeadStruct()
+        # del son
+
+        # for son in sonObjs:
+        #     headValid = son.headValid # Flag indicating if sonar header structure is known.
+        #     # ping header structure is known!
+        #     if headValid[0] is True:
+        #         print(son.beamName, ":", "Done!")
+        #     # Header byte length is of a known length, but we found an inconsistency
+        #     ## in the ping header structure.  Report byte location where
+        #     ## mis-match occured (for debugging purposes), then try to decode automatically.
+        #     elif headValid[0] is False:
+        #         print("\n#####\nERROR: Wrong Header Structure")
+        #         print("Expected {} at index {}.".format(headValid[1], headValid[2]))
+        #         print("Found {} instead.".format(headValid[3]))
+        #         print("Attempting to decode header structure.....")
+        #         son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
+        #     # Header structure is completely unknown.  Try to automatically decode.
+        #     else:
+        #         print("\n#####\nERROR: Wrong Header Structure")
+        #         print("Attempting to decode header structure.....")
+        #         son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
+        # del son, headValid
+
+        # # If we had to decode header structure, let's make sure it decoded correctly.
+        # ## If we are wrong, then we found a completely new Humminbird file format.
+        # ## Report byte location where mis-match occured (for dubugging purposes),
+        # ## and terminate the process.  We can't automatically decode this file.
+        # ## Please report to PING Mapper developers.
+        # for son in sonObjs:
+        #     if son.headValid[0] is not True:
+        #         son._checkHeadStruct()
+        #         headValid = son.headValid
+        #         if headValid[0] is True:
+        #             print("Succesfully determined header structure!")
+        #         else:
+        #             print("\n#####\nERROR:Unable to decode header structure")
+        #             print("Expected {} at index {}.".format(headValid[1], headValid[2]))
+        #             print("Found {} instead.".format(headValid[3]))
+        #             print("Terminating srcipt.")
+        #             sys.exit()
+        # del son
+
+        # print("Time (s):", round(time.time() - start_time, ndigits=1))
+        # printUsage()
+
+        ########################################
+        # Let's get the metadata for each ping #
+        ########################################
+
+        # start_time = time.time()
+        # # Now that we know the ping header structure, let's read that data
+        # ## and save it to .CSV in the meta directory.
+        # print("\nGetting SON file header metadata...")
+        # # Check to see if metadata is already saved to csv.
+        # toProcess = []
+        # for son in sonObjs:
+        #     beam = os.path.split(son.sonFile)[-1].split(".")[0]
+        #     file = os.path.join(son.metaDir, beam+"_meta.csv")
+        #     if os.path.exists(file):
+        #         print("File {0} exists. No need to re-process.".format(file))
+        #         son.sonMetaFile = file
+        #     else:
+        #         toProcess.append(son)
+        # del son, file
+
+        # # See if .IDX file is available.  If it is, store file path for later use.
+        # for son in sonObjs:
+        #     idxFile = son.sonFile.replace(".SON", ".IDX")
+        #     if os.path.exists(idxFile):
+        #         son.sonIdxFile = idxFile
+        #     else:
+        #         son.sonIdxFile = False
+        # del son, idxFile
+
+        # # Get metadata for each beam in parallel.
+        # if len(toProcess) > 0:
+        #     r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
+        #     # for son in toProcess:
+        #     #     son._getSonMeta()
+        #     # Store pix_m in object
+        #     for son, pix_m in zip(sonObjs, r):
+        #         son.pixM = pix_m # Sonar instrument pixel resolution
+        #         if pix_res_son == 0:
+        #             son.pix_res_son = son.pixM
+        #         else:
+        #             son.pix_res_son = pix_res_son # Store output pixel resolution
+        #         if pix_res_map == 0:
+        #             son.pix_res_map = son.pixM
+        #         else:
+        #             son.pix_res_map = pix_res_map
+        #     del toProcess
+
+        # metaDir = sonObjs[0].metaDir # Get path to metadata directory
+        # sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv'))) # Get path to metadata files
+        # for i in range(0,len(sonObjs)): # Iterate each metadata file
+        #     sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
+        # del i, sonMeta
+
+        # sys.exit()
+
+
+        ###################################
+        # Above can be ported to PINGVerter
+        ###################################
+
+
+
+        #####
+        ### 
         # Save main script to metaDir
         scriptDir = os.path.join(os.path.dirname(logfilename), 'processing_scripts')
         if not os.path.exists(scriptDir):
             os.mkdir(scriptDir)
         outScript = os.path.join(scriptDir, script[1])
         shutil.copy(script[0], outScript)
+        
 
-        # Save DAT metadata to file (csv)
-        outFile = os.path.join(metaDir, 'DAT_meta.csv') # Specify file directory & name
-        pd.DataFrame.from_dict(son.humDat, orient='index').T.to_csv(outFile, index=False) # Export DAT df to csv
-        son.datMetaFile = outFile # Store metadata file path in sonObj
-        del outFile
-
-
-        # Cleanup
-        son._cleanup()
-
-        print("\nDone!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        printUsage()
-
-        #######################################################
-        # Try copying sonObj instance for every sonar channel #
-        #######################################################
-
-        # Determine which sonar beams are present (B000,B001,..)
-        chanAvail = {}
-        for s in sonFiles:
-            beam = os.path.split(s)[-1].split('.')[0] #Get beam number (B000,B001,..)
-            chanAvail[beam] = s
-        del s, beam
-
-        # Copy the previously created sonObj instance to make a unique sonObj for
-        ## each beam.  Then update sonObj attributes specific to each beam.
-        sonObjs = []
-        for chan, file in chanAvail.items():
-            if chan == 'B000':
-                B000 = deepcopy(son)
-                B000.beamName = 'ds_lowfreq' #Update beam name
-                B000.outDir = os.path.join(B000.projDir, B000.beamName) #Update output directory
-                B000.beam = chan #Update beam number
-                B000.sonFile = file #Update sonar file path
-                sonObjs.append(B000) #Store in sonObjs list
-
-            elif chan == 'B001':
-                B001 = deepcopy(son)
-                B001.beamName = 'ds_highfreq' #Update beam name
-                B001.outDir = os.path.join(B001.projDir, B001.beamName) #Update output directory
-                B001.beam = chan #Update beam number
-                B001.sonFile = file #Update sonar file path
-                sonObjs.append(B001) #Store in sonObjs list
-
-            elif chan == 'B002':
-                B002 = deepcopy(son)
-                B002.beamName = 'ss_port' #Update beam name
-                B002.outDir = os.path.join(B002.projDir, B002.beamName) #Update output directory
-                B002.beam = chan #Update beam number
-                B002.sonFile = file #Update sonar file path
-                sonObjs.append(B002) #Store in sonObjs list
-
-            elif chan == 'B003':
-                B003 = deepcopy(son)
-                B003.beamName = 'ss_star' #Update beam name
-                B003.outDir = os.path.join(B003.projDir, B003.beamName) #Update output directory
-                B003.beam = chan #Update beam number
-                B003.sonFile = file #Update sonar file path
-                sonObjs.append(B003) #Store in sonObjs list
-
-            elif chan == 'B004':
-                B004 = deepcopy(son)
-                B004.beamName = 'ds_vhighfreq' #Update beam name
-                B004.outDir = os.path.join(B004.projDir, B004.beamName) #Update output directory
-                B004.beam = chan #Update beam number
-                B004.sonFile = file #Update sonar file path
-                sonObjs.append(B004) #Store in sonObjs list
-
-            else:
-                pass
-
-        del chanAvail, chan, file
-
-        ############################################################################
-        # Determine ping header length (varies by model)                           #
-        ############################################################################
-
-        start_time = time.time()
-        print("\nGetting Header Structure...")
-        cntSON = len(sonObjs) # Number of sonar files
-        gotHeader = False # Flag indicating if length of header is found
-        i = 0 # Counter for iterating son files
-        while gotHeader is False: # Iterate each sonObj until header length determined
-            try:
-                son = sonObjs[i] # Get current sonObj
-                headbytes = son._cntHead() # Try counting head bytes
-                # Determine if header length was determined
-                if headbytes > 0: # Header length found
-                    print("Header Length: {}".format(headbytes))
-                    gotHeader = True
-                else: # Header length not found, iterate i to load next sonObj
-                    i+=1
-            # Terminate program if header length not determined
-            except:
-                sys.exit("\n#####\nERROR: Out of SON files... \n"+
-                "Unable to determine header length.")
-        del i, gotHeader, cntSON
-
-        # Update each sonObj with header length
-        if headbytes > 0:
-            for son in sonObjs:
-                son.headBytes = headbytes
-
-        # Cleanup
-        del son, headbytes
-
-        ############################################################################
-        # Get the SON header structure and attributes                              #
-        ############################################################################
-
-        # The number of ping header bytes indicates the structure and order
-        ## of ping attributes.  For known structures, the ping
-        ## header structure will be stored in the sonObj.
-        for son in sonObjs:
-            son._getHeadStruct(exportUnknown)
-        del son
-
-        # Let's check and make sure the header structure is correct.
-        for son in sonObjs:
-            son._checkHeadStruct()
-        del son
-
-        for son in sonObjs:
-            headValid = son.headValid # Flag indicating if sonar header structure is known.
-            # ping header structure is known!
-            if headValid[0] is True:
-                print(son.beamName, ":", "Done!")
-            # Header byte length is of a known length, but we found an inconsistency
-            ## in the ping header structure.  Report byte location where
-            ## mis-match occured (for debugging purposes), then try to decode automatically.
-            elif headValid[0] is False:
-                print("\n#####\nERROR: Wrong Header Structure")
-                print("Expected {} at index {}.".format(headValid[1], headValid[2]))
-                print("Found {} instead.".format(headValid[3]))
-                print("Attempting to decode header structure.....")
-                son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
-            # Header structure is completely unknown.  Try to automatically decode.
-            else:
-                print("\n#####\nERROR: Wrong Header Structure")
-                print("Attempting to decode header structure.....")
-                son._decodeHeadStruct(exportUnknown) # Try to automatically decode.
-        del son, headValid
-
-        # If we had to decode header structure, let's make sure it decoded correctly.
-        ## If we are wrong, then we found a completely new Humminbird file format.
-        ## Report byte location where mis-match occured (for dubugging purposes),
-        ## and terminate the process.  We can't automatically decode this file.
-        ## Please report to PING Mapper developers.
-        for son in sonObjs:
-            if son.headValid[0] is not True:
-                son._checkHeadStruct()
-                headValid = son.headValid
-                if headValid[0] is True:
-                    print("Succesfully determined header structure!")
-                else:
-                    print("\n#####\nERROR:Unable to decode header structure")
-                    print("Expected {} at index {}.".format(headValid[1], headValid[2]))
-                    print("Found {} instead.".format(headValid[3]))
-                    print("Terminating srcipt.")
-                    sys.exit()
-        del son
-
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        printUsage()
-
-        ########################################
-        # Let's get the metadata for each ping #
-        ########################################
-
-        start_time = time.time()
-        # Now that we know the ping header structure, let's read that data
-        ## and save it to .CSV in the meta directory.
-        print("\nGetting SON file header metadata...")
-        # Check to see if metadata is already saved to csv.
-        toProcess = []
-        for son in sonObjs:
-            beam = os.path.split(son.sonFile)[-1].split(".")[0]
-            file = os.path.join(son.metaDir, beam+"_meta.csv")
-            if os.path.exists(file):
-                print("File {0} exists. No need to re-process.".format(file))
-                son.sonMetaFile = file
-            else:
-                toProcess.append(son)
-        del son, file
-
-        # See if .IDX file is available.  If it is, store file path for later use.
-        for son in sonObjs:
-            idxFile = son.sonFile.replace(".SON", ".IDX")
-            if os.path.exists(idxFile):
-                son.sonIdxFile = idxFile
-            else:
-                son.sonIdxFile = False
-        del son, idxFile
-
-        # Get metadata for each beam in parallel.
-        if len(toProcess) > 0:
-            r = Parallel(n_jobs= np.min([len(toProcess), threadCnt]), verbose=10)(delayed(son._getSonMeta)() for son in toProcess)
-            # for son in toProcess:
-            #     son._getSonMeta()
-            # Store pix_m in object
-            for son, pix_m in zip(sonObjs, r):
-                son.pixM = pix_m # Sonar instrument pixel resolution
-                if pix_res_son == 0:
-                    son.pix_res_son = son.pixM
-                else:
-                    son.pix_res_son = pix_res_son # Store output pixel resolution
-                if pix_res_map == 0:
-                    son.pix_res_map = son.pixM
-                else:
-                    son.pix_res_map = pix_res_map
-            del toProcess
-
-        metaDir = sonObjs[0].metaDir # Get path to metadata directory
-        sonMeta = sorted(glob(os.path.join(metaDir,'*B*_meta.csv'))) # Get path to metadata files
-        for i in range(0,len(sonObjs)): # Iterate each metadata file
-            sonObjs[i].sonMetaFile = sonMeta[i] # Store meta file path in sonObj
-        del i, sonMeta
-
-
-        ###################################
-        # Above can be ported to PINGVerter
-        ###################################
+        ###
+        ####
 
 
         # Store cropRange in object
@@ -576,6 +663,7 @@ def read_master_func(logfilename='',
 
             del beam
         del son
+
 
         # If Onix, need to store self._trans in object
         if sonObjs[0].isOnix:

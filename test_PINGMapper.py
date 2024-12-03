@@ -104,6 +104,10 @@ if ds == 2:
     projDir = r'./procData/PINGMapper-Test-Large-DS'
 
 
+humFile = os.path.abspath(humFile)
+sonPath = os.path.abspath(sonPath)
+projDir = os.path.abspath(projDir)
+
 # *** IMPORTANT ****
 # Export Mode: project_mode
 ## 0==NEW PROJECT: Create a new project. [DEFAULT]

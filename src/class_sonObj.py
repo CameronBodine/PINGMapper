@@ -1766,6 +1766,48 @@ class sonObj(object):
             gc.collect()
         return #self
 
+    # # ==========================================================================
+    # def _loadSonChunk(self):
+    #     '''
+    #     Reads ping returns into memory based on byte index location in son file
+    #     and number of pings to return.
+
+    #     ----------------------------
+    #     Required Pre-processing step
+    #     ----------------------------
+    #     Called from self._getScanChunkALL() or self._getScanChunkSingle()
+
+    #     -------
+    #     Returns
+    #     -------
+    #     2-D numpy array containing sonar intensity
+
+    #     --------------------
+    #     Next Processing Step
+    #     --------------------
+    #     Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
+    #     '''
+    #     sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+    #     file = open(self.sonFile, 'rb') # Open .SON file
+    #     # Iterate each ping
+    #     for i in range(len(self.headIdx)):
+    #         if ~np.isnan(self.headIdx[i]):
+    #             headIdx = self.headIdx[i].astype(int) # Get current byte offset to ping
+    #             pingCnt = self.pingCnt[i].astype(int) # Get current ping count
+    #             pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+    #             file.seek(pingIdx) # Move to that location
+    #             k = 0
+
+    #             # Decode each sonar return and store in array
+    #             while k < min(pingCnt, self.pingMax):
+    #                 byte = self._fread(file, 1, 'B')[0]
+    #                 sonDat[k,i] = byte
+    #                 k+=1
+
+    #     file.close() # Close the file
+    #     self.sonDat = sonDat # Store array in class attribute
+    #     return #self
+
     # ==========================================================================
     def _loadSonChunk(self):
         '''
@@ -1787,26 +1829,51 @@ class sonObj(object):
         --------------------
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
+        # sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        # file = open(self.sonFile, 'rb') # Open .SON file
+        # # Iterate each ping
+        # for i in range(len(self.headIdx)):
+        #     if ~np.isnan(self.headIdx[i]):
+        #         headIdx = self.headIdx[i].astype(int) # Get current byte offset to ping
+        #         pingCnt = self.pingCnt[i].astype(int) # Get current ping count
+        #         pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+        #         file.seek(pingIdx) # Move to that location
+        #         k = 0
+
+        #         # Decode each sonar return and store in array
+        #         while k < min(pingCnt, self.pingMax):
+        #             byte = self._fread(file, 1, 'B')[0]
+        #             sonDat[k,i] = byte
+        #             k+=1
+
+        # file.close() # Close the file
+        # self.sonDat = sonDat # Store array in class attribute
+        # return #self
+
         sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
-        # Iterate each ping
+
         for i in range(len(self.headIdx)):
             if ~np.isnan(self.headIdx[i]):
-                headIdx = self.headIdx[i].astype(int) # Get current byte offset to ping
-                pingCnt = self.pingCnt[i].astype(int) # Get current ping count
-                pingIdx = headIdx + self.headBytes # Determine byte offset to sonar returns
+                ping_len = min(self.pingCnt[i].astype(int), self.pingMax)
+                headIDX = self.headIdx[i].astype(int)
+                pingIdx = headIDX + self.headBytes # Determine byte offset to sonar returns
                 file.seek(pingIdx) # Move to that location
-                k = 0
 
-                # Decode each sonar return and store in array
-                while k < min(pingCnt, self.pingMax):
-                    byte = self._fread(file, 1, 'B')[0]
-                    sonDat[k,i] = byte
-                    k+=1
+                # Get the ping
+                buffer = file.read(ping_len)
 
-        file.close() # Close the file
-        self.sonDat = sonDat # Store array in class attribute
-        return #self
+                if self.flip_port:
+                    buffer = buffer[::-1]
+
+                # Read the data
+                dat = np.frombuffer(buffer, dtype='>u1')
+
+                sonDat[:ping_len, i] = dat
+        
+        file.close()
+        self.sonDat = sonDat
+        return
 
     # ======================================================================
     def _WC_mask(self, i, son=True):

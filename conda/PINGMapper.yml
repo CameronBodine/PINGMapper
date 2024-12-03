@@ -23,3 +23,4 @@ dependencies:
       - tf-keras
       - transformers
       - pysimplegui == 5.0.*
+      - pingverter
