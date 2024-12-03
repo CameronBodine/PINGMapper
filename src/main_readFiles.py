@@ -308,8 +308,6 @@ def read_master_func(logfilename='',
 
         # Store other parameters as attributes
         son.fixNotDat = fixNoDat
-        # son.datLen = meta['datLen']
-        # son.humDatStruct = meta['humDatStruct']
         son.metaDir = sonar_obj.metaDir
         son.beamName = meta['beamName']
         son.beam = beam
