@@ -1824,8 +1824,8 @@ class portstarObj(object):
         ###############
         # Do prediction
 
-        port_label, port_prob = doPredict(model, MODEL, self.port.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
-        star_label, star_prob = doPredict(model, MODEL, self.star.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD)
+        port_label, port_prob = doPredict(model, MODEL, self.port.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD, shadow=True)
+        star_label, star_prob = doPredict(model, MODEL, self.star.sonDat, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD, shadow=True)
 
         # Set shadow to 0, else 1
         port_label = np.where(port_label==0,1,0)
