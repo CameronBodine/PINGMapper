@@ -140,7 +140,7 @@ def initModel(weights, configfile, USE_GPU=False):
 ################################################
 
 #=======================================================================
-def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD):
+def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRESHOLD, shadow=False):
 
     '''
     '''
@@ -151,6 +151,11 @@ def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRES
     image, w, h, bigimage = seg_file2tensor(arr, N_DATA_BANDS, TARGET_SIZE, MODEL)
 
     image = standardize(image.numpy()).squeeze()
+
+    # Kludge to fix error noted in Issue #128
+    if shadow:
+        image = image[:,:,0]
+        image = tf.expand_dims(image, 2)
 
     if NCLASSES == 2:
 
