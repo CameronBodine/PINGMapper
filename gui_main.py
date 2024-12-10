@@ -35,7 +35,7 @@ with open(default_params_file) as f:
 
 layout = [
     [sg.Text('Recording to Process')],
-    [sg.In(size=(80,1)), sg.FileBrowse(key='humFile', file_types=(("DAT File", "*.DAT"), ), initial_folder=os.path.dirname(default_params['humFile']))],
+    [sg.In(size=(80,1)), sg.FileBrowse(key='inFile', file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))],
     [sg.Text('Output Folder')],
     [sg.In(size=(80,1)), sg.FolderBrowse(key='proj', initial_folder=os.path.dirname(default_params['projDir']))],
     [sg.Text('Project Name', size=(15,1)), sg.InputText(key='projName', size=(50,1), default_text=os.path.basename(default_params['projDir']))],
@@ -98,7 +98,7 @@ layout = [
 
 
 layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
-window = sg.Window('Process Single Humminbird Sonar Recording', layout2, resizable=True)
+window = sg.Window('Process Sonar Log', layout2, resizable=True)
 
 while True:
     event, values = window.read()
@@ -206,7 +206,7 @@ map_mosaic = int(map_mosaic)
 
 
 params = {
-    'humFile':values['humFile'],
+    'inFile':values['inFile'],
     'projDir':os.path.join(values['proj'], values['projName']),
     'project_mode':int(values['project_mode']),
     'tempC':float(values['tempC']),
@@ -293,9 +293,12 @@ sys.stdout = Logger(logfilename)
 
 #============================================
 
-sonPath = humFile.split('.DAT')[0]
-sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-print(sonFiles)
+try:
+    sonPath = inFile.split('.DAT')[0]
+    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+    print(sonFiles)
+except:
+    sonFiles = ""
 
 if not 'map_predict' in locals():
     map_predict = 0

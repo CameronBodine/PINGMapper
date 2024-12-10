@@ -96,12 +96,12 @@ layout = [
 
 
 layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
-window = sg.Window('Process Single Humminbird Sonar Recording', layout2, resizable=True)
+window = sg.Window('Batch Process Sonar Logs', layout2, resizable=True)
 
 while True:
     event, values = window.read()
 
-    values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
+    # values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
 
     if event == "Quit" or event == 'Submit':
         break
@@ -270,7 +270,7 @@ globals().update(params)
 inFiles=[]
 for root, dirs, files in os.walk(inDir):
     for file in files:
-        if file.endswith('.DAT'):
+        if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
             inFiles.append(os.path.join(root, file))
 
 inFiles = sorted(inFiles)
@@ -288,10 +288,14 @@ for datFile in inFiles:
         start_time = time.time()  
 
         inPath = os.path.dirname(datFile)
-        humFile = datFile
-        recName = os.path.basename(humFile).split('.')[0]
-        sonPath = humFile.split('.DAT')[0]
-        sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+        inFile = datFile
+        recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
+
+        try:
+            sonPath = inFile.split('.DAT')[0]
+            sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+        except:
+            sonFiles = ''
 
         recName = values['prefix'] + recName + values['suffix']
 
@@ -344,7 +348,7 @@ for datFile in inFiles:
         params['logfilename'] = logfilename
         params['script'] = [script, copied_script_name]
         params['projDir'] = projDir
-        params['humFile'] = humFile
+        params['inFile'] = inFile
 
 
 
@@ -352,7 +356,7 @@ for datFile in inFiles:
         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
         print('+++++++++++++++++++++++++++++++++++++++++++')
         print('***** Working On *****')
-        print(humFile)
+        print(inFile)
         print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
         print('\n===========================================')

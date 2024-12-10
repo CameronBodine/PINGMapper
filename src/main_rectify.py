@@ -41,7 +41,7 @@ import inspect
 def rectify_master_func(logfilename='',
                         project_mode=0,
                         script='',
-                        humFile='',
+                        inFile='',
                         sonFiles='',
                         projDir='',
                         coverage=False,
@@ -398,6 +398,10 @@ def rectify_master_func(logfilename='',
 
         chunks = pd.unique(sDF['chunk_id'])
         transects = pd.unique(sDF['transect'])
+
+        # Update chunkMax while we are here
+        chunkMax = max(chunks)
+        son.chunkMax = chunkMax
 
         i = 1
         t = 0

@@ -1018,7 +1018,7 @@ class rectObj(sonObj):
     #===========================================================================
     def _exportCovShp(self,
                       covFiles,
-                      dissolve=True,
+                      dissolve=False,
                       filt=10,
                       wgs=False):
         
@@ -1058,8 +1058,11 @@ class rectObj(sonObj):
 
         dfs = [df1, df2]
 
+        filt = 0
+
         # Iterate chunks
         for chunk in range(0, chunkMax+1):
+            print(chunk, chunkMax)
             # Iterate dfs
             for df in dfs:
                 # Get chunk
@@ -1087,9 +1090,9 @@ class rectObj(sonObj):
             chunk_geom = gpd.GeoDataFrame(index=[chunk], crs=epsg, geometry=[chunk_geom])
             del lat_list, lon_list
 
-            # Do buffer to help fix geometry issues
-            chunk_geom['geometry'] = chunk_geom.buffer(10, join_style=2)
-            chunk_geom['geometry'] = chunk_geom.buffer(-10, join_style=2)
+            # # Do buffer to help fix geometry issues
+            # chunk_geom['geometry'] = chunk_geom.buffer(10, join_style=2)
+            # chunk_geom['geometry'] = chunk_geom.buffer(-10, join_style=2)
 
 
             # Append to final geodataframe
@@ -1101,7 +1104,7 @@ class rectObj(sonObj):
 
         gdf['chunk_id'] = gdf.index
 
-        gdf['geometry'] = gdf.buffer(10, join_style=2)
+        # gdf['geometry'] = gdf.buffer(10, join_style=2)
 
         if dissolve:
             try:
@@ -1110,7 +1113,7 @@ class rectObj(sonObj):
                 gdf = gdf.loc[gdf.geometry.is_valid]
                 gdf = gdf.dissolve()
 
-        gdf['geometry'] = gdf.buffer(-10, join_style=2)
+        # gdf['geometry'] = gdf.buffer(-10, join_style=2)
 
         # Save to shapefile
         projName = os.path.basename(self.projDir)

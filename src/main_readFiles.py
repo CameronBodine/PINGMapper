@@ -34,7 +34,7 @@ from class_portstarObj import portstarObj
 import shutil
 from doodleverse_utils.imports import *
 
-sys.path.insert(0, r'C:\Users\cbodine\PythonRepos\PINGVerter')
+# sys.path.insert(0, r'C:\Users\cbodine\PythonRepos\PINGVerter')
 
 from pingverter import hum2pingmapper, low2pingmapper
 
@@ -43,7 +43,7 @@ from pingverter import hum2pingmapper, low2pingmapper
 def read_master_func(logfilename='',
                      project_mode=0,
                      script='',
-                     humFile='',
+                     inFile='',
                      sonFiles='',
                      projDir='',
                      coverage=False,
@@ -277,15 +277,15 @@ def read_master_func(logfilename='',
 
     start_time = time.time()
     # Determine sonar recording type
-    _, file_type = os.path.splitext(humFile)
+    _, file_type = os.path.splitext(inFile)
 
     # Prepare Humminbird file for PINGMapper
     if file_type == '.DAT':
-        sonar_obj = hum2pingmapper(humFile, projDir, nchunk, tempC, exportUnknown)
+        sonar_obj = hum2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Lowrance file for PINGMapper    
     elif file_type == '.sl2' or file_type == '.sl3':
-        sonar_obj = low2pingmapper(humFile, projDir)
+        sonar_obj = low2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     ####################
     # Create son objects
@@ -937,7 +937,7 @@ def read_master_func(logfilename='',
             df = son.sonMetaDF
             print("Ping Count:", len(df))
             print("______________________________________________________________________________")
-            print("{:<15s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
+            print("{:<20s} | {:<15s} | {:<15s} | {:<15s} | {:<5s}".format("Attribute", "Minimum", "Maximum", "Average", "Valid"))
             print("______________________________________________________________________________")
             for att in df.columns:
 
@@ -966,7 +966,7 @@ def read_master_func(logfilename='',
                 elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
                     valid=False
                     invalid[son.beam+"."+att] = False
-                    detectDep=1
+                    detectDep=0#1
                 else:
                     valid=False
                     invalid[son.beam+"."+att] = False
@@ -1453,6 +1453,7 @@ def read_master_func(logfilename='',
         df0 = son0._reassignChunks(df0)
         df1['chunk_id'] = df0['chunk_id']
         df1['transect'] = df0['transect']
+
 
         # sDF0['chunk_id'] = df0['chunk_id']
         # sDF0['transect'] = df0['transect']

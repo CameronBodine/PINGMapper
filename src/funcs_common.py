@@ -309,10 +309,15 @@ def saveDefaultParams(values):
         inDir = values['inDir']
     except:
         inDir = ''
+
+    try:
+        inFile = values['inFile']
+    except:
+        inFile = ''
     
     params = {
         'inDir':inDir,
-        'humFile':values['humFile'],
+        'inFile':inFile,
         'projDir':projDir,
         'project_mode':int(values['project_mode']),
         'tempC':float(values['tempC']),

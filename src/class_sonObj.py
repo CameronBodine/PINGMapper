@@ -1837,7 +1837,10 @@ class sonObj(object):
             if ~np.isnan(self.headIdx[i]):
                 ping_len = min(self.pingCnt[i].astype(int), self.pingMax)
                 headIDX = self.headIdx[i].astype(int)
-                pingIdx = headIDX + self.headBytes # Determine byte offset to sonar returns
+                son_offset = self.son_offset[i].astype(int)
+                # pingIdx = headIDX + self.headBytes # Determine byte offset to sonar returns
+                pingIdx = headIDX + son_offset
+
                 file.seek(pingIdx) # Move to that location
 
                 # Get the ping
@@ -1849,7 +1852,11 @@ class sonObj(object):
                 # Read the data
                 dat = np.frombuffer(buffer, dtype='>u1')
 
-                sonDat[:ping_len, i] = dat
+                try:
+                    sonDat[:ping_len, i] = dat
+                except:
+                    ping_len = len(dat)
+                    sonDat[:ping_len, i] = dat
         
         file.close()
         self.sonDat = sonDat
@@ -2303,6 +2310,7 @@ class sonObj(object):
         self.pingMax = int(rangeCnt[0][pingMaxi])
 
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
+        self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
         # Load chunk's sonar data into memory
