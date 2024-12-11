@@ -1,20 +1,19 @@
 name: ping
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
-  - python==3.11.*
+  - python == 3.12.*
+  - gdal
   - numpy
   - git
   - pandas
   - geopandas
-  - rasterio
   - pyproj
   - scikit-image
   - joblib
-  - gdal
-  - libgdal
   - matplotlib
+  - rasterio
   - h5py
   - pip
   - pip:
