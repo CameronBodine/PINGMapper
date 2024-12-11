@@ -959,7 +959,7 @@ def read_master_func(logfilename='',
                         son.chunkMax = int(attMax)
 
                 # Check if data are valid.
-                if (att == "date") or (att == "time"):
+                if (att == "date") or (att == "time") or (att == "transect"):
                     valid=True
                 elif (attMax != 0) or ("unknown" in att) or (att =="beam"):
                     valid=True

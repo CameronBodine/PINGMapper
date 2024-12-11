@@ -401,7 +401,7 @@ def rectify_master_func(logfilename='',
 
         # Update chunkMax while we are here
         chunkMax = max(chunks)
-        son.chunkMax = chunkMax
+        son.chunkMax = int(chunkMax)
 
         i = 1
         t = 0

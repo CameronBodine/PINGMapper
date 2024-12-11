@@ -305,7 +305,7 @@ read_master_func(**params)
 
 try:
     #==================================================
-    if rect_wcp or rect_wcr or banklines:
+    if rect_wcp or rect_wcr or banklines or coverage:
         print('\n===========================================')
         print('===========================================')
         print('***** RECTIFYING *****')
