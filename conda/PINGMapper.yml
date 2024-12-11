@@ -13,6 +13,7 @@ dependencies:
   - scikit-image
   - joblib
   - gdal
+  - libgdal
   - matplotlib
   - h5py
   - pip
