@@ -77,7 +77,7 @@ if ds == 1:
         print('Downloaded and extracted', filename)
         
     # Path to data/output
-    humFile = r'./exampleData/Test-Small-DS.DAT'
+    inFile = r'./exampleData/Test-Small-DS.DAT'
     sonPath = r'./exampleData/Test-Small-DS'
     projDir = r'./procData/PINGMapper-Test-Small-DS'
 
@@ -99,10 +99,14 @@ if ds == 2:
         print('Downloaded and extracted', filename)
 
     # Path to data/output
-    humFile = r'./exampleData/Test-Large-DS.DAT'
+    inFile = r'./exampleData/Test-Large-DS.DAT'
     sonPath = r'./exampleData/Test-Large-DS'
     projDir = r'./procData/PINGMapper-Test-Large-DS'
 
+
+inFile = os.path.abspath(inFile)
+sonPath = os.path.abspath(sonPath)
+projDir = os.path.abspath(projDir)
 
 # *** IMPORTANT ****
 # Export Mode: project_mode
@@ -191,7 +195,8 @@ map_mosaic = 1 #Export substrate mosaic; 0==Don't Mosaic; 1==Do Mosaic - GTiff; 
 
 
 # Miscellaneous Exports
-banklines = False # Export banklines from sonar imagery
+banklines = True # Export banklines from sonar imagery
+coverage = True # Export coverage and trackline shapefile
 
 
 #################
@@ -243,7 +248,7 @@ params = {
     'logfilename':logfilename,
     'project_mode':project_mode,
     'script':[script, copied_script_name],
-    'humFile':humFile,
+    'inFile':inFile,
     'sonFiles':sonFiles,
     'projDir':projDir,
     'tempC':tempC,
@@ -283,6 +288,7 @@ params = {
     'mosaic':mosaic,
     'map_mosaic':map_mosaic,
     'banklines':banklines,
+    'coverage':coverage,
     }
 
 print('\n\n', '***User Parameters***')

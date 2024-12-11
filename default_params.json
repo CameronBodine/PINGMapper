@@ -1,6 +1,6 @@
 {   
     "inDir":"",
-    "humFile":"",
+    "inFile":"",
     "projDir":"",
     "project_mode":true,
     "tempC":10,
@@ -27,8 +27,8 @@
     "lbl_set":"False",
     "spdCor":false,
     "maxCrop":false,
-    "remShadow":"Remove only bank shadows",
-    "detectDep":"Auto",
+    "remShadow":"False",
+    "detectDep":"Sensor",
     "smthDep":false,
     "adjDep":0,
     "pltBedPick":false,

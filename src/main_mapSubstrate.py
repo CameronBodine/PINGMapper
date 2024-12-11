@@ -39,7 +39,7 @@ import itertools
 def map_master_func(logfilename='',
                     project_mode=0,
                      script='',
-                     humFile='',
+                     inFile='',
                      sonFiles='',
                      projDir='',
                      coverage=False,
