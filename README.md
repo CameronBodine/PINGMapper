@@ -26,7 +26,7 @@
 # Overview
 `PING-Mapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PING-Mapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
 
-### New Functionality & Bug Fixes
+### New Functionality & Bug Fixes (December 11, 2024)
 - [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
   - Support for Lowrance&reg; *.sl2 and *.sl3 files!
   - Improved mechanism for reading sonar logs, inspired by [sonarlight](https://github.com/KennethTM/sonarlight), resulting in **~1.3x speedup** when running the [Small Dataset Test](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html#small-dataset-test).
