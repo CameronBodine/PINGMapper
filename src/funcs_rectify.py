@@ -118,7 +118,7 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
             # if filter > nchunk*0.1:
             #     filter = int(nchunk*0.1)
 
-            print('\n\n\ntransect:', name, 'filter:', filter)
+            # print('\n\n\ntransect:', name, 'filter:', filter)
             smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
 
             # smooth trackline fit

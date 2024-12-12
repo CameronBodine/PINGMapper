@@ -365,7 +365,7 @@ for datFile in inFiles:
         read_master_func(**params)
         # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-        if rect_wcp or rect_wcr or banklines:
+        if rect_wcp or rect_wcr or banklines or coverage:
             print('\n===========================================')
             print('===========================================')
             print('***** RECTIFYING *****')

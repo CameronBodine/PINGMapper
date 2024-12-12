@@ -1062,7 +1062,6 @@ class rectObj(sonObj):
 
         # Iterate chunks
         for chunk in range(0, chunkMax+1):
-            print(chunk, chunkMax)
             # Iterate dfs
             for df in dfs:
                 # Get chunk

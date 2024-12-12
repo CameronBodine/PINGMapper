@@ -3,17 +3,17 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python==3.11.*
+  - python < 3.13
+  - gdal
   - numpy
   - git
   - pandas
   - geopandas
-  - rasterio
   - pyproj
   - scikit-image
   - joblib
-  - gdal
   - matplotlib
+  - rasterio
   - h5py
   - pip
   - pip:
