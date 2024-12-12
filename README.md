@@ -34,6 +34,8 @@
 - Export coverage and trackline shapefiles.
 - Fix [bankline export](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0).
 
+See the [v3.0.0-alpha release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0-alpha) for more information
+
 ### Key Functionality
 - [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
   - [![PyPI - Version](https://img.shields.io/pypi/v/pingverter?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingverter/)
