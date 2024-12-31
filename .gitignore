@@ -1,15 +1,15 @@
-procData/*
-__pycache__/*
+pingmapper/procData/*
+pingmapper/__pycache__/*
 oldFiles/*
 testData/*
 /src/__pycache__/*
-exampleData/*
-models
+pingmapper/exampleData/*
+pingmapper/models
 
 main_batch.py
 main_batchFolder.py
 
-!procData/OutputsHere.txt
+!pingmapper/procData/OutputsHere.txt
 
 .vs
 .vscode
@@ -19,4 +19,4 @@ Python 3.7*
 
 *csb*
 
-user_params.json
+pingmapper/user_params.json
