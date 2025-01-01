@@ -35,7 +35,7 @@ from scipy.interpolate import splprep, splev
 from skimage.transform import warp
 from rasterio.transform import from_origin
 from rasterio.enums import Resampling
-from PIL import Image
+from PIL import Image, ImageColor
 from shapely.geometry import Polygon
 
 from matplotlib import colormaps    
@@ -1444,8 +1444,11 @@ class rectObj(sonObj):
                 self._pixresResize(gtiff)
 
         if self.rect_wcr:
-            imgOutPrefix = 'rect_wcr'
-            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+            if son:
+                imgOutPrefix = 'rect_wcr'
+                outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+            else:
+                imgOutPrefix = 'map_substrate_{}'.format(self.beamName)
 
             if son:
                 try:
@@ -1482,51 +1485,73 @@ class rectObj(sonObj):
             # Warping substrate classification adds anomlies which must be removed
             if not son:
                 # Set minSize
-                min_size = 1500
+                min_size = int((out.shape[0] + out.shape[1])/2)
+
+                # Set nan's to zero
+                out = np.nan_to_num(out, nan=0)#.astype('uint8')
 
                 # Label all regions
                 lbl = label(out)
 
                 # First set small objects to background value (0)
                 noSmall = remove_small_objects(lbl, min_size)
-                del lbl
 
                 # Punch holes in original label
                 holes = ~(noSmall==0)
-                del noSmall
 
-                l = out*holes
+                l = (out*holes).astype('uint8')
+
+                del holes, lbl
 
                 # Remove small holes
                 # Convert l to binary
                 binary_objects = l.astype(bool)
                 # Remove the holes
-                binary_filled = remove_small_holes(binary_objects, min_size)
+                binary_filled = remove_small_holes(binary_objects, min_size+100)
                 # Recover classification with holes filled
                 out = watershed(binary_filled, l, mask=binary_filled)
-                del binary_objects, binary_filled, l
+
+                out = out.astype('uint8')
+                del binary_filled, binary_objects, l
+
+                # Prepare colors
+                class_colormap = {0: '#3366CC',
+                                1: '#DC3912',
+                                2: '#FF9900',
+                                3: '#109618',
+                                4: '#990099', 
+                                5: '#0099C6',
+                                6: '#DD4477',
+                                7: '#66AA00',
+                                8: '#B82E2E'}
+                
+                for k, v in class_colormap.items():
+                    rgb = ImageColor.getcolor(v, 'RGB')
+                    class_colormap[k] = rgb
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
 
-            projName = os.path.split(self.projDir)[-1] # Get project name
-            beamName = self.beamName # Determine which sonar beam we are working with
-            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
-
             if son:
+                projName = os.path.split(self.projDir)[-1] # Get project name
+                beamName = self.beamName # Determine which sonar beam we are working with
+                imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
                 gtiff = os.path.join(outDir, imgName) # Output file name
             else:
-                outDir = os.path.join(self.substrateDir, 'map_sub')
-                if not os.path.exists(outDir):
-                    os.mkdir(outDir)
-                gtiff = os.path.join(outDir, imgName) # Output file name
-                gtiff = gtiff.replace(imgOutPrefix, 'sub_map')
+                # Set output name
+                projName = os.path.split(self.projDir)[-1] # Get project name
+                imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
+                gtiff = os.path.join(self.outDir, imgName)
 
             if pix_res != 0:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
+            if son:
+                colormap = self.son_colorMap
+            else:
+                colormap = class_colormap
             with rasterio.open(
                 gtiff,
                 'w',
@@ -1542,7 +1567,7 @@ class rectObj(sonObj):
                 ) as dst:
                     dst.nodata=0
                     dst.write(out,1)
-                    dst.write_colormap(1, self.son_colorMap)
+                    dst.write_colormap(1, colormap)
                     dst=None
 
             del out, dst
@@ -1656,9 +1681,3 @@ class rectObj(sonObj):
         t = None
 
         return bandCount, bandDtype, nodataVal
-
-
-
-
-    
-    

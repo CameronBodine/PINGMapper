@@ -1997,18 +1997,32 @@ class portstarObj(object):
 
 
         ###############################################################
-        # Merge arrays (may need to add a size check, skipping for now)
-        # Left start ping, right end ping, top port, bottom star
-        portSub = np.rot90(portSub, k=2, axes=(1,0))
-        portSub = np.fliplr(portSub)
-        mergeSub = np.concatenate((portSub, starSub), axis=0)
+        # Merge arrays
 
-        del portSub, starSub
+        # Check to see if there is a size mismatch. If so, resize and rectify each individually
+        if portSub.shape[1] == starSub.shape[1]:
+            portSub = np.rot90(portSub, k=2, axes=(1,0))
+            portSub = np.fliplr(portSub)
+            mergeSub = np.concatenate((portSub, starSub), axis=0)
 
-        # Do rectification
-        self._rectify(mergeSub, chunk, 'map_substrate')
+            del portSub, starSub
 
-        del mergeSub
+            # Do rectification
+            self._rectify(mergeSub, chunk, 'map_substrate')
+            del mergeSub
+
+        else:
+            # Rectify each individually
+            # Port
+            self.port.sonDat = portSub
+            self.port.rect_wcr = True
+            self.port._rectSonParallel(chunk, son=False)
+
+            # Star
+            self.star.sonDat = starSub
+            self.star.rect_wcr = True
+            self.star._rectSonParallel(chunk, son=False)
+
         gc.collect()
 
         return
