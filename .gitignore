@@ -20,3 +20,27 @@ Python 3.7*
 *csb*
 
 user_params.json
+
+pingmapper/procData/*
+pingmapper/__pycache__/*
+oldFiles/*
+testData/*
+/src/__pycache__/*
+pingmapper/exampleData/*
+pingmapper/models
+
+main_batch.py
+main_batchFolder.py
+
+!pingmapper/procData/OutputsHere.txt
+
+.vs
+.vscode
+
+ping (*
+Python 3.7*
+
+*csb*
+
+pingmapper/user_params.json
+
