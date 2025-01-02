@@ -1,4 +1,5 @@
-# PING-Mapper v4.0.0-alpha.1
+# PING-Mapper
+[![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
 <!-- ![PING-Mapper](./docs/attach/PINGMapper_Logo.png) -->
 ![PINGMapper_Logo](https://github.com/CameronBodine/PINGMapper/blob/main/docs/attach/PINGMapper_Logo.png?raw=true)
 
