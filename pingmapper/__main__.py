@@ -18,8 +18,9 @@ def main(process):
     
     # Process single sonar log
     if process == 'gui_main':
-        from pingmapper.gui_main import main
-        main()
+        print('\n\nLaunching gui for processing single sonar log...\n\n')
+        from pingmapper.gui_main import gui
+        gui()
 
     # Do test on small dataset
     elif process == 'test':
