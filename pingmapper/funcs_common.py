@@ -27,6 +27,12 @@
 # SOFTWARE.
 
 import os, sys, struct, gc
+
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
 from joblib import Parallel, delayed, cpu_count
 from glob import glob
 import requests, zipfile
@@ -364,7 +370,8 @@ def saveDefaultParams(values):
 
     json_object = json.dumps(params, indent=4)
 
-    with open("./user_params.json", "w") as f:
+    user_params = os.path.join(SCRIPT_DIR, 'user_params.json')
+    with open(user_params, "w") as f:
         f.write(json_object)
 
     
