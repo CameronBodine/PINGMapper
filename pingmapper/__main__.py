@@ -8,7 +8,7 @@ sys.path.append(PACKAGE_DIR)
 
 # Default function to run
 if len(sys.argv) == 1:
-    to_do = 'gui_main'
+    to_do = 'gui'
 else:
     to_do = sys.argv[1]
 
@@ -17,10 +17,16 @@ else:
 def main(process):
     
     # Process single sonar log
-    if process == 'gui_main':
+    if process == 'gui':
         print('\n\nLaunching gui for processing single sonar log...\n\n')
         from pingmapper.gui_main import gui
         gui()
+
+    # Batch process sonar logs
+    elif process == 'gui_batch':
+        print('\n\nLaunching gui for batch processing sonar logs...\n\n')
+        from pingmapper.gui_main_batchDirectory import gui_batch
+        gui_batch()
 
     # Do test on small dataset
     elif process == 'test':
