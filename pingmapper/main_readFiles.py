@@ -26,11 +26,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os, sys
 
-from funcs_common import *
-from funcs_rectify import smoothTrackline
-from class_sonObj import sonObj
-from class_portstarObj import portstarObj
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
+from pingmapper.class_sonObj import sonObj
+from pingmapper.class_portstarObj import portstarObj
 import shutil
 from doodleverse_utils.imports import *
 
@@ -228,7 +233,8 @@ def read_master_func(logfilename='',
 
     #####################################
     # Download models if they don't exist
-    modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
+    # modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
+    modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
     if not os.path.exists(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
         getSegformer = True
@@ -1181,7 +1187,8 @@ def read_master_func(logfilename='',
 
             # Store configuration file and model weights
             # These were downloaded at the beginning of the script
-            psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Bedpick_Zheng2021_Segmentation_unet_v1.0/config/Bedpick_Zheng2021_Segmentation_unet_v1.0.json'
+            depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
+            psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
             psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
@@ -1335,7 +1342,8 @@ def read_master_func(logfilename='',
         psObj = portstarObj(portstar)
 
         # Model weights and config file
-        psObj.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Shadow_Segmentation_unet_v1.0/config/Shadow_Segmentation_unet_v1.0.json'
+        shadowModelVer = 'Shadow_Segmentation_unet_v1.0'
+        psObj.configfile = os.path.join(modelDir, shadowModelVer, 'config', shadowModelVer+'.json')
         psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
         psObj.port.shadow = defaultdict()

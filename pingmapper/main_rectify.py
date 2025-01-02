@@ -28,12 +28,17 @@
 
 
 from __future__ import division
-import sys
-from funcs_common import *
+import sys, os
 
-from class_rectObj import rectObj
-from class_portstarObj import portstarObj
-from funcs_rectify import smoothTrackline
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
+from pingmapper.class_rectObj import rectObj
+from pingmapper.class_portstarObj import portstarObj
+from pingmapper.funcs_rectify import smoothTrackline
 
 import inspect
 
