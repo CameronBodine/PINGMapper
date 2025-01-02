@@ -98,10 +98,10 @@ def test(ds):
         os.remove(filename)
         print('Downloaded and extracted', filename)
             
-        # Path to data/output
-        inFile = ds_path+'.DAT'
-        sonPath = ds_path
-        projDir = os.path.join(user_home_path, 'PINGMapper-'+ds_name)
+    # Path to data/output
+    inFile = ds_path+'.DAT'
+    sonPath = ds_path
+    projDir = os.path.join(user_home_path, 'PINGMapper-'+ds_name)
 
     inFile = os.path.abspath(inFile)
     sonPath = os.path.abspath(sonPath)
