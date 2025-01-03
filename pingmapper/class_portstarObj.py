@@ -35,6 +35,7 @@ PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
 from pingmapper.funcs_common import *
+from pingmapper.funcs_model import *
 
 # import gdal
 from osgeo import gdal, ogr, osr
