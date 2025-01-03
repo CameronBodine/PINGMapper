@@ -82,6 +82,8 @@ def test(ds):
     exampleDir = os.path.join(scriptDir, 'exampleData')
     ds_path = os.path.join(exampleDir, ds_name)
 
+    os.makedirs(exampleDir, exist_ok=True)
+
     # Check if files have already been downloaded
     if os.path.exists(ds_path) and os.path.exists(ds_path+'.DAT'):
         print('Files already downloaded!')
