@@ -34,6 +34,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
+from pingmapper.funcs_common import *
+
 # import gdal
 from osgeo import gdal, ogr, osr
 from scipy.signal import savgol_filter
