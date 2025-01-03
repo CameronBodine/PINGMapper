@@ -42,4 +42,9 @@ setup(
         "limnology",],
     python_requires="<3.13",
     install_requires=[],
+    project_urls={
+        "Issues": "https://github.com/CameronBodine/PINGMapper/issues",
+        "GitHub":"https://github.com/CameronBodine/PINGMapper",
+        "Homepage":"https://cameronbodine.github.io/PINGMapper/",
+    },
 )
