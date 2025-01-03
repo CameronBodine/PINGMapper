@@ -43,6 +43,8 @@ from pingmapper.main_mapSubstrate import map_master_func
 from pathlib import Path
 user_home_path = os.path.join(Path.home(), 'Desktop')
 
+orig_stdout = sys.stdout
+
 def test(ds):
 
     # Get processing script's dir so we can save it to file
@@ -324,6 +326,11 @@ def test(ds):
 
         gc.collect()
         print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+        print("\n\nFiles saved to: ", projDir)
+
+        sys.stdout.log.close()
+        sys.stdout = orig_stdout
 
     except Exception as Argument:
         unableToProcessError(logfilename)
