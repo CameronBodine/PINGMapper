@@ -120,247 +120,248 @@ def gui():
 
     window.close()
 
-    if event == "Quit":
-        sys.exit()
+    # if event == "Quit":
+    #     sys.exit()
+    if event != 'Quit':
 
-    start_time = time.time()
+        start_time = time.time()
 
-    #################################
-    # Convert parameters if necessary
+        #################################
+        # Convert parameters if necessary
 
-    # AOI
-    aoi = values['aoi']
-    if aoi == '':
-        aoi = False
+        # AOI
+        aoi = values['aoi']
+        if aoi == '':
+            aoi = False
 
-    # EGN Stretch
-    egn_stretch = values['egn_stretch']
-    if egn_stretch == 'None':
-        egn_stretch = 0
-    elif egn_stretch == 'Min-Max':
-        egn_stretch = 1
-    elif egn_stretch == 'Percent Clip':
-        egn_stretch = 2
-    egn_stretch = int(egn_stretch)
+        # EGN Stretch
+        egn_stretch = values['egn_stretch']
+        if egn_stretch == 'None':
+            egn_stretch = 0
+        elif egn_stretch == 'Min-Max':
+            egn_stretch = 1
+        elif egn_stretch == 'Percent Clip':
+            egn_stretch = 2
+        egn_stretch = int(egn_stretch)
 
-    # Speed Corrected Sonograms
-    lbl_set = values['lbl_set']
-    if lbl_set == 'False':
-        lbl_set = 0
-    elif lbl_set == 'True: Keep WC & Shadows':
-        lbl_set = 1
-    elif lbl_set == 'True: Mask WC & Shadows':
-        lbl_set = 2
-    lbl_set = int(lbl_set)
+        # Speed Corrected Sonograms
+        lbl_set = values['lbl_set']
+        if lbl_set == 'False':
+            lbl_set = 0
+        elif lbl_set == 'True: Keep WC & Shadows':
+            lbl_set = 1
+        elif lbl_set == 'True: Mask WC & Shadows':
+            lbl_set = 2
+        lbl_set = int(lbl_set)
 
-    # Shadow removal
-    remShadow = values['remShadow']
-    if remShadow == 'False':
-        remShadow = 0
-    elif remShadow == 'Remove all shadows':
-        remShadow = 1
-    elif remShadow == 'Remove only bank shadows':
-        remShadow = 2
-    remShadow = int(remShadow)
+        # Shadow removal
+        remShadow = values['remShadow']
+        if remShadow == 'False':
+            remShadow = 0
+        elif remShadow == 'Remove all shadows':
+            remShadow = 1
+        elif remShadow == 'Remove only bank shadows':
+            remShadow = 2
+        remShadow = int(remShadow)
 
-    # Depth detection
-    detectDep = values['detectDep']
-    if detectDep == 'Sensor':
-        detectDep = 0
-    elif detectDep == 'Auto':
-        detectDep = 1
-    detectDep = int(detectDep)
+        # Depth detection
+        detectDep = values['detectDep']
+        if detectDep == 'Sensor':
+            detectDep = 0
+        elif detectDep == 'Auto':
+            detectDep = 1
+        detectDep = int(detectDep)
 
-    # Predict substrate
-    if values['map_sub']:
-        values['pred_sub'] = True
-    elif values['export_poly']:
-        values['pred_sub'] = True
-        values['map_sub'] = True
-    elif values['pltSubClass']:
-        values['pred_sub'] = True
-    else:
-        values['pred_sub'] = False
-
-    # Map class method
-    values['map_class_method'] = 'max'
-
-    # Map predictions #### DISABLED ####
-    # map_predict = values['map_predict']
-    # if map_predict == 'False':
-    #     map_predict = 0
-    # elif map_predict == 'Probability':
-    #     map_predict = 1
-    # elif map_predict == 'Logit':
-    #     map_predict = 2
-    # map_predict = int(map_predict)
-    map_predict = 0 # Disable workflow
-
-    # Sonar mosaic
-    mosaic = values['mosaic']
-    if mosaic == 'False':
-        mosaic = int(0)
-    elif mosaic == 'GTiff':
-        mosaic = int(1)
-    elif mosaic == 'VRT':
-        mosaic = int(2)
-    mosaic = int(mosaic)
-
-    # Substrate mosaic
-    map_mosaic = values['map_mosaic']
-    if map_mosaic == 'False':
-        map_mosaic = 0
-    elif map_mosaic == 'GTiff':
-        map_mosaic = 1
-    elif map_mosaic == 'VRT':
-        map_mosaic = 2
-    map_mosaic = int(map_mosaic)
-
-
-    params = {
-        'inFile':values['inFile'],
-        'projDir':os.path.join(values['proj'], values['projName']),
-        'project_mode':int(values['project_mode']),
-        'tempC':float(values['tempC']),
-        'nchunk':int(values['nchunk']),
-        'cropRange':float(values['cropRange']),
-        'exportUnknown':values['exportUnknown'],
-        'fixNoDat':values['fixNoDat'],
-        'threadCnt':int(values['threadCnt']),
-        'aoi':aoi,
-        'max_heading_deviation':float(values['max_heading_deviation']),
-        'max_heading_distance':float(values['max_heading_distance']),
-        'min_speed':float(values['min_speed']),
-        'max_speed':float(values['max_speed']),
-        'pix_res_son':float(values['pix_res_son']),
-        'pix_res_map':float(values['pix_res_map']),
-        'x_offset':float(values['x_offset']),
-        'y_offset':float(values['y_offset']),
-        'egn':values['egn'],
-        'egn_stretch':egn_stretch,
-        'egn_stretch_factor':float(values['egn_stretch_factor']),
-        'wcp':values['wcp'],
-        'wcr':values['wcr'],
-        'tileFile':values['tileFile'],
-        'lbl_set':lbl_set,
-        'spdCor':float(values['spdCor']),
-        'maxCrop':values['maxCrop'],
-        'remShadow':remShadow,
-        'detectDep':detectDep,
-        'smthDep':values['smthDep'],
-        'adjDep':float(values['adjDep']),
-        'pltBedPick':values['pltBedPick'],
-        'rect_wcp':values['rect_wcp'],
-        'rect_wcr':values['rect_wcr'],
-        'son_colorMap':values['son_colorMap'],
-        'pred_sub':values['pred_sub'],
-        'pltSubClass':values['pltSubClass'],
-        'map_sub':values['map_sub'],
-        'export_poly':values['export_poly'],
-        'map_class_method':values['map_class_method'],
-        'map_predict':map_predict,
-        'mosaic_nchunk':int(values['mosaic_nchunk']),
-        'mosaic':mosaic,
-        'map_mosaic':map_mosaic,
-        'banklines':values['banklines'],
-        'coverage':values['coverage']
-    }
-
-    globals().update(params)
-
-    # =========================================================
-    # Determine project_mode
-    print(project_mode)
-    if project_mode == 0:
-        # Create new project
-        if not os.path.exists(projDir):
-            os.mkdir(projDir)
+        # Predict substrate
+        if values['map_sub']:
+            values['pred_sub'] = True
+        elif values['export_poly']:
+            values['pred_sub'] = True
+            values['map_sub'] = True
+        elif values['pltSubClass']:
+            values['pred_sub'] = True
         else:
-            projectMode_1_inval()
+            values['pred_sub'] = False
 
-    elif project_mode == 1:
-        # Overwrite existing project
-        if os.path.exists(projDir):
-            shutil.rmtree(projDir)
+        # Map class method
+        values['map_class_method'] = 'max'
 
-        os.mkdir(projDir)        
+        # Map predictions #### DISABLED ####
+        # map_predict = values['map_predict']
+        # if map_predict == 'False':
+        #     map_predict = 0
+        # elif map_predict == 'Probability':
+        #     map_predict = 1
+        # elif map_predict == 'Logit':
+        #     map_predict = 2
+        # map_predict = int(map_predict)
+        map_predict = 0 # Disable workflow
 
-    elif project_mode == 2:
-        # Update project
-        # Make sure project exists, exit if not.
-        
-        if not os.path.exists(projDir):
-            projectMode_2_inval()
+        # Sonar mosaic
+        mosaic = values['mosaic']
+        if mosaic == 'False':
+            mosaic = int(0)
+        elif mosaic == 'GTiff':
+            mosaic = int(1)
+        elif mosaic == 'VRT':
+            mosaic = int(2)
+        mosaic = int(mosaic)
 
-    # =========================================================
-    # For logging the console output
+        # Substrate mosaic
+        map_mosaic = values['map_mosaic']
+        if map_mosaic == 'False':
+            map_mosaic = 0
+        elif map_mosaic == 'GTiff':
+            map_mosaic = 1
+        elif map_mosaic == 'VRT':
+            map_mosaic = 2
+        map_mosaic = int(map_mosaic)
 
-    logdir = os.path.join(projDir, 'logs')
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
 
-    logfilename = os.path.join(logdir, logfilename)
+        params = {
+            'inFile':values['inFile'],
+            'projDir':os.path.join(values['proj'], values['projName']),
+            'project_mode':int(values['project_mode']),
+            'tempC':float(values['tempC']),
+            'nchunk':int(values['nchunk']),
+            'cropRange':float(values['cropRange']),
+            'exportUnknown':values['exportUnknown'],
+            'fixNoDat':values['fixNoDat'],
+            'threadCnt':int(values['threadCnt']),
+            'aoi':aoi,
+            'max_heading_deviation':float(values['max_heading_deviation']),
+            'max_heading_distance':float(values['max_heading_distance']),
+            'min_speed':float(values['min_speed']),
+            'max_speed':float(values['max_speed']),
+            'pix_res_son':float(values['pix_res_son']),
+            'pix_res_map':float(values['pix_res_map']),
+            'x_offset':float(values['x_offset']),
+            'y_offset':float(values['y_offset']),
+            'egn':values['egn'],
+            'egn_stretch':egn_stretch,
+            'egn_stretch_factor':float(values['egn_stretch_factor']),
+            'wcp':values['wcp'],
+            'wcr':values['wcr'],
+            'tileFile':values['tileFile'],
+            'lbl_set':lbl_set,
+            'spdCor':float(values['spdCor']),
+            'maxCrop':values['maxCrop'],
+            'remShadow':remShadow,
+            'detectDep':detectDep,
+            'smthDep':values['smthDep'],
+            'adjDep':float(values['adjDep']),
+            'pltBedPick':values['pltBedPick'],
+            'rect_wcp':values['rect_wcp'],
+            'rect_wcr':values['rect_wcr'],
+            'son_colorMap':values['son_colorMap'],
+            'pred_sub':values['pred_sub'],
+            'pltSubClass':values['pltSubClass'],
+            'map_sub':values['map_sub'],
+            'export_poly':values['export_poly'],
+            'map_class_method':values['map_class_method'],
+            'map_predict':map_predict,
+            'mosaic_nchunk':int(values['mosaic_nchunk']),
+            'mosaic':mosaic,
+            'map_mosaic':map_mosaic,
+            'banklines':values['banklines'],
+            'coverage':values['coverage']
+        }
 
-    sys.stdout = Logger(logfilename)
+        globals().update(params)
 
-    #============================================
+        # =========================================================
+        # Determine project_mode
+        print(project_mode)
+        if project_mode == 0:
+            # Create new project
+            if not os.path.exists(projDir):
+                os.mkdir(projDir)
+            else:
+                projectMode_1_inval()
 
-    try:
-        sonPath = inFile.split('.DAT')[0]
-        sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-        print(sonFiles)
-    except:
-        sonFiles = ""
+        elif project_mode == 1:
+            # Overwrite existing project
+            if os.path.exists(projDir):
+                shutil.rmtree(projDir)
 
-    if not 'map_predict' in locals():
-        map_predict = 0
+            os.mkdir(projDir)        
 
-    #============================================
+        elif project_mode == 2:
+            # Update project
+            # Make sure project exists, exit if not.
+            
+            if not os.path.exists(projDir):
+                projectMode_2_inval()
 
-    print('\n\n', '***User Parameters***')
-    for k,v in params.items():
-        print("| {:<20s} : {:<10s} |".format(k, str(v)))
+        # =========================================================
+        # For logging the console output
 
-    #============================================
-    # Add ofther params
-    params['sonFiles'] = sonFiles
-    params['logfilename'] = logfilename
-    params['script'] = [script, copied_script_name]
+        logdir = os.path.join(projDir, 'logs')
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
 
-    try:
+        logfilename = os.path.join(logdir, logfilename)
 
-        #==================================================
-        print('\n===========================================')
-        print('===========================================')
-        print('***** READING *****')
-        print("working on "+projDir)
-        read_master_func(**params)
-        # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+        sys.stdout = Logger(logfilename)
 
-        #==================================================
-        if rect_wcp or rect_wcr or banklines or coverage:
+        #============================================
+
+        try:
+            sonPath = inFile.split('.DAT')[0]
+            sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+            print(sonFiles)
+        except:
+            sonFiles = ""
+
+        if not 'map_predict' in locals():
+            map_predict = 0
+
+        #============================================
+
+        print('\n\n', '***User Parameters***')
+        for k,v in params.items():
+            print("| {:<20s} : {:<10s} |".format(k, str(v)))
+
+        #============================================
+        # Add ofther params
+        params['sonFiles'] = sonFiles
+        params['logfilename'] = logfilename
+        params['script'] = [script, copied_script_name]
+
+        try:
+
+            #==================================================
             print('\n===========================================')
             print('===========================================')
-            print('***** RECTIFYING *****')
+            print('***** READING *****')
             print("working on "+projDir)
-            rectify_master_func(**params)
-            # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+            read_master_func(**params)
+            # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-        #==================================================
-        if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
-            print('\n===========================================')
-            print('===========================================')
-            print('***** MAPPING SUBSTRATE *****')
-            print("working on "+projDir)
-            map_master_func(**params)
+            #==================================================
+            if rect_wcp or rect_wcr or banklines or coverage:
+                print('\n===========================================')
+                print('===========================================')
+                print('***** RECTIFYING *****')
+                print("working on "+projDir)
+                rectify_master_func(**params)
+                # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-        gc.collect()
-        print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+            #==================================================
+            if pred_sub or map_sub or export_poly or map_predict or pltSubClass:
+                print('\n===========================================')
+                print('===========================================')
+                print('***** MAPPING SUBSTRATE *****')
+                print("working on "+projDir)
+                map_master_func(**params)
 
-        sys.stdout.log.close()
+            gc.collect()
+            print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
 
-    except Exception as Argument:
-        unableToProcessError(logfilename)
+            sys.stdout.log.close()
+
+        except Exception as Argument:
+            unableToProcessError(logfilename)
 
 if __name__ == "__main__":
     gui()

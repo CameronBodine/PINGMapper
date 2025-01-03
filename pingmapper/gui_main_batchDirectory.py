@@ -123,291 +123,292 @@ def gui_batch():
 
     window.close()
 
-    if event == "Quit":
-        sys.exit()
+    # if event == "Quit":
+    #     sys.exit()
+    if event == "Submit":
 
-    batch_start_time = time.time()
+        batch_start_time = time.time()
 
-    for k, v in values.items():
-        print(k, v, '\n\n')
+        for k, v in values.items():
+            print(k, v, '\n\n')
 
-    # sys.exit()
+        # sys.exit()
 
-    inDir = values['inDir']
-    outDir = values['proj']
+        inDir = values['inDir']
+        outDir = values['proj']
 
-    #################################
-    # Convert parameters if necessary
+        #################################
+        # Convert parameters if necessary
 
-    # AOI
-    aoi = values['aoi']
-    if aoi == '':
-        aoi = False
+        # AOI
+        aoi = values['aoi']
+        if aoi == '':
+            aoi = False
 
-    # EGN Stretch
-    egn_stretch = values['egn_stretch']
-    if egn_stretch == 'None':
-        egn_stretch = 0
-    elif egn_stretch == 'Min-Max':
-        egn_stretch = 1
-    elif egn_stretch == 'Percent Clip':
-        egn_stretch = 2
-    egn_stretch = int(egn_stretch)
+        # EGN Stretch
+        egn_stretch = values['egn_stretch']
+        if egn_stretch == 'None':
+            egn_stretch = 0
+        elif egn_stretch == 'Min-Max':
+            egn_stretch = 1
+        elif egn_stretch == 'Percent Clip':
+            egn_stretch = 2
+        egn_stretch = int(egn_stretch)
 
-    # Speed Corrected Sonograms
-    lbl_set = values['lbl_set']
-    if lbl_set == 'False':
-        lbl_set = 0
-    elif lbl_set == 'True: Keep WC & Shadows':
-        lbl_set = 1
-    elif lbl_set == 'True: Mask WC & Shadows':
-        lbl_set = 2
-    lbl_set = int(lbl_set)
+        # Speed Corrected Sonograms
+        lbl_set = values['lbl_set']
+        if lbl_set == 'False':
+            lbl_set = 0
+        elif lbl_set == 'True: Keep WC & Shadows':
+            lbl_set = 1
+        elif lbl_set == 'True: Mask WC & Shadows':
+            lbl_set = 2
+        lbl_set = int(lbl_set)
 
-    # Shadow removal
-    remShadow = values['remShadow']
-    if remShadow == 'False':
-        remShadow = 0
-    elif remShadow == 'Remove all shadows':
-        remShadow = 1
-    elif remShadow == 'Remove only bank shadows':
-        remShadow = 2
-    remShadow = int(remShadow)
+        # Shadow removal
+        remShadow = values['remShadow']
+        if remShadow == 'False':
+            remShadow = 0
+        elif remShadow == 'Remove all shadows':
+            remShadow = 1
+        elif remShadow == 'Remove only bank shadows':
+            remShadow = 2
+        remShadow = int(remShadow)
 
-    # Depth detection
-    detectDep = values['detectDep']
-    if detectDep == 'Sensor':
-        detectDep = 0
-    elif detectDep == 'Auto':
-        detectDep = 1
-    detectDep = int(detectDep)
+        # Depth detection
+        detectDep = values['detectDep']
+        if detectDep == 'Sensor':
+            detectDep = 0
+        elif detectDep == 'Auto':
+            detectDep = 1
+        detectDep = int(detectDep)
 
-    # Predict substrate
-    if values['map_sub']:
-        values['pred_sub'] = True
-    elif values['export_poly']:
-        values['pred_sub'] = True
-        values['map_sub'] = True
-    elif values['pltSubClass']:
-        values['pred_sub'] = True
-    else:
-        values['pred_sub'] = False
+        # Predict substrate
+        if values['map_sub']:
+            values['pred_sub'] = True
+        elif values['export_poly']:
+            values['pred_sub'] = True
+            values['map_sub'] = True
+        elif values['pltSubClass']:
+            values['pred_sub'] = True
+        else:
+            values['pred_sub'] = False
 
-    # Map class method
-    values['map_class_method'] = 'max'
+        # Map class method
+        values['map_class_method'] = 'max'
 
-    # Map predictions #### DISABLED ####
-    # map_predict = values['map_predict']
-    # if map_predict == 'False':
-    #     map_predict = 0
-    # elif map_predict == 'Probability':
-    #     map_predict = 1
-    # elif map_predict == 'Logit':
-    #     map_predict = 2
-    # map_predict = int(map_predict)
-    map_predict = 0 # Disable workflow
+        # Map predictions #### DISABLED ####
+        # map_predict = values['map_predict']
+        # if map_predict == 'False':
+        #     map_predict = 0
+        # elif map_predict == 'Probability':
+        #     map_predict = 1
+        # elif map_predict == 'Logit':
+        #     map_predict = 2
+        # map_predict = int(map_predict)
+        map_predict = 0 # Disable workflow
 
-    # Sonar mosaic
-    mosaic = values['mosaic']
-    if mosaic == 'False':
-        mosaic = int(0)
-    elif mosaic == 'GTiff':
-        mosaic = int(1)
-    elif mosaic == 'VRT':
-        mosaic = int(2)
-    mosaic = int(mosaic)
+        # Sonar mosaic
+        mosaic = values['mosaic']
+        if mosaic == 'False':
+            mosaic = int(0)
+        elif mosaic == 'GTiff':
+            mosaic = int(1)
+        elif mosaic == 'VRT':
+            mosaic = int(2)
+        mosaic = int(mosaic)
 
-    # Substrate mosaic
-    map_mosaic = values['map_mosaic']
-    if map_mosaic == 'False':
-        map_mosaic = 0
-    elif map_mosaic == 'GTiff':
-        map_mosaic = 1
-    elif map_mosaic == 'VRT':
-        map_mosaic = 2
-    map_mosaic = int(map_mosaic)
+        # Substrate mosaic
+        map_mosaic = values['map_mosaic']
+        if map_mosaic == 'False':
+            map_mosaic = 0
+        elif map_mosaic == 'GTiff':
+            map_mosaic = 1
+        elif map_mosaic == 'VRT':
+            map_mosaic = 2
+        map_mosaic = int(map_mosaic)
 
 
-    params = {
-        # 'humFile':values[0],
-        # 'projDir':os.path.join(values[1], values[2]),
-        'project_mode':int(values['project_mode']),
-        'tempC':float(values['tempC']),
-        'nchunk':int(values['nchunk']),
-        'cropRange':float(values['cropRange']),
-        'exportUnknown':values['exportUnknown'],
-        'fixNoDat':values['fixNoDat'],
-        'threadCnt':int(values['threadCnt']),
-        'aoi':aoi,
-        'max_heading_deviation':float(values['max_heading_deviation']),
-        'max_heading_distance':float(values['max_heading_distance']),
-        'min_speed':float(values['min_speed']),
-        'max_speed':float(values['max_speed']),
-        'pix_res_son':float(values['pix_res_son']),
-        'pix_res_map':float(values['pix_res_map']),
-        'x_offset':float(values['x_offset']),
-        'y_offset':float(values['y_offset']),
-        'egn':values['egn'],
-        'egn_stretch':egn_stretch,
-        'egn_stretch_factor':float(values['egn_stretch_factor']),
-        'wcp':values['wcp'],
-        'wcr':values['wcr'],
-        'tileFile':values['tileFile'],
-        'lbl_set':lbl_set,
-        'spdCor':float(values['spdCor']),
-        'maxCrop':values['maxCrop'],
-        'remShadow':remShadow,
-        'detectDep':detectDep,
-        'smthDep':values['smthDep'],
-        'adjDep':float(values['adjDep']),
-        'pltBedPick':values['pltBedPick'],
-        'rect_wcp':values['rect_wcp'],
-        'rect_wcr':values['rect_wcr'],
-        'son_colorMap':values['son_colorMap'],
-        'pred_sub':values['pred_sub'],
-        'pltSubClass':values['pltSubClass'],
-        'map_sub':values['map_sub'],
-        'export_poly':values['export_poly'],
-        'map_class_method':values['map_class_method'],
-        'map_predict':map_predict,
-        'mosaic_nchunk':int(values['mosaic_nchunk']),
-        'mosaic':mosaic,
-        'map_mosaic':map_mosaic,
-        'banklines':values['banklines'],
-        'coverage':values['coverage']
-    }
+        params = {
+            # 'humFile':values[0],
+            # 'projDir':os.path.join(values[1], values[2]),
+            'project_mode':int(values['project_mode']),
+            'tempC':float(values['tempC']),
+            'nchunk':int(values['nchunk']),
+            'cropRange':float(values['cropRange']),
+            'exportUnknown':values['exportUnknown'],
+            'fixNoDat':values['fixNoDat'],
+            'threadCnt':int(values['threadCnt']),
+            'aoi':aoi,
+            'max_heading_deviation':float(values['max_heading_deviation']),
+            'max_heading_distance':float(values['max_heading_distance']),
+            'min_speed':float(values['min_speed']),
+            'max_speed':float(values['max_speed']),
+            'pix_res_son':float(values['pix_res_son']),
+            'pix_res_map':float(values['pix_res_map']),
+            'x_offset':float(values['x_offset']),
+            'y_offset':float(values['y_offset']),
+            'egn':values['egn'],
+            'egn_stretch':egn_stretch,
+            'egn_stretch_factor':float(values['egn_stretch_factor']),
+            'wcp':values['wcp'],
+            'wcr':values['wcr'],
+            'tileFile':values['tileFile'],
+            'lbl_set':lbl_set,
+            'spdCor':float(values['spdCor']),
+            'maxCrop':values['maxCrop'],
+            'remShadow':remShadow,
+            'detectDep':detectDep,
+            'smthDep':values['smthDep'],
+            'adjDep':float(values['adjDep']),
+            'pltBedPick':values['pltBedPick'],
+            'rect_wcp':values['rect_wcp'],
+            'rect_wcr':values['rect_wcr'],
+            'son_colorMap':values['son_colorMap'],
+            'pred_sub':values['pred_sub'],
+            'pltSubClass':values['pltSubClass'],
+            'map_sub':values['map_sub'],
+            'export_poly':values['export_poly'],
+            'map_class_method':values['map_class_method'],
+            'map_predict':map_predict,
+            'mosaic_nchunk':int(values['mosaic_nchunk']),
+            'mosaic':mosaic,
+            'map_mosaic':map_mosaic,
+            'banklines':values['banklines'],
+            'coverage':values['coverage']
+        }
 
-    globals().update(params)
+        globals().update(params)
 
-    #============================================
+        #============================================
 
-    # Find all DAT and SON files in all subdirectories of inDir
-    inFiles=[]
-    for root, dirs, files in os.walk(inDir):
-        for file in files:
-            if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
-                inFiles.append(os.path.join(root, file))
+        # Find all DAT and SON files in all subdirectories of inDir
+        inFiles=[]
+        for root, dirs, files in os.walk(inDir):
+            for file in files:
+                if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
+                    inFiles.append(os.path.join(root, file))
 
-    inFiles = sorted(inFiles)
+        inFiles = sorted(inFiles)
 
-    for i, f in enumerate(inFiles):
-        print(i, ":", f)
+        for i, f in enumerate(inFiles):
+            print(i, ":", f)
 
-    for datFile in inFiles:
-        logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
-
-        try:
-            copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-            script = os.path.abspath(__file__)
-
-            start_time = time.time()  
-
-            inPath = os.path.dirname(datFile)
-            inFile = datFile
-            recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
+        for datFile in inFiles:
+            logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
             try:
-                sonPath = inFile.split('.DAT')[0]
-                sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-            except:
-                sonFiles = ''
+                copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+                script = os.path.abspath(__file__)
 
-            recName = values['prefix'] + recName + values['suffix']
+                start_time = time.time()  
 
-            projDir = os.path.join(outDir, recName)
+                inPath = os.path.dirname(datFile)
+                inFile = datFile
+                recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
 
-            #============================================
+                try:
+                    sonPath = inFile.split('.DAT')[0]
+                    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+                except:
+                    sonFiles = ''
 
-            # =========================================================
-            # Determine project_mode
-            print(project_mode)
-            if project_mode == 0:
-                # Create new project
-                if not os.path.exists(projDir):
-                    os.mkdir(projDir)
-                else:
-                    projectMode_1_inval()
+                recName = values['prefix'] + recName + values['suffix']
 
-            elif project_mode == 1:
-                # Overwrite existing project
-                if os.path.exists(projDir):
-                    shutil.rmtree(projDir)
+                projDir = os.path.join(outDir, recName)
 
-                os.mkdir(projDir)        
+                #============================================
 
-            elif project_mode == 2:
-                # Update project
-                # Make sure project exists, exit if not.
-                
-                if not os.path.exists(projDir):
-                    projectMode_2_inval()
+                # =========================================================
+                # Determine project_mode
+                print(project_mode)
+                if project_mode == 0:
+                    # Create new project
+                    if not os.path.exists(projDir):
+                        os.mkdir(projDir)
+                    else:
+                        projectMode_1_inval()
 
-            # =========================================================
-            # For logging the console output
+                elif project_mode == 1:
+                    # Overwrite existing project
+                    if os.path.exists(projDir):
+                        shutil.rmtree(projDir)
 
-            logdir = os.path.join(projDir, 'logs')
-            if not os.path.exists(logdir):
-                os.makedirs(logdir)
+                    os.mkdir(projDir)        
 
-            logfilename = os.path.join(logdir, logfilename)
+                elif project_mode == 2:
+                    # Update project
+                    # Make sure project exists, exit if not.
+                    
+                    if not os.path.exists(projDir):
+                        projectMode_2_inval()
 
-            sys.stdout = Logger(logfilename)
+                # =========================================================
+                # For logging the console output
 
-            print('\n\n', '***User Parameters***')
-            for k,v in params.items():
-                print("| {:<20s} : {:<10s} |".format(k, str(v)))
+                logdir = os.path.join(projDir, 'logs')
+                if not os.path.exists(logdir):
+                    os.makedirs(logdir)
 
-            #============================================
-            # Add ofther params
-            params['sonFiles'] = sonFiles
-            params['logfilename'] = logfilename
-            params['script'] = [script, copied_script_name]
-            params['projDir'] = projDir
-            params['inFile'] = inFile
+                logfilename = os.path.join(logdir, logfilename)
+
+                sys.stdout = Logger(logfilename)
+
+                print('\n\n', '***User Parameters***')
+                for k,v in params.items():
+                    print("| {:<20s} : {:<10s} |".format(k, str(v)))
+
+                #============================================
+                # Add ofther params
+                params['sonFiles'] = sonFiles
+                params['logfilename'] = logfilename
+                params['script'] = [script, copied_script_name]
+                params['projDir'] = projDir
+                params['inFile'] = inFile
 
 
 
-            print('sonPath',sonPath)
-            print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-            print('+++++++++++++++++++++++++++++++++++++++++++')
-            print('***** Working On *****')
-            print(inFile)
-            print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+                print('sonPath',sonPath)
+                print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+                print('+++++++++++++++++++++++++++++++++++++++++++')
+                print('***** Working On *****')
+                print(inFile)
+                print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-            print('\n===========================================')
-            print('===========================================')
-            print('***** READING *****')
-            read_master_func(**params)
-            # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
-
-            if rect_wcp or rect_wcr or banklines or coverage:
                 print('\n===========================================')
                 print('===========================================')
-                print('***** RECTIFYING *****')
-                rectify_master_func(**params)
-                # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+                print('***** READING *****')
+                read_master_func(**params)
+                # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-            #==================================================
-            #==================================================
-            if pred_sub or map_sub or export_poly or pltSubClass:
-                print('\n===========================================')
-                print('===========================================')
-                print('***** MAPPING SUBSTRATE *****')
-                print("working on "+projDir)
-                map_master_func(**params)
+                if rect_wcp or rect_wcr or banklines or coverage:
+                    print('\n===========================================')
+                    print('===========================================')
+                    print('***** RECTIFYING *****')
+                    rectify_master_func(**params)
+                    # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-            sys.stdout.log.close()
+                #==================================================
+                #==================================================
+                if pred_sub or map_sub or export_poly or pltSubClass:
+                    print('\n===========================================')
+                    print('===========================================')
+                    print('***** MAPPING SUBSTRATE *****')
+                    print("working on "+projDir)
+                    map_master_func(**params)
 
-        except Exception as Argument:
-            unableToProcessError(logfilename)
-            print('\n\nCould not process:', datFile)
+                sys.stdout.log.close()
 
-        sys.stdout = oldOutput
+            except Exception as Argument:
+                unableToProcessError(logfilename)
+                print('\n\nCould not process:', datFile)
 
-        gc.collect()
-        print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+            sys.stdout = oldOutput
 
-    print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
+            gc.collect()
+            print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
+        print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
 
 
 if __name__ == "__main__":
