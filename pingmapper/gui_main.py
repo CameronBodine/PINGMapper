@@ -26,15 +26,20 @@ def gui():
     # For the logfile
     logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
-    start_time = time.time()
-
     #============================================
 
     # Default Values
     # Edit values below to change default values in gui
+    primary_default_params = os.path.join(SCRIPT_DIR, "default_params.json")
+
+    if not os.path.exists(primary_default_params):
+        d = os.environ['CONDA_PREFIX']
+        primary_default_params = os.path.join(d, 'pingmapper_config', 'default_params.json')
+    
     default_params_file = os.path.join(SCRIPT_DIR, "user_params.json")
+
     if not os.path.exists(default_params_file):
-        default_params_file = os.path.join(SCRIPT_DIR, "default_params.json")
+        default_params_file = primary_default_params
     with open(default_params_file) as f:
         default_params = json.load(f)
 
@@ -118,6 +123,7 @@ def gui():
     if event == "Quit":
         sys.exit()
 
+    start_time = time.time()
 
     #################################
     # Convert parameters if necessary

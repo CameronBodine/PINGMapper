@@ -16,9 +16,7 @@ from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 import json
 
-def gui_batch():
-
-    batch_start_time = time.time()  
+def gui_batch():  
 
     # Get processing script's dir so we can save it to file
     scriptDir = SCRIPT_DIR
@@ -32,9 +30,16 @@ def gui_batch():
 
     # Default Values
     # Edit values below to change default values in gui
+    primary_default_params = os.path.join(SCRIPT_DIR, "default_params.json")
+
+    if not os.path.exists(primary_default_params):
+        d = os.environ['CONDA_PREFIX']
+        primary_default_params = os.path.join(d, 'pingmapper_config', 'default_params.json')
+    
     default_params_file = os.path.join(SCRIPT_DIR, "user_params.json")
+
     if not os.path.exists(default_params_file):
-        default_params_file = os.path.join(SCRIPT_DIR, "default_params.json")
+        default_params_file = primary_default_params
     with open(default_params_file) as f:
         default_params = json.load(f)
 
@@ -120,6 +125,8 @@ def gui_batch():
 
     if event == "Quit":
         sys.exit()
+
+    batch_start_time = time.time()
 
     for k, v in values.items():
         print(k, v, '\n\n')
