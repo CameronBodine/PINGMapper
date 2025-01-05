@@ -17,10 +17,13 @@ dependencies:
   - h5py
   - pip
   - pip:
+      - pingverter
+      - pingmapper
+      - pingwizard
+      - pinginstaller
       - doodleverse_utils
       - psutil
       - tensorflow
       - tf-keras
       - transformers
       - pysimplegui == 5.0.*
-      - pingverter
