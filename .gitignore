@@ -1,3 +1,7 @@
+pingmapper
+pingmapper.egg*
+.pydirc
+dist
 procData/*
 __pycache__/*
 oldFiles/*
