@@ -5,7 +5,7 @@ nav_order: 1
 description: "PING-Mapper is an open-source software for recreationg-grade sonar"
 ---
 
-# PING-Mapper
+# PINGMapper
 {: .fs-9 }
 
 Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat
@@ -15,15 +15,36 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 ---
 
-`PING-Mapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
+`PINGMapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ## Overview
 
+### New Functionality & Bug Fixes (January 6, 2025)
+- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Light-weight application for installing PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pinginstaller?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pinginstaller/)
+- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Light-weight interface for running PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
+
+### New Functionality & Bug Fixes (December 28, 2024)
+- [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
+  - Support for Lowrance&reg; *.sl2 and *.sl3 files!
+  - Improved mechanism for reading sonar logs, inspired by [sonarlight](https://github.com/KennethTM/sonarlight), resulting in **~1.3x speedup** when running the [Small Dataset Test](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html#small-dataset-test).
+- [Sonar log filtering](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0) based on heading deviation, speed, and Area of Interest (AOI) shapefile.
+- Export coverage and trackline shapefiles.
+- Fix [bankline export](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0).
+
+See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0) for more information
+
 ### Key Functionality
+- [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
+  - [![PyPI - Version](https://img.shields.io/pypi/v/pingverter?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingverter/)
+  - Decode Humminbird&reg; sonar recordings.  For more information on Humminbird&reg; recording file formats, [read the docs](https://cameronbodine.github.io/PINGMapper/docs/advanced/HumFileStructure.html).
 
-- Decode Humminbird&reg; (tested on 1197, 1198, 1199, Helix, Solix, Onix).  If it doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).  For more information on Humminbird&reg; recording file formats, [read the docs](./docs/advanced/HumFileStructure.html).
+  - Decode Lowrance&reg; *.sl2 and *.sl3 files. Lowrance&reg; support made possible by open-source projects including [SL3Reader](https://github.com/halmaia/SL3Reader), [sonarlight](https://github.com/KennethTM/sonarlight), and [Navico (Lowrance, Simrad, B&G) Sonar Log File Format](https://www.memotech.franken.de/FileFormats/Navico_SLG_Format.pdf).
 
-- Export all metadata from .DAT and .SON files to .CSV.
+  - If it doesn't work for your Humminbird&reg; or Lowrance&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+
+- Export all metadata from .DAT, .SON, .sl2, and .sl3 files to .CSV.
 
 - Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels .
 
@@ -41,20 +62,29 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 - Automatically segment and classify substrate patches.
 
-More information on PING-Mapper exports can be found [here](./docs/gettingstarted/Exports.html).
+More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
 
-### Compatible Humminbird&reg; Systems
 
-`PING-Mapper` is currently compatible with Humminbird&reg; side imaging sonar systems. The software has been designed to work with any model, but has been specifically tested with the following models:
 
+
+## Compatible Sonar Systems
+
+`PING-Mapper` is currently compatible with Humminbird&reg; and Lowrance&reg; side imaging sonar systems. The software has been tested with:
+
+### Humminbird&reg; Models:
 - 998
 - 1198
 - 1199
 - Helix
 - Solix
 - Onix
+- Apex
 
-If `PING-Mapper` doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+### Lowrance&reg; File Formats:
+- sl2
+- sl3
+
+If `PING-Mapper` doesn't work for your Humminbird&reg; or Lowrance&reg; sonar system, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
 
