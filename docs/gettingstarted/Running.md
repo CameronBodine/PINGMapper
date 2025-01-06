@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Running PING-Mapper
+title: Running PINGMapper
 nav_order: 4
 parent: Getting Started
 
@@ -8,26 +8,24 @@ nav_exclude: false
 
 ---
 
-# Running `PING-Mapper`
+# Running `PINGMapper`
 
 {: .no_toc }
 
 Find out how to process your own sonar recordings.
 {: .fs-6 .fw-300 }
 
-{: .g2k }
-> If you prefer to run from a Python Script, check out the [Script Instructions](./Running_script.md)
-
-After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you are ready to process your own sonar recordings! Two scripts have been included with `PING-Mapper` and are found in the top-level directory. The first is `gui_main.py` which allows you to process a single sonar recording. It is recommended that you start with this script when first processing sonar recordings with the software. A second script called `gui_main_batchDirectory.py` provides an example of how to batch process many sonar recordings at once. Both approaches are covered below.
+After [installing](./Installation.md) PINGMapper, you are now ready to run a test to make sure PINGMapper is running as expected. As of v4.0, PINGMapper is run through a utility called [PINGWizard](https://github.com/CameronBodine/PINGWizard). PINGWizard is the entry-point for all current and future PING-related utilities.
 
 ## Process single sonar recording
 
-### Note on sonar file structure
+### Note on Humminbird sonar file structure
 
 Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure:
 
-```
-Rec00001.DAT
+```bash
+ParentFolder
+├── Rec00001.DAT
 ├── Rec00001
 │   ├── B001.IDX
 │   ├── B001.SON
@@ -42,41 +40,48 @@ Rec00001.DAT
 
 
 ### Step 1
-1. Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
-```
-cd C:\users\Cam\MyPythonRepos\PINGMapper
+
+The first step is to launch PINGWizard. There are two options for launching PINGWizard
+
+#### Option a - Desktop Shortcut
+
+During installation, a batch (Windows) or bash (Linux/Mac OS) file was saved to the desktop. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
+
+On Windows, simply double click the PINGWizard.bat file on the desktop:
+
+<img src="../../assets/running/PINGWizard_bat.PNG"/>
+
+On Linux/Mac OS, open a command prompt, change directory to the Desktop, and launch the bash script by entering the following and press `Enter`:
+
+```bash
+cd Desktop
+./PINGWizard.sh
 ```
 
-{: .g2k }
-> Take a look at [Step 2](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Installation.html#step-2) of the installation instructions if you need help navigating to the `PINGMapper` directory.
+<img src="../../assets/running/PINGWizard_sh.PNG"/>
 
-2. Activate the `ping` virtual environment by running the following command and hit `Enter`:
-```
-conda activate ping
-```
+#### Option b - Conda Command Prompt
 
-You should see something similar to the following in the command prompt following by a flashing cursor:
-```
-(ping) PS C:\users\Cam\Python\PINGMapper>
+Open the Conda Command Prompt used during [installation](./Installation.md). Activate the `ping` environment and launching PINGWizard by entering the following and pressing `Enter`:
+
+```bash
+conda run -n ping python -m pingwizard
 ```
 
-<img src="../../assets/install/shell_19.PNG"/>
+<img src="../../assets/running/PINGWizard_console.PNG"/>
 
 ### Step 2
 
-Now we will run the GUI by issuing the following command and hitting `Enter`:
+PINGWizard will launch and present a menu of buttons to run various PINGMapper utilities:
 
-```
-python gui_main.py
-```
+<img src="../../assets/running/PINGWizard_gui.PNG"/>
 
-<img src="../../assets/running/shell_RunGUI.PNG"/>
+If you just installed or updated PINGMapper, it is recommended that you test the installation by pressing `Small Dataset` and/or `Large Dataset`.
 
-The GUI will launch in a new window:
+After the tests, you can launch the gui to process a single sonar log by pressing `Single Log`. This will open a new window that looks similar to the following:
 
 <img src="../../assets/running/gui_Launch.PNG"/>
 
-The title at the top of the window that this GUI is designed to process a single sonar recording. More on batch processing a directory of sonar recordings [below](#batch-process-multiple-sonar-recordings). You will notice that there is a scroll bar on the right, allowing you to scroll through all of the parameters. At the very end, there are buttons to start processing the recording (`Submit`), close the window without processing (`Quit`), or to save the selected parameters as default (`Save Defaults`). More on all of this later. Lets step through each section of the GUI to learn how to process our recording.
 
 ### Step 3
 Selecting input/output directories, Project Name and whether to overwrite existing projects sharing the same name.
@@ -273,7 +278,7 @@ PING-Mapper includes a script which will find all sonar recordings in a director
 
 ### Note on sonar file structure
 
-Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure, where `AllRecordings`:
+Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure, where `ParentDirectory`:
 
 ```
 AllRecordings
@@ -300,14 +305,12 @@ AllRecordings
 ....
 ```
 
-In the example above, the top directory is `AllRecordings`. This is the directory you will point the GUI at. The script will then iterate each sonar recording (e.g., `Rec00001`, `Rec00002`, etc.), process the recording and export files as specified in the GUI. The `Output Folder` will have a folder sharing the same name as the sonar recording (e.g., `Rec00001`, `Rec00002`, etc.).
+In the example above, the top directory is `ParentDirectory`. This is the directory you will point the GUI at. The script will then iterate each sonar recording (e.g., `Rec00001`, `Rec00002`, etc.), process the recording and export files as specified in the GUI. The `Output Folder` will have a folder sharing the same name as the sonar recording (e.g., `Rec00001`, `Rec00002`, etc.).
 
 ### Step 1
-From the command prompt, run the following to open the Batch GUI window:
+From PINGWizard, press `Batch Sonar Logs`:
 
-```
-python gui_main_batchDirectory.py
-```
+<img src="../../assets/running/PINGWizard_gui.PNG"/>
 
 ### Step 2
 
