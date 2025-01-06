@@ -28,6 +28,9 @@ testData/*
 /src/__pycache__/*
 pingmapper/exampleData/*
 pingmapper/models
+.pydirc
+pingmapper.egg-info
+dist
 
 main_batch.py
 main_batchFolder.py
