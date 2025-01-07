@@ -40,8 +40,7 @@ from pingmapper.main_readFiles import read_master_func
 from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 
-from pathlib import Path
-user_home_path = os.path.join(Path.home(), 'Desktop')
+user_home_path = os.path.expanduser('~')
 
 orig_stdout = sys.stdout
 
@@ -83,6 +82,7 @@ def test(ds):
 
     exampleDir = os.path.join(scriptDir, 'exampleData')
     ds_path = os.path.join(exampleDir, ds_name)
+    ds_path = os.path.normpath(ds_path)
 
     os.makedirs(exampleDir, exist_ok=True)
 

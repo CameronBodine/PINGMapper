@@ -235,6 +235,7 @@ def read_master_func(logfilename='',
     # Download models if they don't exist
     # modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
     modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    modelDir = os.path.normpath(modelDir)
     if not os.path.exists(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
         getSegformer = True

@@ -15,6 +15,9 @@ else:
 # May need to load conda config, check later
 
 def main(process):
+
+    from .version import __version__
+    print("\n\nPINGMapper v{}".format(__version__))
     
     # Process single sonar log
     if process == 'gui':
