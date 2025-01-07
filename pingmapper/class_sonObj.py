@@ -26,7 +26,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from funcs_common import *
+import os, sys
+
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
 
 class sonObj(object):
     '''

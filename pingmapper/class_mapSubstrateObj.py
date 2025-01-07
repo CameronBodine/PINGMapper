@@ -26,9 +26,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from funcs_common import *
-from funcs_model import *
-from class_rectObj import rectObj
+import os, sys
+
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
+from pingmapper.funcs_model import *
+from pingmapper.class_rectObj import rectObj
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import matplotlib

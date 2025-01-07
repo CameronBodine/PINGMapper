@@ -26,9 +26,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os, sys
 
-from funcs_common import *
-from class_sonObj import sonObj
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
+from pingmapper.class_sonObj import sonObj
 from osgeo import gdal, ogr, osr
 from osgeo_utils.gdal_sieve import gdal_sieve
 from scipy.interpolate import splprep, splev

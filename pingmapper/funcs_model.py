@@ -28,8 +28,14 @@
 
 
 # Imports
-from funcs_common import *
-import os
+import sys, os
+
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
+from pingmapper.funcs_common import *
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import json
 import numpy as np

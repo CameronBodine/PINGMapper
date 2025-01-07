@@ -26,12 +26,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os, sys
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
 
-from funcs_common import *
+from pingmapper.funcs_common import *
 
-from class_mapSubstrateObj import mapSubObj
-from class_portstarObj import portstarObj
-from funcs_model import *
+from pingmapper.class_mapSubstrateObj import mapSubObj
+from pingmapper.class_portstarObj import portstarObj
+from pingmapper.funcs_model import *
 
 import itertools
 
@@ -103,6 +108,7 @@ def map_master_func(logfilename='',
 
     ############
     # Parameters
+    modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
     flip = False #Flip port/star
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
     filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
@@ -371,12 +377,14 @@ def map_master_func(logfilename='',
                 # Load model weights and config file
                 if son.egn:
                     # EGN model
-                    son.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/EGN_Substrate_Segmentation_segformer_v1.0/config/EGN_Substrate_Segmentation_segformer_v1.0.json'
+                    substrateModelVer = 'EGN_Substrate_Segmentation_segformer_v1.0'
+                    son.configfile = os.path.join(modelDir, substrateModelVer, 'config', substrateModelVer+'.json')
                     son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
                 else:
                     # Raw model
-                    son.configfile = r'./models/PINGMapperv2.0_SegmentationModelsv1.0/Raw_Substrate_Segmentation_segformer_v1.0/config/Raw_Substrate_Segmentation_segformer_v1.0.json'
+                    substrateModelVer = 'Raw_Substrate_Segmentation_segformer_v1.0'
+                    son.configfile = os.path.join(modelDir, substrateModelVer, 'config', substrateModelVer+'.json')
                     son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
 
             # Do prediction (make parallel later)
