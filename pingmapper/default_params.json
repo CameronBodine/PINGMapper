@@ -8,7 +8,7 @@
     "cropRange":0.0,
     "exportUnknown":false,
     "fixNoDat":false,
-    "threadCnt":0,
+    "threadCnt":0.5,
     "aoi":"",
     "max_heading_deviation":0,
     "max_heading_distance":0,

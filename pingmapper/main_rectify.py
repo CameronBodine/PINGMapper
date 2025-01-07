@@ -192,6 +192,11 @@ def rectify_master_func(logfilename='',
         threadCnt=cpu_count()+threadCnt
         if threadCnt<0: # Make sure not negative
             threadCnt=1
+    elif threadCnt<1: # Use proportion of available threads
+        threadCnt = int(cpu_count()*threadCnt)
+        # Make even number
+        if threadCnt % 2 == 1:
+            threadCnt -= 1
     else: # Use specified threadCnt if positive
         pass
 
@@ -516,7 +521,7 @@ def rectify_master_func(logfilename='',
             # for i in chunks:
             #     son._rectSonParallel(i, filter, cog, wgs=False)
             #     sys.exit()
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, cog, wgs=False) for i in chunks)
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonParallel)(i, filter, cog, wgs=False) for i in tqdm(range(len(chunks))))
             son._cleanup()
             gc.collect()
             printUsage()

@@ -80,6 +80,8 @@ import json
 
 import logging
 
+from tqdm import tqdm
+
 # from funcs_pyhum_correct import doPyhumCorrections
 
 
