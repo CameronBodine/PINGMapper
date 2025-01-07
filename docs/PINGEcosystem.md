@@ -15,7 +15,7 @@ Converting fishfinders into scientific instruments with software.
 
 ## Introduction
 
-The PING Ecosystem is a growing set of open-source software tools designed to generate scientific datasets from sonar data collected with low-cost recreation-grade sonar systems, or fishfinders. These tools are housed in open-source repositories on GitHub. They are designed to be easy-to-use and require no coding (i.e. Python) expertise to use.
+The [PING Ecosystem](https://github.com/PINGEcosystem) is a growing set of open-source software tools designed to generate scientific datasets from sonar data collected with low-cost recreation-grade sonar systems, or fishfinders. These tools are housed in open-source repositories on GitHub. They are designed to be easy-to-use and require no coding (i.e. Python) expertise to use.
 
 ## Future Development, Collaborations, & Partnerships
 
