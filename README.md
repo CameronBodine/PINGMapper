@@ -32,6 +32,15 @@
 # Overview
 `PING-Mapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PING-Mapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing. 
 
+
+### New Functionality & Bug Fixes (January 6, 2025)
+- PINGMapper is a PyPi package
+  - [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
+- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Light-weight application for installing PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pinginstaller?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pinginstaller/)
+- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Light-weight interface for running PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
+
 ### New Functionality & Bug Fixes (December 28, 2024)
 - [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
   - Support for Lowrance&reg; *.sl2 and *.sl3 files!
