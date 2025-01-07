@@ -18,9 +18,9 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 ---
 
-`PINGMapper` transforms recreation-grade sonar systems into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
-
 ## Overview
+
+`PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ### New Functionality & Bug Fixes (January 6, 2025)
 - PINGMapper is a PyPi package
@@ -74,7 +74,7 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 
 ## Compatible Sonar Systems
 
-`PING-Mapper` is currently compatible with Humminbird&reg; and Lowrance&reg; side imaging sonar systems. The software has been tested with:
+`PINGMapper` is currently compatible with Humminbird&reg; and Lowrance&reg; side imaging sonar systems. The software has been tested with:
 
 ### Humminbird&reg; Models:
 - 998
@@ -89,13 +89,13 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 - sl2
 - sl3
 
-If `PING-Mapper` doesn't work for your Humminbird&reg; or Lowrance&reg; sonar system, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+If `PINGMapper` doesn't work for your Humminbird&reg; or Lowrance&reg; sonar system, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
 
 ### Examples
 
-`PING-Mapper` is designed to **decode sonar recordings** from a Humminbird&reg; like this:
+`PINGMapper` is designed to **decode sonar recordings** from a Humminbird&reg; like this:
 
 <img src="./assets/Suwa_Son.gif" width="800"/>
 
@@ -113,10 +113,10 @@ And **export georectified mosaics** of the sonar imagery and **automatically gen
 
 ## Find out more!
 
-There are several ways you can find out more about `PING-Mapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use `PING-Mapper` for your work, please cite the journal articles below.
+There are several ways you can find out more about `PINGMapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use `PINGMapper` for your work, please cite the journal articles below.
 
 
-### PING-Mapper v2.0.0
+### PINGMapper v2.0.0
 The second version of PING-Mapper is available now, including automated substrate mapping. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
 
 #### Journal Article
@@ -135,8 +135,8 @@ The second version of PING-Mapper is available now, including automated substrat
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119320.svg)](https://doi.org/10.5281/zenodo.10119320)
 
 
-### PING-Mapper v1.0.0
-An overview of `PING-Mapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal.
+### PINGMapper v1.0.0
+An overview of `PINGMapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal.
 
 #### Journal Article
 Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
@@ -165,7 +165,7 @@ A special thanks to advocates and early-adoptors including, but not limited to, 
 
 Cameron wishes to thank his PhD dissertation committee: Toby Hocking, Co-Chair; advisor Dan Buscombe, Co-Chair; Rebecca Best; and Adam Kaeser.
 
-## PING-Mapper is part of the Doodleverse!
+## PINGMapper is part of the Doodleverse!
 ![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
 
 The Doodleverse is an opinionated collection of Python packages designed for geoscientific image segmentation. Find out more on [GitHub](https://github.com/Doodleverse).
