@@ -20,25 +20,7 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 ## Overview
 
-`PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
-
-### New Functionality & Bug Fixes (January 6, 2025)
-- PINGMapper is a PyPi package
-  - [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Light-weight application for installing PING ecosystem (PINGMapper, etc.)
-    - [![PyPI - Version](https://img.shields.io/pypi/v/pinginstaller?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pinginstaller/)
-- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Light-weight interface for running PING ecosystem (PINGMapper, etc.)
-    - [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
-
-### New Functionality & Bug Fixes (December 28, 2024)
-- [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
-  - Support for Lowrance&reg; *.sl2 and *.sl3 files!
-  - Improved mechanism for reading sonar logs, inspired by [sonarlight](https://github.com/KennethTM/sonarlight), resulting in **~1.3x speedup** when running the [Small Dataset Test](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html#small-dataset-test).
-- [Sonar log filtering](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0) based on heading deviation, speed, and Area of Interest (AOI) shapefile.
-- Export coverage and trackline shapefiles.
-- Fix [bankline export](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0).
-
-See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0) for more information
+`PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific instruments, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ### Key Functionality
 - [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
@@ -51,7 +33,7 @@ See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/relea
 
 - Export all metadata from .DAT, .SON, .sl2, and .sl3 files to .CSV.
 
-- Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels .
+- Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels.
 
 - Correct sonar backscatter with Empiracle Gain Normalization.
 
@@ -113,11 +95,22 @@ And **export georectified mosaics** of the sonar imagery and **automatically gen
 
 ## Find out more!
 
-There are several ways you can find out more about `PINGMapper`. The first of which is this website! You can also check out the manuscripts and Zenodo archives below. If you use `PINGMapper` for your work, please cite the journal articles below.
+There are several ways you can find out more about `PINGMapper`. The first of which is this website! You can also check out the manuscripts, Zenodo archives, and release notes below. If you use `PINGMapper` for your work, please cite the journal articles below.
 
+### v1.0.0 (August 29, 2022)
+An overview of `PINGMapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal.
 
-### PINGMapper v2.0.0
-The second version of PING-Mapper is available now, including automated substrate mapping. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
+#### Journal Article
+Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
+
+#### Preprint
+[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+
+#### Code
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
+
+### v2.0.0 (July 9, 2024)
+A manuscript detailing the automated substrate mapping features made availabe in v2.0.0 is published in AGU's Journal of Geophysical Research: Machine Learning and Computation.
 
 #### Journal Article
  Bodine, C. S., Buscombe, D., & Hocking, T. D. (2024). Automated river substrate mapping from sonar imagery with machine learning. Journal of Geophysical Research: Machine Learning and Computation, 1, e2024JH000135. [https://doi.org/10.1029/2024JH000135](https://doi.org/10.1029/2024JH000135) 
@@ -135,17 +128,24 @@ The second version of PING-Mapper is available now, including automated substrat
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119320.svg)](https://doi.org/10.5281/zenodo.10119320)
 
 
-### PINGMapper v1.0.0
-An overview of `PINGMapper` v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal.
 
-#### Journal Article
-Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. [https://doi.org/10.1029/2022EA002469](https://doi.org/10.1029/2022EA002469)
+### v3.0 (December 28, 2024) - v4.0 (January 6, 2025)
+- [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
+  - Support for Lowrance&reg; *.sl2 and *.sl3 files!
+  - Improved mechanism for reading sonar logs, inspired by [sonarlight](https://github.com/KennethTM/sonarlight), resulting in **~1.3x speedup** when running the [Small Dataset Test](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Testing.html#small-dataset-test).
+- [Sonar log filtering](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0) based on heading deviation, speed, and Area of Interest (AOI) shapefile.
+- Export coverage and trackline shapefiles.
+- Fix [bankline export](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0).
 
-#### Preprint
-[![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
+See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0) for more information
 
-#### Code
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
+- PINGMapper is a PyPi package
+  - [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
+- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Light-weight application for installing PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pinginstaller?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pinginstaller/)
+- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Light-weight interface for running PING ecosystem (PINGMapper, etc.)
+    - [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
+
 
 ## Ready to get started?
 
@@ -153,17 +153,31 @@ Follow the installation and testing instructions to [Get Started!](./docs/gettin
 
 # Acknowledgements
 
-*This study was made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Trustee Implementation Group to restore natural resources injured by the 2010 Deepwater Horizon oil spill in the Gulf of Mexico. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University.*
+## v1.0 - 2.0
 
-**Primary Developer:** [Cameron S. Bodine](https://github.com/CameronBodine)
+*This study was originally made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Trustee Implementation Group to restore natural resources injured by the 2010 Deepwater Horizon oil spill in the Gulf of Mexico. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University.*
 
-**Co-Developer:** [Daniel Buscombe](https://github.com/dbuscombe-usgs)
+**Primary Developer:** [Dr. Cameron S. Bodine](https://github.com/CameronBodine)
 
-Thanks to project collaborators Adam Kaeser (USFWS), Channing St. Aubin (USFWS), Mike Andres (USM), Kasea Price (USM), Alyssa Pagel (USM), Eric Haffey (USM), and Katherine Wright (USM).
+**Co-Developer:** [Dr. Daniel Buscombe](https://github.com/dbuscombe-usgs)
 
-A special thanks to advocates and early-adoptors including, but not limited to, Jennylyn Redner, Adrian Pinchbeck, Art Trembanis, Dan Carlson, Alan Ryon, Mirko Denecke, Dan Haught, Dan Hamill, Mark Lundine, Elizabeth Greenheck, Hendra Kurnia Febriawan, Bryan Bozeman, Paul Grams, Matt Kaplinski, Jess Kozarek, Chris Milliren, Brett Connell and James Parham.
+**Project Collaborators:** Thanks to Adam Kaeser (USFWS), Channing St. Aubin (USFWS), Mike Andres (USM), Kasea Price (USM), Alyssa Pagel (USM), Eric Haffey (USM), and Katherine Wright (USM).
 
-Cameron wishes to thank his PhD dissertation committee: Toby Hocking, Co-Chair; advisor Dan Buscombe, Co-Chair; Rebecca Best; and Adam Kaeser.
+**Advocates & Early-Adopters:** A special thanks to advocates and early-adoptors including, but not limited to, Jennylyn Redner, Adrian Pinchbeck, Art Trembanis, Dan Carlson, Alan Ryon, Mirko Denecke, Dan Haught, Dan Hamill, Mark Lundine, Elizabeth Greenheck, Hendra Kurnia Febriawan, Bryan Bozeman, Paul Grams, Matt Kaplinski, Jess Kozarek, Chris Milliren, Brett Connell and James Parham.
+
+**PhD Committee:** Cameron wishes to thank his PhD dissertation committee: Toby Hocking, Co-Chair; advisor Dan Buscombe, Co-Chair; Rebecca Best; and Adam Kaeser.
+
+## v3.0 - 4.0
+
+Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEcosystem.md) is made possible through mentorship, partnerships, and financial support listed below.
+
+**PostDoctoral Advisor:** [Dr. Arthur Trembanis](https://www.udel.edu/academics/colleges/ceoe/departments/smsp/faculty/arthur-trembanis/)
+
+**Lab**: [Coastal Sediments, Hydrodynamics and Engineering Lab (CSHEL)](https://sites.udel.edu/ceoe-art/)
+
+**Institution**: [College of Earth, Ocean, & Environment (CEOE)](https://www.udel.edu/ceoe/) at the [University of Delaware](https://www.udel.edu/)
+
+**Advocates & Mentors**: Vincent Capone - [Black Laser Learning](https://blacklaserlearning.com/)
 
 ## PINGMapper is part of the Doodleverse!
 ![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
