@@ -20,7 +20,7 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 ## Overview
 
-`PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
+`PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
 ### New Functionality & Bug Fixes (January 6, 2025)
 - PINGMapper is a PyPi package
