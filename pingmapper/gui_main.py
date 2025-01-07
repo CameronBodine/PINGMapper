@@ -219,8 +219,8 @@ def gui():
 
 
         params = {
-            'inFile':values['inFile'],
-            'projDir':os.path.join(values['proj'], values['projName']),
+            'inFile':os.path.normpath(values['inFile']),
+            'projDir':os.path.join(os.path.normpath(values['proj']), values['projName']),
             'project_mode':int(values['project_mode']),
             'tempC':float(values['tempC']),
             'nchunk':int(values['nchunk']),
@@ -301,6 +301,8 @@ def gui():
             os.makedirs(logdir)
 
         logfilename = os.path.join(logdir, logfilename)
+
+        print('Log File:', logfilename)
 
         sys.stdout = Logger(logfilename)
 

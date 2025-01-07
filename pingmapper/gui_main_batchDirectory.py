@@ -134,8 +134,8 @@ def gui_batch():
 
         # sys.exit()
 
-        inDir = values['inDir']
-        outDir = values['proj']
+        inDir = os.path.normpath(values['inDir'])
+        outDir = os.path.normpath(values['proj'])
 
         #################################
         # Convert parameters if necessary
