@@ -1,10 +1,8 @@
 ---
 layout: default
 title: Update Installation
-nav_order: 2
-parent: Getting Started
 
-nav_exclude: false
+nav_exclude: true
 
 ---
 
