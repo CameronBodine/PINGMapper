@@ -13,22 +13,29 @@ nav_exclude: false
 {: .g2k }
 > As of v4.0, the PINGMapper installation process has been dramatically improved and simplified compared to the [old version](./Installation-v1.md)
 
-Here is a set of installation instructions to help you get up and running with PINGMapper. Screenshots and additional detail are provided to aid navigating this somewhat cumbersome installation procedure.
+`PINGMapper` is a software (i.e. package) written in [Python](https://www.python.org/). PINGMapper uses a variety of Python packages ([NumPy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [Tensorflow](https://www.tensorflow.org/), etc.), or dependencies, that allow you to process Humminbird&reg; sonar recordings and generate a variety of GIS datasets.
 
-PINGMapper is a software (i.e. package) written in [Python](https://www.python.org/). PINGMapper uses a variety of Python packages ([NumPy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [Tensorflow](https://www.tensorflow.org/), etc.), or dependencies, that allow you to process Humminbird&reg; sonar recordings and generate a variety of GIS datasets. To ensure that all the dependencies are configured correctly, we will first install a software called [Miniconda](https://docs.conda.io/en/latest/miniconda.html), the lightweight version of [Anaconda](https://www.anaconda.com/). Miniconda allows you to create [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) which are containers storing all the correct versions of the dependencies required to run Python software packages, ensuring everything runs as expected.
+{: .g2k }
+> You **do not** need to know Python to use PINGMapper! After issuing a few simple commands, all interactions with PINGMapper will be point-and-click.
+
+`PINGMapper` uses `conda` to ensure the installation is configured correctly. Specifically, `conda` is used to create a [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) called `ping`, a container storing all the correct versions of of the required dependencies, that ensures `PINGMapper` runs as expected.
+
+ `Conda` comes in several flavors, listed below. It does not matter which flavor you choose. However, there are limitations for using the free version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html) and [Anaconda](https://www.anaconda.com/) based on the size of your organization. Please consult their documentation for more information. Note that [Miniforge](https://conda-forge.org/download/) is free for anyone to use.
+
+ - [Miniforge](https://conda-forge.org/download/): *Free for all*; [License](https://github.com/conda-forge/miniforge?tab=License-1-ov-file#readme)
+ - [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+ - [Anaconda](https://www.anaconda.com/)
 
 {: .warning }
 > Miniconda and Anaconda are not free for everyone to use. Consider installing [Miniforge](https://conda-forge.org/download/) instead.
 
-After installing Miniconda, we will procede with downloading the [latest version of PINGMapper](https://github.com/CameronBodine/PINGMapper) hosted on [GitHub](https://github.com/). Then, we will create a virtual environment called `ping` and install all the required dependencies to run PINGMapper.
+This tutorial will use Miniconda to demonstrate how to install and configure `PINGMapper`. After installing Miniconda, we will install and run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller). `PINGInstaller` automatically creates the `ping` environment, installs the appropriate packages from the [PING Ecosystem](../PINGEcosystem.md) ([PINGMapper](https://github.com/CameronBodine/PINGMapper), [PINGWizard](https://github.com/CameronBodine/PINGWizard), [PINGVerter](https://github.com/CameronBodine/PINGVerter), etc.), and other necessary dependencies.
 
 Let's get started!
 
 ## Step 1 - Install Miniconda
 
-[Click this](https://www.anaconda.com/download/) to open a web browser and navigate to the Miniconda download page.
-
-There is a seperate installation file depending on the type of computer you are using. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
+Use one of the links listed above to download `conda`. This example will use [Miniconda](https://docs.conda.io/en/latest/miniconda.html). There is a separate installation file depending on the type of your computer's operation system. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
 
 Double click the file to begin the installation file. This will open an installation window:
 
@@ -58,7 +65,7 @@ You can choose to see additional documentation on conda and Anaconda by keeping 
 
 ## Step 2
 
-Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniconda. At this time, the prompt is the primary interface for installing and running PINGMapper. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
+Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniconda. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/9zMWXD-xoxc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
@@ -72,7 +79,7 @@ Click the folder are click `Anaconda Powershell Prompt`. This will open the prom
 
 ## Step 2
 
-A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is used to install and setup PINGMapper. We will install PINGInstaller with the following command and pressing `Enter`:
+A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is used to install and setup PINGMapper. We will install `PINGInstaller` with the following command and pressing `Enter`:
 
 ```bash
 pip install pinginstaller -U
@@ -82,7 +89,7 @@ pip install pinginstaller -U
 
 ## Step 3
 
-Now run PINGInstaller to download and install all dependencies into a conda environment. Add the following command and press `Enter`:
+Now run `PINGInstaller` to download and install all dependencies into a conda environment. Add the following command and press `Enter`:
 
 ```bash
 python -m pinginstaller
@@ -94,14 +101,11 @@ Installation will take approximately **5-10 minutes**. You should see something 
 
 <img src="../../assets/install/shell_pinginstaller_finish.PNG"/>
 
+At the end of the install process, a window will prompt you where to save the `bat` or `sh` shortcut file. Browse to the desired location and click `Submit`.
+
+<img src="../../assets/install/shortcut_gui.PNG"/>
+
 
 ## That's It!
 
 PINGMapper is now ready to go. [Launch PINGWizard](./Running.md), a new interface for PINGMapper, to start processing data.
-
-
-
-
-
-
-

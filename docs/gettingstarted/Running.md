@@ -43,18 +43,17 @@ ParentFolder
 
 The first step is to launch PINGWizard. There are two options for launching PINGWizard
 
-#### Option a - Desktop Shortcut
+#### Option a - Shortcut
 
-During installation, a batch (Windows) or bash (Linux/Mac OS) file was saved to the desktop. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
+During installation, you were prompted to select a location to save a batch (Windows) or bash (Linux/Mac OS) shortcut file. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
 
-On Windows, simply double click the PINGWizard.bat file on the desktop:
+On Windows, simply double click the PINGWizard.bat file:
 
 <img src="../../assets/running/PINGWizard_bat.PNG"/>
 
-On Linux/Mac OS, open a command prompt, change directory to the Desktop, and launch the bash script by entering the following and press `Enter`:
+On Linux/Mac OS, open a command prompt, change directory to where you saved the shortcut, and launch the bash script by entering the following and press `Enter`:
 
 ```bash
-cd Desktop
 ./PINGWizard.sh
 ```
 
