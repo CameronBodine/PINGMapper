@@ -8,7 +8,16 @@ nav_exclude: false
 
 ---
 
-# Updating PINGMapper
+# Update PINGMapper
+{: .no_toc }
+
+Update `PINGMapper` & dependencies to the latest version.
+
+[![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
+
+{: .fs-6 .fw-300 }
+
+---
 
 {: .g2k }
 > As of v4.0, the updating PINGMapper process has been dramatically improved and simplified compared to the [old version](./UpdateInstallation_v1.md)

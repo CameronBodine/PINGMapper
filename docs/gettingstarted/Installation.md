@@ -8,7 +8,16 @@ nav_exclude: false
 
 ---
 
-# Installation Instructions
+# Install PINGMapper
+{: .no_toc }
+
+Get `PINGMapper` up and running on your computer.
+
+[![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
+
+{: .fs-6 .fw-300 }
+
+---
 
 {: .g2k }
 > As of v4.0, the PINGMapper installation process has been dramatically improved and simplified compared to the [old version](./Installation-v1.md)

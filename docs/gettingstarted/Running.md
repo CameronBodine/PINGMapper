@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Running PINGMapper
+title: Use PINGMapper
 nav_order: 5
 parent: Getting Started
 
@@ -8,12 +8,14 @@ nav_exclude: false
 
 ---
 
-# Running `PINGMapper`
+# Use `PINGMapper`
 
 {: .no_toc }
 
 Find out how to process your own sonar recordings.
 {: .fs-6 .fw-300 }
+
+---
 
 After [installing](./Installation.md) PINGMapper, you are now ready to run a test to make sure PINGMapper is running as expected. As of v4.0, PINGMapper is run through a utility called [PINGWizard](https://github.com/CameronBodine/PINGWizard). PINGWizard is the entry-point for all current and future PING-related utilities.
 

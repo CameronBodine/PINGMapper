@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Update Installation
+title: Launch PING Wizard
 nav_order: 2
 parent: Getting Started
 
@@ -24,7 +24,7 @@ Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utiliti
 {: .g2k }
 > As of v4.0, [PINGWizard](https://github.com/CameronBodine/PINGWizard) is the recommended interface for running `PINGMapper` and other utilities in the [PING Ecosystem](../PINGEcosystem.md).
 
-`PINGWizard` is a light-weight interface for launching `PINGMapper` utilities, including running the [tests](Testing.md), processing a [sonar log](./Running.-#)
+`PINGWizard` is a light-weight interface for launching `PINGMapper` utilities, including running the [tests](Testing.md), processing a [sonar log](./Running.md#process-single-sonar-log), batch process [multiple sonar logs](./Running.md#batch-process-multiple-sonar-recordings), and 
 
 
 
@@ -37,7 +37,7 @@ Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utiliti
 
 There are two options for launching PINGWizard: a) [with a shortcut](#option-a---shortcut) or b) [command prompt](#option-b---conda-command-prompt).
 
-### Option a - Shortcut
+### Option A - Shortcut
 
 During installation, you were prompted to select a location to save a batch (Windows) or bash (Linux/Mac OS) shortcut file. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
 
@@ -53,7 +53,7 @@ On Linux/Mac OS, open a command prompt, change directory to where you saved the 
 
 <img src="../../assets/running/PINGWizard_sh.PNG"/>
 
-#### Option b - Conda Command Prompt
+#### Option B - Conda Command Prompt
 
 Open the Conda Command Prompt used during [installation](./Installation.md). Activate the `ping` environment and launching PINGWizard by entering the following and pressing `Enter`:
 
