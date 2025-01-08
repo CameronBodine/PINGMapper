@@ -12,10 +12,9 @@ nav_exclude: false
 {: .no_toc }
 
 Update `PINGMapper` & dependencies to the latest version.
+{: .fs-6 .fw-300 }
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-
-{: .fs-6 .fw-300 }
 
 ---
 

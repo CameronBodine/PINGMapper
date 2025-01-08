@@ -8,7 +8,7 @@ nav_exclude: false
 
 ---
 
-# Use `PINGMapper`
+# Use PINGMapper
 
 {: .no_toc }
 

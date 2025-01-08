@@ -12,10 +12,9 @@ nav_exclude: false
 {: .no_toc }
 
 Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utilities.
+{: .fs-6 .fw-300 }
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
-
-{: .fs-6 .fw-300 }
 
 ---
 

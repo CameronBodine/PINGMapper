@@ -11,8 +11,7 @@ nav_exclude: false
 # Test PINGMapper
 {: .no_toc }
 
-Get `PINGMapper` up and running on your computer.
-
+Test PINGMapper on sample datasets.
 {: .fs-6 .fw-300 }
 
 ---
