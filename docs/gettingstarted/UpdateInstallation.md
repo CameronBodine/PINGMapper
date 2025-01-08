@@ -52,3 +52,5 @@ cond run -n ping python -m pinginstaller
 ```
 
 ## All Done!
+
+It is recommended that you [run the tests](./Testing.md) to make sure everything is working correctly.
