@@ -39,7 +39,7 @@ Once complete, explore the outputs in the `Test-Small-DS` on your desktop `C:\Us
 {: .warning }
 > If you receive an error, check the [FAQ](../faq.md). If the FAQ does not address your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues). 
 > 
-> [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues){: .btn-red .fs-5 .mb-4 .mb-md-0 }
+> [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues){: .btn .btn-red }
 
 ## Large Dataset Test
 
@@ -62,7 +62,7 @@ Once complete, explore the outputs in the `Test-Large-DS` on your desktop `C:\Us
 {: .warning }
 > If you receive an error, check the [FAQ](../faq.md). If the FAQ does not address your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues). 
 > 
-> [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues){: .btn-red .fs-5 .mb-4 .mb-md-0 }
+> [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues){: .btn .btn-red }
 
 ## All Done!
 
