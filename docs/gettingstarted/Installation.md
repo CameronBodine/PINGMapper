@@ -14,8 +14,7 @@ nav_exclude: false
 Get `PINGMapper` up and running on your computer.
 {: .fs-6 .fw-300 }
 
-[![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-
+[![PINGMapper](https://img.shields.io/pypi/v/pingmapper?label=PINGMapper)](https://pypi.org/project/pingmapper/) [![PINGWizard](https://img.shields.io/pypi/v/pingwizard?label=PINGWizard)](https://pypi.org/project/pingwizard/) [![PINGVerter](https://img.shields.io/pypi/v/pingverter?label=PINGVerter)](https://pypi.org/project/pingverter/) [![PINGInstaller](https://img.shields.io/pypi/v/pinginstaller?label=PINGInstaller)](https://pypi.org/project/pinginstaller/)
 ---
 
 {: .g2k }
