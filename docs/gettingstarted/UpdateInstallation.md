@@ -14,8 +14,7 @@ nav_exclude: false
 Update `PINGMapper` & dependencies to the latest version.
 {: .fs-6 .fw-300 }
 
-[![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-
+[![PINGMapper](https://img.shields.io/pypi/v/pingmapper?label=PINGMapper)](https://pypi.org/project/pingmapper/) [![PINGWizard](https://img.shields.io/pypi/v/pingwizard?label=PINGWizard)](https://pypi.org/project/pingwizard/) [![PINGVerter](https://img.shields.io/pypi/v/pingverter?label=PINGVerter)](https://pypi.org/project/pingverter/) [![PINGInstaller](https://img.shields.io/pypi/v/pinginstaller?label=PINGInstaller)](https://pypi.org/project/pinginstaller/)
 ---
 
 {: .g2k }
@@ -28,47 +27,27 @@ If you have installed a previous version of PING-Mapper (>=4.0), follow these in
 
 ## Option 1
 
-Launch PINGWizard *([Click here to learn how](./PINGWizard.md))* and press `Update`. 
+Launch PINGWizard *([Click here to learn how](./PINGWizard.md))*:
 
 <img src="../../assets/running/PINGWizard_gui.PNG"/>
 
-There are two ways to Launch PINGWizard.
+Press `Update`:
 
-### With Desktop Shortcut
-
-During installation, a batch (Windows) or bash (Linux/Mac OS) file was saved to the desktop. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
-
-On Windows, simply double click the PINGWizard.bat file on the desktop:
-
-<img src="../../assets/running/PINGWizard_bat.PNG"/>
-
-On Linux/Mac OS, open a command prompt, change directory to the Desktop, and launch the bash script by entering the following and press `Enter`:
-
-```bash
-cd Desktop
-./PINGWizard.sh
-```
-
-<img src="../../assets/running/PINGWizard_sh.PNG"/>
-
-### With Conda Command Prompt
-
-Open the Conda Command Prompt used during [installation](./Installation.md). Activate the `ping` environment and launching PINGWizard by entering the following and pressing `Enter`:
-
-```bash
-conda run -n ping python -m pingwizard
-```
-
-<img src="../../assets/running/PINGWizard_console.PNG"/>
+<img src="../../assets/install/pingwizard_update.PNG"/>
 
 ## Option 2
 
 Open the Anaconda Powershell prompt and run the following:
+
 ```bash
 conda activate ping
 python -m pinginstaller
 ```
 
+Alternatively run as a single command:
 
+```base
+cond run -n ping python -m pinginstaller
+```
 
 ## All Done!
