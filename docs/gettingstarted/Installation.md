@@ -75,7 +75,7 @@ Click the folder are click `Anaconda Powershell Prompt`. This will open the prom
 A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is used to install and setup PINGMapper. We will install PINGInstaller with the following command and pressing `Enter`:
 
 ```bash
-pip install pinginstaller
+pip install pinginstaller -U
 ```
 
 <img src="../../assets/install/shell_install_pinginstaller.PNG"/>
