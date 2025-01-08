@@ -1,13 +1,13 @@
 ---
 layout: default
-title: Testing PING-Mapper
-nav_order: 3
+title: Testing PINGMapper
+nav_order: 4
 parent: Getting Started
 
 nav_exclude: false
 
 ---
-# Testing PING-Mapper
+# Testing PINGMapper
 
 Once you have [installed](./Installation.md)  `PING-Mapper` on your computer, you can test the installation by processing two example datasets. The first is a [small](#small-dataset-test) dataset that is already downloaded into the `PING-Mapper` directory following installation. This is the fastest way to see if the software is performing as expected. A second test can be carried out on a [large](#large-dataset-test) which is automatically downloaded once you run the test. The large dataset is included to see how the software performs on a typical sonar recording.  
 

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Installation
+title: Installation (Legacy v1.0)
 
 nav_exclude: true
 

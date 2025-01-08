@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Running PINGMapper
-nav_order: 4
+nav_order: 5
 parent: Getting Started
 
 nav_exclude: false
@@ -17,7 +17,9 @@ Find out how to process your own sonar recordings.
 
 After [installing](./Installation.md) PINGMapper, you are now ready to run a test to make sure PINGMapper is running as expected. As of v4.0, PINGMapper is run through a utility called [PINGWizard](https://github.com/CameronBodine/PINGWizard). PINGWizard is the entry-point for all current and future PING-related utilities.
 
-## Process single sonar recording
+There are two options for processing sonar logs: 1) process a [single sonar log](#process-single-sonar-log) or 2) process a [batch of sonar logs](#batch-process-multiple-sonar-recordings) in a directory. Continue reading to find out how.
+
+## Process single sonar log
 
 ### Note on Humminbird sonar file structure
 
@@ -41,46 +43,20 @@ ParentFolder
 
 ### Step 1
 
-The first step is to launch PINGWizard. There are two options for launching PINGWizard
-
-#### Option a - Shortcut
-
-During installation, you were prompted to select a location to save a batch (Windows) or bash (Linux/Mac OS) shortcut file. This file contains the commands to activate the `ping` conda environment and run PINGWizard. 
-
-On Windows, simply double click the PINGWizard.bat file:
-
-<img src="../../assets/running/PINGWizard_bat.PNG"/>
-
-On Linux/Mac OS, open a command prompt, change directory to where you saved the shortcut, and launch the bash script by entering the following and press `Enter`:
-
-```bash
-./PINGWizard.sh
-```
-
-<img src="../../assets/running/PINGWizard_sh.PNG"/>
-
-#### Option b - Conda Command Prompt
-
-Open the Conda Command Prompt used during [installation](./Installation.md). Activate the `ping` environment and launching PINGWizard by entering the following and pressing `Enter`:
-
-```bash
-conda run -n ping python -m pingwizard
-```
-
-<img src="../../assets/running/PINGWizard_console.PNG"/>
-
-### Step 2
-
-PINGWizard will launch and present a menu of buttons to run various PINGMapper utilities:
+The first step is to launch `PING Wizard` - *[Click here to learn how](./PINGWizard.md).* This will open the `PING Wizard` window:
 
 <img src="../../assets/running/PINGWizard_gui.PNG"/>
 
-If you just installed or updated PINGMapper, it is recommended that you test the installation by pressing `Small Dataset` and/or `Large Dataset`.
 
-After the tests, you can launch the gui to process a single sonar log by pressing `Single Log`. This will open a new window that looks similar to the following:
+### Step 2
+
+Press the `Single Log` button:
+
+<img src="../../assets/running/PINGWizard_SingleLog.PNG"/>
+
+ This will open the `Process Sonar Log` window:
 
 <img src="../../assets/running/gui_Launch.PNG"/>
-
 
 ### Step 3
 Selecting input/output directories, Project Name and whether to overwrite existing projects sharing the same name.
@@ -91,19 +67,26 @@ First, let's navigate to the `.DAT` file we want to process. For this example, w
 
 <img src="../../assets/running/browse_Window.PNG"/>
 
-Navigate to the `.DAT` file and select it. The name of the `.DAT` file will be visible in the `File name:` box, indicating it is selected:
+Navigate to the sonar log (.DAT, .sl2, .sl3) and select it. 
+
+{: .g2k }
+> Compatible with .DAT (Humminbird&reg;) and .sl2/.sl3 (i.e. Lowrance&reg;) sonar logs. *NOTE: v3.0 added support for .sl2 and .sl3 ([Release Notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0)).*
+
+
+The name of the file will be visible in the `File name:` box, indicating it is selected:
 
 <img src="../../assets/running/browse_DAT.PNG"/>
 
-As we [noted above](#note-on-sonar-file-structure), there should be a folder at the same location as the `.DAT` file with the same name. In the image above, we can see that there is a folder sharing the same name. Now we can click `Open` on the window to select the `.DAT` file. The window will close and we will see that the GUI has been populated with the path to the `.DAT` file:
+{: .g2k }
+> As we [noted above](#note-on-sonar-file-structure), if processing Humminbird&reg; sonar logs, there should be a folder at the same location as the `.DAT` file with the same name. In the image above, we can see that there is a folder sharing the same name.
+
+Now we can click `Open` on the window to select the sonar log. The window will close and we will see that the GUI has been populated with the path to the sonar log:
 
 <img src="../../assets/running/gui_DAT.PNG"/>
 
-Follow the same process for deciding where the outputs should be exported to using the `Browse` button for selecting the `Output Folder` location. Supply a `Project Name` and a new folder with this name will be created there. Finally, specify whether to overwrite any existing project folders sharing the same name as the `Project Name`. Here is an example showing my selections:
+Follow the same process to select the `Output Folder` location. Supply a `Project Name` and a new folder with this name will be created in the `Output Folder`. Finally, specify whether to overwrite any existing project folders sharing the same name as the `Project Name`. Here is an example showing my selections:
 
 <img src="../../assets/running/gui_DirsComplete.PNG"/>
-
-Outputs from processing `Test-Small-DS.DAT` will be located in a newly created (or overwritten) folder called `Test-Project` at the following location: `C:/Users/csb67/PINGMapperOutputs`.
 
 ### Step 4
 Specify general processing parameters:
@@ -114,20 +97,39 @@ Specify general processing parameters:
 
 2. `Chunk Size`: Choose the number of pings to export per sonar tile. This can be any value but all testing has been performed on chunk sizes of 500.
 
-3. `Crop Range [m]`: Option to crop the max range extent [in meters].
+3. `Export Unknown Ping Attributes`: Option to export unknown ping metadata fields.
+
+4. `Locate and flag missing pings`: Option to locate missing pings and fill with NoData. See [Issue #33](https://github.com/CameronBodine/PINGMapper/issues/33) and [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#orig_record_num) for more information.
+
+5. `Thread Count`: Specify maximum number of CPU threads to use during processing:
+    - `0.0 < Thread Count < 1.0`: Use this proportion of available CPU threads. `0.5 - 0.75` recommended to prevent OOM errors or freezing computer.
+    - `0`: Use all available threads. This is the fastest your computer can process a sonar recording as the software will use all threads available on the CPU.
+
+
+### Step 5
+
+Options to filter (i.e. clip, remove, mask) data in sonar logs:
+
+<img src="../../assets/running/gui_Filter.PNG"/>
+
+1. `Crop Range [m]`: Option to crop the max range extent [in meters].
     - `0` or `0.0`: Don't crop range.
     - `> 0`: Crop (e.g., don't process) sonar returns further than this range.
 
-4. `Export Unknown Ping Attributes`: Option to export unknown ping metadata fields.
+2. `Max. Heading Deviation [deg]` and `Distance [m]`: Filter sonar records based on maximum vessel heading over a given distance.
+    - `0`: Don't filter
+    - [See example](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0)
 
-5. `Locate and flag missing pings`: Option to locate missing pings and fill with NoData. See [Issue #33](https://github.com/CameronBodine/PINGMapper/issues/33) and [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#orig_record_num) for more information.
+3. `Min. Speed [m/s]` and `Max. Speed [m/s]`: Filter sonar records based on minimum and/or maximum vessel speed.
+    - `0`: Don't filter
 
-6. `Thread Count`: Specify maximum number of CPU threads to use during processing:
-    - `0`: Use all available threads. This is the fastest your computer can process a sonar recording as the software will use all threads available on the CPU.
-    - `> 0`: Use specified number of threads.
-    - `< 0`: Use total number of threads minus `Thread Count`.
+4. `AOI`: Spatially filter sonar records based on polygon shapefile (.shp).
+    - `C:/Path/To/The/AOI/aoi_boundary.shp`
+    - Example: The pink polygon shapefile is used to clip the trackline, resulting in sonar mosaics for each transect.
 
-### Step 5
+<img src="../../assets/running/AOI.png"/>
+
+### Step 6
 Provide an x and y offset to account for position offset between the control head (or external GPS) and the transducer.
 
 <img src="../../assets/running/gui_PositionCorrection.PNG"/>
@@ -140,7 +142,7 @@ Here is an example showing the transducer in relation to the control head. In th
 
 <img src="../../assets/running/TransducerOffset.png"/>
 
-### Step 6
+### Step 7
 Decide if you want the sonar intensities to be corrected.
 
 <img src="../../assets/running/gui_EGN.PNG"/>
@@ -155,16 +157,16 @@ Decide if you want the sonar intensities to be corrected.
 3. `EGN Stretch Factor``
     - If `Percent Clip` is selected, the value supplied to `EGN Stretch Factor` specifies percent of the histogram tails to clip. This is similar to the [stretch function](https://desktop.arcgis.com/en/arcmap/latest/manage-data/raster-and-images/stretch-function.htm) provided by ArcGIS.
 
-### Step 7
-Decide if un-rectified sonograms should be exported.
+### Step 8
+Decide if raw (waterfall) sonograms should be exported.
 
 <img src="../../assets/running/gui_Sonogram.PNG"/>
 
-1. `WCP`: Export un-rectified sonograms with the water column present.
-2. `WCR`: Export un-rectified sonograms with the water column removed.
+1. `WCP`: Export raw (waterfall) sonograms with the water column present.
+2. `WCR`: Export raw (waterfall) sonograms with the water column removed.
 3. `Image Format`: Specify sonogram file type (".png" or ".jpg"). This applies to sonograms and plots.
 
-### Step 8
+### Step 9
 Decide if speed (or factor) corrected sonograms should be exported.
 
 <img src="../../assets/running/gui_SpeedCorrected.PNG"/>
@@ -179,9 +181,9 @@ Decide if speed (or factor) corrected sonograms should be exported.
     - `1`: Speed correction based on distance traveled.
     - `!= 0 or 1`: Stretch along the track by the specified factor.
 
-3. `Max Crop`: Perform ping-wise (`Checked`) or maximum range for a chunk as determined by shadow detection (`UnChecked`). See [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#speed-corrected) for more information:
+3. `Max Crop`: Perform ping-wise (`Checked`) or maximum range for a chunk as determined by shadow detection (`UnChecked`). [See this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#speed-corrected) for more information.
 
-### Step 9
+### Step 10
 Update depth detection and shadow removal parameters as necessary:
 
 <img src="../../assets/running/gui_DepthShadow.PNG"/>
@@ -205,64 +207,67 @@ Update depth detection and shadow removal parameters as necessary:
 
 5. `Plot Bedpick`: Option to plot bedpick(s) on non-rectified sonogram for visual inspection.
 
-### Step 10
+### Step 11
 Update georectification parameters as necessary:
 
 <img src="../../assets/running/gui_Rectify.PNG"/>
 
-1. `WCP`: Export georectified sonar imagery with water column present.
+1. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
+    - `0`: Use default resolution [~0.02 m].
+    - `> 0`: Resize mosaic to output pixel resolution.
 
-2. `WCR`: Export georectified sonar imagery with water column removed.
+2. `WCP`: Export georectified sonar imagery with water column present.
 
-3. `Sonar Colormap`: Apply colormap to rectified imagery. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
+3. `WCR`: Export georectified sonar imagery with water column removed.
 
-### Step 11
+4. `Sonar Colormap`: Apply colormap to rectified imagery. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
+
+### Step 12
 Update automated substrate mapping parameters as necessary:
 
 <img src="../../assets/running/gui_Substrate.PNG"/>
 
-1. `Predict Substrate`: Automatically predict substrates with provided deep learning segmentation model. Required in order to export substrate plots or maps.
+1. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
+    - `0`: Use default resolution [~0.02 m].
+    - `> 0`: Resize mosaic to output pixel resolution.
 
-2. `Export Substrate Plots`: Option to export substrate plots.
+2. `Map Substrate [Raster]`: Export raster georectified substrate maps. Required to export maps as polygon shapefile.
 
-3. `Map Substrate [Raster]`: Export raster georectified substrate maps. Required to export maps as polygon shapefile.
+3. `Map Substrate [Polygon]`: Export polygon shapefile georectified substrate maps.
 
-4. `Map Substrate [Polygon]`: Export polygon shapefile georectified substrate maps.
+4. `Export Substrate Plots`: Option to export substrate plots.
 
-5. `Classification Method`: There is currently only one substrate classification method.
-
-### Step 12
+### Step 13
 Update mosaic export parameters as necessary:
 
 <img src="../../assets/running/gui_Mosaic.PNG"/>
 
-1. `Pixel Size`: Specify an output pixel resolution [in meters]:
-    - `0`: Use default resolution [~0.02 m].
-    - `> 0`: Resize mosaic to output pixel resolution.
-
-2. `# Chunks per Mosaic`: Optionally limit the number of chunks per mosaic:
+1. `# Chunks per Mosaic`: Optionally limit the number of chunks per mosaic:
     - `0`: Mosaic all chunks into single mosaic file.
     - `> 0`: Maximum number of chunks per mosaic file.
 
-3. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery (exported from step 10). Options include:
+2. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery (exported from step 10). Options include:
     - `0` or `False`: Don't Mosaic.
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
 
-4. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
+3. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
     - `0` or `False`: Don't Mosaic.
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
 
-### Step 13
+### Step 14
 Select miscellaneous exports:
 
 <img src="../../assets/running/gui_Misc.PNG"/>
 
 1. `Banklines`: Export polygon shapefile which estimates river bankline location based on the shadow sementation.
+    - [See Example](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.1.0)
+
+2. `Coverage`: Export polygon shapefile of sonar coverage and point shapefile of vessel track.
 
 
-### Step 14
+### Step 15
 Buttons: 
 
 <img src="../../assets/running/gui_Buttons.PNG"/>
@@ -270,6 +275,21 @@ Buttons:
 1. Click `Submit` to start processing.
 2. Click `Quit` to exit without processing.
 3. Click `Save Defaults` to save current parameter selections as default.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Batch process multiple sonar recordings
 
@@ -307,11 +327,17 @@ AllRecordings
 In the example above, the top directory is `ParentDirectory`. This is the directory you will point the GUI at. The script will then iterate each sonar recording (e.g., `Rec00001`, `Rec00002`, etc.), process the recording and export files as specified in the GUI. The `Output Folder` will have a folder sharing the same name as the sonar recording (e.g., `Rec00001`, `Rec00002`, etc.).
 
 ### Step 1
-From PINGWizard, press `Batch Sonar Logs`:
+The first step is to launch `PING Wizard` - *[Click here to learn how](./PINGWizard.md).* This will open the `PING Wizard` window:
 
 <img src="../../assets/running/PINGWizard_gui.PNG"/>
 
 ### Step 2
+Press the `Batch Sonar Logs` button:
+
+<img src="../../assets/running/PINGWizard_BatchLogs.PNG"/>
+
+
+### Step 3
 
 1. Provide the path to the `Parent Folder of Recordings to Process` by browsing to the appropriate location. In the example above, you would browse and select the `AllRecordings` folder.
 2. Provide path to the `Output Folder` where all processed outputs will be saved.
