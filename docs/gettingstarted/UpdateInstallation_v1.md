@@ -1,8 +1,6 @@
 ---
 layout: default
 title: Update Installation - (Legacy v1.0)
-nav_order: 2
-parent: Getting Started
 
 nav_exclude: true
 
