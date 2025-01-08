@@ -116,4 +116,4 @@ At the end of the install process, a window will prompt you where to save the `b
 
 ## That's It!
 
-PINGMapper is now ready to go. [Launch PINGWizard](./Running.md), a new interface for PINGMapper, to start processing data.
+PINGMapper is now ready to go. [Launch PINGWizard](./PINGWizard.md), a new interface for PINGMapper, to start processing data.

@@ -67,33 +67,3 @@ Once complete, explore the outputs in the `Test-Large-DS` on your desktop `C:\Us
 ## All Done!
 
 You can now run `PINGMapper` on your [own datasets](./Running.md).
-
-
-
-
-
-
-
-A quick test can be made to ensure PING-Mapper is working properly.
-1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
-
-2. Enter the following into the prompt:  
-```
-python test_PINGMapper.py 1
-```
-
-Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Small-DS`.
-
-{: .warning }
-> If you recieve a `ModuleNotFoundError`, try the [troubleshooting steps](../faq.md/#modulenotfounderror)
-
-## Large Dataset Test
-A test on a large (~0.5 GB; 1:00:06 duration) dataset can also be made.
-1. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory.
-
-2. Enter the following into the prompt:  
-```
-python test_PINGMapper.py 2
-```
-
-Outputs are found in `.\\PINGMapper\\procData\\PINGMapper-Test-Large-DS`.
