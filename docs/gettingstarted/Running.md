@@ -17,9 +17,7 @@ Find out how to process your own sonar recordings.
 
 ---
 
-After [installing](./Installation.md) PINGMapper, you are now ready to run a test to make sure PINGMapper is running as expected. As of v4.0, PINGMapper is run through a utility called [PINGWizard](https://github.com/CameronBodine/PINGWizard). PINGWizard is the entry-point for all current and future PING-related utilities.
-
-There are two options for processing sonar logs: 1) process a [single sonar log](#process-single-sonar-log) or 2) process a [batch of sonar logs](#batch-process-multiple-sonar-recordings) in a directory. Continue reading to find out how.
+After [installing](./Installation.md) `PINGMapper` and running the [tests](./Testing.md), you are now ready to use `PINGMapper` on your own sonar logs. There are two options for processing sonar logs: 1) process a [single sonar log](#process-single-sonar-log) or 2) process a [batch of sonar logs](#batch-process-multiple-sonar-recordings) in a directory. Continue reading to find out how.
 
 ## Process single sonar log
 
@@ -253,10 +251,16 @@ Update mosaic export parameters as necessary:
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
 
+{: .g2k }
+> You must check `WCP` and/or `WCR` in [Step 11](#step-11) in order to export sonar mosaics.
+
 3. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
     - `0` or `False`: Don't Mosaic.
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
+
+{: .g2k }
+> You must check `Map Substrate [Raster]` in [Step 12](#step-12) in order to export substrate mosaics.
 
 ### Step 14
 Select miscellaneous exports:
@@ -277,18 +281,6 @@ Buttons:
 1. Click `Submit` to start processing.
 2. Click `Quit` to exit without processing.
 3. Click `Save Defaults` to save current parameter selections as default.
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -347,4 +339,4 @@ Press the `Batch Sonar Logs` button:
 <img src="../../assets/running/gui_Batch.PNG"/>
 
 ### Step 3
-Enter all remaining process parameters as detailed [above](#step-4)
+Enter all remaining process parameters as detailed [above](#step-4).
