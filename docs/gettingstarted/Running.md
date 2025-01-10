@@ -88,6 +88,9 @@ Follow the same process to select the `Output Folder` location. Supply a `Projec
 
 <img src="../../assets/running/gui_DirsComplete.PNG"/>
 
+{: .warning }
+> There have been issues with exporting datasets to cloud drives, specifically OneDrive (see [Issue 133](https://github.com/CameronBodine/PINGMapper/issues/133)). This may also be a problem for Google Drive. Please export datasets to a local folder instead.
+
 ### Step 4
 Specify general processing parameters:
 
@@ -337,6 +340,9 @@ Press the `Batch Sonar Logs` button:
 2. Provide path to the `Output Folder` where all processed outputs will be saved.
 
 <img src="../../assets/running/gui_Batch.PNG"/>
+
+{: .warning }
+> There have been issues with exporting datasets to cloud drives, specifically OneDrive (see [Issue 133](https://github.com/CameronBodine/PINGMapper/issues/133)). This may also be a problem for Google Drive. Please export datasets to a local folder instead.
 
 ### Step 3
 Enter all remaining process parameters as detailed [above](#step-4).
