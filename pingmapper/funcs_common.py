@@ -333,7 +333,7 @@ def saveDefaultParams(values):
         'cropRange':float(values['cropRange']),
         'exportUnknown':values['exportUnknown'],
         'fixNoDat':values['fixNoDat'],
-        'threadCnt':int(values['threadCnt']),
+        'threadCnt':float(values['threadCnt']),
         'max_heading_deviation':float(values['max_heading_deviation']),
         'max_heading_distance':float(values['max_heading_distance']),
         'min_speed':float(values['min_speed']),

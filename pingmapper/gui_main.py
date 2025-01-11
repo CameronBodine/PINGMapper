@@ -227,7 +227,7 @@ def gui():
             'cropRange':float(values['cropRange']),
             'exportUnknown':values['exportUnknown'],
             'fixNoDat':values['fixNoDat'],
-            'threadCnt':int(values['threadCnt']),
+            'threadCnt':float(values['threadCnt']),
             'aoi':aoi,
             'max_heading_deviation':float(values['max_heading_deviation']),
             'max_heading_distance':float(values['max_heading_distance']),
