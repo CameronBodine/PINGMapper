@@ -344,7 +344,7 @@ def gui():
             # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, tileFile, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
             #==================================================
-            if rect_wcp or rect_wcr or banklines or coverage:
+            if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
                 print('\n===========================================')
                 print('===========================================')
                 print('***** RECTIFYING *****')
