@@ -286,6 +286,18 @@ class mapSubObj(rectObj):
             self._loadSonMeta()
         df = self.sonMetaDF
 
+        ##############
+        # For Transect
+        # Get l,c,r transect
+        c_transect = df.loc[df['chunk_id'] == c, ['transect']].values[0]
+        l_transect = df.loc[df['chunk_id'] == l, ['transect']].values[0]
+        r_transect = df.loc[df['chunk_id'] == r, ['transect']].values[0]
+
+        if l_transect != c_transect:
+            l = c
+        if r_transect != c_transect:
+            r = c
+
         ########
         # Left
 
