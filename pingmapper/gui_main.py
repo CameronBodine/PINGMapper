@@ -18,6 +18,9 @@ import json
 
 def gui():
 
+    # For the logfile
+    oldOutput = sys.stdout
+
     # Get processing script's dir so we can save it to file
     scriptDir = SCRIPT_DIR
     copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
@@ -361,9 +364,11 @@ def gui():
             print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
 
             sys.stdout.log.close()
-
+            
         except Exception as Argument:
             unableToProcessError(logfilename)
+
+        sys.stdout = oldOutput
 
 if __name__ == "__main__":
     gui()
