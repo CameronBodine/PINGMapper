@@ -46,9 +46,9 @@ def gui_batch():
 
     layout = [
         [sg.Text('Parent Folder of Recordings to Process')],
-        [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse(initial_folder=(default_params['inDir']))],
+        [sg.In(key='inDir', default_text=(default_params['inDir']), size=(80,1)), sg.FolderBrowse(initial_folder=(default_params['inDir']))],
         [sg.Text('Output Folder')],
-        [sg.In(size=(80,1)), sg.FolderBrowse(key='proj', initial_folder=os.path.dirname(default_params['projDir']))],
+        [sg.In(key='proj', default_text=os.path.dirname(default_params['projDir']), size=(80,1)), sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))],
         [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(key='prefix', size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(key='suffix', size=(10,1))],
         # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
         [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],

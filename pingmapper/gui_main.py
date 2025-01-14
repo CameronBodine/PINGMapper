@@ -49,9 +49,9 @@ def gui():
 
     layout = [
         [sg.Text('Recording to Process')],
-        [sg.In(size=(80,1)), sg.FileBrowse(key='inFile', file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))],
+        [sg.In(key='inFile', default_text=(default_params['inFile']), size=(80,1)), sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))],
         [sg.Text('Output Folder')],
-        [sg.In(size=(80,1)), sg.FolderBrowse(key='proj', initial_folder=os.path.dirname(default_params['projDir']))],
+        [sg.In(key='proj', default_text=os.path.dirname(default_params['projDir']), size=(80,1)), sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))],
         [sg.Text('Project Name', size=(15,1)), sg.InputText(key='projName', size=(50,1), default_text=os.path.basename(default_params['projDir']))],
         [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
         [sg.HorizontalSeparator()],
