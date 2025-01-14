@@ -397,8 +397,6 @@ class portstarObj(object):
         else:
             chunkField = 'chunk_id_2'
 
-        print(chunkField)
-
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
                 self.port._loadSonMeta()
@@ -456,8 +454,6 @@ class portstarObj(object):
                         #     pass
                     port.append(port_transect)
 
-                    print('\n\n\nport', port_transect)
-
                 self.star._loadSonMeta()
                 df = self.star.sonMetaDF
 
@@ -476,8 +472,6 @@ class portstarObj(object):
                         # except:
                         #     pass
                     star.append(star_transect)
-                
-                    print('\n\n\nstar', star_transect)
 
                 srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
 
