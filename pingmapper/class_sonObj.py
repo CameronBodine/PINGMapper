@@ -2023,7 +2023,10 @@ class sonObj(object):
 
         for k, val in shw_pix.items():
             for v in val:
-                mask[v[0]:v[1], k] = 0
+                try:
+                    mask[v[0]:v[1], k] = 0
+                except:
+                    pass
 
         self.shadowMask = mask
 
