@@ -23,7 +23,7 @@ Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utiliti
 {: .g2k }
 > As of v4.0, [PINGWizard](https://github.com/CameronBodine/PINGWizard) is the recommended interface for running `PINGMapper` and other utilities in the [PING Ecosystem](../PINGEcosystem.md).
 
-`PINGWizard` is a light-weight interface for launching `PINGMapper` utilities, including running the [tests](Testing.md), processing a [sonar log](./Running.md#process-single-sonar-log), batch process [multiple sonar logs](./Running.md#batch-process-multiple-sonar-recordings), and 
+`PINGWizard` is a light-weight interface for launching `PINGMapper` utilities, including running the [tests](Testing.md), processing a [sonar log](./Running.md#process-single-sonar-log), batch process [multiple sonar logs](./Running.md#batch-process-multiple-sonar-recordings), and [updating](./UpdateInstallation.md) the installation.
 
 
 
