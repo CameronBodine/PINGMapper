@@ -1426,28 +1426,32 @@ class sonObj(object):
             # Filter df by window
             dfFilt = df[(df[trk_dist] >= dist_start) & (df[trk_dist] < dist_end)]
 
-            # Get difference between start and end heading
-            start = dfFilt[head].iloc[0]
-            end = dfFilt[head].iloc[-1]
-            vessel_dev = np.abs(start - end)
+            if len(dfFilt) > 0:
 
-            # Compare vessel deviation to threshold deviation
-            if vessel_dev < dev:
-                # Keep these pings
-                df[filtCol].loc[dfFilt.index] = True
+                # Get difference between start and end heading
+                start = dfFilt[head].iloc[0]
+                end = dfFilt[head].iloc[-1]
+                vessel_dev = np.abs(start - end)
 
-                # dist_start += win
-                dist_start = dist_end
+                # Compare vessel deviation to threshold deviation
+                if vessel_dev < dev:
+                    # Keep these pings
+                    df[filtCol].loc[dfFilt.index] = True
 
-            else:
-                dist_start = dist_end
+                    # dist_start += win
+                    # dist_start = dist_end
 
-                # df[filtCol].loc[dfFilt.index] = False
+                else:
+                    # dist_start = dist_end
 
-                # dist_start += win
+                    # df[filtCol].loc[dfFilt.index] = False
+
+                    # dist_start += win
+
+                    pass
                 
 
-
+            dist_start = dist_end
             dist_end = dist_start + d
 
         try:
