@@ -74,7 +74,7 @@ A manuscript detailing the automated substrate mapping features made availabe in
 
 ## Acknowledgements
 
-## v1.0 - 2.0
+### v1.0 - 2.0
 
 *This study was originally made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Trustee Implementation Group to restore natural resources injured by the 2010 Deepwater Horizon oil spill in the Gulf of Mexico. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University.*
 
@@ -88,7 +88,7 @@ A manuscript detailing the automated substrate mapping features made availabe in
 
 **PhD Committee:** Cameron wishes to thank his PhD dissertation committee: Toby Hocking, Co-Chair; advisor Dan Buscombe, Co-Chair; Rebecca Best; and Adam Kaeser.
 
-## v3.0 - 4.0
+### v3.0 - 4.0
 
 Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEcosystem.md) is made possible through mentorship, partnerships, and financial support listed below.
 
