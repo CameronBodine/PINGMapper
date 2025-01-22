@@ -25,7 +25,18 @@
 
 ![GithubMap](https://github.com/CameronBodine/PINGMapper/blob/main/docs/attach/GithubMap.png?raw=true)
 
-# Overview
+# Learn More Now!
+Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for most up to date information:
+
+- [Homepage](https://cameronbodine.github.io/PINGMapper/)
+- [Getting Started](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted)
+- [Advanced Topics](https://cameronbodine.github.io/PINGMapper/docs/advanced)
+- [Tutorials](https://cameronbodine.github.io/PINGMapper/docs/tutorials)
+- [FAQ's](https://cameronbodine.github.io/PINGMapper/docs/faq.html)
+
+*and more!*
+
+## Overview
 
 `PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
@@ -77,11 +88,11 @@ See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/relea
 
 More information on PING-Mapper exports can be found [here](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html).
 
-## Compatible Sonar Systems
+### Compatible Sonar Systems
 
 `PING-Mapper` is currently compatible with Humminbird&reg; and Lowrance&reg; side imaging sonar systems. The software has been tested with:
 
-### Humminbird&reg; Models:
+#### Humminbird&reg; Models:
 - 998
 - 1198
 - 1199
@@ -90,57 +101,57 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 - Onix
 - Apex
 
-### Lowrance&reg; File Formats:
+#### Lowrance&reg; File Formats:
 - sl2
 - sl3
 
 If `PING-Mapper` doesn't work for your Humminbird&reg; or Lowrance&reg; sonar system, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
-# Software Documentation
+## Software Documentation
 There are several ways you can find out more about `PING-Mapper`. Check out the website, manuscripts, and Zenodo archives below. If you use `PING-Mapper` for your work, please cite the journal articles below.
 
-## Website
+### Website
 Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for more information.
 
-## PING-Mapper v2.0.0
+### PING-Mapper v2.0.0
 The second version of PING-Mapper is available now. Check the [release notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v2.0.0) for more information.
 
 #### Journal Article
  Bodine, C. S., Buscombe, D., & Hocking, T. D. (2024). Automated river substrate mapping from sonar imagery with machine learning. Journal of Geophysical Research: Machine Learning and Computation, 1, e2024JH000135. [https://doi.org/10.1029/2024JH000135](https://doi.org/10.1029/2024JH000135) 
 
-### Preprint
+#### Preprint
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5K402-%23FF7F2A)](https://doi.org/10.31223/X5K402)
 
-### Code
+#### Code
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10120054.svg)](https://doi.org/10.5281/zenodo.10120054)
 
-### Segmentation models
+#### Segmentation models
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10093642.svg)](https://doi.org/10.5281/zenodo.10093642)
 
-### Segmentation model training datasets
+#### Segmentation model training datasets
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10119320.svg)](https://doi.org/10.5281/zenodo.10119320)
 
 
-## PING-Mapper v1.0.0
+### PING-Mapper v1.0.0
 An overview of PING-Mapper v1.0.0 functionality and justification are published in AGU's Earth and Space Science scientific journal. If you use PING-Mapper for your work, please cite the article!
 
-### Journal Article
+#### Journal Article
 Bodine, C. S., Buscombe, D., Best, R. J., Redner, J. A., & Kaeser, A. J. (2022). PING-Mapper: Open-source software for automated benthic imaging and mapping using recreation-grade sonar. Earth and Space Science, 9, e2022EA002469. https://doi.org/10.1029/2022EA002469
 
-### Preprint
+#### Preprint
 [![Earth ArXiv Preprint DOI](https://img.shields.io/badge/%F0%9F%8C%8D%20EarthArXiv%F0%9F%8C%8D-doi.org%2F10.31223%2FX5XP8Q-%23FF7F2A)](https://doi.org/10.31223/X5XP8Q)
 
 
-### Code
+#### Code
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6604785.svg)](https://doi.org/10.5281/zenodo.6604785)
 
 
-# Ready to get started?
+## Ready to get started?
 
 Follow the installation and testing instructions to [Get Started!](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted)
 
-# Acknowledgements
+## Acknowledgements
 
 *This study was made possible by a partnership between the U.S. Fish and Wildlife Service and Northern Arizona University. Funding for this work was provided by the Open Ocean Trustee Implementation Group to restore natural resources injured by the 2010 Deepwater Horizon oil spill in the Gulf of Mexico. The contents of this website are those of the authors and do not necessarily represent the views of the U.S. Fish and Wildlife Service or Northern Arizona University.*
 
