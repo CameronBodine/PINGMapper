@@ -39,6 +39,8 @@ from pingmapper.class_portstarObj import portstarObj
 import shutil
 from doodleverse_utils.imports import *
 
+from scipy.signal import savgol_filter
+
 # sys.path.insert(0, r'C:\Users\cbodine\PythonRepos\PINGVerter')
 
 from pingverter import hum2pingmapper, low2pingmapper
@@ -72,9 +74,13 @@ def read_master_func(logfilename='',
                      egn_stretch=0,
                      egn_stretch_factor=1,
                      wcp=False,
+                     wcm=False,
                      wcr=False,
-                     lbl_set=False,
-                     spdCor=0,
+                     wco=False,
+                     sonogram_colorMap='Greys',
+                     mask_shdw=False,
+                     mask_wc=False,
+                     spdCor=False,
                      maxCrop=False,
                      USE_GPU=False,
                      remShadow=0,
@@ -661,6 +667,8 @@ def read_master_func(logfilename='',
             beam = son.beamName
 
             son.wcp = wcp
+            son.wco = wco
+            son.wcm = wcm
 
             if wcr:
                 if beam == "ss_port" or beam == "ss_star":
@@ -1341,17 +1349,28 @@ def read_master_func(logfilename='',
             if beam != "ss_port" and beam != "ss_star":
                 son._loadSonMeta()
                 sonDF = son.sonMetaDF
+                son.detectDep = 0
 
-                # If reprocessing, delete existing depth columns
-                try:
-                    sonDF.drop('dep_m', axis=1, inplace=True)
-                    sonDF.drop('dep_m_Method', axis=1, inplace=True)
-                    sonDF.drop('dep_m_smth', axis=1, inplace=True)
-                    sonDF.drop('dep_m_adjBy', axis=1, inplace=True)
-                except:
-                    pass
+                # # If reprocessing, delete existing depth columns
+                # try:
+                #     sonDF.drop('dep_m', axis=1, inplace=True)
+                #     sonDF.drop('dep_m_Method', axis=1, inplace=True)
+                #     sonDF.drop('dep_m_smth', axis=1, inplace=True)
+                #     sonDF.drop('dep_m_adjBy', axis=1, inplace=True)
+                # except:
+                #     pass
 
-                sonDF = pd.concat([sonDF, depDF], axis=1)
+                # sonDF = pd.concat([sonDF, depDF], axis=1)
+
+                sonDF['dep_m_Method'] = 'Instrument Depth'
+                sonDF['dep_m_smth'] = False
+                sonDF['dep_m_adjBy'] = adjDep
+                
+                dep = sonDF['inst_dep_m']
+                if smthDep:
+                    dep = savgol_filter(dep, 51, 3)
+                
+                sonDF['dep_m'] = dep + adjDep
 
                 sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
                 del sonDF, son.sonMetaDF
@@ -1772,26 +1791,41 @@ def read_master_func(logfilename='',
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
-    if wcp or wcr:
+    if wcp or wcr or wco:
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
-            if son.wcp or son.wcr_src:
+            if son.wcp or son.wcr_src or son.wco or son.wcm:
                 # Set outDir
                 son.outDir = os.path.join(son.projDir, son.beamName)
 
+                # Set colormap
+                son.sonogram_colorMap = sonogram_colorMap
+
                 # Determine what chunks to process
+                chunkCnt = 0
                 chunks = son._getChunkID()
-                if son.wcr_src and son.wcp:
-                    chunkCnt = len(chunks)*2
-                else:
-                    chunkCnt = len(chunks)
+                # if son.wcr_src and son.wcp:
+                #     chunkCnt = len(chunks)*2
+                # else:
+                #     chunkCnt = len(chunks)
+                if son.wcp:
+                    chunkCnt += len(chunks)
+                if son.wcm:
+                    chunkCnt += len(chunks)
+                if son.wcr_src:
+                    chunkCnt += len(chunks)
+                if son.wco:
+                    chunkCnt += len(chunks)
+
                 print('\n\tExporting', chunkCnt, 'sonograms for', son.beamName)
 
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTiles)(i, tileFile) for i in tqdm(range(len(chunks))))
+                # Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTiles)(i, tileFile) for i in tqdm(range(len(chunks))))
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=tileFile, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(range(len(chunks))))
+
 
                 son._pickleSon()
 
@@ -1811,34 +1845,34 @@ def read_master_func(logfilename='',
     ## labeling for subsequent model training. Optionally remove water column
     ## and shadows (essentially NoData if interested in substrate related pixels)
 
-    if lbl_set:
-        start_time = time.time()
-        for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
-                # Set outDir
-                son.outDir = os.path.join(son.projDir, son.beamName)
+    # if lbl_set:
+    #     start_time = time.time()
+    #     for son in sonObjs:
+    #         if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+    #             # Set outDir
+    #             son.outDir = os.path.join(son.projDir, son.beamName)
 
-                # Determine what chunks to process
-                chunks = son._getChunkID()
-                chunkCnt = len(chunks)
+    #             # Determine what chunks to process
+    #             chunks = son._getChunkID()
+    #             chunkCnt = len(chunks)
 
-                print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
+    #             print('\n\tExporting', chunkCnt, 'label-ready sonograms for', son.beamName)
 
-                # Load sonMetaDF
-                son._loadSonMeta()
+    #             # Load sonMetaDF
+    #             son._loadSonMeta()
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in tqdm(range(len(chunks))))
-                son._cleanup()
+    #             Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportLblTiles)(i, lbl_set, spdCor, maxCrop, tileFile) for i in tqdm(range(len(chunks))))
+    #             son._cleanup()
 
-            gc.collect()
-        print("\nDone!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        printUsage()
+    #         gc.collect()
+    #     print("\nDone!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     printUsage()
 
-    try:
-        del chunkCnt
-    except:
-        pass
+    # try:
+    #     del chunkCnt
+    # except:
+    #     pass
 
 
     ##############################################

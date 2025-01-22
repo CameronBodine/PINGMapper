@@ -1993,7 +1993,8 @@ class sonObj(object):
 
     # ======================================================================
     def _WCR_crop(self,
-                  sonMeta):
+                  sonMeta,
+                  crop=True):
         # Load depth (in real units) and convert to pixels
         bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
         minDep = min(bedPick)
@@ -2004,11 +2005,31 @@ class sonObj(object):
             sonDat[:d, j] = 0
 
         # Crop to min depth
-        sonDat = sonDat[minDep:,]
+        if crop:
+            sonDat = sonDat[minDep:,]
 
         self.sonDat = sonDat
 
         return minDep
+    
+    # ======================================================================
+    def _WCO(self,
+                  sonMeta):
+        # Load depth (in real units) and convert to pixels
+        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        maxDep = max(bedPick)
+
+        sonDat = self.sonDat
+        # Zero out water column
+        for j, d in enumerate(bedPick):
+            sonDat[d:, j] = 0
+
+        # Crop to min depth
+        sonDat = sonDat[:maxDep,]
+
+        self.sonDat = sonDat
+
+        return maxDep
 
     # ======================================================================
     def _SHW_mask(self, i, son=True):
@@ -2038,7 +2059,7 @@ class sonObj(object):
 
 
     # ======================================================================
-    def _SHW_crop(self, i, maxCrop=True):
+    def _SHW_crop(self, i, maxCrop=True, croprange=True):
         '''
         maxCrop: True: ping-wise crop; False: crop tile to max range
         '''
@@ -2101,7 +2122,8 @@ class sonObj(object):
         sonDat = sonDat * mask
 
         # Crop SonDat
-        sonDat = sonDat[:max_r,:]
+        if croprange:
+            sonDat = sonDat[:max_r,:]
 
         self.sonDat = sonDat
         del mask, reg
@@ -2112,7 +2134,8 @@ class sonObj(object):
     def _writeTiles(self,
                     k,
                     imgOutPrefix,
-                    tileFile='.jpg'):
+                    tileFile='.jpg',
+                    colormap=False):
         '''
         Using currently saved ping ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
@@ -2159,17 +2182,89 @@ class sonObj(object):
 
         return
 
+    def _writeTilesPlot(self,
+                    k,
+                    imgOutPrefix,
+                    tileFile='.jpg',
+                    colormap=False):
+        '''
+        Using currently saved ping ping returns stored in self.sonDAT,
+        saves an unrectified image of the sonar echogram.
+
+        ----------
+        Parameters
+        ----------
+        k : int
+            DESCRIPTION - Chunk number
+        imgOutPrefix : str
+            DESCRIPTION - Prefix to add to exported image
+
+        ----------------------------
+        Required Pre-processing step
+        ----------------------------
+        Called from self._getScanChunkALL() or self._getScanChunkSingle() after
+        sonar data loaded to memory with self._loadSonChunk()
+
+        -------
+        Returns
+        -------
+        *.PNG of sonogram to output directory
+
+        --------------------
+        Next Processing Step
+        --------------------
+        NA
+        '''
+        data = self.sonDat.astype('uint8') # Get the sonar data
+
+        # File name zero padding
+        addZero = self._addZero(k)
+
+        # Prepare output directory if it doesn't exist
+        outDir = os.path.join(self.outDir, imgOutPrefix)
+        try:
+            os.mkdir(outDir)
+        except:
+            pass
+        
+        # Prepare the name
+        channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
+        projName = os.path.split(self.projDir)[-1] #to append project name to filename
+        outfile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile)
+
+        # Save as a plot for colormap
+        if colormap:
+            # plt.imshow(data, cmap=self.sonogram_colorMap)
+            # plt.savefig(outfile)
+
+            norm_data = data / 255.0
+            colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
+            colored_data = (colored_data[:, :, :3] * 255).astype('uint8')
+            data = colored_data
+
+            # imsave(outfile, data)
+
+        else:
+            pass
+        
+            # imsave(outfile, data, check_contrast=False)
+
+        imsave(outfile, data, check_contrast=False)
+            
+
+        return
+
 
     ############################################################################
     # Export imagery for labeling                                              #
     ############################################################################
 
     # ======================================================================
-    def _exportLblTiles(self,
+    def _exportTilesSpd(self,
                         chunk,
-                        lbl_set = 1,
-                        spdCor = 1,
-                        maxCrop = True,
+                        spdCor = False, 
+                        mask_shdw = False,
+                        maxCrop = False,
                         tileFile='.jpg'):
         '''
 
@@ -2180,20 +2275,59 @@ class sonObj(object):
         except:
             pass
 
-        # Do speed correction
-        self._doSpdCor(chunk, lbl_set=lbl_set, spdCor=spdCor, maxCrop=maxCrop, do_egn=self.egn)
+        if self.wcp:
+            # Do speed correction
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
 
-        if self.sonDat is not np.nan:
-            self._writeTiles(chunk, imgOutPrefix='for_label', tileFile=tileFile)
-        else:
-            pass
+            if self.sonDat is not np.nan:
+                self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
+            else:
+                pass
+
+        if self.wcm:
+            # Do speed correction
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+
+            if self.sonDat is not np.nan:
+                self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
+            else:
+                pass
+
+        if self.wcr_src:
+            # Do speed correction
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+
+            if self.sonDat is not np.nan:
+                self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
+            else:
+                pass
+
+        if self.wco:
+            # Do speed correction
+            self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+
+            if self.sonDat is not np.nan:
+                self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
+            else:
+                pass
 
         gc.collect()
         return
 
 
     # ======================================================================
-    def _doSpdCor(self, chunk, lbl_set=1, spdCor=1, maxCrop=0, son=True, integer=True, do_egn=False):
+    def _doSpdCor(self, 
+                  chunk, 
+                  spdCor=False,
+                  mask_shdw=False, 
+                  src=False,
+                  mask_wc=False,
+                  mask_bed=False,
+                  maxCrop=0, 
+                  son=True, 
+                  integer=True, 
+                  do_egn=False, 
+                  stretch_wcp=False):
 
         if not hasattr(self, 'sonMetaDF'):
             self._loadSonMeta()
@@ -2215,21 +2349,25 @@ class sonObj(object):
             if do_egn:
 
                 self._egn_wcp(chunk, sonMeta, do_rescale=True)
-
-                if lbl_set == 2:
-                    stretch_wcp=False
-                else:
-                    stretch_wcp=True
                 self._egnDoStretch(stretch_wcp=stretch_wcp)
 
             # Remove shadows and crop
-            if self.remShadow and (lbl_set==2):
-                self._SHW_crop(chunk, maxCrop)
+            # if self.remShadow and (lbl_set==2):
+            if (self.remShadow and mask_shdw) or (self.remShadow and maxCrop):
+                self._SHW_crop(chunk, maxCrop=mask_shdw, croprange=maxCrop)
             sonDat = self.sonDat
 
+            if src:
+                # slant range correction
+                self._WCR_SRC(sonMeta)
+
             # Remove water column and crop
-            if (lbl_set==2):
-                _ = self._WCR_crop(sonMeta)
+            if mask_wc:
+                _ = self._WCR_crop(sonMeta, crop=maxCrop)
+
+            if mask_bed:
+                _ = self._WCO(sonMeta)
+
             sonDat = self.sonDat
 
             if spdCor == 0:

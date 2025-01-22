@@ -75,6 +75,8 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 
 from skimage.transform import PiecewiseAffineTransform
 
+import matplotlib.pyplot as plt
+
 import psutil
 import json
 
@@ -348,10 +350,13 @@ def saveDefaultParams(values):
         'egn_stretch_factor':float(values['egn_stretch_factor']),
         'wcp':values['wcp'],
         'wcr':values['wcr'],
+        'wco':values['wco'],
+        'wcm':values['wcm'],
+        'sonogram_colorMap':values['sonogram_colorMap'],
         'tileFile':values['tileFile'],
-        'lbl_set':values['lbl_set'],
-        'spdCor':float(values['spdCor']),
+        'spdCor':bool(values['spdCor']),
         'maxCrop':values['maxCrop'],
+        'mask_shdw':bool(values['mask_shdw']),
         'remShadow':values['remShadow'],
         'detectDep':values['detectDep'],
         'smthDep':values['smthDep'],
@@ -363,7 +368,6 @@ def saveDefaultParams(values):
         'pltSubClass':values['pltSubClass'],
         'map_sub':values['map_sub'],
         'export_poly':values['export_poly'],
-        'mosaic_nchunk':int(values['mosaic_nchunk']),
         'mosaic':values['mosaic'],
         'map_mosaic':values['map_mosaic'],
         'banklines':values['banklines'],
