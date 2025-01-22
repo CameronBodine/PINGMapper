@@ -100,13 +100,13 @@ Specify general processing parameters:
 
 2. `Chunk Size`: Choose the number of pings to export per sonar tile. This can be any value but all testing has been performed on chunk sizes of 500.
 
-3. `Export Unknown Ping Attributes`: Option to export unknown ping metadata fields.
-
-4. `Locate and flag missing pings`: Option to locate missing pings and fill with NoData. See [Issue #33](https://github.com/CameronBodine/PINGMapper/issues/33) and [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#orig_record_num) for more information.
-
-5. `Thread Count`: Specify maximum number of CPU threads to use during processing:
+3. `Thread Count`: Specify maximum number of CPU threads to use during processing:
     - `0.0 < Thread Count < 1.0`: Use this proportion of available CPU threads. `0.5 - 0.75` recommended to prevent OOM errors or freezing computer.
     - `0`: Use all available threads. This is the fastest your computer can process a sonar recording as the software will use all threads available on the CPU.
+
+4. `Export Unknown Ping Attributes`: Option to export unknown ping metadata fields.
+
+5. `Locate and flag missing pings`: Option to locate missing pings and fill with NoData. See [Issue #33](https://github.com/CameronBodine/PINGMapper/issues/33) and [this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#orig_record_num) for more information. 
 
 
 ### Step 5
@@ -166,106 +166,86 @@ Decide if raw (waterfall) sonograms should be exported.
 <img src="../../assets/running/gui_Sonogram.PNG"/>
 
 1. `WCP`: Export raw (waterfall) sonograms with the water column present.
-2. `WCR`: Export raw (waterfall) sonograms with the water column removed.
-3. `Image Format`: Specify sonogram file type (".png" or ".jpg"). This applies to sonograms and plots.
+2. `WCM`: Export raw (waterfall) sonograms with the water column masked.
+3. `SRC`: Export raw (waterfall) sonograms with the water column removed and slant range corrected.
+4. `WCO`: Export raw (waterfall) sonograms with the water column only.
+
+5. `Speed Correct`: Create speed corrected (based on distance traveled) tiles.
+6. `Mask Shadows`: Mask sonar shadows. *Shadow Removal must be selected [see Step 9](#step-9)*.
+7. `Max Crop`: Crop to minimum depth and maximum range.
+8. `Image Format`: Specify sonogram file type (".png" or ".jpg"). This applies to sonograms and plots.
+9. `Tile Colormap`: Apply colormap to sonogram. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
 ### Step 9
-Decide if speed (or factor) corrected sonograms should be exported.
-
-<img src="../../assets/running/gui_SpeedCorrected.PNG"/>
-
-1. `Export Sonograms`: 
-    - `0` or `False`: Don't export.
-    - `True: Keep WC & Shadows`: Export images with water column and shadows *present*.
-    - `True: Mask WC & Shadows`: Export images with water column and shadows *removed*.
-
-2. `Speed Correction`: Specify if images should be speed corrected (based on distance traveled) or stretched by a factor:
-    - `0`: No speed correction.
-    - `1`: Speed correction based on distance traveled.
-    - `!= 0 or 1`: Stretch along the track by the specified factor.
-
-3. `Max Crop`: Perform ping-wise (`Checked`) or maximum range for a chunk as determined by shadow detection (`UnChecked`). [See this](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted/Exports.html#speed-corrected) for more information.
-
-### Step 10
 Update depth detection and shadow removal parameters as necessary:
 
 <img src="../../assets/running/gui_DepthShadow.PNG"/>
 
-1. `Shadow Removal`: Automatically segment and remove shadows from any image exports:
-    - `False`: Don't segment or remove shadows.
-    - `Remove all shadows`: Remove all shadows.
-    - `Remove only bank shadows`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
 
-
-2. `Depth Detection`: Specify a depth detection method:
+1. `Depth Detection`: Specify a depth detection method:
     - `Sensor`: Don't automatically estimate depth. Use sonar sensor depth instead.
     - `Auto`: Automatically segment and remove water column with a Residual U-Net, based upon [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945).
+
+2. `Adjust Depth [m]`: Additional depth adjustment in meters for water column removal. Positive values increase depth estimate, resulting in a larger proportion of sonar returns being removed during water column removal.
 
 
 3. `Smooth Depth`: Smooth the depth data before removing water column.  This may help with any strange issues or noisy depth data.
 
+4. `Plot Bedpick`: Option to plot bedpick(s) on non-rectified sonogram for visual inspection.
 
-4. `Adjust Depth [m]`: Additional depth adjustment in meters for water column removal. Positive values increase depth estimate, resulting in a larger proportion of sonar returns being removed during water column removal.
+5. `Shadow Removal`: Automatically segment and remove shadows from any image exports:
+    - `False`: Don't segment or remove shadows.
+    - `Remove all shadows`: Remove all shadows.
+    - `Remove only bank shadows`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
 
-
-5. `Plot Bedpick`: Option to plot bedpick(s) on non-rectified sonogram for visual inspection.
-
-### Step 11
+### Step 10
 Update georectification parameters as necessary:
 
 <img src="../../assets/running/gui_Rectify.PNG"/>
 
-1. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
+1. `WCP`: Export georectified sonar imagery with water column present.
+
+2. `WCR`: Export georectified sonar imagery with water column removed and slant range corrected.
+
+3. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
     - `0`: Use default resolution [~0.02 m].
     - `> 0`: Resize mosaic to output pixel resolution.
 
-2. `WCP`: Export georectified sonar imagery with water column present.
-
-3. `WCR`: Export georectified sonar imagery with water column removed.
-
 4. `Sonar Colormap`: Apply colormap to rectified imagery. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
-### Step 12
+5. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery (exported from step 10). Options include:
+    - `0` or `False`: Don't Mosaic.
+    - `GTiff`: Export mosaic as GeoTiff.
+    - `VRT`: Export mosaic as VRT (virtual raster).
+
+{: .g2k }
+> You must check `WCP` and/or `WCR` in [Step 10](#step-10) in order to export sonar mosaics.
+
+### Step 11
 Update automated substrate mapping parameters as necessary:
 
 <img src="../../assets/running/gui_Substrate.PNG"/>
 
-1. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
+1. `Map Substrate [Raster]`: Export raster georectified substrate maps. Required to export maps as polygon shapefile.
+
+2. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
+    - `0` or `False`: Don't Mosaic.
+    - `GTiff`: Export mosaic as GeoTiff.
+    - `VRT`: Export mosaic as VRT (virtual raster).
+
+{: .g2k }
+> You must check `Map Substrate [Raster]` in [Step 11](#step-11) in order to export substrate mosaics.
+
+3. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
     - `0`: Use default resolution [~0.02 m].
     - `> 0`: Resize mosaic to output pixel resolution.
 
-2. `Map Substrate [Raster]`: Export raster georectified substrate maps. Required to export maps as polygon shapefile.
+4. `Map Substrate [Polygon]`: Export polygon shapefile georectified substrate maps.
 
-3. `Map Substrate [Polygon]`: Export polygon shapefile georectified substrate maps.
+5. `Export Substrate Plots`: Option to export substrate plots.
 
-4. `Export Substrate Plots`: Option to export substrate plots.
 
-### Step 13
-Update mosaic export parameters as necessary:
-
-<img src="../../assets/running/gui_Mosaic.PNG"/>
-
-1. `# Chunks per Mosaic`: Optionally limit the number of chunks per mosaic:
-    - `0`: Mosaic all chunks into single mosaic file.
-    - `> 0`: Maximum number of chunks per mosaic file.
-
-2. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery (exported from step 10). Options include:
-    - `0` or `False`: Don't Mosaic.
-    - `GTiff`: Export mosaic as GeoTiff.
-    - `VRT`: Export mosaic as VRT (virtual raster).
-
-{: .g2k }
-> You must check `WCP` and/or `WCR` in [Step 11](#step-11) in order to export sonar mosaics.
-
-3. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
-    - `0` or `False`: Don't Mosaic.
-    - `GTiff`: Export mosaic as GeoTiff.
-    - `VRT`: Export mosaic as VRT (virtual raster).
-
-{: .g2k }
-> You must check `Map Substrate [Raster]` in [Step 12](#step-12) in order to export substrate mosaics.
-
-### Step 14
+### Step 12
 Select miscellaneous exports:
 
 <img src="../../assets/running/gui_Misc.PNG"/>
@@ -276,7 +256,7 @@ Select miscellaneous exports:
 2. `Coverage`: Export polygon shapefile of sonar coverage and point shapefile of vessel track.
 
 
-### Step 15
+### Step 13
 Buttons: 
 
 <img src="../../assets/running/gui_Buttons.PNG"/>
