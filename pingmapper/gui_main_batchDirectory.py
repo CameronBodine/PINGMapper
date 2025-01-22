@@ -16,7 +16,7 @@ from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 import json
 
-def gui_batch():  
+def gui_batch(batch: bool):  
 
     # Get processing script's dir so we can save it to file
     scriptDir = SCRIPT_DIR
@@ -43,69 +43,377 @@ def gui_batch():
     with open(default_params_file) as f:
         default_params = json.load(f)
 
+    #============================================
+    # Set up gui
 
-    layout = [
-        [sg.Text('Parent Folder of Recordings to Process')],
-        [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse(initial_folder=(default_params['inDir']))],
-        [sg.Text('Output Folder')],
-        [sg.In(key='proj', size=(80,1)), sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))],
-        [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(key='prefix', size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(key='suffix', size=(10,1))],
-        # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
-        [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('General Parameters')],
-        [sg.Text('Temperature [C]', size=(20,1)), sg.Input(key='tempC', default_text=default_params['tempC'], size=(10,1))],
-        [sg.Text('Chunk Size', size=(20,1)), sg.Input(key='nchunk', default_text=default_params['nchunk'], size=(10,1))],
-        [sg.Checkbox('Export Unknown Ping Attributes', key='exportUnknown', default=default_params['exportUnknown'])],
-        [sg.Checkbox('Locate and flag missing pings', key='fixNoDat', default=default_params['fixNoDat'])],
-        [sg.Text('Thread Count [0==All Threads]', size=(30,1)), sg.Input(key='threadCnt', default_text=default_params['threadCnt'], size=(10,1))],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Filter Sonar Log')],
-        [sg.Text('Crop Range [m]', size=(22,1)), sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1))],
-        [sg.Text('Max. Heading Deviation [deg]:', size=(22,1)), sg.Input(key='max_heading_deviation', default_text=default_params['max_heading_deviation'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Distance [m]:', size=(15,1)), sg.Input(key='max_heading_distance', default_text=default_params['max_heading_distance'], size=(10,1))],
-        [sg.Text('Min. Speed [m/s]:', size=(22,1)), sg.Input(key='min_speed', default_text=default_params['min_speed'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Max. Speed [m/s]:', size=(15,1)), sg.Input(key='max_speed', default_text=default_params['max_speed'], size=(10,1))],
-        [sg.Text('AOI')],
-        [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Position Corrections')],
-        [sg.Text('Transducer Offset [X]:', size=(22,1)), sg.Input(key='x_offset', default_text=default_params['x_offset'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Transducer Offset [Y]:', size=(22,1)), sg.Input(key='y_offset', default_text=default_params['y_offset'], size=(10,1))],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Sonar Intensity Corrections')],
-        [sg.Checkbox('Empiracal Gain Normalization (EGN)', key='egn', default=default_params['egn'])],
-        [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['None', 'Min-Max', 'Percent Clip'], key='egn_stretch', default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(key='egn_stretch_factor', default_text=default_params['egn_stretch_factor'], size=(10,1))],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Sonagram Tile Exports')],
-        [sg.Checkbox('WCP', key='wcp', default=default_params['wcp']), sg.Checkbox('WCR', key='wcr', default=default_params['wcr']), sg.Text('Image Format:', size=(12,1)), sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Speed Corrected Sonagram Exports')],
-        [sg.Text('Export Sonograms', size=(20,1)), sg.Combo(['False', 'True: Keep WC & Shadows', 'True: Mask WC & Shadows'], key='lbl_set', default_value=default_params['lbl_set'])],
-        [sg.Text('Speed Correction', size=(20,1)), sg.Input(key='spdCor', default_text=default_params['spdCor'], size=(10,1)), sg.VerticalSeparator(), sg.Checkbox('Max Crop', key='maxCrop', default=default_params['maxCrop'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Depth Detection and Shadow Removal')],
-        [sg.Text('Shadow Removal', size=(20,1)), sg.Combo(['False', 'Remove all shadows', 'Remove only bank shadows'], key='remShadow', default_value=default_params['remShadow'])],
-        [sg.Text('Depth Detection', size=(20,1)), sg.Combo(['Sensor', 'Auto'], key='detectDep', default_value=default_params['detectDep']), sg.VerticalSeparator(), sg.Checkbox('Smooth Depth', key='smthDep', default=default_params['smthDep']), sg.VerticalSeparator(), sg.Text('Adjust Depth [m]'), sg.Input(key='adjDep', default_text=default_params['adjDep'], size=(10,1)), sg.VerticalSeparator(()), sg.Checkbox('Plot Bedpick', key='pltBedPick', default=default_params['pltBedPick'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Sonar Georectification Exports')],
-        [sg.Text('Pixel Resolution [0==Default Resolution (~0.02m)]', size=(38,1)), sg.Input(key='pix_res_son', default_text=default_params['pix_res_son'], size=(10,1)),],
-        [sg.Checkbox('WCP', key='rect_wcp', default=default_params['rect_wcp']), sg.Checkbox('WCR', key='rect_wcr', default=default_params['rect_wcr']), sg.Text('Sonar Colormap'), sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Substrate Mapping')],
-        # [sg.Checkbox('Predict Substrate', key='pred_sub', default=default_params['pred_sub']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
-        # [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Text('Classification Method'), sg.Combo(['max'], key='map_class_method', default_value=default_params['map_class_method'])],
-        # [sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
-        # [sg.Text('Map Predictions', size=(20,1)), sg.Combo(['False', 'Logit', 'Probability'], key='map_predict', default_value=default_params['map_predict'])],
-        [sg.Text('Pixel Resolution [0==Default Resolution (~0.02m)]', size=(38,1)), sg.Input(key='pix_res_map', default_text=default_params['pix_res_map'], size=(10,1))],
-        [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Mosaic Exports')],
-        [sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1))],
-        [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='map_mosaic', default_value=default_params['map_mosaic'])],
-        [sg.HorizontalSeparator()],
-        [sg.Text('Miscellaneous Shapefile Exports')],
-        [sg.Checkbox('Banklines', key='banklines', default=default_params['banklines']), sg.VerticalSeparator(), sg.Checkbox('Coverage', key='coverage', default=default_params['coverage'])],
-        [sg.HorizontalSeparator()],
-        [sg.Submit(), sg.Quit(), sg.Button('Save Defaults')]
-    ]
+    layout = []
+
+    ##################
+    # Input parameters
+    text_io = sg.Text('I/O\n', font=("Helvetica", 14, "underline"))
+
+    if batch:
+        text_input = sg.Text('Parent Folder of Recordings to Process')
+        in_input = sg.In(key='inDir', default_text=default_params['inDir'], size=(80,1))
+        browse_input = sg.FolderBrowse(initial_folder=(default_params['inDir']))
+
+    else:
+        text_input = sg.Text('Recording to Process')
+        in_input = sg.In(key='inFile', size=(80,1))
+        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))
+
+    # Add to layout
+    layout.append([text_io])
+    layout.append([text_input])
+    layout.append([in_input, browse_input])
+
+    ###################
+    # Output parameters
+    text_output = sg.Text('Output Folder')
+    in_output = sg.In(key='proj', default_text=os.path.dirname(default_params['projDir']), size=(80,1))
+    browse_output = sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))
+
+    # Add to layout
+    layout.append([text_output])
+    layout.append([in_output, browse_output])
+
+    ##############
+    # Project Name
+    if batch:
+        text_prefix = sg.Text('Project Name Prefix:', size=(20,1))
+        in_prefix = sg.Input(key='prefix', size=(10,1))
+
+        text_suffix = sg.Text('Project Name Suffix:', size=(20,1))
+        in_suffix = sg.Input(key='suffix', size=(10,1))
+
+        # Add to layout
+        layout.append([text_prefix, in_prefix, sg.VerticalSeparator(), text_suffix, in_suffix])
+
+    else:
+        text_project = sg.Text('Project Name', size=(15,1))
+        in_project = sg.InputText(key='projName', size=(50,1), default_text=os.path.basename(default_params['projDir']))
+
+        # Add to layout
+        layout.append([text_project, in_project])
+
+    ###########
+    # Overwrite
+    check_overwrite = sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])
+
+    # Add to layout
+    layout.append([check_overwrite])
+
+    ####################
+    # General Parameters
+    text_general = sg.Text('General Parameters\n', font=("Helvetica", 14, "underline"))
+
+    # Temperature
+    text_temp = sg.Text('Temperature [C]', size=(30,1))
+    in_temp = sg.Input(key='tempC', default_text=default_params['tempC'], size=(10,1))
+
+    # Chunk
+    text_chunk = sg.Text('Chunk Size', size=(30,1))
+    in_chunk = sg.Input(key='nchunk', default_text=default_params['nchunk'], size=(10,1))
+
+    # Ping Attributes
+    check_attr = sg.Checkbox('Export Unknown Ping Attributes', key='exportUnknown', default=default_params['exportUnknown'])
+
+    # Missing Pings
+    check_missing = sg.Checkbox('Locate and flag missing pings', key='fixNoDat', default=default_params['fixNoDat'])
+
+    # Thread count
+    text_thread = sg.Text('Thread Count [0==All Threads]', size=(30,1))
+    in_thread = sg.Input(key='threadCnt', default_text=default_params['threadCnt'], size=(10,1))
+
+    col_general_1 = sg.Column([[text_temp, in_temp], [text_chunk, in_chunk], [text_thread, in_thread]], pad=0)
+    col_general_2 = sg.Column([[check_attr], [check_missing]], pad=0)
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_general])
+    layout.append([col_general_1, sg.VerticalSeparator(), col_general_2])
+
+    
+    ###########
+    # Filtering
+    text_filtering = sg.Text('Filter Sonar Log\n', font=("Helvetica", 14, "underline"))
+
+    # Cropping
+    text_crop = sg.Text('Crop Range [m]', size=(22,1))
+    in_crop = sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1))
+
+    # Heading
+    text_heading = sg.Text('Max. Heading Deviation [deg]:', size=(22,1))
+    in_heading = sg.Input(key='max_heading_deviation', default_text=default_params['max_heading_deviation'], size=(10,1))
+    text_distance = sg.Text('Distance [m]:', size=(15,1))
+    in_distance = sg.Input(key='max_heading_distance', default_text=default_params['max_heading_distance'], size=(10,1))
+
+    # Speed
+    text_speed_min = sg.Text('Min. Speed [m/s]:', size=(22,1))
+    in_speed_min = sg.Input(key='min_speed', default_text=default_params['min_speed'], size=(10,1))
+    text_speed_max = sg.Text('Max. Speed [m/s]:', size=(15,1))
+    in_speed_max = sg.Input(key='max_speed', default_text=default_params['max_speed'], size=(10,1))
+
+    # AOI
+    text_aoi = sg.Text('AOI')
+    in_aoi = sg.In(size=(80,1))
+    browse_aoi = sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_filtering])
+    layout.append([text_crop, in_crop])
+    layout.append([text_heading, in_heading, sg.VerticalSeparator(), text_distance, in_distance])
+    layout.append([text_speed_min, in_speed_min, sg.VerticalSeparator(), text_speed_max, in_speed_max])
+    layout.append([text_aoi])
+    layout.append([in_aoi, browse_aoi])
+
+    ######################
+    # Position Corrections
+
+    # Position text
+    text_position = sg.Text('Position Corrections\n', font=("Helvetica", 14, "underline"))
+
+    # X offset
+    text_x_offset = sg.Text('Transducer Offset [X]:', size=(22,1))
+    in_x_offset = sg.Input(key='x_offset', default_text=default_params['x_offset'], size=(10,1))
+    
+    # Y offset
+    text_y_offset = sg.Text('Transducer Offset [Y]:', size=(22,1))
+    in_y_offset = sg.Input(key='y_offset', default_text=default_params['y_offset'], size=(10,1))
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_position])
+    layout.append([text_x_offset, in_x_offset, sg.VerticalSeparator(), text_y_offset, in_y_offset])
+
+
+    #################
+    # EGN Corrections
+
+    # EGN text
+    text_egn = sg.Text('Sonar Intensity Corrections\n', font=("Helvetica", 14, "underline"))
+
+    # EGN
+    check_egn = sg.Checkbox('Empiracal Gain Normalization (EGN)', key='egn', default=default_params['egn'])
+
+    # EGN options
+    text_egn_stretch = sg.Text('EGN Stretch', size=(20,1))
+    combo_egn_stretch = sg.Combo(['None', 'Min-Max', 'Percent Clip'], key='egn_stretch', default_value=default_params['egn_stretch'])
+    text_egn_factor = sg.Text('EGN Stretch Factor', size=(20,1))
+    in_egn_factor = sg.Input(key='egn_stretch_factor', default_text=default_params['egn_stretch_factor'], size=(10,1))
+
+    col_egn_1 = sg.Column([[check_egn]], pad=0)
+    col_egn_2 = sg.Column([[text_egn_stretch, combo_egn_stretch], [text_egn_factor, in_egn_factor]], pad=0)
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_egn])
+    layout.append([col_egn_1, sg.VerticalSeparator(), col_egn_2])
+
+    #######################
+    # Sonogram Tile Exports
+
+    text_tile = sg.Text('Sonogram Tile Exports\n', font=("Helvetica", 14, "underline"))
+
+    # Tiles
+    check_wcp = sg.Checkbox('WCP (Water Column Present)', key='wcp', default=default_params['wcp'])
+    check_wcm = sg.Checkbox('WCM (Water Column Masked)', key='wcm', default=default_params['wcm'])
+    check_wcr = sg.Checkbox('SRC (Slant Range Corrected)', key='wcr', default=default_params['wcr'])
+    check_wco = sg.Checkbox('WCO (Water Column Only)', key='wco', default=default_params['wco'])
+
+    # Options
+    text_file_type = sg.Text('Image Format:', size=(15,1))
+    combo_file_type = sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])
+
+    text_tile_color = sg.Text('Tile Colormap:', size=(15,1))
+    combo_tile_color = sg.Combo(plt.colormaps(), key='sonogram_colorMap', default_value=default_params['sonogram_colorMap'])
+
+
+    check_speed_cor = sg.Checkbox('Speed Correct', key='spdCor', default=default_params['spdCor'])
+
+    check_max_crop = sg.Checkbox('Max Crop', key='maxCrop', default=default_params['maxCrop'])
+
+    # Mask
+    check_mask_shdw = sg.Checkbox('Mask Shadows', key='mask_shdw', default=default_params['mask_shdw'])
+    
+    # Turn into columns
+    col_tile_1 = sg.Column([[check_wcp], [check_wcm], [check_wcr], [check_wco]], pad=0)
+    col_tile_2 = sg.Column([[check_speed_cor], [check_mask_shdw], [check_max_crop]], pad=0)
+    col_tile_3 = sg.Column([[text_file_type, combo_file_type], [text_tile_color, combo_tile_color]], pad=0)
+    
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_tile])
+    layout.append([col_tile_1, sg.VerticalSeparator(), col_tile_2, sg.VerticalSeparator(), col_tile_3])
+
+    ########################
+    # Depth & Shadow Removal
+
+    text_dep_shdw = sg.Text('Depth Detection and Shadow Removal\n', font=("Helvetica", 14, "underline"))
+
+    # Shadow
+    text_shdw = sg.Text('Shadow Removal', size=(15,1))
+    in_shdw = sg.Combo(['False', 'Remove all shadows', 'Remove only bank shadows'], key='remShadow', default_value=default_params['remShadow'])
+
+    # Depth
+    text_dep = sg.Text('Depth Detection', size=(15,1))
+    in_dep = sg.Combo(['Sensor', 'Auto'], key='detectDep', default_value=default_params['detectDep'])
+    check_dep_smth = sg.Checkbox('Smooth Depth', key='smthDep', default=default_params['smthDep'])
+    text_dep_adj = sg.Text('Adjust Depth [m]', size=(15,1))
+    in_dep_adj = sg.Input(key='adjDep', default_text=default_params['adjDep'], size=(10,1))
+    check_dep_plt = sg.Checkbox('Plot Bedpick', key='pltBedPick', default=default_params['pltBedPick'])
+
+    col_depshdw_1 = sg.Column([[text_dep, in_dep], [text_dep_adj, in_dep_adj], [check_dep_smth], [check_dep_plt]], pad=0)
+    col_depshdw_2 = sg.Column([[text_shdw, in_shdw]], pad=0)
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_dep_shdw])
+    layout.append([col_depshdw_1, sg.VerticalSeparator(), col_depshdw_2])
+
+    ########################
+    # Sonar Georectification
+
+    text_rect = sg.Text('Sonar Georectification Exports\n', font=("Helvetica", 14, "underline"))
+
+    # Pixel resolution
+    text_rect_pix = sg.Text('Pixel Resolution [0==Default (~0.02m)]', size=(30,1))
+    in_rect_pix = sg.Input(key='pix_res_son', default_text=default_params['pix_res_son'], size=(10,1))
+
+    # Type
+    check_rect_wcp = sg.Checkbox('WCP (Water Column Present)', key='rect_wcp', default=default_params['rect_wcp'])
+    check_rect_wcr = sg.Checkbox('WCR (Water Column Removed)', key='rect_wcr', default=default_params['rect_wcr'])
+
+    text_color = sg.Text('Sonar Colormap', size=(30,1))
+    combo_color = sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])
+
+    text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
+    combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'])
+    
+    col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr]], pad=0)
+    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic]], pad=0)
+    
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_rect])
+    layout.append([col_rect_1, sg.VerticalSeparator(), col_rect_2])
+
+
+    ###################s
+    # Substrate Mapping
+
+    text_substrate = sg.Text('Substrate Mapping\n', font=("Helvetica", 14, "underline"))
+
+    check_substrate_raster = sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub'])
+    check_substrate_poly = sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly'])
+    check_substrate_plot =  sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])
+        
+    text_substrate_mosaic = sg.Text('Export Substrate Mosaic', size=(30,1))
+    combo_substrate_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='map_mosaic', default_value=default_params['map_mosaic'])
+
+    # Pixel resolution
+    text_substrate_pix = sg.Text('Pixel Resolution [0==Default (~0.02m)]', size=(30,1))
+    in_substrate_pix = sg.Input(key='pix_res_map', default_text=default_params['pix_res_map'], size=(10,1))
+
+    # Columns
+    col_substrate_1 = sg.Column([[check_substrate_raster], [text_substrate_mosaic, combo_substrate_mosaic], [text_substrate_pix, in_substrate_pix]], pad=0)
+    col_substrate_2 = sg.Column([[check_substrate_poly], [check_substrate_plot]], pad=0)
+    
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_substrate])
+    layout.append([col_substrate_1, sg.VerticalSeparator(), col_substrate_2])
+
+    #######################
+    # Miscellaneous Exports
+
+    text_misc = sg.Text('Miscellaneous Shapefile Exports\n', font=("Helvetica", 14, "underline"))
+
+    check_misc_banks = sg.Checkbox('Banklines', key='banklines', default=default_params['banklines'])
+    check_misc_cov = sg.Checkbox('Coverage', key='coverage', default=default_params['coverage'])
+
+    col_misc_1 = sg.Column([[check_misc_banks], [check_misc_cov]], pad=0)
+
+    # Add to layout
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_misc])
+    layout.append([col_misc_1])
+        
+
+    #####################
+    # Submit/quit buttons
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([sg.Push(), sg.Submit(), sg.Quit(), sg.Button('Save Defaults'), sg.Push()])
+    
+    
+
+    
+
+
+
+    # layout = [
+    #     [sg.Text('Parent Folder of Recordings to Process')],
+    #     [sg.In(key='inDir', size=(80,1)), sg.FolderBrowse(initial_folder=(default_params['inDir']))],
+    #     [sg.Text('Output Folder')],
+    #     [sg.In(key='proj', size=(80,1)), sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))],
+    #     [sg.Text('Project Name Prefix:', size=(20,1)), sg.Input(key='prefix', size=(10,1)), sg.VerticalSeparator(), sg.Text('Project Name Suffix:', size=(20,1)), sg.Input(key='suffix', size=(10,1))],
+    #     # [sg.Text('Project Name', size=(15,1)), sg.InputText(size=(50,1))],
+    #     [sg.Checkbox('Overwrite Existing Project', key='project_mode', default=default_params['project_mode'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('General Parameters')],
+    #     [sg.Text('Temperature [C]', size=(20,1)), sg.Input(key='tempC', default_text=default_params['tempC'], size=(10,1))],
+    #     [sg.Text('Chunk Size', size=(20,1)), sg.Input(key='nchunk', default_text=default_params['nchunk'], size=(10,1))],
+    #     [sg.Checkbox('Export Unknown Ping Attributes', key='exportUnknown', default=default_params['exportUnknown'])],
+    #     [sg.Checkbox('Locate and flag missing pings', key='fixNoDat', default=default_params['fixNoDat'])],
+    #     [sg.Text('Thread Count [0==All Threads]', size=(30,1)), sg.Input(key='threadCnt', default_text=default_params['threadCnt'], size=(10,1))],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Filter Sonar Log')],
+    #     [sg.Text('Crop Range [m]', size=(22,1)), sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1))],
+    #     [sg.Text('Max. Heading Deviation [deg]:', size=(22,1)), sg.Input(key='max_heading_deviation', default_text=default_params['max_heading_deviation'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Distance [m]:', size=(15,1)), sg.Input(key='max_heading_distance', default_text=default_params['max_heading_distance'], size=(10,1))],
+    #     [sg.Text('Min. Speed [m/s]:', size=(22,1)), sg.Input(key='min_speed', default_text=default_params['min_speed'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Max. Speed [m/s]:', size=(15,1)), sg.Input(key='max_speed', default_text=default_params['max_speed'], size=(10,1))],
+    #     [sg.Text('AOI')],
+    #     [sg.In(size=(80,1)), sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Position Corrections')],
+    #     [sg.Text('Transducer Offset [X]:', size=(22,1)), sg.Input(key='x_offset', default_text=default_params['x_offset'], size=(10,1)), sg.VerticalSeparator(), sg.Text('Transducer Offset [Y]:', size=(22,1)), sg.Input(key='y_offset', default_text=default_params['y_offset'], size=(10,1))],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Sonar Intensity Corrections')],
+    #     [sg.Checkbox('Empiracal Gain Normalization (EGN)', key='egn', default=default_params['egn'])],
+    #     [sg.Text('EGN Stretch', size=(10,1)), sg.Combo(['None', 'Min-Max', 'Percent Clip'], key='egn_stretch', default_value=default_params['egn_stretch']), sg.VerticalSeparator(), sg.Text('EGN Stretch Factor', size=(20,1)), sg.Input(key='egn_stretch_factor', default_text=default_params['egn_stretch_factor'], size=(10,1))],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Sonagram Tile Exports')],
+    #     [sg.Checkbox('WCP', key='wcp', default=default_params['wcp']), sg.Checkbox('WCR', key='wcr', default=default_params['wcr']), sg.Text('Image Format:', size=(12,1)), sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Speed Corrected Sonagram Exports')],
+    #     [sg.Text('Export Sonograms', size=(20,1)), sg.Combo(['False', 'True: Keep WC & Shadows', 'True: Mask WC & Shadows'], key='lbl_set', default_value=default_params['lbl_set'])],
+    #     [sg.Text('Speed Correction', size=(20,1)), sg.Input(key='spdCor', default_text=default_params['spdCor'], size=(10,1)), sg.VerticalSeparator(), sg.Checkbox('Max Crop', key='maxCrop', default=default_params['maxCrop'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Depth Detection and Shadow Removal')],
+    #     [sg.Text('Shadow Removal', size=(20,1)), sg.Combo(['False', 'Remove all shadows', 'Remove only bank shadows'], key='remShadow', default_value=default_params['remShadow'])],
+    #     [sg.Text('Depth Detection', size=(20,1)), sg.Combo(['Sensor', 'Auto'], key='detectDep', default_value=default_params['detectDep']), sg.VerticalSeparator(), sg.Checkbox('Smooth Depth', key='smthDep', default=default_params['smthDep']), sg.VerticalSeparator(), sg.Text('Adjust Depth [m]'), sg.Input(key='adjDep', default_text=default_params['adjDep'], size=(10,1)), sg.VerticalSeparator(()), sg.Checkbox('Plot Bedpick', key='pltBedPick', default=default_params['pltBedPick'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Sonar Georectification Exports')],
+    #     [sg.Text('Pixel Resolution [0==Default Resolution (~0.02m)]', size=(38,1)), sg.Input(key='pix_res_son', default_text=default_params['pix_res_son'], size=(10,1)),],
+    #     [sg.Checkbox('WCP', key='rect_wcp', default=default_params['rect_wcp']), sg.Checkbox('WCR', key='rect_wcr', default=default_params['rect_wcr']), sg.Text('Sonar Colormap'), sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Substrate Mapping')],
+    #     # [sg.Checkbox('Predict Substrate', key='pred_sub', default=default_params['pred_sub']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
+    #     # [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Text('Classification Method'), sg.Combo(['max'], key='map_class_method', default_value=default_params['map_class_method'])],
+    #     # [sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
+    #     # [sg.Text('Map Predictions', size=(20,1)), sg.Combo(['False', 'Logit', 'Probability'], key='map_predict', default_value=default_params['map_predict'])],
+    #     [sg.Text('Pixel Resolution [0==Default Resolution (~0.02m)]', size=(38,1)), sg.Input(key='pix_res_map', default_text=default_params['pix_res_map'], size=(10,1))],
+    #     [sg.Checkbox('Map Substrate [Raster]', key='map_sub', default=default_params['map_sub']), sg.VerticalSeparator(), sg.Checkbox('Map Substrate [Polygon]', key='export_poly', default=default_params['export_poly']), sg.VerticalSeparator(), sg.Checkbox('Export Substrate Plots', key='pltSubClass', default=default_params['pltSubClass'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Mosaic Exports')],
+    #     [sg.Text('# Chunks per Mosaic [0==All Chunks]'), sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1))],
+    #     [sg.Text('Export Sonar Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic']), sg.VerticalSeparator(), sg.Text('Export Substrate Mosaic'), sg.Combo(['False', 'GTiff', 'VRT'], key='map_mosaic', default_value=default_params['map_mosaic'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Text('Miscellaneous Shapefile Exports')],
+    #     [sg.Checkbox('Banklines', key='banklines', default=default_params['banklines']), sg.VerticalSeparator(), sg.Checkbox('Coverage', key='coverage', default=default_params['coverage'])],
+    #     [sg.HorizontalSeparator()],
+    #     [sg.Submit(), sg.Quit(), sg.Button('Save Defaults')]
+    # ]
 
 
     layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
@@ -134,8 +442,10 @@ def gui_batch():
 
         # sys.exit()
 
-        inDir = os.path.normpath(values['inDir'])
         outDir = os.path.normpath(values['proj'])
+
+        if batch:
+            inDir = os.path.normpath(values['inDir'])
 
         #################################
         # Convert parameters if necessary
@@ -154,16 +464,6 @@ def gui_batch():
         elif egn_stretch == 'Percent Clip':
             egn_stretch = 2
         egn_stretch = int(egn_stretch)
-
-        # Speed Corrected Sonograms
-        lbl_set = values['lbl_set']
-        if lbl_set == 'False':
-            lbl_set = 0
-        elif lbl_set == 'True: Keep WC & Shadows':
-            lbl_set = 1
-        elif lbl_set == 'True: Mask WC & Shadows':
-            lbl_set = 2
-        lbl_set = int(lbl_set)
 
         # Shadow removal
         remShadow = values['remShadow']
@@ -252,10 +552,13 @@ def gui_batch():
             'egn_stretch':egn_stretch,
             'egn_stretch_factor':float(values['egn_stretch_factor']),
             'wcp':values['wcp'],
+            'wcm':values['wcm'],
             'wcr':values['wcr'],
+            'wco':values['wco'],
+            'sonogram_colorMap':values['sonogram_colorMap'],
+            'mask_shdw':values['mask_shdw'],
             'tileFile':values['tileFile'],
-            'lbl_set':lbl_set,
-            'spdCor':float(values['spdCor']),
+            'spdCor':values['spdCor'],
             'maxCrop':values['maxCrop'],
             'remShadow':remShadow,
             'detectDep':detectDep,
@@ -271,7 +574,6 @@ def gui_batch():
             'export_poly':values['export_poly'],
             'map_class_method':values['map_class_method'],
             'map_predict':map_predict,
-            'mosaic_nchunk':int(values['mosaic_nchunk']),
             'mosaic':mosaic,
             'map_mosaic':map_mosaic,
             'banklines':values['banklines'],
@@ -282,14 +584,18 @@ def gui_batch():
 
         #============================================
 
-        # Find all DAT and SON files in all subdirectories of inDir
-        inFiles=[]
-        for root, dirs, files in os.walk(inDir):
-            for file in files:
-                if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
-                    inFiles.append(os.path.join(root, file))
+        if batch:
+            # Find all DAT and SON files in all subdirectories of inDir
+            inFiles=[]
+            for root, dirs, files in os.walk(inDir):
+                for file in files:
+                    if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
+                        inFiles.append(os.path.join(root, file))
 
-        inFiles = sorted(inFiles)
+            inFiles = sorted(inFiles)
+
+        else:
+            inFiles = [values['inFile']]
 
         for i, f in enumerate(inFiles):
             print(i, ":", f)
@@ -313,9 +619,13 @@ def gui_batch():
                 except:
                     sonFiles = ''
 
-                recName = values['prefix'] + recName + values['suffix']
+                if batch:
+                    recName = values['prefix'] + recName + values['suffix']
 
-                projDir = os.path.join(outDir, recName)
+                    projDir = os.path.join(outDir, recName)
+
+                else:
+                    projDir = os.path.join(os.path.normpath(values['proj']), values['projName'])
 
                 #============================================
 
@@ -408,8 +718,14 @@ def gui_batch():
             gc.collect()
             print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
 
-        print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
+        if batch:
+            print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
 
 
 if __name__ == "__main__":
-    gui_batch()
+    # Default function to run
+    if len(sys.argv) == 1:
+        batch = False
+    else:
+        batch = sys.argv[1]
+    gui_batch(batch)
