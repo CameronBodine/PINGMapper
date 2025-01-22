@@ -16,7 +16,7 @@ from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 import json
 
-def gui_batch(batch: bool):  
+def gui(batch: bool):  
 
     # Get processing script's dir so we can save it to file
     scriptDir = SCRIPT_DIR
@@ -54,7 +54,7 @@ def gui_batch(batch: bool):
 
     if batch:
         text_input = sg.Text('Parent Folder of Recordings to Process')
-        in_input = sg.In(key='inDir', default_text=default_params['inDir'], size=(80,1))
+        in_input = sg.In(key='inDir', size=(80,1))
         browse_input = sg.FolderBrowse(initial_folder=(default_params['inDir']))
 
     else:
@@ -70,7 +70,7 @@ def gui_batch(batch: bool):
     ###################
     # Output parameters
     text_output = sg.Text('Output Folder')
-    in_output = sg.In(key='proj', default_text=os.path.dirname(default_params['projDir']), size=(80,1))
+    in_output = sg.In(key='proj', size=(80,1))
     browse_output = sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))
 
     # Add to layout
@@ -728,4 +728,4 @@ if __name__ == "__main__":
         batch = False
     else:
         batch = sys.argv[1]
-    gui_batch(batch)
+    gui(batch)

@@ -22,14 +22,17 @@ def main(process):
     # Process single sonar log
     if process == 'gui':
         print('\n\nLaunching gui for processing single sonar log...\n\n')
+        # from pingmapper.gui_main import gui
+        # gui()
         from pingmapper.gui_main import gui
-        gui()
+        gui(batch=False)
+
 
     # Batch process sonar logs
     elif process == 'gui_batch':
         print('\n\nLaunching gui for batch processing sonar logs...\n\n')
-        from pingmapper.gui_main_batchDirectory import gui_batch
-        gui_batch()
+        from pingmapper.gui_main import gui
+        gui(batch=True)
 
     # Do test on small dataset
     elif process == 'test':
