@@ -43,6 +43,14 @@ def gui(batch: bool):
     with open(default_params_file) as f:
         default_params = json.load(f)
 
+    # Make sure all params in user params
+    with open(primary_default_params) as f:
+        primary_defaults = json.load(f)
+
+    for k, v in primary_defaults.items():
+        if k not in default_params:
+            default_params[k] = v
+
     #============================================
     # Set up gui
 

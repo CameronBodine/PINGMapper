@@ -17,15 +17,11 @@
 
 **Transform recordings from recreation-grade side scan sonar systems...**
 
-<!-- <img src="../main/docs/attach/Suwa_Son.gif" width="800"/> -->
-
-![PINGMapper_Logo](https://github.com/CameronBodine/PINGMapper/blob/main/docs/attach/Suwa_Son.gif?raw=true)
+![Suwa_Son](https://github.com/CameronBodine/PINGMapper/blob/main/docs/attach/Suwa_Son.gif?raw=true)
 
 *Video made with [HumViewer](https://humviewer.cm-johansen.dk/)*
 
 **...into scientific datasets!**
-
-<!-- <img src="../main/docs/attach/GithubMap.png" width="800"/> -->
 
 ![GithubMap](https://github.com/CameronBodine/PINGMapper/blob/main/docs/attach/GithubMap.png?raw=true)
 
