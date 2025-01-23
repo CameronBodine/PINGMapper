@@ -34,7 +34,70 @@ Generate a variety of sonogram tiles for various use-cases.
 
 <img src="../../assets/sonotiles/SonoTiles_2_Raw_Shdw.PNG" width="800"/>
 
+#### Mask Shadows - Crop
 
+<img src="../../assets/sonotiles/SonoTiles_3_Raw_ShdwCrop.PNG" width="800"/>
 
+#### Crop - W/ Shadow Model
 
-## Use Cases
+<img src="../../assets/sonotiles/SonoTiles_4_Raw_CropShdwModel.PNG" width="800"/>
+
+#### Crop - W/o Shadow Model
+
+<img src="../../assets/sonotiles/SonoTiles_5_Raw_Crop.PNG" width="800"/>
+
+### Speed Corrected
+
+<img src="../../assets/sonotiles/SonoTiles_6_Spd.PNG" width="800"/>
+
+#### Mask Shadows
+
+<img src="../../assets/sonotiles/SonoTiles_7_Spd_Shdw.PNG" width="800"/>
+
+#### Mask Shadows - Crop
+
+<img src="../../assets/sonotiles/SonoTiles_8_Spd_ShdwCrop.PNG" width="800"/>
+
+#### Crop - W/ Shadow Model
+
+<img src="../../assets/sonotiles/SonoTiles_9_CropShdwCrop.PNG" width="800"/>
+
+#### Crop - W/o Shadow Model
+
+<img src="../../assets/sonotiles/SonoTiles_10_Crop.PNG" width="800"/>
+
+## Case Studies
+
+*coming soon: show simple case studies that might link to specific tutorials (??)*
+
+### Data Quality Review
+
+*coming soon*
+
+### Target Identification
+
+*coming soon*
+
+#### Crab Pot
+
+*coming soon*
+
+#### Fish Enumeration
+
+*coming soon*
+
+#### SAV
+
+*coming soon*
+
+### Generate AI-Compliant Datasets
+
+*coming soon*
+
+#### Doodler
+
+*coming soon*
+
+#### Roboflow
+
+*coming soon*
