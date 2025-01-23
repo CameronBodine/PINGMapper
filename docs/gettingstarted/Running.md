@@ -163,6 +163,9 @@ Decide if you want the sonar intensities to be corrected.
 ### Step 8
 Decide if raw (waterfall) sonograms should be exported.
 
+{: .g2k }
+> Check out the [Sonogram Tiles Tutorial](../tutorials/SonogramTiles.md) for a thorough breakdown of all the settings.
+
 <img src="../../assets/running/gui_Sonogram.PNG"/>
 
 1. `WCP`: Export raw (waterfall) sonograms with the water column present.
@@ -177,7 +180,7 @@ Decide if raw (waterfall) sonograms should be exported.
 9. `Tile Colormap`: Apply colormap to sonogram. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
 {: .g2k }
-> Check out the [Sonogram Tiles Tutorial](../tutorials/SonogramTiles.md) for a thorough breakdown of all the settings.
+> Check out the [Colormap Tutorial](../tutorials/Colormaps.md) for recommendations.
 
 ### Step 9
 Update depth detection and shadow removal parameters as necessary:
