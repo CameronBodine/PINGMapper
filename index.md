@@ -8,11 +8,10 @@ description: "PING-Mapper is an open-source software for recreationg-grade sonar
 # PINGMapper
 {: .fs-9 }
 
-Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat
+Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat.
+{: .fs-6 .fw-300 }
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-
-{: .fs-6 .fw-300 }
 
 [Get started now](./docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
 
