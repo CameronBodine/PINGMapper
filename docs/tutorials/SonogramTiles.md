@@ -17,7 +17,7 @@ Generate a variety of sonogram tiles for various use-cases.
 
 <details closed markdown="block">
   <summary>
-    <- Click to expand table of contents
+    {Click to show table of contents}
   </summary>
   {: .text-delta }
 1. TOC

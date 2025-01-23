@@ -176,6 +176,9 @@ Decide if raw (waterfall) sonograms should be exported.
 8. `Image Format`: Specify sonogram file type (".png" or ".jpg"). This applies to sonograms and plots.
 9. `Tile Colormap`: Apply colormap to sonogram. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
+{: .g2k }
+> Check out the [Sonogram Tiles Tutorial](../tutorials/SonogramTiles.md) for a thorough breakdown of all the settings.
+
 ### Step 9
 Update depth detection and shadow removal parameters as necessary:
 
