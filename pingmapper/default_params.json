@@ -27,7 +27,6 @@
     "wco":false,
     "tileFile":".jpg",
     "sonogram_colorMap":"copper",
-    "lbl_set":"False",
     "spdCor":false,
     "maxCrop":false,
     "mask_shdw":false,

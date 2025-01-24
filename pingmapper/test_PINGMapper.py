@@ -158,12 +158,11 @@ def test(ds):
     tileFile = '.jpg' # Img format for plots and sonogram exports
     wcp = True #Export tiles with water column present: 0==False; 1==True, side scan channels only; 2==True, all available channels.
     wcr = True #Export Tiles with water column removed (and slant range corrected): 0==False; 1==True, side scan channels only; 2==True, all available channels.
-
-
-    # Speed corrected sonogram Exports
-    lbl_set = 2 # Export images for labeling: 0==False; 1==True, keep water column & shadows; 2==True, remove water column & shadows
-    spdCor = 1 # Speed correction: 0==No Speed Correction; 1==Stretch by GPS distance; !=1 or !=0 == Stretch factor.
-    maxCrop = True # True==Ping-wise crop; False==Crop tile to max range.
+    wco = True
+    wcm = True
+    sonogram_colorMap = "copper"
+    spdCor = True
+    maxCrop = True
 
 
     # Depth Detection and Shadow Removal Parameters
@@ -269,7 +268,9 @@ def test(ds):
         'tileFile':tileFile,
         'wcp':wcp,
         'wcr':wcr,
-        'lbl_set':lbl_set,
+        'wco':wco,
+        'wcm':wcm,
+        'sonogram_colorMap':sonogram_colorMap,
         'spdCor':spdCor,
         'maxCrop':maxCrop,
         'USE_GPU':False,
