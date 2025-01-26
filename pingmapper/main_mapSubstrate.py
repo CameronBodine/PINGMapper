@@ -111,7 +111,9 @@ def map_master_func(logfilename='',
 
     ############
     # Parameters
-    modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    # modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    d = os.environ['CONDA_PREFIX']
+    modelDir = os.path.join(d, 'pingmapper_config', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
     flip = False #Flip port/star
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
     filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
@@ -387,13 +389,13 @@ def map_master_func(logfilename='',
                     # EGN model
                     substrateModelVer = 'EGN_Substrate_Segmentation_segformer_v1.0'
                     son.configfile = os.path.join(modelDir, substrateModelVer, 'config', substrateModelVer+'.json')
-                    son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
+                    son.weights = os.path.join(modelDir, substrateModelVer, 'weights', substrateModelVer+'_fullmodel.h5')
 
                 else:
                     # Raw model
                     substrateModelVer = 'Raw_Substrate_Segmentation_segformer_v1.0'
                     son.configfile = os.path.join(modelDir, substrateModelVer, 'config', substrateModelVer+'.json')
-                    son.weights = son.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
+                    son.weights = os.path.join(modelDir, substrateModelVer, 'weights', substrateModelVer+'_fullmodel.h5')
 
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')

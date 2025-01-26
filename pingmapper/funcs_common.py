@@ -222,7 +222,9 @@ def downloadSegmentationModelsv1_0(modelDir):
 
     filename = modelDir+'.zip'
     r = requests.get(url, allow_redirects=True)
-    open(filename, 'wb').write(r.content)
+    # open(filename, 'wb').write(r.content)
+    with open(filename, 'wb') as f:
+        f.write(r.content)
 
     with zipfile.ZipFile(filename, 'r') as z_fp:
         z_fp.extractall(modelDir)

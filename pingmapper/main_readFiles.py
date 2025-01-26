@@ -240,7 +240,9 @@ def read_master_func(logfilename='',
     #####################################
     # Download models if they don't exist
     # modelDir = "./models/PINGMapperv2.0_SegmentationModelsv1.0"
-    modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    # modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    d = os.environ['CONDA_PREFIX']
+    modelDir = os.path.join(d, 'pingmapper_config', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
     modelDir = os.path.normpath(modelDir)
     if not os.path.exists(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
@@ -1305,7 +1307,7 @@ def read_master_func(logfilename='',
             # These were downloaded at the beginning of the script
             depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
             psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
-            psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
+            psObj.weights = os.path.join(modelDir, depthModelVer, 'weights', depthModelVer+'_fullmodel.h5')
             print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
         # With binary thresholding
@@ -1471,7 +1473,7 @@ def read_master_func(logfilename='',
         # Model weights and config file
         shadowModelVer = 'Shadow_Segmentation_unet_v1.0'
         psObj.configfile = os.path.join(modelDir, shadowModelVer, 'config', shadowModelVer+'.json')
-        psObj.weights = psObj.configfile.replace('.json', '_fullmodel.h5').replace('config', 'weights')
+        psObj.weights = os.path.join(modelDir, shadowModelVer, 'weights', shadowModelVer+'_fullmodel.h5')
 
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()

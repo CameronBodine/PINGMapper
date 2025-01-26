@@ -80,7 +80,8 @@ def test(ds):
         print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
         sys.exit()
 
-    exampleDir = os.path.join(scriptDir, 'exampleData')
+    d = os.environ['CONDA_PREFIX']
+    exampleDir = os.path.join(d, 'exampleData')
     ds_path = os.path.join(exampleDir, ds_name)
     ds_path = os.path.normpath(ds_path)
 
@@ -95,7 +96,9 @@ def test(ds):
         url='https://github.com/CameronBodine/PINGMapper/releases/download/data/{}.zip'.format(download_name)
         filename = ds_path+'.zip'
         r = requests.get(url, allow_redirects=True)
-        open(filename, 'wb').write(r.content)
+        # open(filename, 'wb').write(r.content)
+        with open(filename, 'wb') as f:
+            f.write(r.content)
 
         with zipfile.ZipFile(filename, 'r') as z_fp:
             z_fp.extractall(exampleDir)
