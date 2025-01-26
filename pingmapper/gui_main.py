@@ -15,6 +15,29 @@ from pingmapper.main_readFiles import read_master_func
 from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 import json
+import pandas as pd
+
+import subprocess
+
+filter_time_csv = os.path.join(SCRIPT_DIR, 'clip_table.csv')
+filter_time_csv = os.path.normpath(filter_time_csv)
+
+def clip_table(csv=filter_time_csv):    
+
+    if not os.path.exists(csv):
+        df = pd.DataFrame(columns=['start_seconds', 'end_seconds'])
+        df.to_csv(csv, index=False)
+
+    if sys.platform == "win32":
+        subprocess.run(['start', "{}".format(csv)], shell=True, check=True)
+    elif sys.platform == "darwin":
+        subprocess.run(['open', "{}".format(csv)], check=True)
+    else:
+        subprocess.run(['xdg-open', "{}".format(csv)], check=True)
+
+    df = pd.read_csv(csv)
+
+    return df
 
 def gui(batch: bool):  
 
@@ -167,6 +190,10 @@ def gui(batch: bool):
     in_aoi = sg.In(size=(80,1))
     browse_aoi = sg.FileBrowse(key='aoi', file_types=(("Shapefile", "*.shp"), (".plan File", "*.plan")), initial_folder=os.path.dirname(default_params['aoi']))
 
+    # Time table
+    button_time_table = sg.Button('Edit Table')
+    check_time_load = sg.Checkbox('Filter by Time', key='filter_table', default=default_params['filter_table'])
+
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
     layout.append([text_filtering])
@@ -175,6 +202,7 @@ def gui(batch: bool):
     layout.append([text_speed_min, in_speed_min, sg.VerticalSeparator(), text_speed_max, in_speed_max])
     layout.append([text_aoi])
     layout.append([in_aoi, browse_aoi])
+    layout.append([check_time_load, button_time_table])
 
     ######################
     # Position Corrections
@@ -437,6 +465,19 @@ def gui(batch: bool):
         if event == "Save Defaults":
             saveDefaultParams(values)
 
+        if event == 'Edit Table':
+            clip_table()
+
+        # if event == 'Load Table':
+        #     time_table = pd.read_csv(filter_time_csv)
+
+        #     print('\n\nFiltering by time')
+        #     print(time_table)
+
+        #     time_table = filter_time_csv
+
+        
+
     window.close()
 
     # if event == "Quit":
@@ -457,6 +498,11 @@ def gui(batch: bool):
 
         #################################
         # Convert parameters if necessary
+
+        if values['filter_table']:
+            time_table = filter_time_csv
+        else:
+            time_table = False
 
         # AOI
         aoi = values['aoi']
@@ -552,6 +598,7 @@ def gui(batch: bool):
             'max_heading_distance':float(values['max_heading_distance']),
             'min_speed':float(values['min_speed']),
             'max_speed':float(values['max_speed']),
+            'time_table':time_table,
             'pix_res_son':float(values['pix_res_son']),
             'pix_res_map':float(values['pix_res_map']),
             'x_offset':float(values['x_offset']),

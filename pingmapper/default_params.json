@@ -14,6 +14,7 @@
     "max_heading_distance":0,
     "min_speed":0,
     "max_speed":0,
+    "filter_table":false,
     "pix_res_son":0.05,
     "pix_res_map":0.25,
     "x_offset":0.0,

@@ -342,6 +342,7 @@ def saveDefaultParams(values):
         'max_heading_distance':float(values['max_heading_distance']),
         'min_speed':float(values['min_speed']),
         'max_speed':float(values['max_speed']),
+        'filter_table':bool(values['filter_table']),
         'aoi':values['aoi'],
         'pix_res_son':float(values['pix_res_son']),
         'pix_res_map':float(values['pix_res_map']),

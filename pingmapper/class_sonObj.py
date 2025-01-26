@@ -1334,6 +1334,7 @@ class sonObj(object):
                           min_speed,
                           max_speed,
                           aoi,
+                          time_table,
                           ):
         '''
         '''
@@ -1359,6 +1360,11 @@ class sonObj(object):
         # Do AOI Filter
         if aoi:
             sonDF = self._filterAOI(sonDF, aoi)
+
+        #############
+        # Time Filter
+        if time_table:
+            sonDF = self._filterTime(sonDF, time_table)
 
         # self._reassignChunks(sonDF)
 
@@ -1459,6 +1465,37 @@ class sonObj(object):
         except:
             sys.exit('\n\n\nERROR:\nMax heading standard deviation too small.\nPlease specify a larger value.')
 
+    # ======================================================================
+    def _filterTime(self,
+                     sonDF,
+                     time_table):
+        
+        '''
+        '''
+
+        time_col = 'time_s'
+        filtTimeCol = 'filter_time'
+        filtCol = 'filter'
+
+        sonDF[filtTimeCol] = False
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+
+        time_table = pd.read_csv(time_table)
+
+        for i, row in time_table.iterrows():
+
+            start = row['start_seconds']
+            end = row['end_seconds']
+
+            # dfFilt = sonDF[(sonDF['time_s'] >= start) & (sonDF['time_s'] <= end)]
+            sonDF.loc[(sonDF[time_col] >= start) & (sonDF[time_col] <= end) & (sonDF[filtCol] == True), filtTimeCol] = True
+
+        sonDF[filtCol] *= sonDF[filtTimeCol]
+
+        return sonDF
+    
 
     # ======================================================================
     def _filterSpeed(self,
@@ -1479,12 +1516,12 @@ class sonObj(object):
         # Filter min_speed
         if min_speed > 0:
             # sonDF = sonDF[sonDF['speed_ms'] >= min_speed]
-            sonDF.loc[sonDF[speed_col] < min_speed] = False
+            sonDF.loc[sonDF[speed_col] < min_speed, filtCol] = False
 
         # Filter max_speed
         if max_speed > 0:
             # sonDF = sonDF[sonDF['speed_ms'] <= max_speed]
-            sonDF.loc[sonDF[speed_col] > max_speed] = False
+            sonDF.loc[sonDF[speed_col] > max_speed, filtCol] = False
 
         return sonDF
 

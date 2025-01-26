@@ -59,6 +59,7 @@ def read_master_func(logfilename='',
                      max_heading_distance = False,
                      min_speed = False,
                      max_speed = False,
+                     time_table = False,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -1160,7 +1161,7 @@ def read_master_func(logfilename='',
     # For Filtering                                                            #
     ############################################################################
 
-    if max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi:
+    if max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table:
 
         start_time = time.time()
 
@@ -1193,7 +1194,7 @@ def read_master_func(logfilename='',
 
         # Do filtering on longest recording
         son0 = portstar[maxRec]
-        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi)
+        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
 
         # # Determine pings to filter
         # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._doSonarFiltering)(max_heading_deviation, max_heading_distance) for son in portstar)
@@ -1253,6 +1254,18 @@ def read_master_func(logfilename='',
         #     sDF = pd.read_csv(csv)
 
         #     sDF['filter'] = df['filter']
+
+        for son in sonObjs:
+            beam = son.beamName
+            if beam != "ss_port" or beam != "ss_star":
+                df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
+
+                df = son0._reassignChunks(df)
+
+                son._saveSonMetaCSV(df)
+
+                del df
+                son._cleanup()
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
