@@ -274,7 +274,7 @@ class rectObj(sonObj):
                   }
 
         sDF = pd.DataFrame(smooth) # Convert dictionary to Pandas df
-
+        
         # Calculate smoothed easting/northing
         e_smth, n_smth = self.trans(sDF[lons].to_numpy(), sDF[lats].to_numpy())
         # Store in df
@@ -989,6 +989,7 @@ class rectObj(sonObj):
         n = 'n'
         record_num = 'record_num'
         chunk_id = 'chunk_id'
+        instr_heading = 'instr_heading'
 
         flip = False
 
@@ -999,9 +1000,22 @@ class rectObj(sonObj):
         pingDF[son_idx] = range(1, int(row[ping_cnt])+1)
         pingDF[record_num] = row[record_num]
         pingDF[chunk_id] = row[chunk_id]
-        pingDF[ping_bearing] = row[ping_bearing]
+        # pingDF[ping_bearing] = row[ping_bearing]
         pingDF[trk_lons] = row[trk_lons]
         pingDF[trk_lats] = row[trk_lats]
+
+        ########################
+        # Calculate ping bearing
+        # Determine ping bearing.  Ping bearings are perpendicular to COG.
+        if self.beamName == 'ss_port':
+            rotate = -90  # Rotate COG by 90 degrees to the left
+        else:
+            rotate = 90 # Rotate COG by 90 degrees to the right
+        if flip: # Flip rotation factor if True
+            rotate *= -1
+
+        # Calculate ping bearing and normalize to range 0-360
+        pingDF[ping_bearing] = (row[instr_heading]+rotate) % 360
 
         pix_m = self.pixM # Get pixel size for each chunk
 
@@ -1229,11 +1243,14 @@ class rectObj(sonObj):
                     x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
                     son_idx = (row['son_idx']-1).astype('int')
 
-                    # Get sonar value
-                    sonVal = img[son_idx, ping_cntr]
+                    try:
+                        # Get sonar value
+                        sonVal = img[son_idx, ping_cntr]
 
-                    # Add value to outup
-                    sonRect[y, x] = sonVal
+                        # Add value to outup
+                        sonRect[y, x] = sonVal
+                    except:
+                        pass
 
                 ping_cntr += 1
 

@@ -38,7 +38,7 @@ from pingmapper.class_rectObj import rectObj
 
 
 # =========================================================
-def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
+def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, threadCnt=''):
 
     ############
     # Parameters
