@@ -90,7 +90,8 @@ def gui(batch: bool):
 
     else:
         text_input = sg.Text('Recording to Process')
-        in_input = sg.In(key='inFile', size=(80,1))
+        # in_input = sg.In(key='inFile', size=(80,1))
+        in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
         browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
@@ -101,7 +102,8 @@ def gui(batch: bool):
     ###################
     # Output parameters
     text_output = sg.Text('Output Folder')
-    in_output = sg.In(key='proj', size=(80,1))
+    # in_output = sg.In(key='proj', size=(80,1))
+    in_output = sg.In(key='proj', size=(80,1), default_text=os.path.dirname(default_params['projDir']))
     browse_output = sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))
 
     # Add to layout
@@ -321,13 +323,16 @@ def gui(batch: bool):
     check_rect_wcp = sg.Checkbox('WCP (Water Column Present)', key='rect_wcp', default=default_params['rect_wcp'])
     check_rect_wcr = sg.Checkbox('WCR (Water Column Removed)', key='rect_wcr', default=default_params['rect_wcr'])
 
+    # COG
+    check_rect_cog = sg.Checkbox('Use COG', key='cog', default=default_params['cog'])
+
     text_color = sg.Text('Sonar Colormap', size=(30,1))
     combo_color = sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])
 
     text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
     combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'])
     
-    col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr]], pad=0)
+    col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_cog]], pad=0)
     col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic]], pad=0)
     
     # Add to layout
@@ -622,6 +627,7 @@ def gui(batch: bool):
             'pltBedPick':values['pltBedPick'],
             'rect_wcp':values['rect_wcp'],
             'rect_wcr':values['rect_wcr'],
+            'cog':values['cog'],
             'son_colorMap':values['son_colorMap'],
             'pred_sub':values['pred_sub'],
             'pltSubClass':values['pltSubClass'],

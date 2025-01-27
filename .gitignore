@@ -21,6 +21,7 @@ Python 3.7*
 
 user_params.json
 
+pingmapper/clip_table.csv
 pingmapper/procData/*
 pingmapper/__pycache__/*
 oldFiles/*

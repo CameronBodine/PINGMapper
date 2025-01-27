@@ -46,6 +46,11 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
     filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
 
+    if cog:
+        headingCol = 'cog'
+    else:
+        headingCol = 'heading'
+
     ####################################################
     # Check if sonObj pickle exists, append to metaFiles
     metaDir = os.path.join(projDir, "meta")
@@ -241,6 +246,7 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
                 sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
                 sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
                 sDF.at[curRow, "cog"] = lastRow["cog"]
+                sDF.at[curRow, "instr_heading"] = lastRow["instr_heading"]
             else:
                 t += 1
 
@@ -283,21 +289,21 @@ def smoothTrackline(projDir, x_offset, y_offset, nchunk, cog, threadCnt):
         gc.collect()
         printUsage()
 
-        # ############################################################################
-        # # Calculate range extent coordinates                                       #
-        # ############################################################################
-        # # cog=True
+        ############################################################################
+        # Calculate range extent coordinates                                       #
+        ############################################################################
+        # cog=True
 
-        # start_time = time.time()
-        # if cog:
-        #     print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-        # else:
-        #     print("\nCalculating range extent coordinates from vessel heading...")
-        # Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
-        # print("Done!")
-        # print("Time (s):", round(time.time() - start_time, ndigits=1))
-        # gc.collect()
-        # printUsage()
+        start_time = time.time()
+        if cog:
+            print("\nCalculating, smoothing, and interpolating range extent coordinates...")
+        else:
+            print("\nCalculating range extent coordinates from vessel heading...")
+        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
+        print("Done!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        gc.collect()
+        printUsage()
 
         return csvNames
 

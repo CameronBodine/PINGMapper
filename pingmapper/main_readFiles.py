@@ -1226,6 +1226,12 @@ def read_master_func(logfilename='',
         df1['chunk_id'] = df0['chunk_id']
         df1['transect'] = df0['transect']
 
+        chunkMax = df0['chunk_id'].max()
+        son0.chunkMax = chunkMax
+
+        chunkMax = df1['chunk_id'].max()
+        son1.chunkMax = chunkMax
+
 
         # sDF0['chunk_id'] = df0['chunk_id']
         # sDF0['transect'] = df0['transect']

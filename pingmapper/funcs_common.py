@@ -367,6 +367,7 @@ def saveDefaultParams(values):
         'pltBedPick':values['pltBedPick'],
         'rect_wcp':values['rect_wcp'],
         'rect_wcr':values['rect_wcr'],
+        'cog':values['cog'],
         'son_colorMap':values['son_colorMap'],
         'pltSubClass':values['pltSubClass'],
         'map_sub':values['map_sub'],
