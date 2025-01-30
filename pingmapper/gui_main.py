@@ -331,9 +331,12 @@ def gui(batch: bool):
 
     text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
     combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'])
+
+    text_rect_chunk = sg.Text('# Chunks per Mosaic [0==All Chunks]', size=(30,1))
+    in_rect_chunk = sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1))
     
     col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_cog]], pad=0)
-    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic]], pad=0)
+    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk]], pad=0)
     
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
@@ -458,7 +461,12 @@ def gui(batch: bool):
 
 
     layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
-    window = sg.Window('Batch Process Sonar Logs', layout2, resizable=True)
+
+    if batch:
+        window_text = 'Batch Process Sonar Logs'
+    else:
+        window_text = 'Process Sonar Log'
+    window = sg.Window(window_text, layout2, resizable=True)
 
     while True:
         event, values = window.read()
@@ -629,6 +637,7 @@ def gui(batch: bool):
             'rect_wcr':values['rect_wcr'],
             'cog':values['cog'],
             'son_colorMap':values['son_colorMap'],
+            'mosaic_nchunk':int(values['mosaic_nchunk']),
             'pred_sub':values['pred_sub'],
             'pltSubClass':values['pltSubClass'],
             'map_sub':values['map_sub'],
