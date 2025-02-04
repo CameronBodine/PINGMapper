@@ -43,14 +43,23 @@ from rasterio.transform import from_origin
 from rasterio.enums import Resampling
 from PIL import Image, ImageColor
 from shapely.geometry import Polygon
+from shapely import affinity
 
 from matplotlib import colormaps    
 
-from scipy.interpolate import NearestNDInterpolator
+from scipy.interpolate import NearestNDInterpolator, griddata
+from scipy.sparse import coo_matrix
+from scipy.spatial import cKDTree, ConvexHull
+from skimage.draw import polygon
+from shapely.geometry import Polygon, Point, MultiPoint
+from shapely.ops import unary_union
+from shapely.vectorized import contains
 
 import rasterio.features
 from shapely.geometry import mapping
 import rasterio.mask
+
+from numba import njit
 
 
 class rectObj(sonObj):
@@ -1000,6 +1009,7 @@ class rectObj(sonObj):
         pingDF[son_idx] = range(1, int(row[ping_cnt])+1)
         pingDF[record_num] = row[record_num]
         pingDF[chunk_id] = row[chunk_id]
+
         # pingDF[ping_bearing] = row[ping_bearing]
         pingDF[trk_lons] = row[trk_lons]
         pingDF[trk_lats] = row[trk_lats]
@@ -1080,9 +1090,6 @@ class rectObj(sonObj):
         xPix = 'x'
         yPix = 'y'
 
-        # Determine leading zeros to match naming convention
-        addZero = self._addZero(chunk)
-
         df.reset_index(inplace=True)
 
         #######################################
@@ -1106,14 +1113,95 @@ class rectObj(sonObj):
         # X values
         xStd = (df[xCoord]-xMin) / (xMax-xMin) # Standardize
         xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
-        df[xPix] = xScaled.astype('int') # Store rescaled x coordinates
+        df[xPix] = xScaled.astype(int) # Store rescaled x coordinates
 
         # Y values
         yStd = (df[yCoord]-yMin) / (yMax-yMin) # Standardize
         yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
-        df[yPix] = yScaled.astype('int') # Store rescaled y coordinates
+        df[yPix] = yScaled.astype(int) # Store rescaled y coordinates
+
+        # Load sonar data
+        df = self._getSonarReturns(df=df, chunk=chunk)
 
         return df
+    
+    def _getSonarReturns(self, df: pd.DataFrame, chunk, son=True):
+
+        '''
+        
+        '''
+
+        record_num = 'record_num'
+        son_idx = 'son_idx'
+
+        # Filter sonMetaDF by chunk
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
+        sonMetaAll = self.sonMetaDF
+        isChunk = sonMetaAll['chunk_id']==chunk
+        sonMeta = sonMetaAll[isChunk].reset_index()
+
+        # Get sonar data
+        if son:
+            # Open image to rectify
+            self._getScanChunkSingle(chunk)
+        else:
+            # Rectifying substrate classification
+            pass
+
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
+
+        # Sort Dataframe and reset index
+        df.sort_values(by=[record_num, son_idx], inplace=True)
+        df.reset_index(inplace=True, drop=True)
+
+        #####
+        # WCP
+        if self.rect_wcp:
+
+            dfAll = []
+            # egn
+            if self.egn:
+                self._egn_wcp(chunk, sonMeta)
+
+                if self.egn_stretch > 0:
+                    self._egnDoStretch()
+
+            img = self.sonDat.copy()
+
+            # img[0]=0 # To fix extra white on curves
+
+            i = 0
+            for _, group in df.groupby(by=[record_num]):
+                sonData = img[:, i]
+
+                if len(sonData) > len(group):
+                    sonData = sonData[:len(group)]
+                elif len(group) > len(sonData):
+                    group = group.loc[:len(sonData)-1]
+                else:
+                    pass
+
+                group['son_wcp'] = sonData
+
+                dfAll.append(group)            
+                
+                i += 1
+
+        dfAll = pd.concat(dfAll)
+
+        # Set index to help speed concatenation
+        dfAll.set_index([record_num, son_idx], inplace=True)
+
+        return dfAll
     
     def _rectSonHeading(self, df: pd.DataFrame, chunk, son=True, wgs=False):
 
@@ -1156,47 +1244,25 @@ class rectObj(sonObj):
         # Determine leading zeros to match naming convention
         addZero = self._addZero(chunk)
 
-        # Set the index
-        df.set_index(['record_num'], inplace=True)
-
         df.sort_index(ascending=True, inplace=True)
-
-        # Get sonar data
-        if son:
-            # Open image to rectify
-            self._getScanChunkSingle(chunk)
-        else:
-            # Rectifying substrate classification
-            pass
-
-        # Remove shadows
-        if self.remShadow:
-            # Get mask
-            self._SHW_mask(chunk)
-
-            # Mask out shadows
-            self.sonDat = self.sonDat*self.shadowMask
-            del self.shadowMask
-
-        img = self.sonDat
 
         ##################
         # Do Rectification
 
         pix_m = self.pixM # Get pixel size
 
-        xPixMax, yPixMax = df[xPix].max(), df[yPix].max()
+        xPixMax, yPixMax = df[xPix].max().astype(int), df[yPix].max().astype(int)
 
         # Get extent of chunk
-        xMin, xMax = df[xCoord].min(), df[xCoord].max()
-        yMin, yMax = df[yCoord].min(), df[yCoord].max()
+        xMin, xMax = df[xCoord].min().astype(int), df[xCoord].max().astype(int)
+        yMin, yMax = df[yCoord].min().astype(int), df[yCoord].max().astype(int)
 
         # Setup outupt array
         # Determine output shape dimensions
         outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
         outShape=[0,0]
         # Divide by pixel size to arrive at output shape of warped image
-        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0).astype(int), round(outShapeM[1]/pix_m,0).astype(int)
 
         # Calculate x,y resolution of a single pixel
         xres = (xMax - xMin) / outShape[0]
@@ -1224,44 +1290,150 @@ class rectObj(sonObj):
             except:
                 pass
 
-            # egn
-            if self.egn:
-                self._egn_wcp(chunk, sonMeta)
+            # # egn
+            # if self.egn:
+            #     self._egn_wcp(chunk, sonMeta)
 
-                if self.egn_stretch > 0:
-                    self._egnDoStretch()
+            #     if self.egn_stretch > 0:
+            #         self._egnDoStretch()
 
-            img = self.sonDat.copy()
+            # img = self.sonDat.copy()
 
-            img[0]=0 # To fix extra white on curves
+            # img[0]=0 # To fix extra white on curves
 
-            ping_cntr = 0 #Set ping counter
+            # ping_cntr = 0 #Set ping counter
             
-            for i, group in df.groupby('record_num'):
-                # Iterate each sonar return
-                for i, row in group.iterrows():
-                    x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
-                    son_idx = (row['son_idx']-1).astype('int')
+            # for i, group in df.groupby('record_num'):
+            #     # Iterate each sonar return
+            #     for i, row in group.iterrows():
+            #         x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
+            #         son_idx = (row['son_idx']-1).astype('int')
 
-                    try:
-                        # Get sonar value
-                        sonVal = img[son_idx, ping_cntr]
+            #         try:
+            #             # Get sonar value
+            #             sonVal = img[son_idx, ping_cntr]
 
-                        # Add value to outup
-                        sonRect[y, x] = sonVal
-                    except:
-                        pass
+            #             # Add value to outup
+            #             sonRect[y, x] = sonVal
+            #         except:
+            #             pass
 
-                ping_cntr += 1
+            #     ping_cntr += 1
+
+            # Old way ^^^^^ Very slow
+
+            # ping_cntr = 0 #Set ping counter
+            
+            # for i, group in df.groupby('record_num'):
+            #     # Iterate each sonar return
+            #     for i, row in group.iterrows():
+            #         x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
+            #         # son_idx = (row['son_idx']-1).astype('int')
+
+            #         try:
+            #             # Get sonar value
+            #             # sonVal = img[son_idx, ping_cntr]
+            #             sonVal = row['son_wcp']
+
+            #             # Add value to outup
+            #             sonRect[y, x] = sonVal
+            #         except:
+            #             pass
+
+            #     ping_cntr += 1
+
+            # New way below using sparse matrix
+            row = df[yPix].to_numpy().astype(int)
+            col = df[xPix].to_numpy().astype(int)
+            data = df['son_wcp'].to_numpy()
+
+            # Create a dictionary to store the maximum value for each coordinate
+            max_values = {}
+            for r, c, d in zip(row, col, data):
+                if (r, c) in max_values:
+                    max_values[(r, c)] = max(max_values[(r, c)], d)
+                else:
+                    max_values[(r, c)] = d
+
+            # Convert the dictionary back to arrays
+            row = np.array([k[0] for k in max_values.keys()])
+            col = np.array([k[1] for k in max_values.keys()])
+            data = np.array(list(max_values.values()))
+
+            # Create the sparse matrix
+            sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
+            sonRect = sonRect.toarray()
+
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             sonRect = np.flip(np.flip(np.flip(sonRect,1),0),1).astype('float')
 
+            ##########
+            # Fill Gaps
+            # Replace 0 values with NaN
+            # sonRect[sonRect == 0] = np.nan
+
+            # # Fill small gaps using griddata
+            # x = np.arange(sonRect.shape[1])
+            # y = np.arange(sonRect.shape[0])
+            # xx, yy = np.meshgrid(x, y)
+
+            # # Mask for valid values
+            # mask = ~np.isnan(sonRect)
+
+            # # Coordinates of valid values
+            # valid_coords = np.array([yy[mask], xx[mask]]).T
+
+            # # Values of valid points
+            # valid_values = sonRect[mask]
+
+            # Create a KDTree for fast lookup of nearest neighbors
+            # tree = cKDTree(valid_coords)
+
+            # Define the interpolation distance in pixels
+            # interpolation_distance = 20
+
+            # # Create interpolator using only valid points
+            # interpolator = NearestNDInterpolator(valid_coords, valid_values)
+
+            # # Interpolate missing values
+            # interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
+            # print('interpolated')
+
+            # # Mask for points within the interpolation distance
+            # distances, _ = tree.query(np.c_[xx.ravel(), yy.ravel()], distance_upper_bound=interpolation_distance)
+            # distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
+            # print('tree')
+            # # Fill gaps in sonRect only within the specified distance
+            # sonRect[np.isnan(sonRect) & distance_mask] = interpolated_values[np.isnan(sonRect) & distance_mask]
+
+            # ########################
+            # # Create Convex Hull Mask
+
+            # # Compute the convex hull
+            # hull = ConvexHull(valid_coords)
+
+            # # Create a shapely polygon from the convex hull points
+            # hull_polygon = Polygon(valid_coords[hull.vertices])
+            # # buffered_hull_polygon = hull_polygon
+
+            # # Buffer the polygon to expand it slightly
+            # buffered_hull_polygon = hull_polygon.buffer(5)  # Adjust the buffer distance as needed
+
+            # # Create a mask based on the buffered convex hull using vectorized operations
+            # x, y = np.meshgrid(np.arange(sonRect.shape[1]), np.arange(sonRect.shape[0]))
+            # hull_path = contains(buffered_hull_polygon, x, y)
+
+            ##########
+            # Fill Gaps
             # Replace 0 values with NaN
             sonRect[sonRect == 0] = np.nan
 
-            # Fill small gaps using griddata
+            # Define the interpolation distance in pixels
+            interpolation_distance = 50
+
+            # Prepare data for interpolation
             x = np.arange(sonRect.shape[1])
             y = np.arange(sonRect.shape[0])
             xx, yy = np.meshgrid(x, y)
@@ -1275,19 +1447,81 @@ class rectObj(sonObj):
             # Values of valid points
             valid_values = sonRect[mask]
 
+            # Create a KDTree for fast lookup of nearest neighbors
+            tree = cKDTree(valid_coords)
+
+            # Mask for points within the interpolation distance
+            distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
+            distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
+
             # Create interpolator using only valid points
             interpolator = NearestNDInterpolator(valid_coords, valid_values)
 
             # Interpolate missing values
             interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
 
-            # Fill gaps in sonRect
-            sonRect[np.isnan(sonRect)] = interpolated_values[np.isnan(sonRect)]
+            ########################
+            # Create Convex Hull Mask
 
-            # Replace any remaining NaN values with 0
-            sonRect[np.isnan(sonRect)] = 0
+            # Coordinates of valid values
+            x = np.arange(sonRect.shape[1])
+            y = np.arange(sonRect.shape[0])
+            xx, yy = np.meshgrid(x, y)
+            valid_coords = np.array([xx[mask], yy[mask]]).T
+
+            # points = MultiPoint(valid_coords)
+
+            # # Compute the convex hull
+            # hull_polygon = points.convex_hull
+
+            # # Ensure the buffered hull is a single MultiPolygon or Polygon
+            # hull_polygon = unary_union(hull_polygon)
+
+            # Compute the convex hull using scipy.spatial.ConvexHull
+            hull = ConvexHull(valid_coords)
+            hull_points = valid_coords[hull.vertices]
+
+            # Create a Polygon from the convex hull points
+            hull_polygon = Polygon(hull_points)
+
+            # # Export the buffered convex hull to a shapefile
+            # gdf = gpd.GeoDataFrame(geometry=[hull_polygon])
+
+            # projName = os.path.split(self.projDir)[-1] # Get project name
+            # beamName = self.beamName # Determine which sonar beam we are working with
+            # shpName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.shp' # Create output image name
+
+            # shp = os.path.join(outDir, shpName) # Output file name
+            # gdf.to_file(shp)
+
+            # Create a mask based on the buffered convex hull using vectorized operations
+            x = np.arange(sonRect.shape[1])
+            y = np.arange(sonRect.shape[0])
+            x, y = np.meshgrid(x, y)
+            hull_path = contains(hull_polygon, x=x, y=y)
+
+            @njit
+            def fill_gaps(sonRect, interpolated_values, distance_mask, hull_path):
+                # Fill gaps in sonRect only within the specified distance and hull_path
+                for i in range(sonRect.shape[0]):
+                    for j in range(sonRect.shape[1]):
+                        if np.isnan(sonRect[i, j]) and distance_mask[i, j] and hull_path[i, j]:
+                        # if np.isnan(sonRect[i, j]) and distance_mask[i, j]:
+                            sonRect[i, j] = interpolated_values[i, j]
+
+                # Replace any remaining NaN values with 0
+                for i in range(sonRect.shape[0]):
+                    for j in range(sonRect.shape[1]):
+                        if np.isnan(sonRect[i, j]):
+                            sonRect[i, j] = 0
+
+                return sonRect
+
+            # Perform the interpolation
+            sonRect = fill_gaps(sonRect, interpolated_values, distance_mask, hull_path)
 
             sonRect = sonRect.astype('uint8')
+
 
             ###############
             # Create output
@@ -1319,31 +1553,32 @@ class rectObj(sonObj):
                     dst.write_colormap(1, self.son_colorMap)
                     dst=None
 
-            del dst, img
+            del dst
 
             ##############################
             # Mask with Coverage Shapefile
 
-            # Shapefile
-            projName = os.path.basename(self.projDir)
-            covFile = os.path.join(self.metaDir, 'shapefiles', projName+"_"+self.beamName+"_coverage.shp")
+            # # Shapefile
+            # projName = os.path.basename(self.projDir)
+            # covFile = os.path.join(self.metaDir, 'shapefiles', projName+"_"+self.beamName+"_coverage.shp")
 
-            covShp = gpd.read_file(covFile)
+            # covShp = gpd.read_file(covFile)
 
-            # Get current chunk
-            covShp = covShp[covShp['chunk_id'] == chunk]
+            # # Get current chunk
+            # covShp = covShp[covShp['chunk_id'] == chunk]
 
-            with rasterio.open(gtiff) as src:
-                out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
-                out_meta = src.meta.copy()
+            # with rasterio.open(gtiff) as src:
+            #     out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
+            #     out_meta = src.meta.copy()
 
-            out_meta.update({"driver": "GTiff",
-                 "height": out_image.shape[1],
-                 "width": out_image.shape[2],
-                 "transform": out_transform})
+            # out_meta.update({"driver": "GTiff",
+            #      "height": out_image.shape[1],
+            #      "width": out_image.shape[2],
+            #      "transform": out_transform})
 
-            with rasterio.open(gtiff, "w", **out_meta) as dest:
-                dest.write(out_image)
+            # with rasterio.open(gtiff, "w", **out_meta) as dest:
+            #     dest.write(out_image)
+
 
             #############
             # Do resizing

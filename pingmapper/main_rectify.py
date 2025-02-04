@@ -394,7 +394,7 @@ def rectify_master_func(logfilename='',
     # Smooth Trackline                                                         #
     ############################################################################
 
-    smthTrkFilenames = smoothTrackline(projDir=projDir, x_offset=x_offset, y_offset=y_offset, nchunk=nchunk, cog=True, threadCnt=threadCnt)
+    smthTrkFilenames = smoothTrackline(projDir=projDir, x_offset=x_offset, y_offset=y_offset, nchunk=nchunk, cog=cog, threadCnt=threadCnt)
     for son in portstar:
         beam = son.beamName
         if beam == "ss_port" or beam == "ss_star":
@@ -472,7 +472,7 @@ def rectify_master_func(logfilename='',
     # Export Coverage and Trackline                                            #
     ############################################################################
 
-    if coverage or not cog:
+    if coverage:
         start_time = time.time()
         print("\nExporting coverage and trackline shapefiles:\n")
         portstar[0]._exportTrkShp()
@@ -495,6 +495,10 @@ def rectify_master_func(logfilename='',
     ############################################################################
     # COG Pre-processing                                                       #
     # ##########################################################################
+
+    for son in portstar:
+        son.rect_wcp = rect_wcp
+        son.rect_wcr = rect_wcr
 
     # Calculate Sonar Return Coordinates
     if not cog:
@@ -544,6 +548,8 @@ def rectify_master_func(logfilename='',
             print('\n\nCalculating pix coordinates for', len(chunks), 'chunks for', son.beamName)
 
             r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._calcSonReturnPixCoords)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+            # for i in chunks:
+            #     son._calcSonReturnPixCoords(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
 
             # Concatenate and store cooordinates
             dfAll = pd.concat(r)
@@ -556,12 +562,36 @@ def rectify_master_func(logfilename='',
         gc.collect()
         printUsage()
 
+    # # Get sonar data for each sonar return point
+    # if not cog:
+    #     start_time = time.time()
+    #     print("\nGet sonar data:\n")
+    #     for son in portstar:
+
+    #         # Get sonar coords dataframe
+    #         sonarCoordsDF = son.sonarCoordsDF
+
+    #         # Get chunk id
+    #         chunks = son._getChunkID()
+
+    #         print('\n\nGet sonar data for', len(chunks), 'chunks for', son.beamName)
+
+    #         r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._getSonarReturns)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+
+    #         # Concatenate and store cooordinates
+    #         dfAll = pd.concat(r)
+    #         son.sonarCoordsDF = dfAll
+
+    #         print(dfAll)
+
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     gc.collect()
+    #     printUsage()
+
     ############################################################################
     # Rectify Heading sonar imagery                                                    #
     ############################################################################
-    for son in portstar:
-        son.rect_wcp = rect_wcp
-        son.rect_wcr = rect_wcr
 
     if not cog:
         start_time = time.time()
@@ -583,6 +613,8 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
             Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeading)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+            # for i in chunks:
+            #     son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
 
             # # Concatenate and store cooordinates
             # dfAll = pd.concat(r)
