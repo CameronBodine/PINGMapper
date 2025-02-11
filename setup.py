@@ -41,7 +41,7 @@ setup(
         "oceanography",
         "limnology",],
     python_requires="<3.13",
-    install_requires=[],
+    install_requires=['pinginstaller', 'pingwizard', 'pingverter'],
     project_urls={
         "Issues": "https://github.com/CameronBodine/PINGMapper/issues",
         "GitHub":"https://github.com/CameronBodine/PINGMapper",
