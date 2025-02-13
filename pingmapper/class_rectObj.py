@@ -59,8 +59,6 @@ import rasterio.features
 from shapely.geometry import mapping
 import rasterio.mask
 
-from numba import njit
-
 from scipy.signal import savgol_filter
 
 
