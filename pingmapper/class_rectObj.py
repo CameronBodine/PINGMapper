@@ -1020,7 +1020,7 @@ class rectObj(sonObj):
         start_time = time.time()
         self._rectSonHeading(dfAll, chunk, son=son)
         t3 = round(time.time() - start_time, ndigits=1)
-        print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
+        # print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
         return
     
     #===========================================================================
@@ -1239,7 +1239,52 @@ class rectObj(sonObj):
                 
                 i += 1
 
-        dfAll = pd.concat(dfAll)
+            dfAll = pd.concat(dfAll)
+
+            if self.rect_wcr:
+                df = dfAll.copy()
+
+        #####
+        # WCR
+        if self.rect_wcr:
+
+            dfAll = []
+
+            self._WCR_SRC(sonMeta)
+
+            # Empirical gain normalization
+            if not self.rect_wcp:
+                if self.egn:
+                    self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+
+            img = self.sonDat
+
+            # img[0]=0 # To fix extra white on curves
+
+            i = 0
+            for _, group in df.groupby(by=[record_num]):
+                sonData = img[:, i]
+
+                if len(sonData) > len(group):
+                    sonData = sonData[:len(group)]
+                elif len(group) > len(sonData):
+                    group = group.loc[:len(sonData)-1]
+                else:
+                    pass
+
+                group['son_wcr'] = sonData
+
+                group = group.dropna()
+
+                dfAll.append(group)            
+                
+                i += 1
+
+            dfAll = pd.concat(dfAll)
 
         # Set index to help speed concatenation
         dfAll.set_index([record_num, son_idx], inplace=True)
@@ -1252,6 +1297,9 @@ class rectObj(sonObj):
         '''
         
         '''
+
+        # Define the interpolation distance in pixels
+        interpolation_distance = 50
 
         pix_res = self.pix_res_son
 
@@ -1316,131 +1364,18 @@ class rectObj(sonObj):
         ## of upper left corner of the image and the pixel size
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
-        if son:
-            sonRect = np.zeros((yPixMax, xPixMax), dtype=np.uint8)
-        else:
-            sonRect = np.zeros((yPixMax, xPixMax))
-
         #########################
         # Create geotiff and save
 
+        to_rect = []
+
         if self.rect_wcp:
-
-            imgOutPrefix = 'rect_wcp'
-            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
-
-            try:
-                os.mkdir(outDir)
-            except:
-                pass
-
-            # New way below using sparse matrix
-            row = df[yPix].to_numpy().astype(int)
-            col = df[xPix].to_numpy().astype(int)
-            data = df['son_wcp'].to_numpy()
-
-            # Create a dictionary to store the maximum value for each coordinate
-            max_values = {}
-            for r, c, d in zip(row, col, data):
-                if (r, c) in max_values:
-                    max_values[(r, c)] = max(max_values[(r, c)], d)
-                else:
-                    max_values[(r, c)] = d
-
-            # Convert the dictionary back to arrays
-            row = np.array([k[0] for k in max_values.keys()])
-            col = np.array([k[1] for k in max_values.keys()])
-            data = np.array(list(max_values.values()))
-
-            # Create the sparse matrix
-            sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
-            sonRect = sonRect.toarray()
-
-            # Rotate 180 and flip
-            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            sonRect = np.flip(np.flip(np.flip(sonRect,1),0),1).astype('float')
-
-            ##########
-            # Fill Gaps
-            # Replace 0 values with NaN
-            sonRect[sonRect == 0] = np.nan
-
-            # Define the interpolation distance in pixels
-            interpolation_distance = 50
-
-            # Prepare data for interpolation
-            x = np.arange(sonRect.shape[1])
-            y = np.arange(sonRect.shape[0])
-            xx, yy = np.meshgrid(x, y)
-
-            # Mask for valid values
-            mask = ~np.isnan(sonRect)
-
-            # Coordinates of valid values
-            valid_coords = np.array([yy[mask], xx[mask]]).T
-
-            # Values of valid points
-            valid_values = sonRect[mask]
-
-            # Create a KDTree for fast lookup of nearest neighbors
-            tree = cKDTree(valid_coords)
-
-            # Mask for points within the interpolation distance
-            distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
-            distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
-
-            # Create interpolator using only valid points
-            interpolator = NearestNDInterpolator(valid_coords, valid_values)
-
-            # Interpolate missing values
-            interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
-
-            # Apply distance mask
-            sonRect = interpolated_values * distance_mask
-
-            sonRect = sonRect.astype('uint8')
-
-
-            ###############
-            # Create output
-
-            projName = os.path.split(self.projDir)[-1] # Get project name
-            beamName = self.beamName # Determine which sonar beam we are working with
-            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
-
-            gtiff = os.path.join(outDir, imgName) # Output file name
-
-            if pix_res != 0 or pix_res != 0.0:
-                gtiff = gtiff.replace('.tif', 'temp.tif')
-
-            # Export georectified image
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=sonRect.shape[0],
-                width=sonRect.shape[1],
-                count=1,
-                dtype=sonRect.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw'
-                ) as dst:
-                    dst.nodata=0
-                    dst.write(sonRect,1)
-                    dst.write_colormap(1, self.son_colorMap)
-                    dst=None
-
-            del dst
-
-            #############
-            # Do resizing
-            if pix_res != 0 or pix_res != 0.0:
-                self._pixresResize(gtiff)
-
+            to_rect.append(('rect_wcp', 'son_wcp'))
         if self.rect_wcr:
+            to_rect.append(('rect_wcr', 'son_wcr'))
 
-            imgOutPrefix = 'rect_wcr'
+        for imgOutPrefix, sonCol in to_rect:
+
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
             try:
@@ -1451,7 +1386,7 @@ class rectObj(sonObj):
             # New way below using sparse matrix
             row = df[yPix].to_numpy().astype(int)
             col = df[xPix].to_numpy().astype(int)
-            data = df['son_wcr'].to_numpy()
+            data = df[sonCol].to_numpy()
 
             # Create a dictionary to store the maximum value for each coordinate
             max_values = {}
@@ -1478,9 +1413,6 @@ class rectObj(sonObj):
             # Fill Gaps
             # Replace 0 values with NaN
             sonRect[sonRect == 0] = np.nan
-
-            # Define the interpolation distance in pixels
-            interpolation_distance = 50
 
             # Prepare data for interpolation
             x = np.arange(sonRect.shape[1])
@@ -1524,7 +1456,7 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
-            if pix_res != 0 or pix_res != 0.0:
+            if pix_res != 0 and pix_res != 0.0:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -1549,32 +1481,8 @@ class rectObj(sonObj):
 
             #############
             # Do resizing
-            if pix_res != 0 or pix_res != 0.0:
+            if pix_res != 0 and pix_res != 0.0:
                 self._pixresResize(gtiff)
-
-            ##############################
-            # Mask with Coverage Shapefile
-
-            # # Shapefile
-            # projName = os.path.basename(self.projDir)
-            # covFile = os.path.join(self.metaDir, 'shapefiles', projName+"_"+self.beamName+"_coverage.shp")
-
-            # covShp = gpd.read_file(covFile)
-
-            # # Get current chunk
-            # covShp = covShp[covShp['chunk_id'] == chunk]
-
-            # with rasterio.open(gtiff) as src:
-            #     out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
-            #     out_meta = src.meta.copy()
-
-            # out_meta.update({"driver": "GTiff",
-            #      "height": out_image.shape[1],
-            #      "width": out_image.shape[2],
-            #      "transform": out_transform})
-
-            # with rasterio.open(gtiff, "w", **out_meta) as dest:
-            #     dest.write(out_image)           
 
         return
 
@@ -2021,7 +1929,6 @@ class rectObj(sonObj):
             img = self.sonDat.copy()
 
             img[0]=0 # To fix extra white on curves
-            print(outShape)
 
             # Warp image from the input shape to output shape
             out = warp(img.T,
