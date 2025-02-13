@@ -1261,17 +1261,20 @@ def read_master_func(logfilename='',
 
         #     sDF['filter'] = df['filter']
 
-        for son in sonObjs:
-            beam = son.beamName
-            if beam != "ss_port" or beam != "ss_star":
-                df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
+        for son in downbeams:
+            df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
 
-                df = son0._reassignChunks(df)
+            df = df[df['filter'] == True]
 
-                son._saveSonMetaCSV(df)
+            df = son._reassignChunks(df)
 
-                del df
-                son._cleanup()
+            son._saveSonMetaCSV(df)
+
+            chunkMax = df['chunk_id'].max()
+            son.chunkMax = chunkMax
+
+            del df
+            son._cleanup()
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
