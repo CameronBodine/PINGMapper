@@ -61,6 +61,8 @@ import rasterio.mask
 
 from numba import njit
 
+from scipy.signal import savgol_filter
+
 
 class rectObj(sonObj):
     '''
@@ -983,6 +985,34 @@ class rectObj(sonObj):
             I = False
         return I
     
+    
+    def _rectSonHeadingMain(self, df: pd.DataFrame, chunk, son=True):
+
+        '''
+        '''
+        smthHeading = True
+        heading = 'instr_heading'
+
+        # # Smooth heading
+        # if smthHeading:
+        #     df[heading] = savgol_filter(df[heading], 51, 3)
+
+
+        # Calculate the sonar return coordinates
+        dfOut = []
+        for i, row in df.iterrows():
+            dfOut.append(self._calcSonReturnCoords(row))
+
+        dfAll = pd.concat(dfOut)
+
+        # Calculate pixel coordinates
+        dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+
+        # Do rectification
+        self._rectSonHeading(dfAll, chunk, son=son)
+        
+        return
+    
     #===========================================================================
     def _calcSonReturnCoords(self, row):
 
@@ -1192,6 +1222,8 @@ class rectObj(sonObj):
 
                 group['son_wcp'] = sonData
 
+                group = group.dropna()
+
                 dfAll.append(group)            
                 
                 i += 1
@@ -1290,58 +1322,6 @@ class rectObj(sonObj):
             except:
                 pass
 
-            # # egn
-            # if self.egn:
-            #     self._egn_wcp(chunk, sonMeta)
-
-            #     if self.egn_stretch > 0:
-            #         self._egnDoStretch()
-
-            # img = self.sonDat.copy()
-
-            # img[0]=0 # To fix extra white on curves
-
-            # ping_cntr = 0 #Set ping counter
-            
-            # for i, group in df.groupby('record_num'):
-            #     # Iterate each sonar return
-            #     for i, row in group.iterrows():
-            #         x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
-            #         son_idx = (row['son_idx']-1).astype('int')
-
-            #         try:
-            #             # Get sonar value
-            #             sonVal = img[son_idx, ping_cntr]
-
-            #             # Add value to outup
-            #             sonRect[y, x] = sonVal
-            #         except:
-            #             pass
-
-            #     ping_cntr += 1
-
-            # Old way ^^^^^ Very slow
-
-            # ping_cntr = 0 #Set ping counter
-            
-            # for i, group in df.groupby('record_num'):
-            #     # Iterate each sonar return
-            #     for i, row in group.iterrows():
-            #         x, y = row[xPix].astype('int')-1, row[yPix].astype('int')-1
-            #         # son_idx = (row['son_idx']-1).astype('int')
-
-            #         try:
-            #             # Get sonar value
-            #             # sonVal = img[son_idx, ping_cntr]
-            #             sonVal = row['son_wcp']
-
-            #             # Add value to outup
-            #             sonRect[y, x] = sonVal
-            #         except:
-            #             pass
-
-            #     ping_cntr += 1
-
             # New way below using sparse matrix
             row = df[yPix].to_numpy().astype(int)
             col = df[xPix].to_numpy().astype(int)
@@ -1364,66 +1344,9 @@ class rectObj(sonObj):
             sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
             sonRect = sonRect.toarray()
 
-
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             sonRect = np.flip(np.flip(np.flip(sonRect,1),0),1).astype('float')
-
-            ##########
-            # Fill Gaps
-            # Replace 0 values with NaN
-            # sonRect[sonRect == 0] = np.nan
-
-            # # Fill small gaps using griddata
-            # x = np.arange(sonRect.shape[1])
-            # y = np.arange(sonRect.shape[0])
-            # xx, yy = np.meshgrid(x, y)
-
-            # # Mask for valid values
-            # mask = ~np.isnan(sonRect)
-
-            # # Coordinates of valid values
-            # valid_coords = np.array([yy[mask], xx[mask]]).T
-
-            # # Values of valid points
-            # valid_values = sonRect[mask]
-
-            # Create a KDTree for fast lookup of nearest neighbors
-            # tree = cKDTree(valid_coords)
-
-            # Define the interpolation distance in pixels
-            # interpolation_distance = 20
-
-            # # Create interpolator using only valid points
-            # interpolator = NearestNDInterpolator(valid_coords, valid_values)
-
-            # # Interpolate missing values
-            # interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
-            # print('interpolated')
-
-            # # Mask for points within the interpolation distance
-            # distances, _ = tree.query(np.c_[xx.ravel(), yy.ravel()], distance_upper_bound=interpolation_distance)
-            # distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
-            # print('tree')
-            # # Fill gaps in sonRect only within the specified distance
-            # sonRect[np.isnan(sonRect) & distance_mask] = interpolated_values[np.isnan(sonRect) & distance_mask]
-
-            # ########################
-            # # Create Convex Hull Mask
-
-            # # Compute the convex hull
-            # hull = ConvexHull(valid_coords)
-
-            # # Create a shapely polygon from the convex hull points
-            # hull_polygon = Polygon(valid_coords[hull.vertices])
-            # # buffered_hull_polygon = hull_polygon
-
-            # # Buffer the polygon to expand it slightly
-            # buffered_hull_polygon = hull_polygon.buffer(5)  # Adjust the buffer distance as needed
-
-            # # Create a mask based on the buffered convex hull using vectorized operations
-            # x, y = np.meshgrid(np.arange(sonRect.shape[1]), np.arange(sonRect.shape[0]))
-            # hull_path = contains(buffered_hull_polygon, x, y)
 
             ##########
             # Fill Gaps
@@ -1460,52 +1383,34 @@ class rectObj(sonObj):
             # Interpolate missing values
             interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
 
-            ########################
-            # Create Convex Hull Mask
+            # ########################
+            # # Create Convex Hull Mask
 
-            # Coordinates of valid values
-            x = np.arange(sonRect.shape[1])
-            y = np.arange(sonRect.shape[0])
-            xx, yy = np.meshgrid(x, y)
-            valid_coords = np.array([xx[mask], yy[mask]]).T
+            # # Coordinates of valid values
+            # x = np.arange(sonRect.shape[1])
+            # y = np.arange(sonRect.shape[0])
+            # xx, yy = np.meshgrid(x, y)
+            # valid_coords = np.array([xx[mask], yy[mask]]).T
 
-            # points = MultiPoint(valid_coords)
+            # # Compute the convex hull using scipy.spatial.ConvexHull
+            # hull = ConvexHull(valid_coords)
+            # hull_points = valid_coords[hull.vertices]
 
-            # # Compute the convex hull
-            # hull_polygon = points.convex_hull
+            # # Create a Polygon from the convex hull points
+            # hull_polygon = Polygon(hull_points)
 
-            # # Ensure the buffered hull is a single MultiPolygon or Polygon
-            # hull_polygon = unary_union(hull_polygon)
-
-            # Compute the convex hull using scipy.spatial.ConvexHull
-            hull = ConvexHull(valid_coords)
-            hull_points = valid_coords[hull.vertices]
-
-            # Create a Polygon from the convex hull points
-            hull_polygon = Polygon(hull_points)
-
-            # # Export the buffered convex hull to a shapefile
-            # gdf = gpd.GeoDataFrame(geometry=[hull_polygon])
-
-            # projName = os.path.split(self.projDir)[-1] # Get project name
-            # beamName = self.beamName # Determine which sonar beam we are working with
-            # shpName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.shp' # Create output image name
-
-            # shp = os.path.join(outDir, shpName) # Output file name
-            # gdf.to_file(shp)
-
-            # Create a mask based on the buffered convex hull using vectorized operations
-            x = np.arange(sonRect.shape[1])
-            y = np.arange(sonRect.shape[0])
-            x, y = np.meshgrid(x, y)
-            hull_path = contains(hull_polygon, x=x, y=y)
+            # # Create a mask based on the buffered convex hull using vectorized operations
+            # x = np.arange(sonRect.shape[1])
+            # y = np.arange(sonRect.shape[0])
+            # x, y = np.meshgrid(x, y)
+            # hull_path = contains(hull_polygon, x=x, y=y)
 
             @njit
-            def fill_gaps(sonRect, interpolated_values, distance_mask, hull_path):
+            def fill_gaps(sonRect, interpolated_values, distance_mask):
                 # Fill gaps in sonRect only within the specified distance and hull_path
                 for i in range(sonRect.shape[0]):
                     for j in range(sonRect.shape[1]):
-                        if np.isnan(sonRect[i, j]) and distance_mask[i, j] and hull_path[i, j]:
+                        if np.isnan(sonRect[i, j]) and distance_mask[i, j]:
                         # if np.isnan(sonRect[i, j]) and distance_mask[i, j]:
                             sonRect[i, j] = interpolated_values[i, j]
 
@@ -1518,7 +1423,7 @@ class rectObj(sonObj):
                 return sonRect
 
             # Perform the interpolation
-            sonRect = fill_gaps(sonRect, interpolated_values, distance_mask, hull_path)
+            sonRect = fill_gaps(sonRect, interpolated_values, distance_mask)
 
             sonRect = sonRect.astype('uint8')
 
@@ -1577,7 +1482,46 @@ class rectObj(sonObj):
             #      "transform": out_transform})
 
             # with rasterio.open(gtiff, "w", **out_meta) as dest:
-            #     dest.write(out_image)
+            #     dest.write(out_image)           
+            
+
+
+
+
+
+
+            # projName = os.path.split(self.projDir)[-1] # Get project name
+            # beamName = self.beamName # Determine which sonar beam we are working with
+            # imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
+
+            # gtiff = os.path.join(outDir, imgName) # Output file name
+
+            # # Make a geopandas point from the sonar data
+            # df['geometry'] = gpd.points_from_xy(df[xCoord], df[yCoord])
+            # gdf = gpd.GeoDataFrame(df, geometry='geometry', crs=epsg)
+
+            # shp = gtiff.replace('.tif', 'temp.shp')
+            # gdf.to_file(shp)
+
+            # gdal.Grid(
+            #     gtiff, 
+            #     shp, 
+            #     format='GTiff', 
+            #     outputSRS=epsg, 
+            #     algorithm='nearest', 
+            #     zfield='son_wcp', 
+            #     width=outShape[0], 
+            #     height=outShape[1], 
+            #     outputBounds=[xMin, yMin, xMax, yMax], 
+            #     outputType=gdal.GDT_Byte, 
+            #     noData=0)
+            
+
+            # if pix_res != 0:
+            #     gtiff = gtiff.replace('.tif', 'temp.tif')
+
+
+            
 
 
             #############

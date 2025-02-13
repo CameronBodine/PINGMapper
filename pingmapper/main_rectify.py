@@ -500,72 +500,43 @@ def rectify_master_func(logfilename='',
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
 
-    # Calculate Sonar Return Coordinates
-    if not cog:
-        start_time = time.time()
-        print("\nCalculating sonar return coordinates:\n")
-        for son in portstar:
-            # son._calcSonReturnCoords()
-
-            # Get smoothed trackline file
-            smth_trk_file = son.smthTrkFile
-            sDF = pd.read_csv(smth_trk_file)
-
-            r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._calcSonReturnCoords)(sDF.iloc[i]) for i in tqdm(range(len(sDF))))
-
-            # Concatenate and store cooordinates
-            dfAll = pd.concat(r)
-            son.sonarCoordsDF = dfAll
-
-            print(dfAll)
-
-            # outDir = os.path.dirname(smth_trk_file)
-            # outFile = os.path.join(outDir, 'Heading_Coords_{}.csv'.format(son.beamName))
-
-            # dfAll.to_csv(outFile)
-
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
-
-    # sys.exit()
-    # Mask sonar returns based on mosaic method (adding later)
-
-
-    # Calculate each chunks local pix coordinates (x, y)
-    if not cog:
-        start_time = time.time()
-        print("\nCalculating sonar return coordinates:\n")
-        for son in portstar:
-
-            # Get sonar coords dataframe
-            sonarCoordsDF = son.sonarCoordsDF
-
-            # Get chunk id
-            chunks = son._getChunkID()
-
-            print('\n\nCalculating pix coordinates for', len(chunks), 'chunks for', son.beamName)
-
-            r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._calcSonReturnPixCoords)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
-            # for i in chunks:
-            #     son._calcSonReturnPixCoords(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
-
-            # Concatenate and store cooordinates
-            dfAll = pd.concat(r)
-            son.sonarCoordsDF = dfAll
-
-            print(dfAll)
-
-        print("Done!")
-        print("Time (s):", round(time.time() - start_time, ndigits=1))
-        gc.collect()
-        printUsage()
-
-    # # Get sonar data for each sonar return point
+    # # Calculate Sonar Return Coordinates
     # if not cog:
     #     start_time = time.time()
-    #     print("\nGet sonar data:\n")
+    #     print("\nCalculating sonar return coordinates:\n")
+    #     for son in portstar:
+    #         # son._calcSonReturnCoords()
+
+    #         # Get smoothed trackline file
+    #         smth_trk_file = son.smthTrkFile
+    #         sDF = pd.read_csv(smth_trk_file)
+
+    #         r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._calcSonReturnCoords)(sDF.iloc[i]) for i in tqdm(range(len(sDF))))
+
+    #         # Concatenate and store cooordinates
+    #         dfAll = pd.concat(r)
+    #         son.sonarCoordsDF = dfAll
+
+    #         print(dfAll)
+
+    #         # outDir = os.path.dirname(smth_trk_file)
+    #         # outFile = os.path.join(outDir, 'Heading_Coords_{}.csv'.format(son.beamName))
+
+    #         # dfAll.to_csv(outFile)
+
+    #     print("Done!")
+    #     print("Time (s):", round(time.time() - start_time, ndigits=1))
+    #     gc.collect()
+    #     printUsage()
+
+    # # sys.exit()
+    # # Mask sonar returns based on mosaic method (adding later)
+
+
+    # # Calculate each chunks local pix coordinates (x, y)
+    # if not cog:
+    #     start_time = time.time()
+    #     print("\nCalculating sonar return coordinates:\n")
     #     for son in portstar:
 
     #         # Get sonar coords dataframe
@@ -574,9 +545,11 @@ def rectify_master_func(logfilename='',
     #         # Get chunk id
     #         chunks = son._getChunkID()
 
-    #         print('\n\nGet sonar data for', len(chunks), 'chunks for', son.beamName)
+    #         print('\n\nCalculating pix coordinates for', len(chunks), 'chunks for', son.beamName)
 
-    #         r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._getSonarReturns)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+    #         r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._calcSonReturnPixCoords)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+    #         # for i in chunks:
+    #         #     son._calcSonReturnPixCoords(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
 
     #         # Concatenate and store cooordinates
     #         dfAll = pd.concat(r)
@@ -589,9 +562,9 @@ def rectify_master_func(logfilename='',
     #     gc.collect()
     #     printUsage()
 
-    ############################################################################
-    # Rectify Heading sonar imagery                                                    #
-    ############################################################################
+    # ############################################################################
+    # # Rectify Heading sonar imagery                                                    #
+    # ############################################################################
 
     if not cog:
         start_time = time.time()
@@ -601,8 +574,12 @@ def rectify_master_func(logfilename='',
             # Set output directory
             son.outDir = os.path.join(son.projDir, son.beamName)
 
-            # Get sonar coords dataframe
-            sonarCoordsDF = son.sonarCoordsDF
+            # # Get sonar coords dataframe
+            # sonarCoordsDF = son.sonarCoordsDF
+
+            # Get smoothed trackline file
+            smth_trk_file = son.smthTrkFile
+            sDF = pd.read_csv(smth_trk_file)
 
             # Get chunk id
             chunks = son._getChunkID()
@@ -612,9 +589,11 @@ def rectify_master_func(logfilename='',
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
-            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeading)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+            # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
             # for i in chunks:
-            #     son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
+            #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
+            #     son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
 
             # # Concatenate and store cooordinates
             # dfAll = pd.concat(r)
