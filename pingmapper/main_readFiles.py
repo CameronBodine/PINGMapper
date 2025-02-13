@@ -1260,7 +1260,7 @@ def read_master_func(logfilename='',
             if beam != "ss_port" or beam != "ss_star":
                 df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
 
-                df = son0._reassignChunks(df)
+                df = son._reassignChunks(df)
 
                 son._saveSonMetaCSV(df)
 
