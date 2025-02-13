@@ -595,6 +595,8 @@ def rectify_master_func(logfilename='',
             #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
             #     son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
 
+            #     sys.exit()
+
             # # Concatenate and store cooordinates
             # dfAll = pd.concat(r)
             # son.sonarCoordsDF = dfAll

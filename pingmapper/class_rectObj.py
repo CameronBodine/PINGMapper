@@ -985,11 +985,17 @@ class rectObj(sonObj):
             I = False
         return I
     
-    
+    ############################################################################
+    # Rectify sonar imagery - Ping-wise (heading)                              #
+    ############################################################################
+
+    #===========================================================================
     def _rectSonHeadingMain(self, df: pd.DataFrame, chunk, son=True):
 
         '''
         '''
+        start_time = time.time()
+
         smthHeading = True
         heading = 'instr_heading'
 
@@ -1005,12 +1011,18 @@ class rectObj(sonObj):
 
         dfAll = pd.concat(dfOut)
 
+        t1 = round(time.time() - start_time, ndigits=1)
+
         # Calculate pixel coordinates
+        start_time = time.time()
         dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+        t2 = round(time.time() - start_time, ndigits=1)
 
         # Do rectification
+        start_time = time.time()
         self._rectSonHeading(dfAll, chunk, son=son)
-        
+        t3 = round(time.time() - start_time, ndigits=1)
+        print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
         return
     
     #===========================================================================
@@ -1100,7 +1112,7 @@ class rectObj(sonObj):
 
         return pingDF
 
-
+    #===========================================================================
     def _calcSonReturnPixCoords(self, df: pd.DataFrame, chunk, son=True, wgs=False):
 
         '''
@@ -1155,6 +1167,7 @@ class rectObj(sonObj):
 
         return df
     
+    #===========================================================================
     def _getSonarReturns(self, df: pd.DataFrame, chunk, son=True):
 
         '''
@@ -1235,6 +1248,7 @@ class rectObj(sonObj):
 
         return dfAll
     
+    #===========================================================================
     def _rectSonHeading(self, df: pd.DataFrame, chunk, son=True, wgs=False):
 
         '''
@@ -1383,47 +1397,8 @@ class rectObj(sonObj):
             # Interpolate missing values
             interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
 
-            # ########################
-            # # Create Convex Hull Mask
-
-            # # Coordinates of valid values
-            # x = np.arange(sonRect.shape[1])
-            # y = np.arange(sonRect.shape[0])
-            # xx, yy = np.meshgrid(x, y)
-            # valid_coords = np.array([xx[mask], yy[mask]]).T
-
-            # # Compute the convex hull using scipy.spatial.ConvexHull
-            # hull = ConvexHull(valid_coords)
-            # hull_points = valid_coords[hull.vertices]
-
-            # # Create a Polygon from the convex hull points
-            # hull_polygon = Polygon(hull_points)
-
-            # # Create a mask based on the buffered convex hull using vectorized operations
-            # x = np.arange(sonRect.shape[1])
-            # y = np.arange(sonRect.shape[0])
-            # x, y = np.meshgrid(x, y)
-            # hull_path = contains(hull_polygon, x=x, y=y)
-
-            @njit
-            def fill_gaps(sonRect, interpolated_values, distance_mask):
-                # Fill gaps in sonRect only within the specified distance and hull_path
-                for i in range(sonRect.shape[0]):
-                    for j in range(sonRect.shape[1]):
-                        if np.isnan(sonRect[i, j]) and distance_mask[i, j]:
-                        # if np.isnan(sonRect[i, j]) and distance_mask[i, j]:
-                            sonRect[i, j] = interpolated_values[i, j]
-
-                # Replace any remaining NaN values with 0
-                for i in range(sonRect.shape[0]):
-                    for j in range(sonRect.shape[1]):
-                        if np.isnan(sonRect[i, j]):
-                            sonRect[i, j] = 0
-
-                return sonRect
-
-            # Perform the interpolation
-            sonRect = fill_gaps(sonRect, interpolated_values, distance_mask)
+            # Apply distance mask
+            sonRect = interpolated_values * distance_mask
 
             sonRect = sonRect.astype('uint8')
 
@@ -1437,7 +1412,7 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
-            if pix_res != 0:
+            if pix_res != 0 or pix_res != 0.0:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -1459,6 +1434,125 @@ class rectObj(sonObj):
                     dst=None
 
             del dst
+
+            #############
+            # Do resizing
+            if pix_res != 0 or pix_res != 0.0:
+                self._pixresResize(gtiff)
+
+        if self.rect_wcr:
+
+            imgOutPrefix = 'rect_wcr'
+            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+
+            # New way below using sparse matrix
+            row = df[yPix].to_numpy().astype(int)
+            col = df[xPix].to_numpy().astype(int)
+            data = df['son_wcr'].to_numpy()
+
+            # Create a dictionary to store the maximum value for each coordinate
+            max_values = {}
+            for r, c, d in zip(row, col, data):
+                if (r, c) in max_values:
+                    max_values[(r, c)] = max(max_values[(r, c)], d)
+                else:
+                    max_values[(r, c)] = d
+
+            # Convert the dictionary back to arrays
+            row = np.array([k[0] for k in max_values.keys()])
+            col = np.array([k[1] for k in max_values.keys()])
+            data = np.array(list(max_values.values()))
+
+            # Create the sparse matrix
+            sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
+            sonRect = sonRect.toarray()
+
+            # Rotate 180 and flip
+            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+            sonRect = np.flip(np.flip(np.flip(sonRect,1),0),1).astype('float')
+
+            ##########
+            # Fill Gaps
+            # Replace 0 values with NaN
+            sonRect[sonRect == 0] = np.nan
+
+            # Define the interpolation distance in pixels
+            interpolation_distance = 50
+
+            # Prepare data for interpolation
+            x = np.arange(sonRect.shape[1])
+            y = np.arange(sonRect.shape[0])
+            xx, yy = np.meshgrid(x, y)
+
+            # Mask for valid values
+            mask = ~np.isnan(sonRect)
+
+            # Coordinates of valid values
+            valid_coords = np.array([yy[mask], xx[mask]]).T
+
+            # Values of valid points
+            valid_values = sonRect[mask]
+
+            # Create a KDTree for fast lookup of nearest neighbors
+            tree = cKDTree(valid_coords)
+
+            # Mask for points within the interpolation distance
+            distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
+            distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
+
+            # Create interpolator using only valid points
+            interpolator = NearestNDInterpolator(valid_coords, valid_values)
+
+            # Interpolate missing values
+            interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
+
+            # Apply distance mask
+            sonRect = interpolated_values * distance_mask
+
+            sonRect = sonRect.astype('uint8')
+
+
+            ###############
+            # Create output
+
+            projName = os.path.split(self.projDir)[-1] # Get project name
+            beamName = self.beamName # Determine which sonar beam we are working with
+            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
+
+            gtiff = os.path.join(outDir, imgName) # Output file name
+
+            if pix_res != 0 or pix_res != 0.0:
+                gtiff = gtiff.replace('.tif', 'temp.tif')
+
+            # Export georectified image
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=sonRect.shape[0],
+                width=sonRect.shape[1],
+                count=1,
+                dtype=sonRect.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw'
+                ) as dst:
+                    dst.nodata=0
+                    dst.write(sonRect,1)
+                    dst.write_colormap(1, self.son_colorMap)
+                    dst=None
+
+            del dst
+
+            #############
+            # Do resizing
+            if pix_res != 0 or pix_res != 0.0:
+                self._pixresResize(gtiff)
 
             ##############################
             # Mask with Coverage Shapefile
@@ -1483,51 +1577,6 @@ class rectObj(sonObj):
 
             # with rasterio.open(gtiff, "w", **out_meta) as dest:
             #     dest.write(out_image)           
-            
-
-
-
-
-
-
-            # projName = os.path.split(self.projDir)[-1] # Get project name
-            # beamName = self.beamName # Determine which sonar beam we are working with
-            # imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
-
-            # gtiff = os.path.join(outDir, imgName) # Output file name
-
-            # # Make a geopandas point from the sonar data
-            # df['geometry'] = gpd.points_from_xy(df[xCoord], df[yCoord])
-            # gdf = gpd.GeoDataFrame(df, geometry='geometry', crs=epsg)
-
-            # shp = gtiff.replace('.tif', 'temp.shp')
-            # gdf.to_file(shp)
-
-            # gdal.Grid(
-            #     gtiff, 
-            #     shp, 
-            #     format='GTiff', 
-            #     outputSRS=epsg, 
-            #     algorithm='nearest', 
-            #     zfield='son_wcp', 
-            #     width=outShape[0], 
-            #     height=outShape[1], 
-            #     outputBounds=[xMin, yMin, xMax, yMax], 
-            #     outputType=gdal.GDT_Byte, 
-            #     noData=0)
-            
-
-            # if pix_res != 0:
-            #     gtiff = gtiff.replace('.tif', 'temp.tif')
-
-
-            
-
-
-            #############
-            # Do resizing
-            if pix_res != 0:
-                self._pixresResize(gtiff)
 
         return
 
@@ -1709,16 +1758,8 @@ class rectObj(sonObj):
             
             
 
-            
-
-
-        
-
-
-
-
     ############################################################################
-    # Rectify sonar imagery                                                    #
+    # Rectify sonar imagery - Rubbersheeting                                   #
     ############################################################################
 
     def _rectSonParallel(self,
