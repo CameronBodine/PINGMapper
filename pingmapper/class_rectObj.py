@@ -47,11 +47,11 @@ from shapely import affinity
 
 from matplotlib import colormaps    
 
-from scipy.interpolate import NearestNDInterpolator, griddata
+from scipy.interpolate import NearestNDInterpolator, griddata, UnivariateSpline
 from scipy.sparse import coo_matrix
 from scipy.spatial import cKDTree, ConvexHull
 from skimage.draw import polygon
-from shapely.geometry import Polygon, Point, MultiPoint
+from shapely.geometry import Polygon, Point, MultiPoint, LineString
 from shapely.ops import unary_union
 from shapely.vectorized import contains
 
@@ -1303,14 +1303,6 @@ class rectObj(sonObj):
 
         pix_res = self.pix_res_son
 
-        # Filter sonMetaDF by chunk
-        if not hasattr(self, 'sonMetaDF'):
-            self._loadSonMeta()
-
-        sonMetaAll = self.sonMetaDF
-        isChunk = sonMetaAll['chunk_id']==chunk
-        sonMeta = sonMetaAll[isChunk].reset_index()
-
         if son:
             # Create output directory if it doesn't exist
             outDir = self.outDir # Parent directory
@@ -1337,6 +1329,11 @@ class rectObj(sonObj):
         addZero = self._addZero(chunk)
 
         df.sort_index(ascending=True, inplace=True)
+
+        ###################
+        # Get coverage mask
+
+        covShp = self._getCoverageMask(df, wgs)
 
         ##################
         # Do Rectification
@@ -1479,6 +1476,22 @@ class rectObj(sonObj):
 
             del dst
 
+            #############################
+            # Mask with Coverage Shapefile
+            with rasterio.open(gtiff) as src:
+                out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
+                out_meta = src.meta.copy()
+
+            out_meta.update({"driver": "GTiff",
+                 "height": out_image.shape[1],
+                 "width": out_image.shape[2],
+                 "transform": out_transform})
+            
+            with rasterio.open(gtiff, "w", **out_meta) as dst:
+                dst.write(out_image) 
+                dst.write_colormap(1, self.son_colorMap)
+                dst=None
+
             #############
             # Do resizing
             if pix_res != 0 and pix_res != 0.0:
@@ -1486,6 +1499,104 @@ class rectObj(sonObj):
 
         return
 
+
+    #===========================================================================
+    def _getCoverageMask(self, df: pd.DataFrame, wgs):
+        '''
+        '''
+
+        filter = int(self.nchunk*0.1)
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xCoord = 'lon'
+            yCoord = 'lat'
+        else:
+            epsg = self.humDat['epsg']
+            xCoord = 'e'
+            yCoord = 'n'
+
+        trk_x = []
+        trk_y = []
+        rng_x = []
+        rng_y = []
+
+        
+
+        # df is already sorted by record_num and son_idx
+        # iterate through each record_num
+
+        i = 0
+        for name, group in df.groupby(level=['record_num']):
+            
+            # Trackline coordinate is first row
+            trk = group.iloc[0]
+            trk_x.append(trk[xCoord])
+            trk_y.append(trk[yCoord])
+
+            # Range extent coordinate is last row
+            rng = group.iloc[-1]
+            rng_x.append(rng[xCoord])
+            rng_y.append(rng[yCoord])
+
+            i += 1
+
+        trk_x = np.array(trk_x)
+        trk_y = np.array(trk_y)
+        rng_x = np.array(rng_x)
+        rng_y = np.array(rng_y)
+
+        # Get Zu values for interpolation
+        t = np.arange(0, i).astype(float)
+
+        # Attempt to fix error
+        # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
+        okay = np.where(np.abs(np.diff(rng_x))+np.abs(np.diff(rng_y))>0)
+        x = np.r_[rng_x[okay], rng_x[-1]]
+        y = np.r_[rng_y[okay], rng_y[-1]]
+        t = np.r_[t[okay], t[-1]]
+
+        # Interpolate
+        tck, _ = splprep([x,y], u=t, k=3, s=0)
+        x_interp, y_interp = splev(t, tck)
+
+        # Put lists together
+        x = trk_x.tolist() + x_interp.tolist()[::-1][::filter]
+        y = trk_y.tolist() + y_interp.tolist()[::-1][::filter]
+
+        # Create polygon from points
+        chunk_geom = Polygon(zip(x, y))
+        chunk_geom = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[chunk_geom])
+
+        # Buffer to fix funky stuff
+        bufDist = 10
+        buf = chunk_geom.buffer(bufDist)
+        bufDist *= -1
+        buf = buf.buffer(bufDist, join_style='mitre')
+
+        chunk_geom = gpd.GeoDataFrame(geometry=buf, crs=chunk_geom.crs)
+
+        # # Save to shapefile
+        # beam = self.beamName
+        # projName = os.path.basename(self.projDir)
+        # outFile = os.path.join(self.metaDir, projName+"_"+beam+"_coverage.shp")
+        # chunk_geom.to_file(outFile)
+
+        # # try linestring
+        # rng_line = LineString(zip(x_interp, y_interp))
+        # rng_line = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[rng_line])
+
+        # outFile = outFile.replace('coverage', 'range')
+        # rng_line.to_file(outFile)
+
+        # trk_line = LineString(zip(trk_x, trk_y))
+        # trk_line = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[trk_line])
+
+        # outFile = outFile.replace('range', 'trk')
+        # trk_line.to_file(outFile)
+
+        return chunk_geom
 
 
 
