@@ -392,10 +392,7 @@ class portstarObj(object):
         # maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
-        if cog:
-            chunkField = 'chunk_id'
-        else:
-            chunkField = 'chunk_id_2'
+        chunkField = 'chunk_id'
 
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
