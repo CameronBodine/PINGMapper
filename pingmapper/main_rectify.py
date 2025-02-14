@@ -596,9 +596,11 @@ def rectify_master_func(logfilename='',
                 heading = 'instr_heading'
                 if smthHeading:
                     for name, group in sDF.groupby('transect'):
-                        group[heading] = savgol_filter(group[heading], 51, 3)
+                        smth = savgol_filter(group[heading], 51, 3)
+                        group[heading] = smth
+                        sDF.update(group)
             else:
-                heading = 'trk_cog'            
+                heading = 'trk_cog' 
 
             # Get chunk id
             chunks = son._getChunkID()
