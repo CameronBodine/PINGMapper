@@ -42,6 +42,8 @@ from pingmapper.funcs_rectify import smoothTrackline
 
 import inspect
 
+from scipy.signal import savgol_filter
+
 #===============================================================================
 def rectify_master_func(logfilename='',
                         project_mode=0,
@@ -88,6 +90,9 @@ def rectify_master_func(logfilename='',
                         cog=True,
                         rect_wcp=False,
                         rect_wcr=False,
+                        rubberSheeting=True,
+                        rectMethod='COG',
+                        rectInterpDist=50,
                         son_colorMap='Greys',
                         pred_sub=0,
                         map_sub=0,
@@ -188,6 +193,11 @@ def rectify_master_func(logfilename='',
     flip = False #Flip port/star
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
     filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing
+
+    # Heading or COG rectification params
+    smthHeading = True
+    # interpolation_distance = 100
+    ## interp_method???
 
     # Specify multithreaded processing thread count
     if threadCnt==0: # Use all threads
@@ -566,7 +576,7 @@ def rectify_master_func(logfilename='',
     # # Rectify Heading sonar imagery                                                    #
     # ############################################################################
 
-    if not cog:
+    if not rubberSheeting:
         start_time = time.time()
         print("\nRectifying and Exporting Geotiffs based on heading:\n")
         for son in portstar:
@@ -581,6 +591,15 @@ def rectify_master_func(logfilename='',
             smth_trk_file = son.smthTrkFile
             sDF = pd.read_csv(smth_trk_file)
 
+            # Smooth heading
+            if rectMethod == 'Heading':
+                heading = 'instr_heading'
+                if smthHeading:
+                    for name, group in sDF.groupby('transect'):
+                        group[heading] = savgol_filter(group[heading], 51, 3)
+            else:
+                heading = 'trk_cog'            
+
             # Get chunk id
             chunks = son._getChunkID()
 
@@ -590,7 +609,7 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
             # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
-            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(range(len(chunks))))
             # for i in chunks:
             #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
             #     son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
@@ -624,17 +643,13 @@ def rectify_master_func(logfilename='',
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
 
-    if (rect_wcp and cog) or (rect_wcr and cog):
+    if (rect_wcp and rubberSheeting) or (rect_wcr and rubberSheeting):
         for son in portstar:
             # Set output directory
             son.outDir = os.path.join(son.projDir, son.beamName)
 
             # Get chunk id's
-            if cog:
-                chunks = son._getChunkID()
-            else:
-                chunks = son._getChunkID_Update()
-                chunks = chunks[:-1]
+            chunks = son._getChunkID()
 
             # Load sonMetaDF
             son._loadSonMeta()

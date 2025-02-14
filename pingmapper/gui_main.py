@@ -304,8 +304,19 @@ def gui(batch: bool):
     check_rect_wcp = sg.Checkbox('WCP (Water Column Present)', key='rect_wcp', default=default_params['rect_wcp'])
     check_rect_wcr = sg.Checkbox('WCR (Water Column Removed)', key='rect_wcr', default=default_params['rect_wcr'])
 
-    # COG
-    check_rect_cog = sg.Checkbox('Use COG', key='cog', default=default_params['cog'])
+    # # COG
+    # check_rect_cog = sg.Checkbox('Use COG', key='cog', default=default_params['cog'])
+    # Rectification Method
+    check_rect_meth = sg.Checkbox('Rubber Sheeting or', key='rubberSheeting', default=default_params['rubberSheeting'], enable_events=True)
+    if default_params['rubberSheeting'] == True:
+        rect_meth_status = True
+    else:
+        rect_meth_status = False
+    combo_rect_meth = sg.Combo(['Heading', 'COG'], key='rectMethod', default_value=default_params['rectMethod'], disabled=rect_meth_status)
+
+    # Interpolation Distance
+    text_rect_interp = sg.Text('Interp. Dist.', size=(10,1))
+    slide_rect_interp = sg.Slider(range=(0, 200), resolution=5, orientation='h', key='rectInterpDist', default_value=default_params['rectInterpDist'], disabled=rect_meth_status)
 
     text_color = sg.Text('Sonar Colormap', size=(30,1))
     combo_color = sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])
@@ -316,7 +327,7 @@ def gui(batch: bool):
     text_rect_chunk = sg.Text('# Chunks per Mosaic [0==All Chunks]', size=(30,1))
     in_rect_chunk = sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1))
     
-    col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_cog]], pad=0)
+    col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_meth, combo_rect_meth], [text_rect_interp, slide_rect_interp]], pad=0)
     col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk]], pad=0)
     
     # Add to layout
@@ -462,13 +473,14 @@ def gui(batch: bool):
         if event == 'Edit Table':
             clip_table(filter_time_csv)
 
-        # if event == 'Load Table':
-        #     time_table = pd.read_csv(filter_time_csv)
-
-        #     print('\n\nFiltering by time')
-        #     print(time_table)
-
-        #     time_table = filter_time_csv
+        # Enable or disable the slider based on the selected rectification method
+        if event == 'rubberSheeting':
+            if values['rubberSheeting'] == True:
+                window['rectMethod'].update(disabled=True)
+                window['rectInterpDist'].update(disabled=True)
+            else:
+                window['rectMethod'].update(disabled=False)
+                window['rectInterpDist'].update(disabled=False)
 
         
 
@@ -616,7 +628,9 @@ def gui(batch: bool):
             'pltBedPick':values['pltBedPick'],
             'rect_wcp':values['rect_wcp'],
             'rect_wcr':values['rect_wcr'],
-            'cog':values['cog'],
+            'rubberSheeting':values['rubberSheeting'],
+            'rectMethod':values['rectMethod'],
+            'rectInterpDist':int(values['rectInterpDist']),
             'son_colorMap':values['son_colorMap'],
             'mosaic_nchunk':int(values['mosaic_nchunk']),
             'pred_sub':values['pred_sub'],

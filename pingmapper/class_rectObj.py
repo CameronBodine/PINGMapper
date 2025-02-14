@@ -989,24 +989,16 @@ class rectObj(sonObj):
     ############################################################################
 
     #===========================================================================
-    def _rectSonHeadingMain(self, df: pd.DataFrame, chunk, son=True):
+    def _rectSonHeadingMain(self, df: pd.DataFrame, chunk, son=True, heading='instr_heading', interp_dist=50):
 
         '''
         '''
         start_time = time.time()
 
-        smthHeading = True
-        heading = 'instr_heading'
-
-        # # Smooth heading
-        # if smthHeading:
-        #     df[heading] = savgol_filter(df[heading], 51, 3)
-
-
         # Calculate the sonar return coordinates
         dfOut = []
         for i, row in df.iterrows():
-            dfOut.append(self._calcSonReturnCoords(row))
+            dfOut.append(self._calcSonReturnCoords(row, heading))
 
         dfAll = pd.concat(dfOut)
 
@@ -1019,13 +1011,13 @@ class rectObj(sonObj):
 
         # Do rectification
         start_time = time.time()
-        self._rectSonHeading(dfAll, chunk, son=son)
+        self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
         t3 = round(time.time() - start_time, ndigits=1)
         # print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
         return
     
     #===========================================================================
-    def _calcSonReturnCoords(self, row):
+    def _calcSonReturnCoords(self, row, heading):
 
         son_range = 'son_range'
         son_idx = 'son_idx'
@@ -1039,7 +1031,6 @@ class rectObj(sonObj):
         n = 'n'
         record_num = 'record_num'
         chunk_id = 'chunk_id'
-        instr_heading = 'instr_heading'
 
         flip = False
 
@@ -1066,7 +1057,7 @@ class rectObj(sonObj):
             rotate *= -1
 
         # Calculate ping bearing and normalize to range 0-360
-        pingDF[ping_bearing] = (row[instr_heading]+rotate) % 360
+        pingDF[ping_bearing] = (row[heading]+rotate) % 360
 
         pix_m = self.pixM # Get pixel size for each chunk
 
@@ -1293,14 +1284,11 @@ class rectObj(sonObj):
         return dfAll
     
     #===========================================================================
-    def _rectSonHeading(self, df: pd.DataFrame, chunk, son=True, wgs=False):
+    def _rectSonHeading(self, df: pd.DataFrame, chunk, son=True, wgs=False, interpolation_distance=50):
 
         '''
         
         '''
-
-        # Define the interpolation distance in pixels
-        interpolation_distance = 50
 
         pix_res = self.pix_res_son
 
@@ -1333,7 +1321,6 @@ class rectObj(sonObj):
 
         ###################
         # Get coverage mask
-
         # covShp = self._getCoverageMask(df, wgs)
 
         ##################
@@ -1409,51 +1396,52 @@ class rectObj(sonObj):
 
             ##########
             # Fill Gaps
-            # First pad sonRect with 0's (helps with masking) by interpolation_distance
-            sonRect = np.pad(sonRect, (interpolation_distance, ), mode='constant', constant_values=0)
+            if interpolation_distance > 0:
+                # First pad sonRect with 0's (helps with masking) by interpolation_distance
+                sonRect = np.pad(sonRect, (interpolation_distance, ), mode='constant', constant_values=0)
 
-            # Replace 0 values with NaN
-            sonRect[sonRect == 0] = np.nan
+                # Replace 0 values with NaN
+                sonRect[sonRect == 0] = np.nan
 
-            # Prepare data for interpolation
-            x = np.arange(sonRect.shape[1])
-            y = np.arange(sonRect.shape[0])
-            xx, yy = np.meshgrid(x, y)
+                # Prepare data for interpolation
+                x = np.arange(sonRect.shape[1])
+                y = np.arange(sonRect.shape[0])
+                xx, yy = np.meshgrid(x, y)
 
-            # Mask for valid values
-            mask = ~np.isnan(sonRect)
+                # Mask for valid values
+                mask = ~np.isnan(sonRect)
 
-            # Coordinates of valid values
-            valid_coords = np.array([yy[mask], xx[mask]]).T
+                # Coordinates of valid values
+                valid_coords = np.array([yy[mask], xx[mask]]).T
 
-            # Values of valid points
-            valid_values = sonRect[mask]
+                # Values of valid points
+                valid_values = sonRect[mask]
 
-            # Create a KDTree for fast lookup of nearest neighbors
-            tree = cKDTree(valid_coords)
+                # Create a KDTree for fast lookup of nearest neighbors
+                tree = cKDTree(valid_coords)
 
-            # Mask for points within the interpolation distance
-            distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
-            distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
+                # Mask for points within the interpolation distance
+                distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
+                distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
 
-            # Try erroding the mask....IT WORKS!!!!
-            # https://forum.image.sc/t/shrink-labeled-regions/50443
-            distance_mask = distance_mask.astype('uint8')
-            distance_mask = self._erode_labels(distance_mask, interpolation_distance)
+                # Try erroding the mask....IT WORKS!!!!
+                # https://forum.image.sc/t/shrink-labeled-regions/50443
+                distance_mask = distance_mask.astype('uint8')
+                distance_mask = self._erode_labels(distance_mask, interpolation_distance)
 
-            # Create interpolator using only valid points
-            interpolator = NearestNDInterpolator(valid_coords, valid_values)
+                # Create interpolator using only valid points
+                interpolator = NearestNDInterpolator(valid_coords, valid_values)
 
-            # Interpolate missing values
-            interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
+                # Interpolate missing values
+                interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
 
-            # Apply distance mask
-            sonRect = interpolated_values * distance_mask
+                # Apply distance mask
+                sonRect = interpolated_values * distance_mask
 
-            # Get sonRect back to original dims
-            sonRect = sonRect[interpolation_distance:-interpolation_distance, interpolation_distance:-interpolation_distance]
+                # Get sonRect back to original dims
+                sonRect = sonRect[interpolation_distance:-interpolation_distance, interpolation_distance:-interpolation_distance]
 
-            sonRect = sonRect.astype('uint8')
+                sonRect = sonRect.astype('uint8')
 
 
             ###############
@@ -1610,7 +1598,7 @@ class rectObj(sonObj):
 
         return chunk_geom
 
-
+    #===========================================================================
     def _erode_labels(self, segmentation, erosion_iterations):
         # create empty list where the eroded masks can be saved to
         list_of_eroded_masks = list()
@@ -1805,8 +1793,6 @@ class rectObj(sonObj):
 
         return
             
-            
-
     ############################################################################
     # Rectify sonar imagery - Rubbersheeting                                   #
     ############################################################################
