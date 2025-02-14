@@ -60,6 +60,7 @@ from shapely.geometry import mapping
 import rasterio.mask
 
 from scipy.signal import savgol_filter
+from scipy import ndimage
 
 
 class rectObj(sonObj):
@@ -1333,7 +1334,7 @@ class rectObj(sonObj):
         ###################
         # Get coverage mask
 
-        covShp = self._getCoverageMask(df, wgs)
+        # covShp = self._getCoverageMask(df, wgs)
 
         ##################
         # Do Rectification
@@ -1408,6 +1409,9 @@ class rectObj(sonObj):
 
             ##########
             # Fill Gaps
+            # First pad sonRect with 0's (helps with masking) by interpolation_distance
+            sonRect = np.pad(sonRect, (interpolation_distance, ), mode='constant', constant_values=0)
+
             # Replace 0 values with NaN
             sonRect[sonRect == 0] = np.nan
 
@@ -1432,6 +1436,11 @@ class rectObj(sonObj):
             distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
             distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
 
+            # Try erroding the mask....IT WORKS!!!!
+            # https://forum.image.sc/t/shrink-labeled-regions/50443
+            distance_mask = distance_mask.astype('uint8')
+            distance_mask = self._erode_labels(distance_mask, interpolation_distance)
+
             # Create interpolator using only valid points
             interpolator = NearestNDInterpolator(valid_coords, valid_values)
 
@@ -1440,6 +1449,9 @@ class rectObj(sonObj):
 
             # Apply distance mask
             sonRect = interpolated_values * distance_mask
+
+            # Get sonRect back to original dims
+            sonRect = sonRect[interpolation_distance:-interpolation_distance, interpolation_distance:-interpolation_distance]
 
             sonRect = sonRect.astype('uint8')
 
@@ -1476,21 +1488,21 @@ class rectObj(sonObj):
 
             del dst
 
-            #############################
-            # Mask with Coverage Shapefile
-            with rasterio.open(gtiff) as src:
-                out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
-                out_meta = src.meta.copy()
+            # #############################
+            # # Mask with Coverage Shapefile
+            # with rasterio.open(gtiff) as src:
+            #     out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
+            #     out_meta = src.meta.copy()
 
-            out_meta.update({"driver": "GTiff",
-                 "height": out_image.shape[1],
-                 "width": out_image.shape[2],
-                 "transform": out_transform})
+            # out_meta.update({"driver": "GTiff",
+            #      "height": out_image.shape[1],
+            #      "width": out_image.shape[2],
+            #      "transform": out_transform})
             
-            with rasterio.open(gtiff, "w", **out_meta) as dst:
-                dst.write(out_image) 
-                dst.write_colormap(1, self.son_colorMap)
-                dst=None
+            # with rasterio.open(gtiff, "w", **out_meta) as dst:
+            #     dst.write(out_image) 
+            #     dst.write_colormap(1, self.son_colorMap)
+            #     dst=None
 
             #############
             # Do resizing
@@ -1599,7 +1611,27 @@ class rectObj(sonObj):
         return chunk_geom
 
 
+    def _erode_labels(self, segmentation, erosion_iterations):
+        # create empty list where the eroded masks can be saved to
+        list_of_eroded_masks = list()
+        regions = regionprops(segmentation)
+        def erode_mask(segmentation_labels, label_id, erosion_iterations):
+            
+            only_current_label_id = np.where(segmentation_labels == label_id, 1, 0)
+            eroded = ndimage.binary_erosion(only_current_label_id, iterations = erosion_iterations)
+            relabeled_eroded = np.where(eroded == 1, label_id, 0)
+            return(relabeled_eroded)
 
+        for i in range(len(regions)):
+            label_id = regions[i].label
+            list_of_eroded_masks.append(erode_mask(segmentation, label_id, erosion_iterations))
+
+        # convert list of numpy arrays to stacked numpy array
+        final_array = np.stack(list_of_eroded_masks)
+
+        # max_IP to reduce the stack of arrays, each containing one labelled region, to a single 2D np array. 
+        final_array_labelled = np.sum(final_array, axis = 0)
+        return(final_array_labelled)
 
     ############################################################################
     # Export Trackline and Coverage shapefiles                                 #
