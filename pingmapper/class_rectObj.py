@@ -1068,13 +1068,34 @@ class rectObj(sonObj):
         # Calculate range extent coordinates for each ping
         # Calculate range extent lat/lon using ping bearing and range
         # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-        R = 6371.393*1000 #Radius of the Earth in meters
+        # R = 6371.393*1000 #Radius of the Earth in meters
+        # R = 6369.823*1000
+        R = 6378137.0 # WGS 1984
+        # def _estEarthRadius(lat: float):
+        #     '''
+        #     Estimate Earth's radius at survey latitude
+
+        #     https://rechneronline.de/earth-radius/
+        #     https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+        #     '''
+
+        #     r1 = 6378.137*1000 # Equitorial radius
+        #     r2 = 6356.752*1000 # Polar radius
+
+        #     lat = np.deg2rad(lat) # Convert lat to radians
+
+        #     R = np.sqrt( ( ( r1**2 * np.cos(lat) )**2 + ( r2**2 * np.sin(lat) )**2 ) / ( ( r1 * np.cos(lat) )**2 + ( r2 * np.sin(lat) )**2 ) )
+
+        #     return R
+
         brng = np.deg2rad(pingDF[ping_bearing]).to_numpy() # Convert ping bearing to radians and store in numpy array
         d = (pingDF[son_range].to_numpy()) # Store range in numpy array
 
         # Get lat/lon for origin of each ping, convert to numpy array
         lat1 = np.deg2rad(pingDF[trk_lats]).to_numpy()
         lon1 = np.deg2rad(pingDF[trk_lons]).to_numpy()
+
+        # R = _estEarthRadius(lat1[0])
 
         # Calculate latitude of range extent
         lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
@@ -1145,12 +1166,12 @@ class rectObj(sonObj):
         # X values
         xStd = (df[xCoord]-xMin) / (xMax-xMin) # Standardize
         xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
-        df[xPix] = xScaled.astype(int) # Store rescaled x coordinates
+        df[xPix] = round(xScaled).astype(int) # Store rescaled x coordinates
 
         # Y values
         yStd = (df[yCoord]-yMin) / (yMax-yMin) # Standardize
         yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
-        df[yPix] = yScaled.astype(int) # Store rescaled y coordinates
+        df[yPix] = round(yScaled).astype(int) # Store rescaled y coordinates
 
         # Load sonar data
         df = self._getSonarReturns(df=df, chunk=chunk)
