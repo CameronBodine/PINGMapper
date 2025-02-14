@@ -17,27 +17,8 @@ from pingmapper.main_mapSubstrate import map_master_func
 import json
 import pandas as pd
 
-import subprocess
-
 filter_time_csv = os.path.join(SCRIPT_DIR, 'clip_table.csv')
 filter_time_csv = os.path.normpath(filter_time_csv)
-
-def clip_table(csv=filter_time_csv):    
-
-    if not os.path.exists(csv):
-        df = pd.DataFrame(columns=['start_seconds', 'end_seconds'])
-        df.to_csv(csv, index=False)
-
-    if sys.platform == "win32":
-        subprocess.run(['start', "{}".format(csv)], shell=True, check=True)
-    elif sys.platform == "darwin":
-        subprocess.run(['open', "{}".format(csv)], check=True)
-    else:
-        subprocess.run(['xdg-open', "{}".format(csv)], check=True)
-
-    df = pd.read_csv(csv)
-
-    return df
 
 def gui(batch: bool):  
 
@@ -479,7 +460,7 @@ def gui(batch: bool):
             saveDefaultParams(values)
 
         if event == 'Edit Table':
-            clip_table()
+            clip_table(filter_time_csv)
 
         # if event == 'Load Table':
         #     time_table = pd.read_csv(filter_time_csv)

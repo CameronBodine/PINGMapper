@@ -84,6 +84,8 @@ import logging
 
 from tqdm import tqdm
 
+import subprocess
+
 # from funcs_pyhum_correct import doPyhumCorrections
 
 
@@ -384,6 +386,22 @@ def saveDefaultParams(values):
     with open(user_params, "w") as f:
         f.write(json_object)
 
+def clip_table(csv):    
+
+    if not os.path.exists(csv):
+        df = pd.DataFrame(columns=['start_seconds', 'end_seconds'])
+        df.to_csv(csv, index=False)
+
+    if sys.platform == "win32":
+        subprocess.run(['start', "{}".format(csv)], shell=True, check=True)
+    elif sys.platform == "darwin":
+        subprocess.run(['open', "{}".format(csv)], check=True)
+    else:
+        subprocess.run(['xdg-open', "{}".format(csv)], check=True)
+
+    df = pd.read_csv(csv)
+
+    return df
     
 # =========================================================
 def unableToProcessError(logfilename):
