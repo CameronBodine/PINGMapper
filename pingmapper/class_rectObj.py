@@ -1450,11 +1450,14 @@ class rectObj(sonObj):
                 distance_mask = distance_mask.astype('uint8')
                 distance_mask = self._erode_labels(distance_mask, interpolation_distance)
 
-                # Create interpolator using only valid points
-                interpolator = NearestNDInterpolator(valid_coords, valid_values)
+                # # Create interpolator using only valid points
+                # interpolator = NearestNDInterpolator(valid_coords, valid_values)
 
-                # Interpolate missing values
-                interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
+                # # Interpolate missing values
+                # interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
+
+                interpolated_values = griddata(valid_coords, valid_values, (yy, xx), method='linear')
+                interpolated_values[np.isnan(interpolated_values)] = sonRect[np.isnan(interpolated_values)]
 
                 # Apply distance mask
                 sonRect = interpolated_values * distance_mask
