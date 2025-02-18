@@ -1380,6 +1380,8 @@ class rectObj(sonObj):
 
         # Calculate transformation matrix by providing geographic coordinates
         ## of upper left corner of the image and the pixel size
+        xMin = df[xCoord].min()
+        yMax = df[yCoord].max()
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
         #########################
@@ -1464,13 +1466,13 @@ class rectObj(sonObj):
 
                 # Much faster - Create interpolator using only valid points
                 interpolated_values = griddata(valid_coords, valid_values, (yy, xx), method='linear')
-                interpolated_values[np.isnan(interpolated_values)] = sonRect[np.isnan(interpolated_values)]
+                # interpolated_values[np.isnan(interpolated_values)] = sonRect[np.isnan(interpolated_values)]
 
                 # Apply distance mask
                 sonRect = interpolated_values * distance_mask
 
                 # Get sonRect back to original dims
-                sonRect = sonRect[interpolation_distance:-interpolation_distance, interpolation_distance:-interpolation_distance]
+                sonRect = sonRect[interpolation_distance-1:-interpolation_distance+1, interpolation_distance-1:-interpolation_distance+1]
 
                 sonRect = sonRect.astype('uint8')
 
@@ -1503,7 +1505,7 @@ class rectObj(sonObj):
                 crs=epsg,
                 transform=transform,
                 compress='lzw',
-                # resampling=Resampling.bilinear
+                resampling=Resampling.bilinear
                 ) as dst:
                     dst.nodata=0
                     dst.write_colormap(1, colormap)

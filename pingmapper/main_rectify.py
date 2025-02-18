@@ -625,16 +625,16 @@ def rectify_master_func(logfilename='',
             Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(range(len(chunks))))
             # for i in chunks:
             #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
-            #     r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
+            #     r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i, heading=heading, interp_dist=rectInterpDist)
 
-            #     sys.exit()
+            # #     sys.exit()
 
-                # # Concatenate and store cooordinates
-                # dfAll = pd.concat(r)
-                # son.sonarCoordsDF = dfAll
+            #     # # Concatenate and store cooordinates
+            #     # dfAll = pd.concat(r)
+            #     # son.sonarCoordsDF = dfAll
 
-                # smth_trk_file = smth_trk_file.replace('.csv', 'heading.csv')
-                # r.to_csv(smth_trk_file)
+            #     smth_trk_file = smth_trk_file.replace('.csv', 'heading.csv')
+            #     r.to_csv(smth_trk_file)
 
             # print(dfAll)
 
