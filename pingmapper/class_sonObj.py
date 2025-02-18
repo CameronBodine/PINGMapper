@@ -1408,6 +1408,9 @@ class sonObj(object):
         #######
         # Setup
 
+        # convert dev to radians
+        dev = np.deg2rad(dev)
+
         # Set Fields for Filtering
         trk_dist = 'trk_dist'       # Along track distance
         head = 'instr_heading'      # Heading reported by instrument
@@ -1431,6 +1434,10 @@ class sonObj(object):
 
             # Filter df by window
             dfFilt = df[(df[trk_dist] >= dist_start) & (df[trk_dist] < dist_end)]
+
+            dfFilt[head] = np.deg2rad(dfFilt[head])
+            # Unwrap the heading because heading is circular
+            dfFilt[head] = np.unwrap(dfFilt[head])
 
             if len(dfFilt) > 0:
 
