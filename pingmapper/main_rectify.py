@@ -596,11 +596,22 @@ def rectify_master_func(logfilename='',
                 heading = 'instr_heading'
                 if smthHeading:
                     for name, group in sDF.groupby('transect'):
-                        smth = savgol_filter(group[heading], 51, 3)
+                        # Convert degrees to radians
+                        hding = np.deg2rad(group[heading])
+                        # Unwrap the heading because heading is circular
+                        hding_unwrapped = np.unwrap(hding)
+                        # Do smoothing
+                        smth = savgol_filter(hding_unwrapped, 51, 3)
+                        # Convert to degrees and make sure 0-360
+                        smth = np.rad2deg(smth) % 360
                         group[heading] = smth
+                        # Update sDF
                         sDF.update(group)
             else:
-                heading = 'trk_cog' 
+                heading = 'trk_cog'
+
+            smth_trk_file = son.smthTrkFile
+            sDF.to_csv(smth_trk_file)
 
             # Get chunk id
             chunks = son._getChunkID()
@@ -611,16 +622,19 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
             # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
-            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(range(len(chunks))))
-            # for i in chunks:
-            #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
-            #     son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
+            # r = Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(range(len(chunks))))
+            for i in chunks:
+                # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
+                r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i)
 
             #     sys.exit()
 
-            # # Concatenate and store cooordinates
-            # dfAll = pd.concat(r)
-            # son.sonarCoordsDF = dfAll
+                # # Concatenate and store cooordinates
+                # dfAll = pd.concat(r)
+                # son.sonarCoordsDF = dfAll
+
+                smth_trk_file = smth_trk_file.replace('.csv', 'heading.csv')
+                r.to_csv(smth_trk_file)
 
             # print(dfAll)
 
