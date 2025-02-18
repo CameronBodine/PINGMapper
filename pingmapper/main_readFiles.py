@@ -341,11 +341,11 @@ def read_master_func(logfilename='',
         son.humDat = sonar_obj.humDat
 
         if pix_res_son == 0:
-            son.pix_res_son = son.pixM
+            son.pix_res_son = 0
         else:
             son.pix_res_son = pix_res_son
         if pix_res_map == 0:
-            son.pix_res_map = son.pixM
+            son.pix_res_map = 0
         else:
             son.pix_res_map = pix_res_map
 

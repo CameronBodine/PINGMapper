@@ -576,7 +576,8 @@ class rectObj(sonObj):
         # Calculate range extent coordinates for each ping
         # Calculate range extent lat/lon using ping bearing and range
         # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-        R = 6371.393*1000 #Radius of the Earth in meters
+        # R = 6371.393*1000 #Radius of the Earth in meters
+        R = 6378137.0 # WGS 1984
         brng = np.deg2rad(sDF[ping_bearing]).to_numpy() # Convert ping bearing to radians and store in numpy array
         d = (sDF[range_].to_numpy()) # Store range in numpy array
 
@@ -1006,14 +1007,16 @@ class rectObj(sonObj):
 
         # Calculate pixel coordinates
         start_time = time.time()
-        dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+        # dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+        dfAll = self._getSonarReturns(dfAll, chunk, son=son)
         t2 = round(time.time() - start_time, ndigits=1)
 
         # Do rectification
         start_time = time.time()
-        self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
+        df = self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
         t3 = round(time.time() - start_time, ndigits=1)
         # print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
+        # return df
         return
     
     #===========================================================================
@@ -1038,7 +1041,8 @@ class rectObj(sonObj):
         pingDF = pd.DataFrame()
 
         # Get necessary values
-        pingDF[son_idx] = range(1, int(row[ping_cnt])+1)
+        # pingDF[son_idx] = range(1, int(row[ping_cnt])+1)
+        pingDF[son_idx] = range(0, int(row[ping_cnt]))
         pingDF[record_num] = row[record_num]
         pingDF[chunk_id] = row[chunk_id]
 
@@ -1173,8 +1177,8 @@ class rectObj(sonObj):
         yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
         df[yPix] = round(yScaled).astype(int) # Store rescaled y coordinates
 
-        # Load sonar data
-        df = self._getSonarReturns(df=df, chunk=chunk)
+        # # Load sonar data
+        # df = self._getSonarReturns(df=df, chunk=chunk)
 
         return df
     
@@ -1184,6 +1188,8 @@ class rectObj(sonObj):
         '''
         
         '''
+
+        df.reset_index(inplace=True)
 
         record_num = 'record_num'
         son_idx = 'son_idx'
@@ -1299,6 +1305,8 @@ class rectObj(sonObj):
 
             dfAll = pd.concat(dfAll)
 
+        dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+
         # Set index to help speed concatenation
         dfAll.set_index([record_num, son_idx], inplace=True)
 
@@ -1312,6 +1320,10 @@ class rectObj(sonObj):
         '''
 
         pix_res = self.pix_res_son
+        do_resize = True
+        if pix_res == 0:
+            pix_res = self.pixM
+            do_resize = False
 
         if son:
             # Create output directory if it doesn't exist
@@ -1450,12 +1462,7 @@ class rectObj(sonObj):
                 distance_mask = distance_mask.astype('uint8')
                 distance_mask = self._erode_labels(distance_mask, interpolation_distance)
 
-                # # Create interpolator using only valid points
-                # interpolator = NearestNDInterpolator(valid_coords, valid_values)
-
-                # # Interpolate missing values
-                # interpolated_values = interpolator(np.array([yy.ravel(), xx.ravel()]).T).reshape(sonRect.shape)
-
+                # Much faster - Create interpolator using only valid points
                 interpolated_values = griddata(valid_coords, valid_values, (yy, xx), method='linear')
                 interpolated_values[np.isnan(interpolated_values)] = sonRect[np.isnan(interpolated_values)]
 
@@ -1477,10 +1484,14 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
-            if pix_res != 0 and pix_res != 0.0:
+            if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
-            # Export georectified image
+            if son:
+                colormap = self.son_colorMap
+            else:
+                # colormap = class_colormap
+                pass
             with rasterio.open(
                 gtiff,
                 'w',
@@ -1491,11 +1502,12 @@ class rectObj(sonObj):
                 dtype=sonRect.dtype,
                 crs=epsg,
                 transform=transform,
-                compress='lzw'
+                compress='lzw',
+                # resampling=Resampling.bilinear
                 ) as dst:
                     dst.nodata=0
+                    dst.write_colormap(1, colormap)
                     dst.write(sonRect,1)
-                    dst.write_colormap(1, self.son_colorMap)
                     dst=None
 
             del dst
@@ -1518,10 +1530,10 @@ class rectObj(sonObj):
 
             #############
             # Do resizing
-            if pix_res != 0 and pix_res != 0.0:
+            if do_resize:
                 self._pixresResize(gtiff)
 
-        return
+        return df
 
 
     #===========================================================================
@@ -1872,6 +1884,10 @@ class rectObj(sonObj):
         '''
         filterIntensity = False
         pix_res = self.pix_res_son
+        do_resize = True
+        if pix_res == 0:
+            pix_res = self.pixM
+            do_resize = False
 
         if son:
             # Create output directory if it doesn't exist
@@ -2102,7 +2118,7 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
-            if pix_res != 0:
+            if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -2119,13 +2135,13 @@ class rectObj(sonObj):
                 compress='lzw'
                 ) as dst:
                     dst.nodata=0
-                    dst.write(out,1)
                     dst.write_colormap(1, self.son_colorMap)
+                    dst.write(out,1)
                     dst=None
 
             del out, dst, img
 
-            if pix_res != 0:
+            if do_resize:
                 self._pixresResize(gtiff)
 
         if self.rect_wcr:
@@ -2229,7 +2245,7 @@ class rectObj(sonObj):
                 imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
                 gtiff = os.path.join(self.outDir, imgName)
 
-            if pix_res != 0:
+            if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -2251,13 +2267,13 @@ class rectObj(sonObj):
                 resampling=Resampling.bilinear
                 ) as dst:
                     dst.nodata=0
-                    dst.write(out,1)
                     dst.write_colormap(1, colormap)
+                    dst.write(out,1)
                     dst=None
 
             del out, dst
 
-            if pix_res != 0:
+            if do_resize:
                 self._pixresResize(gtiff)
 
         gc.collect()
