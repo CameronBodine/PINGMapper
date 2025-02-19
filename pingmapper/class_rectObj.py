@@ -1013,10 +1013,10 @@ class rectObj(sonObj):
 
         # Do rectification
         start_time = time.time()
-        df = self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
+        self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
         t3 = round(time.time() - start_time, ndigits=1)
         # print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
-        # return df
+        # return dfAll
         return
     
     #===========================================================================
@@ -1240,19 +1240,19 @@ class rectObj(sonObj):
             # img[0]=0 # To fix extra white on curves
 
             i = 0
-            for _, group in df.groupby(by=[record_num]):
+            for idx, group in df.groupby(by=[record_num]):
                 sonData = img[:, i]
 
                 if len(sonData) > len(group):
                     sonData = sonData[:len(group)]
                 elif len(group) > len(sonData):
-                    group = group.loc[:len(sonData)-1]
+                    group = group[:len(sonData)]
                 else:
                     pass
 
                 group['son_wcp'] = sonData
 
-                group = group.dropna()
+                # group = group.dropna()
 
                 dfAll.append(group)            
                 
@@ -1280,7 +1280,7 @@ class rectObj(sonObj):
                     if self.egn_stretch > 0:
                         self._egnDoStretch()
 
-            img = self.sonDat
+            img = self.sonDat.copy()
 
             # img[0]=0 # To fix extra white on curves
 
@@ -1288,16 +1288,18 @@ class rectObj(sonObj):
             for _, group in df.groupby(by=[record_num]):
                 sonData = img[:, i]
 
+                # group = group[:len(sonData)]
+
                 if len(sonData) > len(group):
                     sonData = sonData[:len(group)]
                 elif len(group) > len(sonData):
-                    group = group.loc[:len(sonData)-1]
+                    group = group[:len(sonData)]
                 else:
                     pass
 
                 group['son_wcr'] = sonData
 
-                group = group.dropna()
+                # group = group.dropna()
 
                 dfAll.append(group)            
                 
