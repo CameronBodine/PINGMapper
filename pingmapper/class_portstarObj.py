@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -392,10 +395,7 @@ class portstarObj(object):
         # maxChunk = 50 # Max chunks per mosaic. Limits each mosaic file size.
         self.imgsToMosaic = [] # List to store files to mosaic.
 
-        if cog:
-            chunkField = 'chunk_id'
-        else:
-            chunkField = 'chunk_id_2'
+        chunkField = 'chunk_id'
 
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported

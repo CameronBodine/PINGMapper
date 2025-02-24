@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,8 +46,25 @@ from rasterio.transform import from_origin
 from rasterio.enums import Resampling
 from PIL import Image, ImageColor
 from shapely.geometry import Polygon
+from shapely import affinity
 
 from matplotlib import colormaps    
+
+from scipy.interpolate import NearestNDInterpolator, griddata, UnivariateSpline
+from scipy.sparse import coo_matrix
+from scipy.spatial import cKDTree, ConvexHull
+from skimage.draw import polygon
+from shapely.geometry import Polygon, Point, MultiPoint, LineString
+from shapely.ops import unary_union
+from shapely.vectorized import contains
+
+import rasterio.features
+from shapely.geometry import mapping
+import rasterio.mask
+
+from scipy.signal import savgol_filter
+from scipy import ndimage
+
 
 class rectObj(sonObj):
     '''
@@ -267,7 +287,7 @@ class rectObj(sonObj):
                   }
 
         sDF = pd.DataFrame(smooth) # Convert dictionary to Pandas df
-
+        
         # Calculate smoothed easting/northing
         e_smth, n_smth = self.trans(sDF[lons].to_numpy(), sDF[lats].to_numpy())
         # Store in df
@@ -503,7 +523,7 @@ class rectObj(sonObj):
         rlat = 'range_lat'
         re = 'range_e'
         rn = 'range_n'
-        range = 'range'
+        range_ = 'range'
         chunk_id = 'chunk_id'
 
         self._loadSonMeta() # Load ping metadata
@@ -537,7 +557,7 @@ class rectObj(sonObj):
         # Calculate range (in meters) for each chunk
         # Calculate max range for each chunk to ensure none of the sonar image
         ## is cut off due to changing the range setting during the survey.
-        chunk = sDF.groupby(chunk_id) # Group dataframe by chunk_id
+        # chunk = sDF.groupby(chunk_id) # Group dataframe by chunk_id
 
         # Old method
         # maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
@@ -553,15 +573,16 @@ class rectObj(sonObj):
         # pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
         pix_m = self.pixM # Get pixel size for each chunk
         for i in maxPing.index: # Calculate range (in meters) for each chunk
-            sDF.loc[sDF[chunk_id]==i, range] = maxPing[i]*pix_m
+            sDF.loc[sDF[chunk_id]==i, range_] = maxPing[i]*pix_m
 
         ##################################################
         # Calculate range extent coordinates for each ping
         # Calculate range extent lat/lon using ping bearing and range
         # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
-        R = 6371.393*1000 #Radius of the Earth in meters
+        # R = 6371.393*1000 #Radius of the Earth in meters
+        R = 6378137.0 # WGS 1984
         brng = np.deg2rad(sDF[ping_bearing]).to_numpy() # Convert ping bearing to radians and store in numpy array
-        d = (sDF[range].to_numpy()) # Store range in numpy array
+        d = (sDF[range_].to_numpy()) # Store range in numpy array
 
         # Get lat/lon for origin of each ping, convert to numpy array
         lat1 = np.deg2rad(sDF[lats]).to_numpy()
@@ -596,7 +617,7 @@ class rectObj(sonObj):
         if cog:
             self._interpRangeCoords(filt)
         else:
-            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n']].copy()
+            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n', ping_bearing]].copy()
             sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog', 'range_lat':'range_lats', 'range_lon':'range_lons', 'range_e':'range_es', 'range_n':'range_ns'}, inplace=True)
             sDF['chunk_id_2'] = sDF.index.astype(int)
 
@@ -968,6 +989,666 @@ class rectObj(sonObj):
         return I
     
     ############################################################################
+    # Rectify sonar imagery - Ping-wise (heading)                              #
+    ############################################################################
+
+    #===========================================================================
+    def _rectSonHeadingMain(self, df: pd.DataFrame, chunk, son=True, heading='instr_heading', interp_dist=50):
+
+        '''
+        '''
+        start_time = time.time()
+
+        # Calculate the sonar return coordinates
+        dfOut = []
+        for i, row in df.iterrows():
+            dfOut.append(self._calcSonReturnCoords(row, heading))
+
+        dfAll = pd.concat(dfOut)
+
+        t1 = round(time.time() - start_time, ndigits=1)
+
+        # Calculate pixel coordinates
+        start_time = time.time()
+        # dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+        dfAll = self._getSonarReturns(dfAll, chunk, son=son)
+        t2 = round(time.time() - start_time, ndigits=1)
+
+        # Do rectification
+        start_time = time.time()
+        self._rectSonHeading(dfAll, chunk, son=son, interpolation_distance=interp_dist)
+        t3 = round(time.time() - start_time, ndigits=1)
+        # print("Chunk {}: {} - {} - {}".format(chunk, t1, t2, t3))
+        # return dfAll
+        return
+    
+    #===========================================================================
+    def _calcSonReturnCoords(self, row, heading):
+
+        son_range = 'son_range'
+        son_idx = 'son_idx'
+        ping_cnt = 'ping_cnt'
+        ping_bearing = 'ping_bearing'
+        trk_lons = 'trk_lons'
+        trk_lats = 'trk_lats'
+        lons = 'lon'
+        lats = 'lat'
+        e = 'e'
+        n = 'n'
+        record_num = 'record_num'
+        chunk_id = 'chunk_id'
+
+        flip = False
+
+        # Make a data frame for the ping
+        pingDF = pd.DataFrame()
+
+        # Get necessary values
+        # pingDF[son_idx] = range(1, int(row[ping_cnt])+1)
+        pingDF[son_idx] = range(0, int(row[ping_cnt]))
+        pingDF[record_num] = row[record_num]
+        pingDF[chunk_id] = row[chunk_id]
+
+        # pingDF[ping_bearing] = row[ping_bearing]
+        pingDF[trk_lons] = row[trk_lons]
+        pingDF[trk_lats] = row[trk_lats]
+
+        ########################
+        # Calculate ping bearing
+        # Determine ping bearing.  Ping bearings are perpendicular to COG.
+        if self.beamName == 'ss_port':
+            rotate = -90  # Rotate COG by 90 degrees to the left
+        else:
+            rotate = 90 # Rotate COG by 90 degrees to the right
+        if flip: # Flip rotation factor if True
+            rotate *= -1
+
+        # Calculate ping bearing and normalize to range 0-360
+        pingDF[ping_bearing] = (row[heading]+rotate) % 360
+
+        pix_m = self.pixM # Get pixel size for each chunk
+
+        # Calculate pixel size
+        pingDF[son_range] = pingDF[son_idx] * pix_m
+
+        ##################################################
+        # Calculate range extent coordinates for each ping
+        # Calculate range extent lat/lon using ping bearing and range
+        # https://stackoverflow.com/questions/7222382/get-lat-long-given-current-point-distance-and-bearing
+        # R = 6371.393*1000 #Radius of the Earth in meters
+        # R = 6369.823*1000
+        R = 6378137.0 # WGS 1984
+        # def _estEarthRadius(lat: float):
+        #     '''
+        #     Estimate Earth's radius at survey latitude
+
+        #     https://rechneronline.de/earth-radius/
+        #     https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+        #     '''
+
+        #     r1 = 6378.137*1000 # Equitorial radius
+        #     r2 = 6356.752*1000 # Polar radius
+
+        #     lat = np.deg2rad(lat) # Convert lat to radians
+
+        #     R = np.sqrt( ( ( r1**2 * np.cos(lat) )**2 + ( r2**2 * np.sin(lat) )**2 ) / ( ( r1 * np.cos(lat) )**2 + ( r2 * np.sin(lat) )**2 ) )
+
+        #     return R
+
+        brng = np.deg2rad(pingDF[ping_bearing]).to_numpy() # Convert ping bearing to radians and store in numpy array
+        d = (pingDF[son_range].to_numpy()) # Store range in numpy array
+
+        # Get lat/lon for origin of each ping, convert to numpy array
+        lat1 = np.deg2rad(pingDF[trk_lats]).to_numpy()
+        lon1 = np.deg2rad(pingDF[trk_lons]).to_numpy()
+
+        # R = _estEarthRadius(lat1[0])
+
+        # Calculate latitude of range extent
+        lat2 = np.arcsin( np.sin(lat1) * np.cos(d/R) +
+            np.cos(lat1) * np.sin(d/R) * np.cos(brng))
+
+        # Calculate longitude of range extent
+        lon2 = lon1 + np.arctan2( np.sin(brng) * np.sin(d/R) * np.cos(lat1),
+                                np.cos(d/R) - np.sin(lat1) * np.sin(lat2))
+
+        # Convert range extent coordinates into degrees
+        lat2 = np.degrees(lat2)
+        lon2 = np.degrees(lon2)
+
+        # Store in dataframe
+        pingDF[lons] = lon2
+        pingDF[lats] = lat2
+
+        # Calculate easting and northing
+        pingDF[e], pingDF[n] = self.trans(pingDF[lons].to_numpy(), pingDF[lats].to_numpy())
+
+        pingDF = pingDF[[chunk_id, record_num, son_idx, lons, lats, e, n, son_range]]
+
+        # Set index to help speed concatenation
+        pingDF.set_index([record_num, son_idx], inplace=True)
+
+        return pingDF
+
+    #===========================================================================
+    def _calcSonReturnPixCoords(self, df: pd.DataFrame, chunk, son=True, wgs=False):
+
+        '''
+        
+        '''
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xCoord = 'lon'
+            yCoord = 'lat'
+        else:
+            epsg = self.humDat['epsg']
+            xCoord = 'e'
+            yCoord = 'n'
+
+        xPix = 'x'
+        yPix = 'y'
+
+        df.reset_index(inplace=True)
+
+        #######################################
+        # Prepare destination (dst) coordinates
+        ## Destination coordinates describe the geographic location in lat/lon
+        ## or easting/northing that directly map to the pix coordinates.
+
+        pix_m = self.pixM # Get pixel size
+
+        # Get extent of chunk
+        xMin, xMax = df[xCoord].min(), df[xCoord].max()
+        yMin, yMax = df[yCoord].min(), df[yCoord].max()
+
+        # Determine output shape dimensions
+        outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
+        outShape=[0,0]
+        # Divide by pixel size to arrive at output shape of warped image
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+
+        # Rescale destination coordinates
+        # X values
+        xStd = (df[xCoord]-xMin) / (xMax-xMin) # Standardize
+        xScaled = xStd * (outShape[0] - 0) + 0 # Rescale to output shape
+        df[xPix] = round(xScaled).astype(int) # Store rescaled x coordinates
+
+        # Y values
+        yStd = (df[yCoord]-yMin) / (yMax-yMin) # Standardize
+        yScaled = yStd * (outShape[1] - 0) + 0 # Rescale to output shape
+        df[yPix] = round(yScaled).astype(int) # Store rescaled y coordinates
+
+        # # Load sonar data
+        # df = self._getSonarReturns(df=df, chunk=chunk)
+
+        return df
+    
+    #===========================================================================
+    def _getSonarReturns(self, df: pd.DataFrame, chunk, son=True):
+
+        '''
+        
+        '''
+
+        df.reset_index(inplace=True)
+
+        record_num = 'record_num'
+        son_idx = 'son_idx'
+
+        # Filter sonMetaDF by chunk
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
+        sonMetaAll = self.sonMetaDF
+        isChunk = sonMetaAll['chunk_id']==chunk
+        sonMeta = sonMetaAll[isChunk].reset_index()
+
+        # Get sonar data
+        if son:
+            # Open image to rectify
+            self._getScanChunkSingle(chunk)
+        else:
+            # Rectifying substrate classification
+            pass
+
+        # Remove shadows
+        if self.remShadow:
+            # Get mask
+            self._SHW_mask(chunk)
+
+            # Mask out shadows
+            self.sonDat = self.sonDat*self.shadowMask
+            del self.shadowMask
+
+        # Sort Dataframe and reset index
+        df.sort_values(by=[record_num, son_idx], inplace=True)
+        df.reset_index(inplace=True, drop=True)
+
+        #####
+        # WCP
+        if self.rect_wcp:
+
+            dfAll = []
+            # egn
+            if self.egn:
+                self._egn_wcp(chunk, sonMeta)
+
+                if self.egn_stretch > 0:
+                    self._egnDoStretch()
+
+            img = self.sonDat.copy()
+
+            # img[0]=0 # To fix extra white on curves
+
+            i = 0
+            for idx, group in df.groupby(by=[record_num]):
+                sonData = img[:, i]
+
+                if len(sonData) > len(group):
+                    sonData = sonData[:len(group)]
+                elif len(group) > len(sonData):
+                    group = group[:len(sonData)]
+                else:
+                    pass
+
+                group['son_wcp'] = sonData
+
+                # group = group.dropna()
+
+                dfAll.append(group)            
+                
+                i += 1
+
+            dfAll = pd.concat(dfAll)
+
+            if self.rect_wcr:
+                df = dfAll.copy()
+
+        #####
+        # WCR
+        if self.rect_wcr:
+
+            dfAll = []
+
+            self._WCR_SRC(sonMeta)
+
+            # Empirical gain normalization
+            if not self.rect_wcp:
+                if self.egn:
+                    self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+
+            img = self.sonDat.copy()
+
+            # img[0]=0 # To fix extra white on curves
+
+            i = 0
+            for _, group in df.groupby(by=[record_num]):
+                sonData = img[:, i]
+
+                # group = group[:len(sonData)]
+
+                if len(sonData) > len(group):
+                    sonData = sonData[:len(group)]
+                elif len(group) > len(sonData):
+                    group = group[:len(sonData)]
+                else:
+                    pass
+
+                group['son_wcr'] = sonData
+
+                # group = group.dropna()
+
+                dfAll.append(group)            
+                
+                i += 1
+
+            dfAll = pd.concat(dfAll)
+
+        dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
+
+        # Set index to help speed concatenation
+        dfAll.set_index([record_num, son_idx], inplace=True)
+
+        return dfAll
+    
+    #===========================================================================
+    def _rectSonHeading(self, df: pd.DataFrame, chunk, son=True, wgs=False, interpolation_distance=50):
+
+        '''
+        
+        '''
+
+        pix_res = self.pix_res_son
+        do_resize = True
+        if pix_res == 0:
+            pix_res = self.pixM
+            do_resize = False
+
+        if son:
+            # Create output directory if it doesn't exist
+            outDir = self.outDir # Parent directory
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xCoord = 'lon'
+            yCoord = 'lat'
+        else:
+            epsg = self.humDat['epsg']
+            xCoord = 'e'
+            yCoord = 'n'
+
+        xPix = 'x'
+        yPix = 'y'
+
+        # Determine leading zeros to match naming convention
+        addZero = self._addZero(chunk)
+
+        df.sort_index(ascending=True, inplace=True)
+
+        ###################
+        # Get coverage mask
+        # covShp = self._getCoverageMask(df, wgs)
+
+        ##################
+        # Do Rectification
+
+        pix_m = self.pixM # Get pixel size
+
+        xPixMax, yPixMax = df[xPix].max().astype(int), df[yPix].max().astype(int)
+
+        # Get extent of chunk
+        xMin, xMax = df[xCoord].min().astype(int), df[xCoord].max().astype(int)
+        yMin, yMax = df[yCoord].min().astype(int), df[yCoord].max().astype(int)
+
+        # Setup outupt array
+        # Determine output shape dimensions
+        outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
+        outShape=[0,0]
+        # Divide by pixel size to arrive at output shape of warped image
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0).astype(int), round(outShapeM[1]/pix_m,0).astype(int)
+
+        # Calculate x,y resolution of a single pixel
+        xres = (xMax - xMin) / outShape[0]
+        yres = (yMax - yMin) / outShape[1]
+
+        # Calculate transformation matrix by providing geographic coordinates
+        ## of upper left corner of the image and the pixel size
+        xMin = df[xCoord].min()
+        yMax = df[yCoord].max()
+        transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
+
+        #########################
+        # Create geotiff and save
+
+        to_rect = []
+
+        if self.rect_wcp:
+            to_rect.append(('rect_wcp', 'son_wcp'))
+        if self.rect_wcr:
+            to_rect.append(('rect_wcr', 'son_wcr'))
+
+        for imgOutPrefix, sonCol in to_rect:
+
+            outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
+
+            try:
+                os.mkdir(outDir)
+            except:
+                pass
+
+            # New way below using sparse matrix
+            row = df[yPix].to_numpy().astype(int)
+            col = df[xPix].to_numpy().astype(int)
+            data = df[sonCol].to_numpy()
+
+            # Create a dictionary to store the maximum value for each coordinate
+            max_values = {}
+            for r, c, d in zip(row, col, data):
+                if (r, c) in max_values:
+                    max_values[(r, c)] = max(max_values[(r, c)], d)
+                else:
+                    max_values[(r, c)] = d
+
+            # Convert the dictionary back to arrays
+            row = np.array([k[0] for k in max_values.keys()])
+            col = np.array([k[1] for k in max_values.keys()])
+            data = np.array(list(max_values.values()))
+
+            # Create the sparse matrix
+            sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
+            sonRect = sonRect.toarray()
+
+            # Rotate 180 and flip
+            # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
+            sonRect = np.flip(np.flip(np.flip(sonRect,1),0),1).astype('float')
+
+            ##########
+            # Fill Gaps
+            if interpolation_distance > 0:
+                # First pad sonRect with 0's (helps with masking) by interpolation_distance
+                sonRect = np.pad(sonRect, (interpolation_distance, ), mode='constant', constant_values=0)
+
+                # Replace 0 values with NaN
+                sonRect[sonRect == 0] = np.nan
+
+                # Prepare data for interpolation
+                x = np.arange(sonRect.shape[1])
+                y = np.arange(sonRect.shape[0])
+                xx, yy = np.meshgrid(x, y)
+
+                # Mask for valid values
+                mask = ~np.isnan(sonRect)
+
+                # Coordinates of valid values
+                valid_coords = np.array([yy[mask], xx[mask]]).T
+
+                # Values of valid points
+                valid_values = sonRect[mask]
+
+                # Create a KDTree for fast lookup of nearest neighbors
+                tree = cKDTree(valid_coords)
+
+                # Mask for points within the interpolation distance
+                distances, _ = tree.query(np.c_[yy.ravel(), xx.ravel()], distance_upper_bound=interpolation_distance)
+                distance_mask = distances.reshape(sonRect.shape) <= interpolation_distance
+
+                # Try erroding the mask....IT WORKS!!!!
+                # https://forum.image.sc/t/shrink-labeled-regions/50443
+                distance_mask = distance_mask.astype('uint8')
+                distance_mask = self._erode_labels(distance_mask, interpolation_distance)
+
+                # Much faster - Create interpolator using only valid points
+                interpolated_values = griddata(valid_coords, valid_values, (yy, xx), method='linear')
+                # interpolated_values[np.isnan(interpolated_values)] = sonRect[np.isnan(interpolated_values)]
+
+                # Apply distance mask
+                sonRect = interpolated_values * distance_mask
+
+                # Get sonRect back to original dims
+                sonRect = sonRect[interpolation_distance-1:-interpolation_distance+1, interpolation_distance-1:-interpolation_distance+1]
+
+                sonRect = sonRect.astype('uint8')
+
+
+            ###############
+            # Create output
+
+            projName = os.path.split(self.projDir)[-1] # Get project name
+            beamName = self.beamName # Determine which sonar beam we are working with
+            imgName = projName+'_'+imgOutPrefix+'_'+beamName+'_'+addZero+str(int(chunk))+'.tif' # Create output image name
+
+            gtiff = os.path.join(outDir, imgName) # Output file name
+
+            if do_resize:
+                gtiff = gtiff.replace('.tif', 'temp.tif')
+
+            if son:
+                colormap = self.son_colorMap
+            else:
+                # colormap = class_colormap
+                pass
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=sonRect.shape[0],
+                width=sonRect.shape[1],
+                count=1,
+                dtype=sonRect.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='lzw',
+                resampling=Resampling.bilinear
+                ) as dst:
+                    dst.nodata=0
+                    dst.write_colormap(1, colormap)
+                    dst.write(sonRect,1)
+                    dst=None
+
+            del dst
+
+            #############
+            # Do resizing
+            if do_resize:
+                self._pixresResize(gtiff)
+
+        return df
+
+
+    #===========================================================================
+    def _getCoverageMask(self, df: pd.DataFrame, wgs):
+        '''
+        '''
+
+        filter = int(self.nchunk*0.1)
+
+        # Use WGS 1984 coordinates and set variables as needed
+        if wgs is True:
+            epsg = self.humDat['wgs']
+            xCoord = 'lon'
+            yCoord = 'lat'
+        else:
+            epsg = self.humDat['epsg']
+            xCoord = 'e'
+            yCoord = 'n'
+
+        trk_x = []
+        trk_y = []
+        rng_x = []
+        rng_y = []
+
+        
+
+        # df is already sorted by record_num and son_idx
+        # iterate through each record_num
+
+        i = 0
+        for name, group in df.groupby(level=['record_num']):
+            
+            # Trackline coordinate is first row
+            trk = group.iloc[0]
+            trk_x.append(trk[xCoord])
+            trk_y.append(trk[yCoord])
+
+            # Range extent coordinate is last row
+            rng = group.iloc[-1]
+            rng_x.append(rng[xCoord])
+            rng_y.append(rng[yCoord])
+
+            i += 1
+
+        trk_x = np.array(trk_x)
+        trk_y = np.array(trk_y)
+        rng_x = np.array(rng_x)
+        rng_y = np.array(rng_y)
+
+        # Get Zu values for interpolation
+        t = np.arange(0, i).astype(float)
+
+        # Attempt to fix error
+        # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
+        okay = np.where(np.abs(np.diff(rng_x))+np.abs(np.diff(rng_y))>0)
+        x = np.r_[rng_x[okay], rng_x[-1]]
+        y = np.r_[rng_y[okay], rng_y[-1]]
+        t = np.r_[t[okay], t[-1]]
+
+        # Interpolate
+        tck, _ = splprep([x,y], u=t, k=3, s=0)
+        x_interp, y_interp = splev(t, tck)
+
+        # Put lists together
+        x = trk_x.tolist() + x_interp.tolist()[::-1][::filter]
+        y = trk_y.tolist() + y_interp.tolist()[::-1][::filter]
+
+        # Create polygon from points
+        chunk_geom = Polygon(zip(x, y))
+        chunk_geom = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[chunk_geom])
+
+        # Buffer to fix funky stuff
+        bufDist = 10
+        buf = chunk_geom.buffer(bufDist)
+        bufDist *= -1
+        buf = buf.buffer(bufDist, join_style='mitre')
+
+        chunk_geom = gpd.GeoDataFrame(geometry=buf, crs=chunk_geom.crs)
+
+        # # Save to shapefile
+        # beam = self.beamName
+        # projName = os.path.basename(self.projDir)
+        # outFile = os.path.join(self.metaDir, projName+"_"+beam+"_coverage.shp")
+        # chunk_geom.to_file(outFile)
+
+        # # try linestring
+        # rng_line = LineString(zip(x_interp, y_interp))
+        # rng_line = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[rng_line])
+
+        # outFile = outFile.replace('coverage', 'range')
+        # rng_line.to_file(outFile)
+
+        # trk_line = LineString(zip(trk_x, trk_y))
+        # trk_line = gpd.GeoDataFrame(index=[1], crs=epsg, geometry=[trk_line])
+
+        # outFile = outFile.replace('range', 'trk')
+        # trk_line.to_file(outFile)
+
+        return chunk_geom
+
+    #===========================================================================
+    def _erode_labels(self, segmentation, erosion_iterations):
+        # create empty list where the eroded masks can be saved to
+        list_of_eroded_masks = list()
+        regions = regionprops(segmentation)
+        def erode_mask(segmentation_labels, label_id, erosion_iterations):
+            
+            only_current_label_id = np.where(segmentation_labels == label_id, 1, 0)
+            eroded = ndimage.binary_erosion(only_current_label_id, iterations = erosion_iterations)
+            relabeled_eroded = np.where(eroded == 1, label_id, 0)
+            return(relabeled_eroded)
+
+        for i in range(len(regions)):
+            label_id = regions[i].label
+            list_of_eroded_masks.append(erode_mask(segmentation, label_id, erosion_iterations))
+
+        # convert list of numpy arrays to stacked numpy array
+        final_array = np.stack(list_of_eroded_masks)
+
+        # max_IP to reduce the stack of arrays, each containing one labelled region, to a single 2D np array. 
+        final_array_labelled = np.sum(final_array, axis = 0)
+        return(final_array_labelled)
+
+    ############################################################################
     # Export Trackline and Coverage shapefiles                                 #
     ############################################################################
 
@@ -1023,10 +1704,12 @@ class rectObj(sonObj):
     
     #===========================================================================
     def _exportCovShp(self,
-                      covFiles,
                       dissolve=False,
                       filt=10,
-                      wgs=False):
+                      wgs=False
+                      ):
+        
+        beam = self.beamName
         
         # Create output directory if it doesn't exist
         outDir = os.path.join(self.metaDir, 'shapefiles')
@@ -1054,15 +1737,18 @@ class rectObj(sonObj):
         chunkMax = self.chunkMax
 
         # Get df's
-        df1 = pd.read_csv(covFiles[0])
-        df2 = pd.read_csv(covFiles[1])
+        # df1 = pd.read_csv(covFiles[0])
+        # df2 = pd.read_csv(covFiles[1])
 
         # # Filter
         # if filt > 0:
         #     df1 = df1[::filt]
         #     df2 = df2[::filt]
 
-        dfs = [df1, df2]
+        # dfs = [df1, df2]
+
+        df1 = pd.read_csv(self.smthTrkFile)
+        dfs = [df1]
 
         filt = 0
 
@@ -1081,12 +1767,18 @@ class rectObj(sonObj):
                     df = df[::filt]
                     df = pd.concat([df, dfLast])
 
-                if 'lat_list' not in locals():
-                    lat_list = df[yRange].tolist()
-                    lon_list = df[xRange].tolist()
-                else:
-                    lat_list += df[yRange].tolist()[::-1] #reverse order
-                    lon_list += df[xRange].tolist()[::-1]
+                # if 'lat_list' not in locals():
+                #     lat_list = df[yRange].tolist()
+                #     lon_list = df[xRange].tolist()
+                # else:
+                #     lat_list += df[yRange].tolist()[::-1] #reverse order
+                #     lon_list += df[xRange].tolist()[::-1]
+
+                lat_list = df[yRange].tolist()
+                lon_list = df[xRange].tolist()
+
+                lat_list += df[yTrk].tolist()[::-1]
+                lon_list += df[xTrk].tolist()[::-1]
 
                 del df
 
@@ -1122,32 +1814,22 @@ class rectObj(sonObj):
 
         # Save to shapefile
         projName = os.path.basename(self.projDir)
-        outFile = os.path.join(self.metaDir, 'shapefiles', projName+"_coverage.shp")
+        outFile = os.path.join(self.metaDir, 'shapefiles', projName+"_"+beam+"_coverage.shp")
         gdf.to_file(outFile)
         del gdf
 
         return
             
-            
-
-            
-
-
-        
-
-
-
-
     ############################################################################
-    # Rectify sonar imagery                                                    #
+    # Rectify sonar imagery - Rubbersheeting                                   #
     ############################################################################
 
-    def _rectSonParallel(self,
-                         chunk,
-                         filt=50,
-                         cog=True,
-                         wgs=False,
-                         son=True):
+    def _rectSonRubber(self,
+                       chunk,
+                       filt=50,
+                       cog=True,
+                       wgs=False,
+                       son=True):
         '''
         This function will georectify sonar tiles with water column present
         (rect_wcp) OR water column removed and slant range corrected (rect_wcr).
@@ -1193,6 +1875,10 @@ class rectObj(sonObj):
         '''
         filterIntensity = False
         pix_res = self.pix_res_son
+        do_resize = True
+        if pix_res == 0:
+            pix_res = self.pixM
+            do_resize = False
 
         if son:
             # Create output directory if it doesn't exist
@@ -1423,7 +2109,7 @@ class rectObj(sonObj):
 
             gtiff = os.path.join(outDir, imgName) # Output file name
 
-            if pix_res != 0:
+            if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -1440,13 +2126,13 @@ class rectObj(sonObj):
                 compress='lzw'
                 ) as dst:
                     dst.nodata=0
-                    dst.write(out,1)
                     dst.write_colormap(1, self.son_colorMap)
+                    dst.write(out,1)
                     dst=None
 
             del out, dst, img
 
-            if pix_res != 0:
+            if do_resize:
                 self._pixresResize(gtiff)
 
         if self.rect_wcr:
@@ -1550,7 +2236,7 @@ class rectObj(sonObj):
                 imgName = projName+'_'+imgOutPrefix+'_'+addZero+str(int(chunk))+'.tif'
                 gtiff = os.path.join(self.outDir, imgName)
 
-            if pix_res != 0:
+            if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
@@ -1572,13 +2258,13 @@ class rectObj(sonObj):
                 resampling=Resampling.bilinear
                 ) as dst:
                     dst.nodata=0
-                    dst.write(out,1)
                     dst.write_colormap(1, colormap)
+                    dst.write(out,1)
                     dst=None
 
             del out, dst
 
-            if pix_res != 0:
+            if do_resize:
                 self._pixresResize(gtiff)
 
         gc.collect()
@@ -1632,37 +2318,6 @@ class rectObj(sonObj):
         t = gdal.Warp(f_out, f, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
 
         t = None
-
-        # # Determine band count for filling NoData
-        # bandCount, bandDtype, nodataVal = self._getTiffAttributes(f_out)
-
-        # ###################
-        # # Fill Small NoData
-        # searchDist = 3
-        # ds = gdal.Open(f_out, gdal.GA_Update)
-
-        # for b in range(1, bandCount+1):
-
-        #     band = ds.GetRasterBand(b)
-
-        #     # mask = band.GetMaskBand()
-        #     # print(mask, np.unique(mask.ReadAsArray(), return_counts=True))
-
-        #     gdal.FillNodata(targetBand = band, maskBand = None, maxSearchDist = searchDist, smoothingIterations = 0)
-
-        # ds = None
-
-
-
-        ##
-
-        ##
-        ##
-        # # Do a seive on final map output
-        # f_2 = f_out.replace('.tif', 'seive.tif')
-        # size = 3
-        # gdal_sieve(f_out, f_2, threshold=size, connectedness=8)
-
         
         try:
             os.remove(f)
