@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -429,65 +432,6 @@ class mapSubObj(rectObj):
 
         # Find min depth
         minDep = min(lMinDep, cMinDep, rMinDep)
-
-        # # Pad arrays if chunk's minDep > minDep and fill with zero's
-        # # Left
-        # if lMinDep > minDep:
-        #     # Get current sonDat shape
-        #     r, c = lSonDat.shape
-
-        #     # Determine pad size (actual offset from top)
-        #     pad = lMinDep - minDep
-
-        #     # Make new zero array w/ pad added in
-        #     newArr = np.zeros((pad+r, c))
-        #     # Fill with nan to prevent unneeded prediction
-        #     newArr.fill(np.nan)
-
-        #     # Fill sonDat in appropriate location
-        #     newArr[pad:,:] = lSonDat
-        #     lSonDat = newArr.copy()
-        #     del newArr
-
-        # # Center
-        # if cMinDep > minDep:
-        #     # Get current sonDat shape
-        #     r, c = cSonDat.shape
-
-        #     # Determine pad size
-        #     pad = cMinDep - minDep
-
-        #     # Make new zero array w/ pad added in
-        #     newArr = np.zeros((pad+r, c))
-        #     # Fill with nan to prevent unneeded prediction
-        #     newArr.fill(np.nan)
-
-        #     # Fill sonDat in appropriate location
-        #     newArr[pad:,:] = cSonDat
-        #     cSonDat = newArr.copy()
-        #     del newArr
-
-        #     # Return cpad to recover original dims
-        #     cpad = pad
-        # else:
-        #     cpad = cMinDep
-
-        # # Right
-        # if rMinDep > minDep:
-        #     # Get current sonDat shape
-        #     r, c = rSonDat.shape
-        #     # Determine pad size
-        #     pad = rMinDep - minDep
-
-        #     # Make new zero array w/ pad added in
-        #     newArr = np.zeros((pad+r, c))
-        #     # Fill with nan to prevent unneeded prediction
-        #     newArr.fill(np.nan)
-
-        #     # Fill sonDat in appropriate location
-        #     newArr[pad:,:] = rSonDat
-        #     rSonDat = newArr.copy()
-        #     del newArr
 
         lSonDat = lSonDat[minDep:]
         cSonDat = cSonDat[minDep:]

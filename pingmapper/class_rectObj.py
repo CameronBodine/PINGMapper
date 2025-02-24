@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -1516,22 +1519,6 @@ class rectObj(sonObj):
 
             del dst
 
-            # #############################
-            # # Mask with Coverage Shapefile
-            # with rasterio.open(gtiff) as src:
-            #     out_image, out_transform = rasterio.mask.mask(src, covShp.geometry, crop=True)
-            #     out_meta = src.meta.copy()
-
-            # out_meta.update({"driver": "GTiff",
-            #      "height": out_image.shape[1],
-            #      "width": out_image.shape[2],
-            #      "transform": out_transform})
-            
-            # with rasterio.open(gtiff, "w", **out_meta) as dst:
-            #     dst.write(out_image) 
-            #     dst.write_colormap(1, self.son_colorMap)
-            #     dst=None
-
             #############
             # Do resizing
             if do_resize:
@@ -1837,12 +1824,12 @@ class rectObj(sonObj):
     # Rectify sonar imagery - Rubbersheeting                                   #
     ############################################################################
 
-    def _rectSonParallel(self,
-                         chunk,
-                         filt=50,
-                         cog=True,
-                         wgs=False,
-                         son=True):
+    def _rectSonRubber(self,
+                       chunk,
+                       filt=50,
+                       cog=True,
+                       wgs=False,
+                       son=True):
         '''
         This function will georectify sonar tiles with water column present
         (rect_wcp) OR water column removed and slant range corrected (rect_wcr).
@@ -2331,37 +2318,6 @@ class rectObj(sonObj):
         t = gdal.Warp(f_out, f, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)
 
         t = None
-
-        # # Determine band count for filling NoData
-        # bandCount, bandDtype, nodataVal = self._getTiffAttributes(f_out)
-
-        # ###################
-        # # Fill Small NoData
-        # searchDist = 3
-        # ds = gdal.Open(f_out, gdal.GA_Update)
-
-        # for b in range(1, bandCount+1):
-
-        #     band = ds.GetRasterBand(b)
-
-        #     # mask = band.GetMaskBand()
-        #     # print(mask, np.unique(mask.ReadAsArray(), return_counts=True))
-
-        #     gdal.FillNodata(targetBand = band, maskBand = None, maxSearchDist = searchDist, smoothingIterations = 0)
-
-        # ds = None
-
-
-
-        ##
-
-        ##
-        ##
-        # # Do a seive on final map output
-        # f_2 = f_out.replace('.tif', 'seive.tif')
-        # size = 3
-        # gdal_sieve(f_out, f_2, threshold=size, connectedness=8)
-
         
         try:
             os.remove(f)

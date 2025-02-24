@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -239,80 +242,6 @@ def downloadSegmentationModelsv1_0(modelDir):
 
 # =========================================================
 def saveDefaultParams(values):
-
-    # # AOI
-    # aoi = values['aoi']
-    # if aoi == '':
-    #     aoi = False
-
-    # # EGN Stretch
-    # egn_stretch = values['egn_stretch']
-    # if egn_stretch == 'None':
-    #     egn_stretch = 0
-    # elif egn_stretch == 'Min-Max':
-    #     egn_stretch = 1
-    # elif egn_stretch == 'Percent Clip':
-    #     egn_stretch = 2
-    # egn_stretch = int(egn_stretch)
-
-    # # Speed Corrected Sonograms
-    # lbl_set = values['lbl_set']
-    # if lbl_set == 'False':
-    #     lbl_set = 0
-    # elif lbl_set == 'True: Keep WC & Shadows':
-    #     lbl_set = 1
-    # elif lbl_set == 'True: Mask WC & Shadows':
-    #     lbl_set = 2
-    # lbl_set = int(lbl_set)
-
-    # # Shadow removal
-    # remShadow = values['remShadow']
-    # if remShadow == 'False':
-    #     remShadow = 0
-    # elif remShadow == 'Remove all shadows':
-    #     remShadow = 1
-    # elif remShadow == 'Remove only bank shadows':
-    #     remShadow = 2
-    # remShadow = int(remShadow)
-
-    # # Depth detection
-    # detectDep = values['detectDep']
-    # if detectDep == 'Sensor':
-    #     detectDep = 0
-    # elif detectDep == 'Auto':
-    #     detectDep = 1
-    # detectDep = int(detectDep)
-
-    # # Predict substrate
-    # if values['map_sub']:
-    #     values['pred_sub'] = True
-    # elif values['export_poly']:
-    #     values['pred_sub'] = True
-    #     values['map_sub'] = True
-    # elif values['pltSubClass']:
-    #     values['pred_sub'] = True
-    # else:
-    #     values['pred_sub'] = False
-
-    # # Sonar mosaic
-    # mosaic = values['mosaic']
-    # if mosaic == 'False':
-    #     mosaic = int(0)
-    # elif mosaic == 'GTiff':
-    #     mosaic = int(1)
-    # elif mosaic == 'VRT':
-    #     mosaic = int(2)
-    # mosaic = int(mosaic)
-
-    # # Substrate mosaic
-    # map_mosaic = values['map_mosaic']
-    # if map_mosaic == 'False':
-    #     map_mosaic = 0
-    # elif map_mosaic == 'GTiff':
-    #     map_mosaic = 1
-    # elif map_mosaic == 'VRT':
-    #     map_mosaic = 2
-    # map_mosaic = int(map_mosaic)
 
     try:
         projDir = os.path.join(values['proj'], values['projName'])

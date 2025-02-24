@@ -1,12 +1,15 @@
 # Part of PING-Mapper software
 #
+# GitHub: https://github.com/CameronBodine/PINGMapper
+# Website: https://cameronbodine.github.io/PINGMapper/ 
+#
 # Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
 #
 # Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
 #
 # MIT License
 #
-# Copyright (c) 2022-23 Cameron S. Bodine
+# Copyright (c) 2025 Cameron S. Bodine
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
