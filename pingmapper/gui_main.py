@@ -71,8 +71,8 @@ def gui(batch: bool):
 
     else:
         text_input = sg.Text('Recording to Process')
-        # in_input = sg.In(key='inFile', size=(80,1))
-        in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
+        in_input = sg.In(key='inFile', size=(80,1))
+        # in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
         browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
@@ -83,8 +83,8 @@ def gui(batch: bool):
     ###################
     # Output parameters
     text_output = sg.Text('Output Folder')
-    # in_output = sg.In(key='proj', size=(80,1))
-    in_output = sg.In(key='proj', size=(80,1), default_text=os.path.dirname(default_params['projDir']))
+    in_output = sg.In(key='proj', size=(80,1))
+    # in_output = sg.In(key='proj', size=(80,1), default_text=os.path.dirname(default_params['projDir']))
     browse_output = sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))
 
     # Add to layout
@@ -772,6 +772,9 @@ def gui(batch: bool):
                     print("working on "+projDir)
                     map_master_func(**params)
 
+                gc.collect()
+                print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+
                 sys.stdout.log.close()
 
             except Exception as Argument:
@@ -779,9 +782,6 @@ def gui(batch: bool):
                 print('\n\nCould not process:', datFile)
 
             sys.stdout = oldOutput
-
-            gc.collect()
-            print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
 
         if batch:
             print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
