@@ -1,35 +1,4 @@
 
-# Part of PING-Mapper software
-#
-# GitHub: https://github.com/CameronBodine/PINGMapper
-# Website: https://cameronbodine.github.io/PINGMapper/ 
-#
-# Co-Developed by Cameron S. Bodine and Dr. Daniel Buscombe
-#
-# Inspired by PyHum: https://github.com/dbuscombe-usgs/PyHum
-#
-# MIT License
-#
-# Copyright (c) 2025 Cameron S. Bodine
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
 import sys, os
 
 PySimpleGUI_License = 'e3yAJ9MVaOWANplCbmndNNl2VwHvlCwpZTSjIl6DIjkiRGpYc53aRty8aBWpJF1qdwGLlzv9bUiHILs3Inkyxpp5Yq2OVku8cg2ZVrJ7RNCQI66bMcTLcnyKMbTRMK57OCTPMGxGNtS8whirTBGTlLjxZEWg5DzWZdUXRUlLcDGfxnv7eiWB1jlOb6nqR8WTZ2XsJVzbabW19ouWI6j0oXiKN0Si4AwtI7iFw8iGTBmtFftjZEUxZMpYcLncNk0rIJj4oyisQq2uFCtqZnXWJvvqbEiCICsSIbkC5jhKbvWTVqM2YtX6Ni0XIJjloji1QEmU9Ak5ayWp5nlnIwi3wiiOQK279ytqcKGwFGuvepS6IH6iIOiYIGs7I4kYNQ13cY33RkvIbqWkVyypSKUOQoiZO2ijIFzaMNTEAp0bNxyWI1sLIwkRRjhZdNGBVoJkcZ3MNN1yZMWTQtihOiieIYyXMDDIIF0ILaTyAt36LKTREj5JI1iYwcixRgGuFk0BZGU5VZ4dciGUl3ykZ3XtMbilOMiBIhy1M5DtId1mL6T1A935LYTLEN5iI3iJwoirR8Wa12h5a0WtxkBNZdGiRJyYZXX9N5zZI2jSoZizYpmp9YkHaIWz5YluLTmcNXzNQmGZd0twYGW6l3sALZmTNWvubcSEItsPITk6lFQgQUWZRrkfcEmAVxz0c9y7IG6sILjZEYyzO8Cf4c0WLDj3QCwSLwjPEt2BMMi0J69p854e39898f71ea82d3a530f7a6ed8a02a4eea9ffd2c7b1279074b491c71b411f392e6d726a2d2f9dbf63388356cf4e083e358fe428852d676073e128607b9ad194c15e34a4feb463a749fd3295606caa293b823d102e854cd845b79b5ec5eaec0b2ef7f9cf0c87b2dfcad3f14cd0d66a2da97e6b38a535eb8707b4486c9802a4bfeb09703382e157449096f0e3551af9f444197cacb3f3d42187cea97ab61978985ddeecd086b9cb86c4ec1c08082d47b3ed0ae9c044d9aa65e5c9bf6e00238f78ed858cfdaf0021fb95d636e0cce84d84d2c2da7ac57f2e54fe793fce44a8b8abf96ce7c381f4b7eeb55dc4b68768e8172a4dffc1b683e62a108b2dfc2ef340dab058e6ee5c1f525f93e89d39258862f099987a8ec7022db5aecb5a58e81d02370d5717d18498ae58749aa5e463cf757ab7fa84efe49c1b770da397eef22423696ad433e7232646e279906bef084b21714ac5fc2af564a03ebc789123aed44531765b3e72c6165131feab68e35e0276a64760ee9abf043bece1e3cd148bcec97ab835395391387ff9d2b74a835a15ea5bac9c7e1218c217481a3999a91e037a138aaf5dddadb2247141242140b130e273aab5e1e6855fae8b7ee80d64be2d09a46f3d49555f53a7a849138fc3b9d2323658ea7e86a0039c40f3c15fd3647f99ec98232d9734a5933177c48c6575a1415e2808640cfb27773e728fe128b99757'
@@ -102,8 +71,8 @@ def gui(batch: bool):
 
     else:
         text_input = sg.Text('Recording to Process')
-        in_input = sg.In(key='inFile', size=(80,1))
-        # in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
+        # in_input = sg.In(key='inFile', size=(80,1))
+        in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
         browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
@@ -114,8 +83,8 @@ def gui(batch: bool):
     ###################
     # Output parameters
     text_output = sg.Text('Output Folder')
-    in_output = sg.In(key='proj', size=(80,1))
-    # in_output = sg.In(key='proj', size=(80,1), default_text=os.path.dirname(default_params['projDir']))
+    # in_output = sg.In(key='proj', size=(80,1))
+    in_output = sg.In(key='proj', size=(80,1), default_text=os.path.dirname(default_params['projDir']))
     browse_output = sg.FolderBrowse(initial_folder=os.path.dirname(default_params['projDir']))
 
     # Add to layout
@@ -414,9 +383,6 @@ def gui(batch: bool):
     layout.append([sg.Push(), sg.Submit(), sg.Quit(), sg.Button('Save Defaults'), sg.Push()])
 
 
-    #############
-    # Make Window
-
     layout2 =[[sg.Column(layout, scrollable=True,  vertical_scroll_only=True, size_subsample_height=2)]]
 
     if batch:
@@ -427,6 +393,8 @@ def gui(batch: bool):
 
     while True:
         event, values = window.read()
+
+        # values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
 
         if event == "Quit" or event == 'Submit':
             break
@@ -449,6 +417,8 @@ def gui(batch: bool):
 
     window.close()
 
+    # if event == "Quit":
+    #     sys.exit()
     if event == "Submit":
 
         batch_start_time = time.time()
@@ -551,6 +521,8 @@ def gui(batch: bool):
 
 
         params = {
+            # 'humFile':values[0],
+            # 'projDir':os.path.join(values[1], values[2]),
             'project_mode':int(values['project_mode']),
             'tempC':float(values['tempC']),
             'nchunk':int(values['nchunk']),
@@ -637,6 +609,19 @@ def gui(batch: bool):
                 inFile = datFile
                 recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
 
+
+                # Rename for Gulf Sturgeon Project
+                if 'GulfSturgeonProject_2025' in inPath:
+                    river = os.path.basename(inPath).split('_')[0]
+                    date = os.path.basename(inPath).split('_')[1]
+                    boat = os.path.basename(inPath).split('_')[2]
+
+                    upRKM = os.path.basename(recName).split('_')[0]
+                    dnRKM = os.path.basename(recName).split('_')[1]
+                    recName = os.path.basename(recName).split('_')[2]
+
+                    recName = ('{}_{}_{}_{}_{}_{}_{}'.format(river, upRKM, dnRKM, date, boat, recName, '2025'))
+
                 try:
                     sonPath = inFile.split('.DAT')[0]
                     sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
@@ -713,12 +698,14 @@ def gui(batch: bool):
                 print('===========================================')
                 print('***** READING *****')
                 read_master_func(**params)
+                # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
                 if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
                     print('\n===========================================')
                     print('===========================================')
                     print('***** RECTIFYING *****')
                     rectify_master_func(**params)
+                    # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
                 #==================================================
                 #==================================================
