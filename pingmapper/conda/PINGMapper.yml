@@ -26,4 +26,4 @@ dependencies:
       - tensorflow
       - tf-keras
       - transformers
-      - pysimplegui == 5.0.*
+      - rsa
