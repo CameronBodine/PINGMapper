@@ -2017,12 +2017,12 @@ class portstarObj(object):
             # Port
             self.port.sonDat = portSub
             self.port.rect_wcr = True
-            self.port._rectSonParallel(chunk, son=False)
+            self.port._rectSonRubber(chunk, son=False)
 
             # Star
             self.star.sonDat = starSub
             self.star.rect_wcr = True
-            self.star._rectSonParallel(chunk, son=False)
+            self.star._rectSonRubber(chunk, son=False)
 
         gc.collect()
 
