@@ -622,6 +622,63 @@ def gui(batch: bool):
 
                     recName = ('{}_{}_{}_{}_{}_{}_{}'.format(river, upRKM, dnRKM, date, boat, recName, '2025'))
 
+                    # Apply boat offset
+                    xOff = 'x_offset'
+                    yOff = 'y_offset'
+                    # USM used FWS Jon boat
+                    # Using offsets kasea provided
+                    if boat == 'USM1':
+                        params[xOff] = 3.6
+                        params[yOff] = -0.6
+                    
+                    elif boat == 'FWSA1':
+                        if '202102' in date:
+                            # Feb 2021 trip, Oquawka boat (chan)
+                            params[xOff] = 5.3
+                            params[yOff] = -0.5
+                        elif '202103' in date:
+                            # March 2021 trip, Oquawka boat (chan)
+                            params[xOff] = 5.3
+                            params[yOff] = -0.5
+                        else:
+                            print('Unknown scan!')
+                            print(recName)
+                            sys.exit()
+
+                    elif boat == 'FWSC1':
+                        if '202102' in date:
+                            # Feb 2021 trip, Whaler boat (adam)
+                            params[xOff] = 3.5
+                            params[yOff] = -0.2
+                        if '202105' in date:
+                            # May 2021 trip, Kann boat (adam)
+                            params[xOff] = 5.4
+                            params[yOff] = -0.5
+                        else:
+                            print('Unknown scan!')
+                            print(recName)
+                            sys.exit()
+
+                    elif boat == 'FWSB1':
+                        if '202103' in date:
+                            # March 2021 trip, Kann boat (adam)
+                            params[xOff] = 5.4
+                            params[yOff] = -0.5
+                        if '202105' in date:
+                            # May 2021 trip, Oquawka boat (chan)
+                            params[xOff] = 5.3
+                            params[yOff] = -0.5
+                        else:
+                            print('Unknown scan!')
+                            print(recName)
+                            sys.exit()
+
+                    else: 
+                        print('Unknown scan!')
+                        print(recName)
+                        sys.exit()
+
+
                 try:
                     sonPath = inFile.split('.DAT')[0]
                     sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
