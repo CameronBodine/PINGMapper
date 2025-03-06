@@ -650,7 +650,7 @@ def gui(batch: bool):
                             # Feb 2021 trip, Whaler boat (adam)
                             params[xOff] = 3.5
                             params[yOff] = -0.2
-                        if '202105' in date:
+                        elif '202105' in date:
                             # May 2021 trip, Kann boat (adam)
                             params[xOff] = 5.4
                             params[yOff] = -0.5
@@ -664,7 +664,7 @@ def gui(batch: bool):
                             # March 2021 trip, Kann boat (adam)
                             params[xOff] = 5.4
                             params[yOff] = -0.5
-                        if '202105' in date:
+                        elif '202105' in date:
                             # May 2021 trip, Oquawka boat (chan)
                             params[xOff] = 5.3
                             params[yOff] = -0.5
