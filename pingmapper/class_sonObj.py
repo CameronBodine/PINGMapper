@@ -1366,20 +1366,17 @@ class sonObj(object):
             self._doPPDRC()
         # Remove water if exporting wcr imagery
         if remWater:
-            self._WCR(sonMeta)
-
-        # if 'filter' in sonMeta.columns:
-        #     # Mask filtered pings
-        #     idxs = sonMeta[sonMeta['filter'] == False].index
-
-        #     mask = np.ones(self.sonDat.shape)
-
-        #     for idx in idxs:
-        #         mask[:, idx] = 0
-
-        #     self.sonDat = self.sonDat * mask       
+            self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+
+        return
+    
+    def _getScanSlice(self,):
+        '''
+        
+        '''
+
 
         return
 
