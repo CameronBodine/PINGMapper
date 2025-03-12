@@ -1454,7 +1454,7 @@ class portstarObj(object):
                 starInstDepth = savgol_filter(starInstDepth, 51, 3)
 
             if adjDep != 0:
-                adjBy = self.port.pixM*adjDep
+                adjBy = adjDep
                 portInstDepth += adjBy
                 starInstDepth += adjBy
 
@@ -1478,8 +1478,8 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
+            portDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
 
         elif detectDep > 0:
             # Prepare depth detection dictionaries
@@ -1546,7 +1546,7 @@ class portstarObj(object):
             starDF['dep_m'] = starFinal
 
             if adjDep != 0:
-                adjBy = self.port.pixM*adjDep
+                adjBy = adjDep
                 portDF['dep_m'] += adjBy
                 starDF['dep_m'] += adjBy
 
@@ -1560,8 +1560,8 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep) + ' pixels'
+            portDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
