@@ -1298,6 +1298,100 @@ class sonObj(object):
 
         return
 
+    # ======================================================================
+    def _exportMovWin(self,
+                      i : int,
+                      stride : int,
+                      tileType: list,
+                      pingMax: int,
+                      depMax: int):
+        
+        '''
+        '''
+
+        # Set chunk index
+        a_idx = i-1
+        b_idx = i
+
+        # Iterate each tile type
+        for t in tileType:
+            if t == 'wco':
+                cropMax = depMax
+            else:
+                cropMax = pingMax
+            inDir = os.path.join(self.outDir, t)
+            outDir = os.path.join(self.outDir, t+'_mw')
+
+            if not os.path.exists(outDir):
+                os.mkdir(outDir)
+
+            # Find the images
+            images = os.listdir(inDir)
+            images.sort()
+
+            # Get each image
+            a_img = images[a_idx]
+            b_img = images[b_idx]
+
+            # Get image name
+            img_name = a_img.split('.')[0]
+
+            # Open each image
+            a_img = imread(os.path.join(inDir, a_img))
+            b_img = imread(os.path.join(inDir, b_img))
+
+            def resize_to_pingMax(img, cropMax):
+                ndims = img.ndim
+                current_size = img.shape[0]
+                if current_size < cropMax:
+                    # Pad with zeros 
+                    if ndims == 2:
+                        padding = ((0, cropMax - current_size), (0, 0))
+                    else:
+                        padding = ((0, cropMax - current_size), (0, 0), (0,0))
+                    resized_img = np.pad(img, padding, mode='constant', constant_values=0)
+                elif current_size > cropMax:
+                    # Truncate the array
+                    resized_img = img[:cropMax, :]
+                else:
+                    # No change needed
+                    resized_img = img
+                return resized_img
+
+            # Resize a_img and b_img
+            a_img = resize_to_pingMax(a_img, cropMax)
+            b_img = resize_to_pingMax(b_img, cropMax)
+
+            # Set stride based on first image
+            # stride = int(round(a_img.shape[1] * stride, 0))
+            to_stride = int(round(self.nchunk * stride, 0))
+
+            # Set window size based on first image
+            # winSize = a_img.shape[1]
+            winSize = self.nchunk
+
+            # Concatenate images
+            movWin = np.concatenate((a_img, b_img), axis=1)
+
+            # Last window idx
+            lastWinIDX = self.nchunk
+
+            win = 0
+            # Iterate each window
+            while win < lastWinIDX:
+                window = movWin[:, win:win+winSize]
+
+                zero = self._addZero(win)
+
+                # Save window
+                imsave(os.path.join(outDir, img_name+'_'+zero+str(win)+'.jpg'), window)
+
+                win += to_stride
+
+        return
+
+
+    
     ############################################################################
     # Miscellaneous                                                            #
     ############################################################################

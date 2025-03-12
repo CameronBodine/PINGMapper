@@ -48,6 +48,8 @@ from scipy.signal import savgol_filter
 
 from pingverter import hum2pingmapper, low2pingmapper
 
+import cv2
+
 
 #===========================================
 def read_master_func(logfilename='',
@@ -1248,7 +1250,16 @@ def read_master_func(logfilename='',
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
-    if wcp or wcr or wco:
+    moving_window = True
+    window_stride = 0.1
+    tileFile = '.mp4'
+    frameRate = 5
+    if tileFile == '.mp4':
+        imgType = '.png'
+    else:
+        imgType = tileFile
+
+    if wcp or wcr or wco or wcm:
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
@@ -1262,10 +1273,6 @@ def read_master_func(logfilename='',
                 # Determine what chunks to process
                 chunkCnt = 0
                 chunks = son._getChunkID()
-                # if son.wcr_src and son.wcp:
-                #     chunkCnt = len(chunks)*2
-                # else:
-                #     chunkCnt = len(chunks)
                 if son.wcp:
                     chunkCnt += len(chunks)
                 if son.wcm:
@@ -1281,10 +1288,88 @@ def read_master_func(logfilename='',
                 son._loadSonMeta()
 
                 # Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTiles)(i, tileFile) for i in tqdm(range(len(chunks))))
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=tileFile, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(range(len(chunks))))
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(range(len(chunks))))
 
+                if moving_window and not spdCor:
+
+                    # Crop all images to most common range
+                    son._loadSonMeta()
+                    sDF = son.sonMetaDF
+                    
+                    rangeCnt = np.unique(sDF['ping_cnt'], return_counts=True)
+                    pingMaxi = np.argmax(rangeCnt[1])
+                    pingMax = int(rangeCnt[0][pingMaxi])
+
+                    depCnt = np.unique(sDF['dep_m'], return_counts=True)
+                    depMaxi = np.argmax(depCnt[1])
+                    depMax = int(depCnt[0][depMaxi]/son.pixM)
+                    depMax += 50
+
+
+                    # Remove first chunk
+                    chunks.sort()
+                    chunks = chunks[1:]
+
+                    # Get types of files exported
+                    tileType = []
+                    if son.wcp:
+                        tileType.append('wcp')
+                    if son.wcm:
+                        tileType.append('wcm')
+                    if son.wcr_src:
+                        tileType.append('src')
+                    if son.wco:
+                        tileType.append('wco')
+
+                    Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportMovWin)(i, stride=window_stride, tileType=tileType, pingMax=pingMax, depMax=depMax) for i in tqdm(chunks))
+
+                    # son._exportMovWin(chunks, 
+                    #                   stride=window_stride, 
+                    #                   tileType=tileType)
+
+                    for t in tileType:
+                        shutil.rmtree(os.path.join(son.outDir, t))
+
+                    # Create a movie
+                    if tileFile == '.mp4' and moving_window and not spdCor:
+                        for t in tileType:
+                            inDir = os.path.join(son.outDir, t+'_mw')
+
+                            imgs = os.listdir(inDir)
+                            imgs.sort()
+
+                            frame = cv2.imread(os.path.join(inDir, imgs[0]))
+                            height, width, layers = frame.shape
+
+                            outName = '_'.join(imgs[0].split('_')[:-2])
+                            vidPath = os.path.join(inDir, outName+tileFile)
+
+                            video = cv2.VideoWriter(vidPath, cv2.VideoWriter_fourcc(*'mp4v'), 3, (width, height))
+                            for image in imgs:
+                                frame = cv2.imread(os.path.join(inDir, image))
+
+                                # Pad end
+                                if frame.shape[1] < nchunk:
+                                    n_dims = frame.ndim
+                                    if n_dims == 2:
+                                        padding = ((0,0), (0, nchunk-frame.shape[1]))
+                                    else:
+                                        padding = ((0,0), (0, nchunk-frame.shape[1]), (0,0))
+                                    frame = np.pad(frame, padding, mode='constant', constant_values=0)
+
+                                video.write(frame)
+
+                            video.release()
+
+                            # Removs
+                            for image in imgs:
+                                os.remove(os.path.join(inDir, image))
+
+                            # shutil.rmtree(os.path.join(son.outDir, t))
 
                 son._pickleSon()
+
+
 
             # Tidy up
             son._cleanup()
