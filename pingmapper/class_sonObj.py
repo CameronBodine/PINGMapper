@@ -1372,11 +1372,39 @@ class sonObj(object):
 
         return
     
-    def _getScanSlice(self,):
+    def _getScanSlice(self, transect, start_idx, end_idx, remWater = False):
         '''
         
         '''
 
+        # Open sonar metadata file to df
+        sonMetaAll = pd.read_csv(self.sonMetaFile)
+
+        # Filter by transect
+        sonMetaAll = sonMetaAll[sonMetaAll['transect'] == transect].reset_index(drop=True)
+        
+        # Filter sonMeta
+        # sonMeta = sonMeta[(sonMeta['index'] >= start_idx) & (sonMeta['index'] <= end_idx)]
+        sonMeta = sonMeta.iloc[start_idx:end_idx]
+        sonMeta = sonMeta.reset_index()
+
+        # Update class attributes based on current chunk
+        rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
+        pingMaxi = np.argmax(rangeCnt[1])
+        self.pingMax = int(rangeCnt[0][pingMaxi])
+
+        self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
+        self.son_offset = sonMeta['son_offset']
+        self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+
+        # Load chunk's sonar data into memory
+        self._loadSonChunk()
+
+        # Remove water if exporting wcr imagery
+        if remWater:
+            self._WCR(sonMeta)     
+
+        del self.headIdx, self.pingCnt
 
         return
 
