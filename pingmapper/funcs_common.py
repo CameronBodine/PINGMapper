@@ -50,6 +50,10 @@ from array import array as arr
 
 from osgeo import gdal
 import pyproj
+
+if 'GDAL_DATA' not in os.environ:
+    os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
+
 import rasterio
 import geopandas as gpd
 from rasterio.enums import Resampling
