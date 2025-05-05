@@ -88,6 +88,8 @@ def read_master_func(logfilename='',
                      mask_wc=False,
                      spdCor=False,
                      maxCrop=False,
+                     moving_window=False,
+                     window_stride=0.1,
                      USE_GPU=False,
                      remShadow=0,
                      detectDep=0,
@@ -1250,10 +1252,10 @@ def read_master_func(logfilename='',
     # Export un-rectified sonar tiles                                          #
     ############################################################################
 
-    moving_window = True
-    window_stride = 0.1
-    tileFile = '.mp4'
-    frameRate = 5
+    # moving_window = True
+    # window_stride = 0.1
+    # tileFile = '.mp4'
+    # frameRate = 5
     if tileFile == '.mp4':
         imgType = '.png'
     else:
