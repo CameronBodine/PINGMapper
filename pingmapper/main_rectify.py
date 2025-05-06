@@ -262,6 +262,10 @@ def rectify_master_func(logfilename='',
     # Smooth Trackline                                                         #
     ############################################################################
 
+    cog=True
+    if 'rectMethod' != 'COG':
+        cog=False
+
     smthTrkFilenames = smoothTrackline(projDir=projDir, x_offset=x_offset, y_offset=y_offset, nchunk=nchunk, cog=cog, threadCnt=threadCnt)
     for son in portstar:
         beam = son.beamName
