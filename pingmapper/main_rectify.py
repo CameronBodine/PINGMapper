@@ -263,7 +263,7 @@ def rectify_master_func(logfilename='',
     ############################################################################
 
     cog=True
-    if 'rectMethod' != 'COG':
+    if rectMethod != 'COG':
         cog=False
 
     smthTrkFilenames = smoothTrackline(projDir=projDir, x_offset=x_offset, y_offset=y_offset, nchunk=nchunk, cog=cog, threadCnt=threadCnt)
