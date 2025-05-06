@@ -75,7 +75,7 @@ def read_master_func(logfilename='',
                      pix_res_map=0,
                      x_offset=0,
                      y_offset=0,
-                     tileFile=False,
+                     tileFile='.png',
                      egn=False,
                      egn_stretch=0,
                      egn_stretch_factor=1,
@@ -83,7 +83,7 @@ def read_master_func(logfilename='',
                      wcm=False,
                      wcr=False,
                      wco=False,
-                     sonogram_colorMap='Greys',
+                     sonogram_colorMap='Greys_r',
                      mask_shdw=False,
                      mask_wc=False,
                      spdCor=False,
@@ -356,7 +356,13 @@ def read_master_func(logfilename='',
 
         son.sonMetaFile = meta['metaCSV']
 
-        sonObjs.append(son)
+        if sonFiles:
+            if son.beamName in sonFiles:
+                sonObjs.append(son)
+            else:
+                pass
+        else:
+            sonObjs.append(son)
 
     ####
     # OLD    
