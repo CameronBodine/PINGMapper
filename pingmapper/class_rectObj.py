@@ -617,7 +617,7 @@ class rectObj(sonObj):
         if cog:
             self._interpRangeCoords(filt)
         else:
-            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n', ping_bearing]].copy()
+            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n', ping_bearing, 'transect']].copy()
             sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog', 'range_lat':'range_lats', 'range_lon':'range_lons', 'range_e':'range_es', 'range_n':'range_ns'}, inplace=True)
             sDF['chunk_id_2'] = sDF.index.astype(int)
 
