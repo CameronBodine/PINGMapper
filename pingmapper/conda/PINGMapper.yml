@@ -9,7 +9,6 @@ dependencies:
   - git
   - pandas
   - geopandas
-  - pyproj
   - scikit-image
   - joblib
   - matplotlib
@@ -28,3 +27,4 @@ dependencies:
       - tf-keras
       - transformers
       - rsa
+      - pyproj --force
