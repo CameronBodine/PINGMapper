@@ -357,7 +357,7 @@ def read_master_func(logfilename='',
         son.sonMetaFile = meta['metaCSV']
 
         if sonFiles:
-            if son.beamName in sonFiles:
+            if any(son.beam in s for s in sonFiles):
                 sonObjs.append(son)
             else:
                 pass
