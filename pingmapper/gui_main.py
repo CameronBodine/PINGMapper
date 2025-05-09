@@ -73,7 +73,7 @@ def gui(batch: bool):
         text_input = sg.Text('Recording to Process')
         # in_input = sg.In(key='inFile', size=(80,1))
         in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
-        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3") ), initial_folder=os.path.dirname(default_params['inFile']))
+        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
     layout.append([text_io])
