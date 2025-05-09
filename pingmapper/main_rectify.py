@@ -262,6 +262,10 @@ def rectify_master_func(logfilename='',
     # Smooth Trackline                                                         #
     ############################################################################
 
+    # Must use COG for rubber sheeting
+    if rubberSheeting:
+        rectMethod = 'COG'
+
     cog=True
     if rectMethod != 'COG':
         cog=False
