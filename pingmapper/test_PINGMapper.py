@@ -38,6 +38,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
+# # For debug
+# from funcs_common import *
+# from main_readFiles import read_master_func
+# from main_rectify import rectify_master_func
+# from main_mapSubstrate import map_master_func
+
 from pingmapper.funcs_common import *
 from pingmapper.main_readFiles import read_master_func
 from pingmapper.main_rectify import rectify_master_func
@@ -177,7 +183,7 @@ def test(ds):
     ## 2==Auto detect depth w/ Thresholding
 
     smthDep = True #Smooth depth before water column removal
-    adjDep = 10 #Aditional depth adjustment (in pixels) for water column removaL
+    adjDep = 0 #Aditional depth adjustment (in meters) for water column removaL
     pltBedPick = True #Plot bedpick on sonogram
 
 

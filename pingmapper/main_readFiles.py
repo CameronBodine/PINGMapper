@@ -36,6 +36,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
+# # For debug
+# from funcs_common import *
+# from class_sonObj import sonObj
+# from class_portstarObj import portstarObj
+
 from pingmapper.funcs_common import *
 from pingmapper.class_sonObj import sonObj
 from pingmapper.class_portstarObj import portstarObj
@@ -245,6 +250,11 @@ def read_master_func(logfilename='',
     |     |--*.PNG : Starboard side scan (ss) sonar tiles (non-rectified), w/
     |     |          water column present (wcp)
     '''
+
+    #####################################
+    # Show version
+    from pingmapper.version import __version__
+    print("\nPING-Mapper v{}".format(__version__))
 
 
     #####################################
