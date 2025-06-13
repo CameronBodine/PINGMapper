@@ -38,10 +38,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-from pingmapper.funcs_common import *
-from pingmapper.class_rectObj import rectObj
-from pingmapper.class_portstarObj import portstarObj
-from pingmapper.funcs_rectify import smoothTrackline
+# # For Debug
+# from funcs_common import *
+# from class_rectObj import rectObj
+# from class_portstarObj import portstarObj
+# from funcs_rectify import smoothTrackline
+
+# from pingmapper.funcs_common import *
+# from pingmapper.class_rectObj import rectObj
+# from pingmapper.class_portstarObj import portstarObj
+# from pingmapper.funcs_rectify import smoothTrackline
 
 import inspect
 
@@ -444,7 +450,7 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
         psObj = portstarObj(portstar)
-        if aoi or max_heading_deviation or min_speed or max_speed:
+        if aoi or max_heading_deviation or min_speed or max_speed or time_table:
             psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
         else:
             psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)

@@ -10,10 +10,17 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
+# # For Debug
+# from funcs_common import *
+# from main_readFiles import read_master_func
+# from main_rectify import rectify_master_func
+# from main_mapSubstrate import map_master_func
+
 from pingmapper.funcs_common import *
 from pingmapper.main_readFiles import read_master_func
 from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
+
 import json
 import pandas as pd
 
