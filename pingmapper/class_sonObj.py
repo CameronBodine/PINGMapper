@@ -741,6 +741,14 @@ class sonObj(object):
         for i in range(len(self.headIdx)):
             if ~np.isnan(self.headIdx[i]):
                 ping_len = min(self.pingCnt[i].astype(int), self.pingMax)
+
+
+                # #### Do not commit!!!!
+                # # if self.beamName == 'ss_star' or self.beamName == 'ss_port':
+                # #     ping_len *= 2
+                if not self.son8bit:
+                    ping_len *= 2
+
                 headIDX = self.headIdx[i].astype(int)
                 son_offset = self.son_offset[i].astype(int)
                 # pingIdx = headIDX + self.headBytes # Determine byte offset to sonar returns
@@ -755,7 +763,13 @@ class sonObj(object):
                     buffer = buffer[::-1]
 
                 # Read the data
-                dat = np.frombuffer(buffer, dtype='>u1')
+                if self.son8bit:# and self.beamName != 'ss_star' and self.beamName != 'ss_port':
+                    dat = np.frombuffer(buffer, dtype='>u1')
+                else:
+                    try:
+                        dat = np.frombuffer(buffer, dtype='>u2')
+                    except:
+                        dat = np.frombuffer(buffer[:-1], dtype='>u2')
 
                 try:
                     sonDat[:ping_len, i] = dat
@@ -764,7 +778,7 @@ class sonObj(object):
                     sonDat[:ping_len, i] = dat
         
         file.close()
-        self.sonDat = sonDat
+        self.sonDat = sonDat.astype(np.uint8)
         return
 
     # ======================================================================

@@ -36,8 +36,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
+# # For depug
+# from funcs_common import *
+# from class_sonObj import sonObj
+
 from pingmapper.funcs_common import *
 from pingmapper.class_sonObj import sonObj
+
 from osgeo import gdal, ogr, osr
 from osgeo_utils.gdal_sieve import gdal_sieve
 from scipy.interpolate import splprep, splev
@@ -1366,11 +1371,11 @@ class rectObj(sonObj):
 
         pix_m = self.pixM # Get pixel size
 
-        xPixMax, yPixMax = df[xPix].max().astype(int), df[yPix].max().astype(int)
+        xPixMax, yPixMax = int(df[xPix].max()), int(df[yPix].max())
 
         # Get extent of chunk
-        xMin, xMax = df[xCoord].min().astype(int), df[xCoord].max().astype(int)
-        yMin, yMax = df[yCoord].min().astype(int), df[yCoord].max().astype(int)
+        xMin, xMax = int(df[xCoord].min()), int(df[xCoord].max())
+        yMin, yMax = int(df[yCoord].min()), int(df[yCoord].max())
 
         # Setup outupt array
         # Determine output shape dimensions

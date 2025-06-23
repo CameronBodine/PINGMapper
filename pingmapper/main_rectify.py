@@ -44,10 +44,10 @@ sys.path.append(PACKAGE_DIR)
 # from class_portstarObj import portstarObj
 # from funcs_rectify import smoothTrackline
 
-# from pingmapper.funcs_common import *
-# from pingmapper.class_rectObj import rectObj
-# from pingmapper.class_portstarObj import portstarObj
-# from pingmapper.funcs_rectify import smoothTrackline
+from pingmapper.funcs_common import *
+from pingmapper.class_rectObj import rectObj
+from pingmapper.class_portstarObj import portstarObj
+from pingmapper.funcs_rectify import smoothTrackline
 
 import inspect
 
@@ -418,7 +418,7 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             # for i in chunks:
             #     son._rectSonRubber(i, filter, cog, wgs=False)
-            #     sys.exit()
+            #     # sys.exit()
             Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(range(len(chunks))))
             son._cleanup()
             gc.collect()

@@ -50,9 +50,9 @@ from doodleverse_utils.imports import *
 
 from scipy.signal import savgol_filter
 
-# sys.path.insert(0, r'C:\Users\cbodine\PythonRepos\PINGVerter')
+# sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
 
-from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper
+from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper#, gar2pingmapper
 
 import cv2
 
@@ -326,14 +326,25 @@ def read_master_func(logfilename='',
     elif file_type == '.sl2' or file_type == '.sl3':
         sonar_obj = low2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
+    # # Prepare Garmin file for PINGMapper
+    # elif file_type == '.RSD':
+    #     sonar_obj = gar2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
+
     # Prepare Cerulean file for PINGMapper
     elif file_type == '.svlog':
         sonar_obj = cerul2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
         detectDep = 1 # No depth in cerulean files, so set to Zheng et al. 2021
 
+    # Unknown
+    else:
+        print('\n\nERROR!\n\nFile type {} not supported at this time.'.format(file_type))
+        sys.exit()
+
     ####################
     # Create son objects
     ####################
+
+    # print(sonar_obj)
 
     # Get available beams and metadata
     beamMeta = sonar_obj.beamMeta
@@ -360,6 +371,13 @@ def read_master_func(logfilename='',
         son.isOnix = sonar_obj.isOnix
         son.trans = sonar_obj.trans
         son.humDat = sonar_obj.humDat
+        # if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+        #     son.son8bit = sonar_obj.son8bit
+        # else:
+        son.son8bit = sonar_obj.son8bit
+
+        # print(son.beamName, son.son8bit)
+
 
         if pix_res_son == 0:
             son.pix_res_son = 0
