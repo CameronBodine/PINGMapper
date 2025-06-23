@@ -43,7 +43,10 @@ Let's get started!
 
 ## Step 1 - Install Miniconda
 
-Use one of the links listed above to download `conda`. This example will use [Miniconda](https://docs.conda.io/en/latest/miniconda.html). There is a separate installation file depending on the type of your computer's operation system. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
+{: .warning }
+> There are errors on Windows associated with the most current (as of 6/23/2025) version ([Miniconda3-py39_25.3.1-1-Windows-x86_64.exe](https://repo.anaconda.com/miniconda/Miniconda3-py39_25.3.1-1-Windows-x86_64.exe), released April 30, 2025) of Miniconda. This issue causes `ping` environment solving stage to take a very long time (>>15mins). If a newer version is not available, please install [Miniconda3-py39_25.1.1-2-Windows-x86_64.exe](https://repo.anaconda.com/miniconda/Miniconda3-py39_25.1.1-2-Windows-x86_64.exe). Visit [Miniconda's version archive](https://repo.anaconda.com/miniconda/) to see all available versions.
+
+Use one of the links listed above to download `conda`. This example will use [Miniconda](https://docs.conda.io/en/latest/miniconda.html(https://repo.anaconda.com/miniconda/Miniconda3-py39_25.3.1-1-Windows-x86_64.exe)). There is a separate installation file depending on the type of your computer's operation system. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
 
 Double click the file to begin the installation file. This will open an installation window:
 
@@ -87,6 +90,9 @@ Click the folder are click `Anaconda Powershell Prompt`. This will open the prom
 
 ## Step 2
 
+{: .g2k }
+> Installing PINGInstaller in the `base` environment will only download the PINGInstaller package and make no further changes.
+
 A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is used to install and setup PINGMapper. We will install `PINGInstaller` with the following command and pressing `Enter`:
 
 ```bash
@@ -97,7 +103,7 @@ pip install pinginstaller -U
 
 ## Step 3
 
-Now run `PINGInstaller` to download and install all dependencies into a conda environment. Add the following command and press `Enter`:
+By running `PINGInstaller`, a new conda environment called `ping` will be created, and all dependencies will be installed into `ping`. Add the following command and press `Enter`:
 
 ```bash
 python -m pinginstaller
