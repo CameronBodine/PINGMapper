@@ -32,6 +32,7 @@ pingmapper/models
 .pydirc
 pingmapper.egg-info
 dist
+pingmapper/test_time.py
 
 main_batch.py
 main_batchFolder.py
