@@ -275,7 +275,7 @@ def map_master_func(logfilename='',
             # Do prediction (make parallel later)
             print('\n\tPredicting substrate for', len(chunks), son.beamName, 'chunks')
 
-            Parallel(n_jobs=np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._detectSubstrate)(i, USE_GPU) for i in chunks)
+            Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(son._detectSubstrate)(i, USE_GPU) for i in tqdm(chunks))
 
             son._cleanup()
             son._pickleSon()
@@ -324,7 +324,7 @@ def map_master_func(logfilename='',
 
             # Plot substrate classification()
             # sys.exit()
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop, probs=probs) for c, f in toMap.items())
+            Parallel(n_jobs=np.min([len(toMap), threadCnt]))(delayed(son._pltSubClass)(map_class_method, c, f, spdCor=spdCor, maxCrop=maxCrop, probs=probs) for c, f in tqdm((toMap.items())))
             son._pickleSon()
             del toMap
 
@@ -384,7 +384,7 @@ def map_master_func(logfilename='',
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
-        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in toMap.items())
+        Parallel(n_jobs=np.min([len(toMap), threadCnt]))(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in tqdm(toMap.items()))
 
         del toMap
         print("\nDone!")
@@ -524,7 +524,7 @@ def map_master_func(logfilename='',
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
-        Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in toMap.items())
+        Parallel(n_jobs=np.min([len(toMap), threadCnt]))(delayed(psObj._mapPredictions)(map_predict, 'map_'+a, c, f) for c, f in tqdm(toMap.items()))
 
         del toMap, psObj
         print("\nDone!")

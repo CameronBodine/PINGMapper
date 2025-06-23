@@ -364,7 +364,7 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
             # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
-            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(range(len(chunks))))
+            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(chunks))
             # for i in chunks:
             #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
             #     r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i, heading=heading, interp_dist=rectInterpDist)
@@ -419,7 +419,7 @@ def rectify_master_func(logfilename='',
             # for i in chunks:
             #     son._rectSonRubber(i, filter, cog, wgs=False)
             #     # sys.exit()
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(range(len(chunks))))
+            Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(chunks))
             son._cleanup()
             gc.collect()
             printUsage()

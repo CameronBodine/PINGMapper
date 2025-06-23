@@ -650,7 +650,7 @@ def read_master_func(logfilename='',
         del c, r, n, startB, rowCnt
 
         # Fix no data in parallel
-        r = Parallel(n_jobs=threadCnt)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in tqdm(range(len(rowsToProc))))
+        r = Parallel(n_jobs=threadCnt)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in tqdm(rowsToProc))
         gc.collect()
 
         # Concatenate results from parallel processing
@@ -934,7 +934,7 @@ def read_master_func(logfilename='',
             print('\n\tUsing binary thresholding...')
 
         # Parallel estimate depth for each chunk using appropriate method
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(range(len(chunks))))
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
 
         # store the depth predictions in the class
         for ret in r:
@@ -1000,7 +1000,7 @@ def read_master_func(logfilename='',
         start_time = time.time()
 
         print("\n\nExporting bedpick plots to {}...".format(tileFile))
-        Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in tqdm(range(len(chunks))))
+        Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in tqdm(chunks))
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -1086,7 +1086,7 @@ def read_master_func(logfilename='',
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()
 
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in tqdm(range(len(chunks))))
+        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in tqdm(chunks))
 
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
@@ -1141,7 +1141,7 @@ def read_master_func(logfilename='',
 
                 # Calculate range-wise mean intensity for each chunk
                 print('\n\tCalculating range-wise mean intensity for each chunk...')
-                chunk_means = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(range(len(chunks))))
+                chunk_means = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(chunks))
 
                 # Calculate global means
                 print('\n\tCalculating range-wise global means...')
@@ -1150,7 +1150,7 @@ def read_master_func(logfilename='',
 
                 # Calculate egn min and max for each chunk
                 print('\n\tCalculating EGN min and max values for each chunk...')
-                min_max = Parallel(n_jobs= np.min([len(chunks)]))(delayed(son._egnCalcMinMax)(i) for i in tqdm(range(len(chunks))))
+                min_max = Parallel(n_jobs= np.min([len(chunks)]))(delayed(son._egnCalcMinMax)(i) for i in tqdm(chunks))
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
@@ -1202,7 +1202,7 @@ def read_master_func(logfilename='',
                     chunks = chunks[:-1] # remove last chunk
 
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
-                    hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcHist)(i) for i in tqdm(range(len(chunks))))
+                    hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcHist)(i) for i in tqdm(chunks))
 
                     print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
@@ -1329,8 +1329,10 @@ def read_master_func(logfilename='',
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                # Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTiles)(i, tileFile) for i in tqdm(range(len(chunks))))
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(range(len(chunks))))
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(chunks))
+                # for i in tqdm(chunks):
+                #     son._exportTilesSpd(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop)
+                #     sys.exit()
 
                 if moving_window and not spdCor:
 
