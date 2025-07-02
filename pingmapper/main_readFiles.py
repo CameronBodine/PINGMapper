@@ -36,23 +36,23 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For debug
-# from funcs_common import *
-# from class_sonObj import sonObj
-# from class_portstarObj import portstarObj
+# For debug
+from funcs_common import *
+from class_sonObj import sonObj
+from class_portstarObj import portstarObj
 
-from pingmapper.funcs_common import *
-from pingmapper.class_sonObj import sonObj
-from pingmapper.class_portstarObj import portstarObj
+# from pingmapper.funcs_common import *
+# from pingmapper.class_sonObj import sonObj
+# from pingmapper.class_portstarObj import portstarObj
 
 import shutil
 from doodleverse_utils.imports import *
 
 from scipy.signal import savgol_filter
 
-# sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
+sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
 
-from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper#, gar2pingmapper
+from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper, gar2pingmapper
 
 import cv2
 
@@ -326,9 +326,9 @@ def read_master_func(logfilename='',
     elif file_type == '.sl2' or file_type == '.sl3':
         sonar_obj = low2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
-    # # Prepare Garmin file for PINGMapper
-    # elif file_type == '.RSD':
-    #     sonar_obj = gar2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
+    # Prepare Garmin file for PINGMapper
+    elif file_type == '.RSD':
+        sonar_obj = gar2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Cerulean file for PINGMapper
     elif file_type == '.svlog':
@@ -367,7 +367,7 @@ def read_master_func(logfilename='',
         son.beamName = meta['beamName']
         son.beam = beam
         son.headBytes = sonar_obj.headBytes
-        son.pixM = sonar_obj.pixM
+        # son.pixM = sonar_obj.pixM
         son.isOnix = sonar_obj.isOnix
         son.trans = sonar_obj.trans
         son.humDat = sonar_obj.humDat
@@ -426,13 +426,24 @@ def read_master_func(logfilename='',
             son.cropRange = cropRange
             # Do range crop, if necessary
             if cropRange > 0.0:
-                # Convert to distance in pix
-                d = round(cropRange / son.pixM, 0).astype(int)
+                # # Convert to distance in pix
+                # d = round(cropRange / son.pixM, 0).astype(int)
+
+                # # Get sonMetaDF
+                # son._loadSonMeta()
+                # son.sonMetaDF.loc[son.sonMetaDF['ping_cnt'] > d, 'ping_cnt'] = d
+                # son._saveSonMetaCSV(son.sonMetaDF)
 
                 # Get sonMetaDF
                 son._loadSonMeta()
-                son.sonMetaDF.loc[son.sonMetaDF['ping_cnt'] > d, 'ping_cnt'] = d
-                son._saveSonMetaCSV(son.sonMetaDF)
+                df = son.sonMetaDF
+
+                # Convert to distance in pixels
+                d = round(cropRange / df['pixM'], 0).astype(int)
+
+                # Filter df
+                df.loc[df['ping_cnt'] > d, 'ping_cnt'] = d
+                son._saveSonMetaCSV(df)
 
         # Store flag to export un-rectified sonar tiles in each sonObj.
         for son in sonObjs:
@@ -979,6 +990,12 @@ def read_master_func(logfilename='',
                 dep = sonDF['inst_dep_m']
                 if smthDep:
                     dep = savgol_filter(dep, 51, 3)
+
+                # Interpolate over nan's (and set zero's to nan)
+                dep = dep.to_numpy()
+                dep[dep==0] = np.nan
+                nans, x = np.isnan(dep), lambda z: z.nonzero()[0]
+                dep[nans] = np.interp(x(nans), x(~nans), dep[~nans])
                 
                 sonDF['dep_m'] = dep + adjDep
 

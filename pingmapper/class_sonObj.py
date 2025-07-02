@@ -800,7 +800,7 @@ class sonObj(object):
 
         # Load depth (in real units) and convert to pixels
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int)
         minDep = min(bedPick)
 
         del sonMeta, self.sonMetaDF
@@ -855,7 +855,7 @@ class sonObj(object):
         '''
         # Load depth (in real units) and convert to pixels
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).reset_index(drop=True)
 
         # Initialize 2d array to store relocated sonar records
         srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(np.float32)#.astype(int)
@@ -904,7 +904,7 @@ class sonObj(object):
                   sonMeta,
                   crop=True):
         # Load depth (in real units) and convert to pixels
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int)
         minDep = min(bedPick)
 
         sonDat = self.sonDat
@@ -924,7 +924,7 @@ class sonObj(object):
     def _WCO(self,
                   sonMeta):
         # Load depth (in real units) and convert to pixels
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int)
         maxDep = max(bedPick)
 
         sonDat = self.sonDat
@@ -1287,8 +1287,15 @@ class sonObj(object):
                 d = sonMeta['trk_dist'].to_numpy()
                 d = np.max(d) - np.min(d)
 
+                pixM = sonMeta['pixM']
+                # Find most common pixel size
+                if len(pixM.unique()) > 1:
+                    pixM = pixM.mode()[0]
+                else:
+                    pixM = pixM.iloc[0]
+
                 # Distance in pix
-                d = round(d / self.pixM, 0).astype(int)
+                d = round(d / pixM, 0).astype(int)
 
                 sonDat = resize(sonDat,
                                 (sonDat.shape[0], d),
@@ -2002,7 +2009,7 @@ class sonObj(object):
         egn_means = self.egn_bed_means.copy() # Don't want to overwrite
 
         # Get bedpicks, in pixel units
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).to_numpy()
 
         # Iterate each ping
         for j in range(sonDat.shape[1]):
@@ -2071,7 +2078,7 @@ class sonObj(object):
             del t, l
 
         # Get bedpicks, in pixel units
-        bedPick = round(sonMeta['dep_m'] / self.pixM, 0).astype(int)
+        bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).to_numpy()
 
         # Iterate each ping
         for j in range(sonDat.shape[1]):

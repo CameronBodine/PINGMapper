@@ -38,16 +38,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For Debug
-# from funcs_common import *
-# from class_rectObj import rectObj
-# from class_portstarObj import portstarObj
-# from funcs_rectify import smoothTrackline
+# For Debug
+from funcs_common import *
+from class_rectObj import rectObj
+from class_portstarObj import portstarObj
+from funcs_rectify import smoothTrackline
 
-from pingmapper.funcs_common import *
-from pingmapper.class_rectObj import rectObj
-from pingmapper.class_portstarObj import portstarObj
-from pingmapper.funcs_rectify import smoothTrackline
+# from pingmapper.funcs_common import *
+# from pingmapper.class_rectObj import rectObj
+# from pingmapper.class_portstarObj import portstarObj
+# from pingmapper.funcs_rectify import smoothTrackline
 
 import inspect
 
@@ -310,7 +310,7 @@ def rectify_master_func(logfilename='',
     # COG Pre-processing                                                       #
     # ##########################################################################
 
-    for son in portstar:
+    # for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
 
@@ -402,6 +402,8 @@ def rectify_master_func(logfilename='',
         son.rect_wcr = rect_wcr
 
     if (rect_wcp and rubberSheeting) or (rect_wcr and rubberSheeting):
+        # Always use COG for rubber sheeting
+        cog = True
         for son in portstar:
             # Set output directory
             son.outDir = os.path.join(son.projDir, son.beamName)
@@ -418,7 +420,7 @@ def rectify_master_func(logfilename='',
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
             # for i in chunks:
             #     son._rectSonRubber(i, filter, cog, wgs=False)
-            #     # sys.exit()
+                # sys.exit()
             Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(chunks))
             son._cleanup()
             gc.collect()

@@ -36,12 +36,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For depug
-# from funcs_common import *
-# from class_sonObj import sonObj
+# For depug
+from funcs_common import *
+from class_sonObj import sonObj
 
-from pingmapper.funcs_common import *
-from pingmapper.class_sonObj import sonObj
+# from pingmapper.funcs_common import *
+# from pingmapper.class_sonObj import sonObj
 
 from osgeo import gdal, ogr, osr
 from osgeo_utils.gdal_sieve import gdal_sieve
@@ -284,7 +284,7 @@ class rectObj(sonObj):
                   'record_num': dfOrig['record_num'],
                   'ping_cnt': dfOrig['ping_cnt'],
                   'time_s': dfOrig['time_s'],
-                  'pix_m': self.pixM,
+                  'pixM': dfOrig['pixM'],
                   lons: x_interp[0],
                   lats: x_interp[1],
                   'dep_m': dfOrig['dep_m'],
@@ -568,17 +568,29 @@ class rectObj(sonObj):
         # maxPing = chunk[ping_cnt].max() # Find max ping count for each chunk
         # New method to find maxPing based on most numerous ping count
         maxPing = []
+        pixM_all = []
         for name, group in sDF.groupby(chunk_id):
             rangeCnt = np.unique(group[ping_cnt], return_counts=True)
             pingMaxi = np.argmax(rangeCnt[1])
             maxPing.append(int(rangeCnt[0][pingMaxi]))
+
+            # Get pixM from sonMetaDF
+            pixM = sonMetaDF.loc[sonMetaDF['chunk_id']==name, 'pixM'] # Get pixel size for each chunk
+            # Find most common pixel size
+            if len(pixM.unique()) > 1:
+                pixM = pixM.mode()[0]
+            else:
+                pixM = pixM.iloc[0]
+            pixM_all.append(pixM)
+
+
         # Convert maxPing i to pd series
         maxPing = pd.Series(maxPing)
 
         # pix_m = chunk['pix_m'].min() # Get pixel size for each chunk
-        pix_m = self.pixM # Get pixel size for each chunk
+        # pix_m = self.pixM # Get pixel size for each chunk
         for i in maxPing.index: # Calculate range (in meters) for each chunk
-            sDF.loc[sDF[chunk_id]==i, range_] = maxPing[i]*pix_m
+            sDF.loc[sDF[chunk_id]==i, range_] = maxPing[i]* pixM_all[i] # Calculate range in meters for each chunk
 
         ##################################################
         # Calculate range extent coordinates for each ping
@@ -622,7 +634,7 @@ class rectObj(sonObj):
         if cog:
             self._interpRangeCoords(filt)
         else:
-            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n', ping_bearing, 'transect']].copy()
+            sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'range', 'range_lon', 'range_lat', 'range_e', 'range_n', ping_bearing, 'transect', 'pixM']].copy()
             sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog', 'range_lat':'range_lats', 'range_lon':'range_lons', 'range_e':'range_es', 'range_n':'range_ns'}, inplace=True)
             sDF['chunk_id_2'] = sDF.index.astype(int)
 
@@ -741,7 +753,7 @@ class rectObj(sonObj):
         ##################################################
         # Join smoothed trackline to smoothed range extent
         # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
-        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'transect']].copy()
+        sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'transect', 'pixM']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
         rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
         rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
@@ -1042,6 +1054,7 @@ class rectObj(sonObj):
         n = 'n'
         record_num = 'record_num'
         chunk_id = 'chunk_id'
+        pixM = 'pixM'
 
         flip = False
 
@@ -1071,10 +1084,12 @@ class rectObj(sonObj):
         # Calculate ping bearing and normalize to range 0-360
         pingDF[ping_bearing] = (row[heading]+rotate) % 360
 
-        pix_m = self.pixM # Get pixel size for each chunk
+        # pix_m = self.pixM # Get pixel size for each chunk
+        pix_m = row['pixM'] # Get pixel size for each chunk
 
         # Calculate pixel size
         pingDF[son_range] = pingDF[son_idx] * pix_m
+        pingDF[pixM] = pix_m # Store pixel size in dataframe
 
         ##################################################
         # Calculate range extent coordinates for each ping
@@ -1128,7 +1143,7 @@ class rectObj(sonObj):
         # Calculate easting and northing
         pingDF[e], pingDF[n] = self.trans(pingDF[lons].to_numpy(), pingDF[lats].to_numpy())
 
-        pingDF = pingDF[[chunk_id, record_num, son_idx, lons, lats, e, n, son_range]]
+        pingDF = pingDF[[chunk_id, record_num, son_idx, lons, lats, e, n, son_range, pixM]]
 
         # Set index to help speed concatenation
         pingDF.set_index([record_num, son_idx], inplace=True)
@@ -1162,7 +1177,14 @@ class rectObj(sonObj):
         ## Destination coordinates describe the geographic location in lat/lon
         ## or easting/northing that directly map to the pix coordinates.
 
-        pix_m = self.pixM # Get pixel size
+        # pix_m = self.pixM # Get pixel size
+        pixM = df['pixM']
+        # Find most common pixel size
+        if len(pixM.unique()) > 1:
+            pixM = pixM.mode()[0]
+        else:
+            pixM = pixM.iloc[0]
+        pix_m = pixM
 
         # Get extent of chunk
         xMin, xMax = df[xCoord].min(), df[xCoord].max()
@@ -1329,10 +1351,17 @@ class rectObj(sonObj):
         
         '''
 
+        pixM = df['pixM']
+        # Find most common pixel size
+        if len(pixM.unique()) > 1:
+            pixM = pixM.mode()[0]
+        else:
+            pixM = pixM.iloc[0]
+
         pix_res = self.pix_res_son
         do_resize = True
         if pix_res == 0:
-            pix_res = self.pixM
+            pix_res = pixM
             do_resize = False
 
         if son:
@@ -1369,7 +1398,7 @@ class rectObj(sonObj):
         ##################
         # Do Rectification
 
-        pix_m = self.pixM # Get pixel size
+        pix_m = pixM # Get pixel size
 
         xPixMax, yPixMax = int(df[xPix].max()), int(df[yPix].max())
 
@@ -1881,9 +1910,20 @@ class rectObj(sonObj):
         filterIntensity = False
         pix_res = self.pix_res_son
         do_resize = True
-        if pix_res == 0:
-            pix_res = self.pixM
-            do_resize = False
+
+        # # Set pixel resolution
+        # self._loadSonMeta()
+        # sonMeta = self.sonMetaDF['chunk_id']==chunk
+        # pixM = sonMeta['pixM']
+        # # Find most common pixel size
+        # if len(pixM.unique()) > 1:
+        #     pixM = pixM.mode()[0]
+        # else:
+        #     pixM = pixM.iloc[0]
+
+        # if pix_res == 0:
+        #     pix_res = pixM
+        #     do_resize = False
 
         if son:
             # Create output directory if it doesn't exist
@@ -1914,10 +1954,18 @@ class rectObj(sonObj):
         # # Determine leading zeros to match naming convention
         addZero = self._addZero(chunk)
 
-        #################################
-        # Prepare pixel (pix) coordinates
-        ## Pix coordinates describe the size of the coordinates in pixel
-        ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
+        #############################################################
+        # Open smoothed trackline/range extent file
+        trkMeta = pd.read_csv(trkMetaFile)
+        if cog:
+            trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        else:
+            # trkMeta = trkMeta[trkMeta['chunk_id_2']==chunk].reset_index(drop=False)
+            # next = trkMeta[trkMeta['chunk_id_2']==chunk+1].reset_index(drop=False)
+            # trkMeta = pd.concat([trkMeta, next], ignore_index=True)
+            isChunk = trkMeta['chunk_id_2']==chunk
+            isChunk.iloc[chunk+1] = True
+            trkMeta = trkMeta[isChunk].reset_index(drop=False)
 
         # Filter sonMetaDF by chunk
         if not hasattr(self, 'sonMetaDF'):
@@ -1934,10 +1982,56 @@ class rectObj(sonObj):
 
         sonMeta = sonMetaAll[isChunk].reset_index()
 
+        filtSon = False
+        if len(sonMeta) != len(trkMeta):
+            if len(sonMeta) > len(trkMeta):
+                filtSon = True
+
+            # Filter df's to make sure they both have the same record_num
+            # Get the intersection of record_num values
+            common_record_nums = np.intersect1d(sonMeta['record_num'], trkMeta['record_num'])
+
+            # Filter both DataFrames to only include these record_num values
+            sonMeta_filtered = sonMeta[sonMeta['record_num'].isin(common_record_nums)]#.reset_index(drop=True)
+            trkMeta_filtered = trkMeta[trkMeta['record_num'].isin(common_record_nums)]#.reset_index(drop=True)
+
+            # Store the index's that were dropped
+            # Get dropped indexes for each DataFrame
+            dropped_sonMeta_idx = sonMeta.index.difference(sonMeta_filtered.index)
+            dropped_trkMeta_idx = trkMeta.index.difference(trkMeta_filtered.index)
+
+            sonMeta = sonMeta_filtered
+            trkMeta = trkMeta_filtered
+            
+            if filtSon:
+                idx_to_filt = dropped_sonMeta_idx.tolist()
+        
+
+        #################################
+        # Prepare pixel (pix) coordinates
+        ## Pix coordinates describe the size of the coordinates in pixel
+        ## coordinates (top left of image == (0,0); top right == (0,nchunk)...)
+
+        # # Filter sonMetaDF by chunk
+        # if not hasattr(self, 'sonMetaDF'):
+        #     self._loadSonMeta()
+
+        # sonMetaAll = self.sonMetaDF
+        # if cog:
+        #     isChunk = sonMetaAll['chunk_id']==chunk
+        # else:
+        #     isChunk = sonMetaAll['chunk_id_2']==chunk
+        #     # next = sonMetaAll['chunk_id_2']==(chunk+1)
+        #     # isChunk = pd.concat([isChunk, next], ignore_index=True)
+        #     isChunk.iloc[chunk+1] = True
+
+        # sonMeta = sonMetaAll[isChunk].reset_index()
+
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
         self.headIdx = sonMeta['index'] # store byte offset per ping
         self.pingCnt = sonMeta['ping_cnt'] # store ping count per ping
+        self.pixM = sonMeta['pixM'] # store pixel size per ping
 
         if son:
             # Open image to rectify
@@ -1956,6 +2050,13 @@ class rectObj(sonObj):
             del self.shadowMask
 
         img = self.sonDat
+
+        # Drop image columns if needed
+        if filtSon:
+            img = np.delete(img, dropped_sonMeta_idx, axis=1)
+            self.sonDat = img.copy()
+
+
         # if not cog:
         #     # Zero out second ping
         #     img[:,1] = 0
@@ -1988,19 +2089,26 @@ class rectObj(sonObj):
         ## Destination coordinates describe the geographic location in lat/lon
         ## or easting/northing that directly map to the pix coordinates.
 
-        # Open smoothed trackline/range extent file
-        trkMeta = pd.read_csv(trkMetaFile)
-        if cog:
-            trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
-        else:
-            # trkMeta = trkMeta[trkMeta['chunk_id_2']==chunk].reset_index(drop=False)
-            # next = trkMeta[trkMeta['chunk_id_2']==chunk+1].reset_index(drop=False)
-            # trkMeta = pd.concat([trkMeta, next], ignore_index=True)
-            isChunk = trkMeta['chunk_id_2']==chunk
-            isChunk.iloc[chunk+1] = True
-            trkMeta = trkMeta[isChunk].reset_index(drop=False)
+        # # Open smoothed trackline/range extent file
+        # trkMeta = pd.read_csv(trkMetaFile)
+        # if cog:
+        #     trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        # else:
+        #     # trkMeta = trkMeta[trkMeta['chunk_id_2']==chunk].reset_index(drop=False)
+        #     # next = trkMeta[trkMeta['chunk_id_2']==chunk+1].reset_index(drop=False)
+        #     # trkMeta = pd.concat([trkMeta, next], ignore_index=True)
+        #     isChunk = trkMeta['chunk_id_2']==chunk
+        #     isChunk.iloc[chunk+1] = True
+        #     trkMeta = trkMeta[isChunk].reset_index(drop=False)
 
-        pix_m = self.pixM # Get pixel size
+        pixM = self.pixM
+        # Find most common pixel size
+        if len(pixM.unique()) > 1:
+            pixM = pixM.mode()[0]
+        else:
+            pixM = pixM.iloc[0]
+
+        pix_m = pixM # Get pixel size
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
         xR, yR = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
@@ -2036,7 +2144,9 @@ class rectObj(sonObj):
         outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
         outShape=[0,0]
         # Divide by pixel size to arrive at output shape of warped image
-        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+        # outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+        outShape[0], outShape[1] = round(outShapeM[0]/pix_res,0), round(outShapeM[1]/pix_res,0)
+        outShape = np.array(outShape).astype(int) # Convert to int
 
         # Rescale destination coordinates
         # X values

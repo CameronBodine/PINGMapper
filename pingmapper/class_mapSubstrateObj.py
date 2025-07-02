@@ -36,9 +36,15 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-from pingmapper.funcs_common import *
-from pingmapper.funcs_model import *
-from pingmapper.class_rectObj import rectObj
+# For Debug
+from funcs_common import *
+from funcs_model import *
+from class_rectObj import rectObj
+
+# from pingmapper.funcs_common import *
+# from pingmapper.funcs_model import *
+# from pingmapper.class_rectObj import rectObj
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import matplotlib
@@ -313,7 +319,7 @@ class mapSubObj(rectObj):
         lOffL = self.sonDat.shape[1]
 
         # Get sonMetaDF
-        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m']].copy().reset_index()
+        lMetaDF = df.loc[df['chunk_id'] == l, ['dep_m', 'pixM']].copy().reset_index()
 
         # Remove shadows
         if self.remShadow:
@@ -357,7 +363,7 @@ class mapSubObj(rectObj):
         lOffR = lOffL + self.sonDat.shape[1]
 
         # Get sonMetaDF
-        cMetaDF = df.loc[df['chunk_id'] == c, ['dep_m']].copy().reset_index()
+        cMetaDF = df.loc[df['chunk_id'] == c, ['dep_m', 'pixM']].copy().reset_index()
 
         # Remove shadows
         if self.remShadow:
@@ -391,7 +397,7 @@ class mapSubObj(rectObj):
         self._getScanChunkSingle(r)
 
         # Get sonMetaDF
-        rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m']].copy().reset_index()
+        rMetaDF = df.loc[df['chunk_id'] == r, ['dep_m', 'pixM']].copy().reset_index()
 
         # Remove shadows
         if self.remShadow:
@@ -688,7 +694,7 @@ class mapSubObj(rectObj):
         df = self.sonMetaDF
 
         # Get sonMetaDF
-        df = df.loc[df['chunk_id'] == chunk, ['dep_m']].copy().reset_index()
+        df = df.loc[df['chunk_id'] == chunk, ['dep_m', 'pixM']].copy().reset_index()
 
         # Load sonDat
         self._getScanChunkSingle(chunk)
@@ -718,7 +724,7 @@ class mapSubObj(rectObj):
         # Plot Classification
 
         # Get final classification
-        label = self._classifySoftmax(chunk, softmax, map_class_method, mask_wc=True, mask_shw=True)
+        label = self._classifySoftmax(chunk, softmax, map_class_method, df=df, mask_wc=True, mask_shw=True)
 
         # Do speed correction
         if spdCor>0:
@@ -904,7 +910,7 @@ class mapSubObj(rectObj):
     ############################################################################
 
     #=======================================================================
-    def _classifySoftmax(self, i, arr, map_class_method='max', mask_wc=True, mask_shw=True, do_filt=True):
+    def _classifySoftmax(self, i, arr, map_class_method='max', df=None, mask_wc=True, mask_shw=True, do_filt=True):
         '''
         Classify pixels from softmax values.
 
@@ -1005,7 +1011,7 @@ class mapSubObj(rectObj):
             min_size = 28
 
             # Filter small regions and holes
-            label = self._filterLabel(label, min_size)
+            label = self._filterLabel(label, min_size, df=df)
 
         return label
 
@@ -1058,7 +1064,7 @@ class mapSubObj(rectObj):
 
 
     #=======================================================================
-    def _filterLabel(self, l, min_size):
+    def _filterLabel(self, l, min_size, df=None):
         '''
         For a classified substrate label, small holes/objects are removed,
         and pixels classified as NoData are removed and adjecent class is
@@ -1080,8 +1086,10 @@ class mapSubObj(rectObj):
         Next Processing Step
         --------------------
         '''
-        # Get pixel size (in meters)
-        pix_m = self.pixM
+        # # Get pixel size (in meters)
+        # pix_m = self.pixM
+        pix_m = df['pixM'].values[0] if df is not None else 0.02
+
 
         # Convert min size to pixels
         min_size = int(min_size/pix_m)

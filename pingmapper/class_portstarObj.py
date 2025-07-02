@@ -37,8 +37,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-from pingmapper.funcs_common import *
-from pingmapper.funcs_model import *
+# For Debug
+from funcs_common import *
+from funcs_model import *
+
+# from pingmapper.funcs_common import *
+# from pingmapper.funcs_model import *
 
 # import gdal
 from osgeo import gdal, ogr, osr
@@ -1278,7 +1282,7 @@ class portstarObj(object):
             isChunk = son.sonMetaDF['chunk_id']==1
             sonMeta = son.sonMetaDF[isChunk].reset_index()
             # acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            acousticBed = round(sonMeta['inst_dep_m'] / self.pixM, 0).astype(int)
+            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pixM'], 0).astype(int)
 
             ##################################
             # Step 1 : Acoustic Bedpick Filter
@@ -1478,8 +1482,8 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
+            portDF['dep_m_adjBy'] = str(adjDep / portDF['pixM']) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep / starDF['pixM']) + ' pixels'
 
         elif detectDep > 0:
             # Prepare depth detection dictionaries
@@ -1532,8 +1536,8 @@ class portstarObj(object):
                 starFinal = savgol_filter(starFinal, 51, 3)
 
             # Convert pix to depth [m]
-            portFinal = np.asarray(portFinal) * self.port.pixM
-            starFinal = np.asarray(starFinal) * self.star.pixM
+            portFinal = np.asarray(portFinal) * portDF['pixM']
+            starFinal = np.asarray(starFinal) * starDF['pixM']
 
             # Set negatives to 0
             portFinal = np.where(portFinal<0, 0, portFinal)
@@ -1560,8 +1564,23 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep / self.port.pixM) + ' pixels'
+            portDF['dep_m_adjBy'] = str(adjDep / portDF['pixM']) + ' pixels'
+            starDF['dep_m_adjBy'] = str(adjDep / starDF['pixM']) + ' pixels'
+
+        # Interpolate over nan's (and set zeros to nan)
+        portDep = portDF['dep_m'].to_numpy()
+        starDep = starDF['dep_m'].to_numpy()
+
+        portDep[portDep == 0] = np.nan
+        starDep[starDep == 0] = np.nan
+
+        nans, x = np.isnan(portDep), lambda z: z.nonzero()[0]
+        portDep[nans] = np.interp(x(nans), x(~nans), portDep[~nans])
+        portDF['dep_m'] = portDep
+
+        nans, x = np.isnan(starDep), lambda z: z.nonzero()[0]
+        starDep[nans] = np.interp(x(nans), x(~nans), starDep[~nans])
+        starDF['dep_m'] = starDep
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
@@ -1638,14 +1657,14 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m']]
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
 
-        portInst = (portDF['inst_dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
-        portAuto = (portDF['dep_m'] / self.port.pixM).to_numpy(dtype=int, copy=True)
+        portInst = (portDF['inst_dep_m'] / portDF['pixM']).to_numpy(dtype=int, copy=True)
+        portAuto = (portDF['dep_m'] / portDF['pixM']).to_numpy(dtype=int, copy=True)
 
-        starInst = (starDF['inst_dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
-        starAuto = (starDF['dep_m'] / self.star.pixM).to_numpy(dtype=int, copy=True)
+        starInst = (starDF['inst_dep_m'] / starDF['pixM']).to_numpy(dtype=int, copy=True)
+        starAuto = (starDF['dep_m'] / starDF['pixM']).to_numpy(dtype=int, copy=True)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
@@ -1807,8 +1826,8 @@ class portstarObj(object):
         starDF = self.star.sonMetaDF
 
         # Get depth/ pix scaler for given chunk
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m']].reset_index()
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m']].reset_index()
+        portDF = portDF.loc[portDF['chunk_id'] == i, ['dep_m', 'pixM']].reset_index()
+        starDF = starDF.loc[starDF['chunk_id'] == i, ['dep_m', 'pixM']].reset_index()
 
         # Load sonar
         self.port._getScanChunkSingle(i)
@@ -1842,8 +1861,8 @@ class portstarObj(object):
 
         ###########################################
         # Remove shadow predictions in water column
-        bedpickPort = round(portDF['dep_m'] / self.port.pixM, 0).astype(int)
-        bedpickStar = round(starDF['dep_m'] / self.star.pixM, 0).astype(int)
+        bedpickPort = round(portDF['dep_m'] / portDF['pixM'], 0).astype(int)
+        bedpickStar = round(starDF['dep_m'] / starDF['pixM'], 0).astype(int)
 
         for j in range(pMask.shape[1]):
             depth = bedpickPort[j]
@@ -2336,7 +2355,17 @@ class portstarObj(object):
         ## top-left coordinate a value of (0,0)
 
         # Get pixel size
-        pix_m = self.port.pixM
+        # pix_m = self.port.pixM
+        self.port._loadSonMeta()
+        isChunk = self.port.sonMetaDF['chunk_id']==chunk
+        sonMeta = self.port.sonMetaDF[isChunk].reset_index()
+
+        pixM = sonMeta['pixM']
+        # Find most common pixel size
+        if len(pixM.unique()) > 1:
+            pixM = pixM.mode()[0]
+        else:
+            pixM = pixM.iloc[0]
 
         # Determine min/max for rescaling
         xMin, xMax = dst[:,0].min(), dst[:,0].max() # Min/Max of x coordinates
@@ -2346,7 +2375,7 @@ class portstarObj(object):
         outShapeM = [xMax-xMin, yMax-yMin] # Calculate range of x,y coordinates
         outShape=[0,0]
         # Divide by pixel size to arrive at output shape of warped image
-        outShape[0], outShape[1] = round(outShapeM[0]/pix_m,0), round(outShapeM[1]/pix_m,0)
+        outShape[0], outShape[1] = round(outShapeM[0]/pixM,0), round(outShapeM[1]/pixM,0)
 
         # Rescale destination coordinates
         # X values

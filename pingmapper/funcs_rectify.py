@@ -36,8 +36,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-from pingmapper.funcs_common import *
-from pingmapper.class_rectObj import rectObj
+# For Debug
+from funcs_common import *
+from class_rectObj import rectObj
+
+# from pingmapper.funcs_common import *
+# from pingmapper.class_rectObj import rectObj
 
 
 # =========================================================
@@ -171,6 +175,7 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
 
             sDF['chunk_id'] = sonDF['chunk_id']
             sDF['transect'] = sonDF['transect']
+            # sDF['pixM'] = sonDF['pixM'] # Add pixel size to smoothed trackline coordinates
 
             sDF.reset_index(inplace=True)
 
@@ -250,14 +255,17 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
                 sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
                 sDF.at[curRow, "cog"] = lastRow["cog"]
                 sDF.at[curRow, "instr_heading"] = lastRow["instr_heading"]
+                # sDF.at[curRow, 'pixM'] = lastRow['pixM']
+
+                del lastRow
             else:
                 t += 1
 
             i+=1
-        del lastRow, curRow, i
+        del curRow, i
 
         son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
-
+        
         # Do positional correction
         if x_offset != 0.0 or y_offset != 0.0:
             son0._applyPosOffset(x_offset, y_offset)
@@ -274,6 +282,7 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
         df = son1.sonMetaDF
         sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
         sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
+        # sDF['pixM'] = df['pixM']
         son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
         del sDF, df, son0, son1

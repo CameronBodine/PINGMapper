@@ -10,16 +10,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For Debug
-# from funcs_common import *
-# from main_readFiles import read_master_func
-# from main_rectify import rectify_master_func
-# from main_mapSubstrate import map_master_func
+# For Debug
+from funcs_common import *
+from main_readFiles import read_master_func
+from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
-from pingmapper.funcs_common import *
-from pingmapper.main_readFiles import read_master_func
-from pingmapper.main_rectify import rectify_master_func
-from pingmapper.main_mapSubstrate import map_master_func
+# from pingmapper.funcs_common import *
+# from pingmapper.main_readFiles import read_master_func
+# from pingmapper.main_rectify import rectify_master_func
+# from pingmapper.main_mapSubstrate import map_master_func
 
 import json
 import pandas as pd
@@ -80,8 +80,8 @@ def gui(batch: bool):
         text_input = sg.Text('Recording to Process')
         # in_input = sg.In(key='inFile', size=(80,1))
         in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
-        # browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
-        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
+        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
+        # browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
     layout.append([text_io])
@@ -592,9 +592,10 @@ def gui(batch: bool):
             # Find all DAT and SON files in all subdirectories of inDir
             inFiles=[]
             for root, dirs, files in os.walk(inDir):
-                for file in files:
-                    if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3'):
-                        inFiles.append(os.path.join(root, file))
+                if '__MACOSX' not in root:
+                    for file in files:
+                        if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3') or file.endswith('.RSD') or file.endswith('.svlog'):
+                            inFiles.append(os.path.join(root, file))
 
             inFiles = sorted(inFiles)
 
