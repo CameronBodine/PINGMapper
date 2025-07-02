@@ -1407,7 +1407,8 @@ class portstarObj(object):
                    chunksPred,
                    detectDep=0,
                    smthDep=False,
-                   adjDep=False):
+                   adjDep=False,
+                   instDepAvail=True):
         '''
         Converts bedpick location (in pixels) to a depth in meters and additionally
         smooth and adjust depth estimate.
@@ -1548,6 +1549,10 @@ class portstarObj(object):
 
             portDF['dep_m'] = portFinal
             starDF['dep_m'] = starFinal
+
+            if not instDepAvail:
+                portDF['inst_dep_m'] = 0
+                starDF['inst_dep_m'] = 0
 
             if adjDep != 0:
                 adjBy = adjDep

@@ -314,6 +314,7 @@ def read_master_func(logfilename='',
     # Use PINGVerter to read the sonar file
     #######################################
 
+    instDepAvail = True
     start_time = time.time()
     # Determine sonar recording type
     _, file_type = os.path.splitext(inFile)
@@ -334,6 +335,7 @@ def read_master_func(logfilename='',
     elif file_type == '.svlog':
         sonar_obj = cerul2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
         detectDep = 1 # No depth in cerulean files, so set to Zheng et al. 2021
+        instDepAvail = False
 
     # Unknown
     else:
@@ -849,6 +851,14 @@ def read_master_func(logfilename='',
         df0 = df0[df0['filter'] == True]
         df1 = df1[df1['filter'] == True]
 
+        # Remove transect shorter then nchunk
+        df0=son0._filterShortTran(df0)
+        df1['filter'] = df0['filter']
+
+        # Apply the filter
+        df0 = df0[df0['filter'] == True]
+        df1 = df1[df1['filter'] == True]
+
         # Reasign the chunks
         df0 = son0._reassignChunks(df0)
         df1['chunk_id'] = df0['chunk_id']
@@ -970,7 +980,7 @@ def read_master_func(logfilename='',
 
     if saveDepth:
         # Save detected depth to csv
-        depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep)
+        depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail)
 
         # Store depths in downlooking sonar files also
         for son in sonObjs:

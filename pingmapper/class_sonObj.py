@@ -285,6 +285,23 @@ class sonObj(object):
             sonDF = self._filterTime(sonDF, time_table)
 
         return sonDF
+    
+    # ======================================================================
+    def _filterShortTran(self, df):
+
+        '''
+        '''
+
+        # Make transects from consective pings using dataframe index
+        idx = df.index.values
+        transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
+
+        for t in transect_groups:
+            if len(t) < self.nchunk:
+                # False means remove
+                df.loc[t, 'filter'] = False
+
+        return df
 
 
     # ======================================================================
@@ -515,7 +532,6 @@ class sonObj(object):
         idx = sonDF.index.values
         transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
 
-        # print(transect_groups)
 
         # Assign transect
         transect = 0

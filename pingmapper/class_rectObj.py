@@ -250,9 +250,15 @@ class rectObj(sonObj):
         # Attempt to fix error
         # https://stackoverflow.com/questions/47948453/scipy-interpolate-splprep-error-invalid-inputs
         okay = np.where(np.abs(np.diff(x))+np.abs(np.diff(y))>0)
-        x = np.r_[x[okay], x[-1]]
-        y = np.r_[y[okay], y[-1]]
-        t = np.r_[t[okay], t[-1]]
+        x = np.r_[x[okay], x[-1]].astype('float64')
+        y = np.r_[y[okay], y[-1]].astype('float64')
+        t = np.r_[t[okay], t[-1]].astype('float64')
+
+        # Remove any non-finite values (NaN or inf)
+        mask = np.isfinite(x) & np.isfinite(y) & np.isfinite(t)
+        x = x[mask]
+        y = y[mask]
+        t = t[mask]
 
         # Check if enough points to interpolate
         # If not, too many overlapping pings
@@ -263,14 +269,29 @@ class rectObj(sonObj):
         # Fit a spline to filtered coordinates and parameterize with time ellapsed
         try:
             tck, _ = splprep([x,y], u=t, k=deg, s=0)
-        except:
+        # except:
+        #     # Time is messed up (negative time offset)
+        #     # Parameterize with record num instead
+        #     zU = 'record_num'
+        #     t = dfFilt[zU].to_numpy()
+        #     t = np.r_[t[okay], t[-1]]
+        #     tck, _ = splprep([x,y], u=t, k=deg, s=0)
+        #     u_interp = dfOrig[zU].to_numpy()
+        except Exception as e:
+            print("splprep failed with error:", e)
             # Time is messed up (negative time offset)
             # Parameterize with record num instead
             zU = 'record_num'
-            t = dfFilt[zU].to_numpy()
+            t = dfFilt[zU].to_numpy(dtype='float64')
             t = np.r_[t[okay], t[-1]]
-            tck, _ = splprep([x,y], u=t, k=deg, s=0)
-            u_interp = dfOrig[zU].to_numpy()
+            # Ensure float and finite
+            t = np.asarray(t, dtype='float64')
+            mask = np.isfinite(x) & np.isfinite(y) & np.isfinite(t)
+            x = x[mask]
+            y = y[mask]
+            t = t[mask]
+            tck, _ = splprep([x, y], u=t, k=deg, s=0)
+            u_interp = dfOrig[zU].to_numpy(dtype='float64')
 
         x_interp = splev(u_interp, tck) # Use u_interp to get smoothed x/y coordinates from spline
 
