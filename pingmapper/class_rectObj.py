@@ -36,12 +36,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# For depug
-from funcs_common import *
-from class_sonObj import sonObj
+# # For depug
+# from funcs_common import *
+# from class_sonObj import sonObj
 
-# from pingmapper.funcs_common import *
-# from pingmapper.class_sonObj import sonObj
+from pingmapper.funcs_common import *
+from pingmapper.class_sonObj import sonObj
 
 from osgeo import gdal, ogr, osr
 from osgeo_utils.gdal_sieve import gdal_sieve

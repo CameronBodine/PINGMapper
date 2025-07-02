@@ -37,12 +37,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# For Debug
-from funcs_common import *
-from funcs_model import *
+# # For Debug
+# from funcs_common import *
+# from funcs_model import *
 
-# from pingmapper.funcs_common import *
-# from pingmapper.funcs_model import *
+from pingmapper.funcs_common import *
+from pingmapper.funcs_model import *
 
 # import gdal
 from osgeo import gdal, ogr, osr

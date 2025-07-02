@@ -36,14 +36,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# For Debug
-from funcs_common import *
-from funcs_model import *
-from class_rectObj import rectObj
+# # For Debug
+# from funcs_common import *
+# from funcs_model import *
+# from class_rectObj import rectObj
 
-# from pingmapper.funcs_common import *
-# from pingmapper.funcs_model import *
-# from pingmapper.class_rectObj import rectObj
+from pingmapper.funcs_common import *
+from pingmapper.funcs_model import *
+from pingmapper.class_rectObj import rectObj
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
