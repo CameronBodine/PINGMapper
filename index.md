@@ -28,9 +28,13 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
   - Decode Lowrance&reg; *.sl2 and *.sl3 files. Lowrance&reg; support made possible by open-source projects including [SL3Reader](https://github.com/halmaia/SL3Reader), [sonarlight](https://github.com/KennethTM/sonarlight), and [Navico (Lowrance, Simrad, B&G) Sonar Log File Format](https://www.memotech.franken.de/FileFormats/Navico_SLG_Format.pdf).
 
-  - If it doesn't work for your Humminbird&reg; or Lowrance&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+  - Decode Garmin&reg; *.RSD files. Garmin&reg; support made possible by [Herbert Oppmann](https://www.memotech.franken.de/FileFormats/Garmin_RSD_Format.pdf).
 
-- Export all metadata from .DAT, .SON, .sl2, and .sl3 files to .CSV.
+  - Decode Cerulean&reg; Omniscan 450SS *.svlog files. Cerulean&reg; support made possible by open-source svlog file format. Information available from the [Cerulean Website](https://ceruleansonar.com/), [Cerulean Ping Protocol](https://docs.ceruleansonar.com/c/cerulean-ping-protocol/), and [Blue Robotics Ping Protocol](https://github.com/bluerobotics/ping-protocol).
+
+  - If it doesn't work for these supported recordings, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+
+- Export all metadata from sonar files to .CSV.
 
 - Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels.
 
@@ -70,7 +74,13 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 - sl2
 - sl3
 
-If `PINGMapper` doesn't work for your Humminbird&reg; or Lowrance&reg; sonar system, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+### Garmin&reg; File Formats:
+- RSD
+
+### Cerulean&reg; Models:
+- Omniscan 450SS
+
+If `PINGMapper` doesn't work for these support systems and file formats, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
 
@@ -166,7 +176,7 @@ Follow the installation and testing instructions to [Get Started!](./docs/gettin
 
 **PhD Committee:** Cameron wishes to thank his PhD dissertation committee: Toby Hocking, Co-Chair; advisor Dan Buscombe, Co-Chair; Rebecca Best; and Adam Kaeser.
 
-## v3.0 - 4.0
+## v3.0 - 5.0
 
 Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEcosystem.md) is made possible through mentorship, partnerships, and financial support listed below.
 
