@@ -1002,7 +1002,6 @@ def read_master_func(logfilename='',
                     dep = savgol_filter(dep, 51, 3)
 
                 # Interpolate over nan's (and set zero's to nan)
-                dep = dep.to_numpy()
                 dep[dep==0] = np.nan
                 nans, x = np.isnan(dep), lambda z: z.nonzero()[0]
                 dep[nans] = np.interp(x(nans), x(~nans), dep[~nans])
