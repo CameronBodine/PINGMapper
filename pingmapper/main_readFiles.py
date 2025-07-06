@@ -55,6 +55,7 @@ sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
 from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper, gar2pingmapper
 
 import cv2
+import copy
 
 
 #===========================================
@@ -377,6 +378,7 @@ def read_master_func(logfilename='',
         #     son.son8bit = sonar_obj.son8bit
         # else:
         son.son8bit = sonar_obj.son8bit
+        son.export_beam = True
 
         # print(son.beamName, son.son8bit)
 
@@ -400,6 +402,40 @@ def read_master_func(logfilename='',
         else:
             sonObjs.append(son)
 
+    # Both port and starboard are required for side scan workflows
+    ## Make copy of ss if both aren't available
+    ss_dups = {
+        'ss_port': ['ss_star', 'B003'],
+        'ss_star': ['ss_port', 'B002']
+    }
+    ss_chan_avail = []
+    for son in sonObjs:
+        if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            ss_chan_avail.append(son)
+    if len(ss_chan_avail) == 0:
+        print('\n\nNo side-scan channels available. Aborting!')
+        sys.exit()
+    elif len(ss_chan_avail) == 1:
+        print('\n\nMaking copy of {} to ensure PINGMapper compatibility'.format(son.beamName))
+        origBeam = son.beamName
+        print(son.beam, son.beamName)
+        son_copy = copy.deepcopy(ss_chan_avail[0])
+        son_copy.beamName = ss_dups[origBeam][0]
+        son_copy.beam = ss_dups[origBeam][1]
+        son_copy.export_beam = False
+
+        # Make copy of meta file
+        oldMeta = son.sonMetaFile
+        newMeta = '{}_{}_meta_copy.csv'.format(son_copy.beam, son_copy.beamName)
+        newMeta = os.path.join(os.path.dirname(oldMeta), newMeta)
+        shutil.copy(oldMeta, newMeta)
+        son_copy.sonMetaFile = newMeta
+        son_copy.outDir = os.path.join(os.path.dirname(oldMeta), son_copy.beamName)
+        sonObjs.append(son_copy)
+    else:
+        pass
+
+    print(sonObjs)
     ####
     # OLD    
 
@@ -1331,7 +1367,7 @@ def read_master_func(logfilename='',
         start_time = time.time()
         print("\nExporting sonogram tiles:\n")
         for son in sonObjs:
-            if son.wcp or son.wcr_src or son.wco or son.wcm:
+            if (son.wcp or son.wcr_src or son.wco or son.wcm) and son.export_beam:
                 # Set outDir
                 son.outDir = os.path.join(son.projDir, son.beamName)
 

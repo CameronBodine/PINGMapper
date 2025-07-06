@@ -310,7 +310,7 @@ def rectify_master_func(logfilename='',
     # COG Pre-processing                                                       #
     # ##########################################################################
 
-    # for son in portstar:
+    for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
 
@@ -322,63 +322,64 @@ def rectify_master_func(logfilename='',
         start_time = time.time()
         print("\nRectifying and Exporting Geotiffs based on heading:\n")
         for son in portstar:
+            if son.export_beam:
 
-            # Set output directory
-            son.outDir = os.path.join(son.projDir, son.beamName)
+                # Set output directory
+                son.outDir = os.path.join(son.projDir, son.beamName)
 
-            # # Get sonar coords dataframe
-            # sonarCoordsDF = son.sonarCoordsDF
+                # # Get sonar coords dataframe
+                # sonarCoordsDF = son.sonarCoordsDF
 
-            # Get smoothed trackline file
-            smth_trk_file = son.smthTrkFile
-            sDF = pd.read_csv(smth_trk_file)
+                # Get smoothed trackline file
+                smth_trk_file = son.smthTrkFile
+                sDF = pd.read_csv(smth_trk_file)
 
-            # Smooth heading
-            if rectMethod == 'Heading':
-                heading = 'instr_heading'
-                if smthHeading:
-                    for name, group in sDF.groupby('transect'):
-                        # Convert degrees to radians
-                        hding = np.deg2rad(group[heading])
-                        # Unwrap the heading because heading is circular
-                        hding_unwrapped = np.unwrap(hding)
-                        # Do smoothing
-                        smth = savgol_filter(hding_unwrapped, 51, 3)
-                        # Convert to degrees and make sure 0-360
-                        smth = np.rad2deg(smth) % 360
-                        group[heading] = smth
-                        # Update sDF
-                        sDF.update(group)
-            else:
-                heading = 'trk_cog'
+                # Smooth heading
+                if rectMethod == 'Heading':
+                    heading = 'instr_heading'
+                    if smthHeading:
+                        for name, group in sDF.groupby('transect'):
+                            # Convert degrees to radians
+                            hding = np.deg2rad(group[heading])
+                            # Unwrap the heading because heading is circular
+                            hding_unwrapped = np.unwrap(hding)
+                            # Do smoothing
+                            smth = savgol_filter(hding_unwrapped, 51, 3)
+                            # Convert to degrees and make sure 0-360
+                            smth = np.rad2deg(smth) % 360
+                            group[heading] = smth
+                            # Update sDF
+                            sDF.update(group)
+                else:
+                    heading = 'trk_cog'
 
-            smth_trk_file = son.smthTrkFile
-            sDF.to_csv(smth_trk_file)
+                smth_trk_file = son.smthTrkFile
+                sDF.to_csv(smth_trk_file)
 
-            # Get chunk id
-            chunks = son._getChunkID()
+                # Get chunk id
+                chunks = son._getChunkID()
 
-            # Get colormap
-            son._getSonColorMap(son_colorMap)
+                # Get colormap
+                son._getSonColorMap(son_colorMap)
 
-            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+                print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
-            # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
-            Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(chunks))
-            # for i in chunks:
-            #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
-            #     r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i, heading=heading, interp_dist=rectInterpDist)
+                # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
+                Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sDF[sDF['chunk_id']==chunk], chunk, heading=heading, interp_dist=rectInterpDist) for chunk in tqdm(chunks))
+                # for i in chunks:
+                #     # son._rectSonHeading(sonarCoordsDF[sonarCoordsDF['chunk_id']==i], i)
+                #     r = son._rectSonHeadingMain(sDF[sDF['chunk_id']==i], i, heading=heading, interp_dist=rectInterpDist)
 
-            # #     sys.exit()
+                # #     sys.exit()
 
-            #     # # Concatenate and store cooordinates
-            #     # dfAll = pd.concat(r)
-            #     # son.sonarCoordsDF = dfAll
+                #     # # Concatenate and store cooordinates
+                #     # dfAll = pd.concat(r)
+                #     # son.sonarCoordsDF = dfAll
 
-            #     smth_trk_file = smth_trk_file.replace('.csv', 'heading.csv')
-            #     r.to_csv(smth_trk_file)
+                #     smth_trk_file = smth_trk_file.replace('.csv', 'heading.csv')
+                #     r.to_csv(smth_trk_file)
 
-            # print(dfAll)
+                # print(dfAll)
 
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -405,26 +406,27 @@ def rectify_master_func(logfilename='',
         # Always use COG for rubber sheeting
         cog = True
         for son in portstar:
-            # Set output directory
-            son.outDir = os.path.join(son.projDir, son.beamName)
+            if son.export_beam:
+                # Set output directory
+                son.outDir = os.path.join(son.projDir, son.beamName)
 
-            # Get chunk id's
-            chunks = son._getChunkID()
+                # Get chunk id's
+                chunks = son._getChunkID()
 
-            # Load sonMetaDF
-            son._loadSonMeta()
+                # Load sonMetaDF
+                son._loadSonMeta()
 
-            # Get colormap
-            son._getSonColorMap(son_colorMap)
+                # Get colormap
+                son._getSonColorMap(son_colorMap)
 
-            print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            # for i in chunks:
-            #     son._rectSonRubber(i, filter, cog, wgs=False)
-                # sys.exit()
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(chunks))
-            son._cleanup()
-            gc.collect()
-            printUsage()
+                print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
+                # for i in chunks:
+                #     son._rectSonRubber(i, filter, cog, wgs=False)
+                    # sys.exit()
+                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._rectSonRubber)(i, filter, cog, wgs=False) for i in tqdm(chunks))
+                son._cleanup()
+                gc.collect()
+                printUsage()
 
     if rect_wcp or rect_wcr:
         for son in portstar:
