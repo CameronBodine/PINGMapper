@@ -1360,7 +1360,10 @@ class sonObj(object):
             outDir = os.path.join(self.outDir, t+'_mw')
 
             if not os.path.exists(outDir):
-                os.mkdir(outDir)
+                try:
+                    os.mkdir(outDir)
+                except:
+                    pass
 
             # Find the images
             images = os.listdir(inDir)
