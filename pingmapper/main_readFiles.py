@@ -1039,8 +1039,9 @@ def read_master_func(logfilename='',
 
                 # Interpolate over nan's (and set zero's to nan)
                 dep[dep==0] = np.nan
-                nans, x = np.isnan(dep), lambda z: z.nonzero()[0]
-                dep[nans] = np.interp(x(nans), x(~nans), dep[~nans])
+                dep = np.asarray(dep)
+                nans = np.isnan(dep)
+                dep[nans] = np.interp(np.flatnonzero(nans), np.flatnonzero(~nans), dep[~nans])
                 
                 sonDF['dep_m'] = dep + adjDep
 
@@ -1408,7 +1409,7 @@ def read_master_func(logfilename='',
 
                     depCnt = np.unique(sDF['dep_m'], return_counts=True)
                     depMaxi = np.argmax(depCnt[1])
-                    depMax = int(depCnt[0][depMaxi]/son.pixM)
+                    depMax = int(depCnt[0][depMaxi]/sDF['pixM'][0])
                     depMax += 50
 
 
