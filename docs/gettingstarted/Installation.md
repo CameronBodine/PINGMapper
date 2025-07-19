@@ -28,25 +28,20 @@ Get `PINGMapper` up and running on your computer.
 
 `PINGMapper` uses `conda` to ensure the installation is configured correctly. Specifically, `conda` is used to create a [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) called `ping`, a container storing all the correct versions of of the required dependencies, that ensures `PINGMapper` runs as expected.
 
- `Conda` comes in several flavors, listed below. It does not matter which flavor you choose. However, there are limitations for using the free version of [Miniconda](https://docs.conda.io/en/latest/miniconda.html) and [Anaconda](https://www.anaconda.com/) based on the size of your organization. Please consult their documentation for more information. Note that [Miniforge](https://conda-forge.org/download/) is free for anyone to use.
+ `Conda` comes in several flavors, however, we will use [Miniforge](https://conda-forge.org/download/) as it is free for anyone to use.
 
  - [Miniforge](https://conda-forge.org/download/): *Free for all*; [License](https://github.com/conda-forge/miniforge?tab=License-1-ov-file#readme)
- - [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
- - [Anaconda](https://www.anaconda.com/)
 
-{: .warning }
-> Miniconda and Anaconda are not free for everyone to use. Consider installing [Miniforge](https://conda-forge.org/download/) instead.
+ {: .g2k }
+ > Existing users may have previously used Miniconda or Anaconda. Due to changes is licensing, it is recommended that you transition to Miniforge, an open-source alternative.
 
-This tutorial will use Miniconda to demonstrate how to install and configure `PINGMapper`. After installing Miniconda, we will install and run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller). `PINGInstaller` automatically creates the `ping` environment, installs the appropriate packages from the [PING Ecosystem](../PINGEcosystem.md) ([PINGMapper](https://github.com/CameronBodine/PINGMapper), [PINGWizard](https://github.com/CameronBodine/PINGWizard), [PINGVerter](https://github.com/CameronBodine/PINGVerter), etc.), and other necessary dependencies.
+This tutorial will demonstrate how to install and configure `PINGMapper`. After installing Miniforge, we will install and run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller). `PINGInstaller` automatically creates the `ping` environment, installs the appropriate packages from the [PING Ecosystem](../PINGEcosystem.md) ([PINGMapper](https://github.com/CameronBodine/PINGMapper), [PINGWizard](https://github.com/CameronBodine/PINGWizard), [PINGVerter](https://github.com/CameronBodine/PINGVerter), etc.), and other necessary dependencies.
 
 Let's get started!
 
-## Step 1 - Install Miniconda
+## Step 1 - Install Miniforge
 
-{: .warning }
-> There are errors on Windows associated with the most current (as of 6/23/2025) version ([Miniconda3-py39_25.3.1-1-Windows-x86_64.exe](https://repo.anaconda.com/miniconda/Miniconda3-py39_25.3.1-1-Windows-x86_64.exe), released April 30, 2025) of Miniconda. This issue causes `ping` environment solving stage to take a very long time (>>15mins). If a newer version is not available, please install [Miniconda3-py39_25.1.1-2-Windows-x86_64.exe](https://repo.anaconda.com/miniconda/Miniconda3-py39_25.1.1-2-Windows-x86_64.exe). Visit [Miniconda's version archive](https://repo.anaconda.com/miniconda/) to see all available versions.
-
-Use one of the links listed above to download `conda`. This example will use [Miniconda](https://docs.conda.io/en/latest/miniconda.html(https://repo.anaconda.com/miniconda/Miniconda3-py39_25.3.1-1-Windows-x86_64.exe)). There is a separate installation file depending on the type of your computer's operation system. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
+Go to the [Miniforge Website](https://conda-forge.org/download/) and download the software. Choose the appropriate installer for your computer's operation system. This tutorial was made on a Windows machine but the process should be similar on other operation systems. Click the file and it will download to your Downloads folder, or you can right-click and select "Save Link As..." and choose an alternative location to save the install file.
 
 Double click the file to begin the installation file. This will open an installation window:
 
@@ -60,7 +55,7 @@ After reviewing the license agreement, you must select `I Agree` to continue wit
 
 <img src="../../assets/install/miniconda_install_3.PNG"/>
 
-You want to install Miniconda in your user folder so that you have the necessary permissions to install the Python dependencies, so select `Just Me` and click `Next`.
+You want to install Miniforge in your user folder so that you have the necessary permissions to install the Python dependencies, so select `Just Me` and click `Next`.
 
 <img src="../../assets/install/miniconda_install_4.PNG"/>
 
@@ -72,19 +67,19 @@ We will accept the default options, shown above, and click `Next`. Once installa
 
 <img src="../../assets/install/miniconda_install_6.PNG"/>
 
-You can choose to see additional documentation on conda and Anaconda by keeping the the boxes checked. Click `Finish` to close the window.
+Click `Finish` to close the window.
 
 ## Step 2
 
-Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniconda. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
+Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniforge. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/9zMWXD-xoxc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-Miniconda includes a command prompt called Anaconda Powershell Prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find the `Miniconda3` or `Anaconda (miniconda3)` folder. 
+Miniforge is a command prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find `Miniforge Prompt`. 
 
 <img src="../../assets/install/miniconda_run.png"/>
 
-Click the folder are click `Anaconda Powershell Prompt`. This will open the prompt.
+Click the icon to open the prompt.
 
 <img src="../../assets/install/shell_1a.PNG"/>
 
