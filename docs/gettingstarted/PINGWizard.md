@@ -60,7 +60,7 @@ Open the Conda Command Prompt used during [installation](./Installation.md). Act
 conda run -n ping python -m pingwizard
 ```
 
-<img src="../../assets/running/PINGWizard_console.PNG"/>
+<img src="../../assets/running/PINGWizard_miniconsole.PNG"/>
 
 PINGWizard will launch and present a menu of buttons to run various PINGMapper utilities:
 

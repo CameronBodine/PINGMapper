@@ -45,27 +45,27 @@ Go to the [Miniforge Website](https://conda-forge.org/download/) and download th
 
 Double click the file to begin the installation file. This will open an installation window:
 
-<img src="../../assets/install/miniconda_install_1.PNG"/>
+<img src="../../assets/install/miniforge_install_1.PNG"/>
 
 Click `Next` and you will see the license agreement:
 
-<img src="../../assets/install/miniconda_install_2.PNG"/>
+<img src="../../assets/install/miniforge_install_2.PNG"/>
 
 After reviewing the license agreement, you must select `I Agree` to continue with the installation. After you agree, you will have an option to install Miniconda for `Just Me` or `All Users`. 
 
-<img src="../../assets/install/miniconda_install_3.PNG"/>
+<img src="../../assets/install/miniforge_install_3.PNG"/>
 
 You want to install Miniforge in your user folder so that you have the necessary permissions to install the Python dependencies, so select `Just Me` and click `Next`.
 
-<img src="../../assets/install/miniconda_install_4.PNG"/>
+<img src="../../assets/install/miniforge_install_4.PNG"/>
 
 Accept the default installation location and click `Next`. This will open the Advanced Installation Options window. 
 
-<img src="../../assets/install/miniconda_install_5.PNG"/>
+<img src="../../assets/install/miniforge_install_5.PNG"/>
 
 We will accept the default options, shown above, and click `Next`. Once installation is complete, you will see the following window indicating Miniconda was successfully installed:
 
-<img src="../../assets/install/miniconda_install_6.PNG"/>
+<img src="../../assets/install/miniforge_install_6.PNG"/>
 
 Click `Finish` to close the window.
 
@@ -77,11 +77,11 @@ Now for the scary part! We are going to open a command prompt so that we can sub
 
 Miniforge is a command prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find `Miniforge Prompt`. 
 
-<img src="../../assets/install/miniconda_run.png"/>
+<img src="../../assets/install/miniforge_run.png"/>
 
 Click the icon to open the prompt.
 
-<img src="../../assets/install/shell_1a.PNG"/>
+<img src="../../assets/install/shellmini_1a.PNG"/>
 
 ## Step 2
 
@@ -94,7 +94,7 @@ A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller)
 pip install pinginstaller -U
 ```
 
-<img src="../../assets/install/shell_install_pinginstaller.PNG"/>
+<img src="../../assets/install/shellmini_install_pinginstaller.PNG"/>
 
 ## Step 3
 
@@ -104,11 +104,11 @@ By running `PINGInstaller`, a new conda environment called `ping` will be create
 python -m pinginstaller
 ```
 
-<img src="../../assets/install/shell_run_pinginstaller.PNG"/>
+<img src="../../assets/install/shellmini_run_pinginstaller.PNG"/>
 
 Installation will take approximately **5-10 minutes**. You should see something similar to:
 
-<img src="../../assets/install/shell_pinginstaller_finish.PNG"/>
+<img src="../../assets/install/shellmini_pinginstaller_finish.PNG"/>
 
 At the end of the install process, a window will prompt you where to save the `bat` or `sh` shortcut file. Browse to the desired location and click `Submit`.
 
