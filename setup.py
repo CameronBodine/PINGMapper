@@ -9,7 +9,7 @@ exec(open('pingmapper/version.py').read())
 setup(
     name="pingmapper",
     version=__version__,
-    author="Cameron Bodine",
+    author="Cameron Bodine, Daniel Buscombe",
     author_email="bodine.cs@gmail.email",
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
@@ -17,7 +17,7 @@ setup(
     packages=find_packages(),
     data_files=[("pingmapper_config", ["pingmapper/default_params.json"])],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
