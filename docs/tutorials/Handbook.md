@@ -15,6 +15,6 @@ Everything you need to know (probably not, but at least an attempt...).
 
 ---
 
-The `PINGMapper` Handbook is designed to provide you with the most up-to-date information regaurding using `PINGMapper`. It is a living document that will be updated as time and interest allow.
+The `PINGMapper` Handbook is designed to provide you with the most up-to-date information regarding using `PINGMapper`. It is a living document that will be updated as time and interest allow.
 
-<object data="../../assets/handbook/PINGMapperHandbook_v1.0_20250801.pdf" width="800" height="600" type='application/pdf'></object>
+<object data="../../assets/handbook/PINGMapperHandbook_v1.0_20250803.pdf" width="800" height="600" type='application/pdf'></object>
