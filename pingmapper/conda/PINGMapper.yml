@@ -14,7 +14,6 @@ dependencies:
   - matplotlib
   - rasterio
   - h5py
-  - opencv
   - pip
   - pip:
       - pingverter
@@ -25,5 +24,6 @@ dependencies:
       - psutil
       - tensorflow
       - tf-keras
+      - opencv-python
       - transformers
       - rsa
