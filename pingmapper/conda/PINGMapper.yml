@@ -14,7 +14,7 @@ dependencies:
   - matplotlib
   - rasterio
   - h5py
-  - opencv-python
+  - opencv
   - pip
   - pip:
       - pingverter
