@@ -2633,8 +2633,8 @@ class portstarObj(object):
             inDirPort = os.path.join(self.port.projDir, self.port.beamName, 'rect_wcr')
             inDirStar = os.path.join(self.star.projDir, self.star.beamName, 'rect_wcr')
         else:
-            inDirPort = os.path.join(self.port.projDir, self.beamName, 'rect_wcp')
-            inDirStar = os.path.join(self.star.projDir, self.beamName, 'rect_wcp')
+            inDirPort = os.path.join(self.port.projDir, self.port.beamName, 'rect_wcp')
+            inDirStar = os.path.join(self.star.projDir, self.star.beamName, 'rect_wcp')
 
         portFiles = glob(os.path.join(inDirPort, '*.tif'))
         starFiles = glob(os.path.join(inDirStar, '*.tif'))
