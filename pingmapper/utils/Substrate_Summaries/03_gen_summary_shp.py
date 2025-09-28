@@ -38,17 +38,18 @@ import pyproj
 ############
 # Parameters
 
-# river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
-river_codes = ['PRL']
+river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
+# river_codes = ['BCH', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
+# river_codes = ['PRL']
 summaryLengths = [500, 1000, 5000, 10000] # Create stamps at specified lengths
 extendDist = 100 # Distance to extend lines to clip stamp
 
-substrateOutput = 'EGN'
+substrateOutput = 'Raw'
 mosaicDirName = '02_Substrate_Shps_Mosaic_Transects'
 outProj = '03_Substrate_Shps_Summary'
 
 # summaryTopDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
-summaryTopDir = r'/media/cbodine/SynologyDrive/GulfSturgeonProject/SSS_Data_Processed/Substrate_Summaries'
+summaryTopDir = r'D:\redbo_science\projects\GulfSturgeonProject_2025\ProcessedData\Substrate_Summaries'
 mapDir = os.path.join(summaryTopDir, mosaicDirName, substrateOutput)
 stampShpDir = os.path.join(summaryTopDir, '01_summary_stamp_shps')
 outDir = os.path.join(summaryTopDir, outProj, substrateOutput)
@@ -75,7 +76,7 @@ if not os.path.exists(outDir):
 def getTrkShps(dir, riv, crs_out, outFile):
 
     filt = 50
-    shpPattern = 'Trackline_Smth_ss_star.shp'
+    shpPattern = 'Trackline_Smth_ss_port.shp'
 
     print('Creating merged trackfile. Filter every {}th ping'.format(filt))
 
@@ -197,6 +198,7 @@ def doWork(riv, dist):
     covShps = glob(os.path.join(stampShpDir, riv, '*stamp*'+str(dist)+'_m.shp'))[0]
     pntShps = glob(os.path.join(stampShpDir, riv, '*Centerline_10m_Pnts.shp'))[0]
     mapShps = glob(os.path.join(mapDir, riv+'*postproc.shp'))[0]
+    # mapShps = glob(os.path.join(mapDir, riv+'*mosaic.shp'))[0]
 
     print(covShps)
 
@@ -227,127 +229,127 @@ def doWork(riv, dist):
 
     # print(covShps)
     
-    # # Iterate each stamp feature
-    # for i, row in covShps.iterrows():
+    # Iterate each stamp feature
+    for i, row in covShps.iterrows():
 
-    #     try:
+        try:
 
-    #         # Get row values
-    #         rkm_ds = row['RKM_DS']
-    #         rkm_us = row['RKM_US']
-    #         covGeom = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs_out)
+            # Get row values
+            rkm_ds = row['RKM_DS']
+            rkm_us = row['RKM_US']
+            covGeom = gpd.GeoDataFrame(geometry=[row.geometry], crs=crs_out)
 
-    #         print('\tRKM:', rkm_ds)
+            print('\tRKM:', rkm_ds)
 
-    #         # Store row summaries
-    #         rowSummary = {}
-    #         rowSummary['river_code'] = riv
-    #         rowSummary['rkm'] = rkm_ds
+            # Store row summaries
+            rowSummary = {}
+            rowSummary['river_code'] = riv
+            rowSummary['rkm'] = rkm_ds
 
-    #         # Clip map
-    #         print('\t\tClip Map')
-    #         mapShp = gpd.clip(mapShps, covGeom)
+            # Clip map
+            print('\t\tClip Map')
+            mapShp = gpd.clip(mapShps, covGeom)
 
-    #         # Dissolve map
-    #         print('\t\tDissolve Map')
-    #         mapDis = mapShp.dissolve()
+            # Dissolve map
+            print('\t\tDissolve Map')
+            mapDis = mapShp.dissolve()
 
-    #         #############
-    #         # Get Lat Lon
+            #############
+            # Get Lat Lon
 
-    #         # Clip points
-    #         print('\t\tClip Tracks')
-    #         pnts = gpd.clip(pntShps, covGeom)
-    #         pnts = pnts.sort_values(by=distField)
+            # Clip points
+            print('\t\tClip Tracks')
+            pnts = gpd.clip(pntShps, covGeom)
+            pnts = pnts.sort_values(by=distField)
 
-    #         pntsLatLon = pnts.copy()
-    #         pntsLatLon = pntsLatLon.to_crs(4326)
+            pntsLatLon = pnts.copy()
+            pntsLatLon = pntsLatLon.to_crs(4326)
 
-    #         rowSummary['lon_ds'] = pntsLatLon.iloc[0].geometry.x
-    #         rowSummary['lat_ds'] = pntsLatLon.iloc[0].geometry.y
-    #         rowSummary['lon_us'] = pntsLatLon.iloc[-1].geometry.x
-    #         rowSummary['lat_us'] = pntsLatLon.iloc[-1].geometry.y
+            rowSummary['lon_ds'] = pntsLatLon.iloc[0].geometry.x
+            rowSummary['lat_ds'] = pntsLatLon.iloc[0].geometry.y
+            rowSummary['lon_us'] = pntsLatLon.iloc[-1].geometry.x
+            rowSummary['lat_us'] = pntsLatLon.iloc[-1].geometry.y
 
-    #         #################
-    #         # Calculate Depth
-    #         print('\t\tDepth')
-    #         trks = gpd.clip(trkShp, covGeom)
+            #################
+            # Calculate Depth
+            print('\t\tDepth')
+            trks = gpd.clip(trkShp, covGeom)
             
-    #         # Calculate stats
-    #         rowSummary = getStats(trks, 'dep_m', rowSummary, decimals=2)
+            # Calculate stats
+            rowSummary = getStats(trks, 'dep_m', rowSummary, decimals=2)
 
-    #         del trks
+            del trks
 
 
-    #         #################
-    #         # Calculate Width
-    #         print('\t\tWidth')
-    #         # Get bearing line
-    #         blDF = getBearingLineDF(pnts.geometry.x.to_numpy(),
-    #                                 pnts.geometry.y.to_numpy(),
-    #                                 pnts[rr_brng].to_numpy(),
-    #                                 pnts[rl_brng].to_numpy(),
-    #                                 extendDist,
-    #                                 crs_out)
+            #################
+            # Calculate Width
+            print('\t\tWidth')
+            # Get bearing line
+            blDF = getBearingLineDF(pnts.geometry.x.to_numpy(),
+                                    pnts.geometry.y.to_numpy(),
+                                    pnts[rr_brng].to_numpy(),
+                                    pnts[rl_brng].to_numpy(),
+                                    extendDist,
+                                    crs_out)
             
 
-    #         # Clip bearing lines
-    #         blDF = gpd.clip(blDF, mapDis)
+            # Clip bearing lines
+            blDF = gpd.clip(blDF, mapDis)
 
-    #         # Calculate river width
-    #         blDF['width'] = blDF.geometry.length
+            # Calculate river width
+            blDF['width'] = blDF.geometry.length
 
-    #         # Calculate stats
-    #         try:
-    #             rowSummary = getStats(blDF, 'width', rowSummary, decimals=2)
-    #         except:
-    #             pass
+            # Calculate stats
+            try:
+                rowSummary = getStats(blDF, 'width', rowSummary, decimals=2)
+            except:
+                pass
 
-    #         del blDF
+            del blDF
 
-    #         #####################
-    #         # Calculate Sinuosity
-    #         print('\t\tSinuosity')
-    #         rowSummary = calcSinuosity(pnts, dist, rowSummary)
+            #####################
+            # Calculate Sinuosity
+            print('\t\tSinuosity')
+            rowSummary = calcSinuosity(pnts, dist, rowSummary)
             
-    #         #######################
-    #         # Calculate Mapped Area
-    #         rowSummary['mapped_area'] = np.around(mapDis.geometry.area.values[0], 2)
+            #######################
+            # Calculate Mapped Area
+            rowSummary['mapped_area'] = np.around(mapDis.geometry.area.values[0], 2)
 
 
-    #         ###########################
-    #         # Calculate Substrate Stats
-    #         print('\t\tSubstrate')
+            ###########################
+            # Calculate Substrate Stats
+            print('\t\tSubstrate')
 
-    #         # Make sure area updated
-    #         mapShp['Area_m'] = np.around(mapShp.geometry.area, 2)
+            # Make sure area updated
+            mapShp['Area_m'] = np.around(mapShp.geometry.area, 2)
 
-    #         # Iterate each class
-    #         for subClass in substrateClasses:
-    #             rowSummary = getSubStats(mapShp, 'Name', subClass, rowSummary, decimals=2)
+            # Iterate each class
+            for subClass in substrateClasses:
+                rowSummary = getSubStats(mapShp, 'Name', subClass, rowSummary, decimals=2)
 
-    #         ##############################
-    #         # Convert summary to dataframe
+            ##############################
+            # Convert summary to dataframe
                 
-    #         # Values must be in a list
-    #         for k, v in rowSummary.items():
-    #             rowSummary[k] = [v]
+            # Values must be in a list
+            for k, v in rowSummary.items():
+                rowSummary[k] = [v]
                 
-    #         dfSummary = pd.DataFrame.from_dict(rowSummary)
+            dfSummary = pd.DataFrame.from_dict(rowSummary)
 
-    #         if 'dfSummaryAll' not in locals():
-    #             dfSummaryAll = dfSummary
-    #         else:
-    #             dfSummaryAll = pd.concat([dfSummaryAll, dfSummary], ignore_index=True)
-    #     except:
-    #         pass
+            if 'dfSummaryAll' not in locals():
+                dfSummaryAll = dfSummary
+            else:
+                dfSummaryAll = pd.concat([dfSummaryAll, dfSummary], ignore_index=True)
+        except:
+            pass
 
 
 
-    # outFile = '_'.join([substrateOutput, riv, str(dist), 'summary.csv' ])
-    # dfSummaryAll.to_csv(os.path.join(outDir, outFile), index=False)
+    outFile = '_'.join([substrateOutput, riv, str(dist), 'summary.csv' ])
+    dfSummaryAll.to_csv(os.path.join(outDir, outFile), index=False)
 
-    # del dfSummaryAll
+    del dfSummaryAll
 
     return
 

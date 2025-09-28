@@ -21,10 +21,10 @@ import numpy as np
 ############
 # Parameters
 # substrateShpsDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries\02_Substrate_Shps_Mosaic_Transects'
-substrateShpsDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries\02_Substrate_Shps_Mosaic_Transects'
+substrateShpsDir = r'D:\redbo_science\projects\GulfSturgeonProject_2025\ProcessedData\Substrate_Summaries\02_Substrate_Shps_Mosaic_Transects'
 outDir = os.path.join(os.path.dirname(substrateShpsDir), '09_raw-egn_PatchSize_density')
 
-outFolderNames = ['Raw', 'EGN']
+outFolderNames = ['Raw']
 
 classOrder = ['Fines Ripple', 'Fines Flat', 'Cobble Boulder', 'Hard Bottom', 'Wood']
 
@@ -147,38 +147,38 @@ def makeBoxPlot(df, out, facet):
 
 shpAll = gpd.GeoDataFrame()
 
-# for dir in outFolderNames:
+for dir in outFolderNames:
 
-#     # Get shapefiles
-#     shpFiles = '*_postproc.shp'
-#     shpFiles = os.path.join(substrateShpsDir, dir, shpFiles)
-#     shpFiles = glob(shpFiles)
+    # Get shapefiles
+    shpFiles = '*_postproc.shp'
+    shpFiles = os.path.join(substrateShpsDir, dir, shpFiles)
+    shpFiles = glob(shpFiles)
 
-#     for shp in shpFiles:
-#         shp = prep_df(shp)
+    for shp in shpFiles:
+        shp = prep_df(shp)
 
-#         shp['Model'] = dir
+        shp['Model'] = dir
         
-#         if 'shpAllDir' not in locals():
-#             shpAllDir = shp
-#         else:
-#             shpAllDir = pd.concat([shpAllDir, shp], ignore_index=True)
+        if 'shpAllDir' not in locals():
+            shpAllDir = shp
+        else:
+            shpAllDir = pd.concat([shpAllDir, shp], ignore_index=True)
 
-#     shpAll = pd.concat([shpAll, shpAllDir], ignore_index=True)
-#     del shpAllDir
+    shpAll = pd.concat([shpAll, shpAllDir], ignore_index=True)
+    del shpAllDir
 
-# shpAllFile = os.path.join(outDir, 'All_River_Model_Maps.shp')
+shpAllFile = os.path.join(outDir, 'All_River_Model_Maps.shp')
 # shpAll.to_file(shpAllFile)
 
 shpAllFile = os.path.join(outDir, 'All_River_Model_Maps.shp')
 # shpAll = gpd.read_file(shpAllFile)
 
-# # Drop geometry column
-# df = shpAll.drop(columns='geometry')
-# del shpAll
+# Drop geometry column
+df = shpAll.drop(columns='geometry')
+del shpAll
 
-# dfFile = shpAllFile.replace('.shp', '.csv')
-# df.to_csv(dfFile)
+dfFile = shpAllFile.replace('.shp', '.csv')
+df.to_csv(dfFile)
 
 dfFile = shpAllFile.replace('.shp', '.csv')
 df = pd.read_csv(dfFile)

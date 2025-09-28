@@ -53,12 +53,12 @@ rivBasin = {'PRL': '[PRL Basin]',
             'CHU': '[PAS Basin]'
             }
 
-substrateOutput = 'EGN'
+substrateOutput = 'Raw'
 csvDir = '04_Substrate_Shps_Summary_All_Plots'
 outDir = '04_Substrate_Shps_Summary_All_Plots'
 
 # topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
-topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+topDir = r'D:\redbo_science\projects\GulfSturgeonProject_2025\ProcessedData\Substrate_Summaries'
 csvDir = os.path.join(topDir, csvDir, substrateOutput)
 outDir = os.path.join(topDir, outDir, substrateOutput)
 

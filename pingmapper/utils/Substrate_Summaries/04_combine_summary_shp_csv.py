@@ -20,14 +20,14 @@ import pandas as pd
 ############
 # Parameters
 river_codes = ['BCH', 'PRL', 'PAS','BOU', 'LEA', 'CHI', 'CHU']
-# river_codes = ['BCH', 'BOU']
+# river_codes = ['PRL']
 summaryLengths = [500, 1000, 5000, 10000]
 
-substrateOutput = 'EGN'
+substrateOutput = 'Raw'
 csvDir = '03_Substrate_Shps_Summary'
 outDir = '04_Substrate_Shps_Summary_All_Plots'
 
-topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+topDir = r'D:\redbo_science\projects\GulfSturgeonProject_2025\ProcessedData\Substrate_Summaries'
 csvDir = os.path.join(topDir, csvDir, substrateOutput)
 outDir = os.path.join(topDir, outDir, substrateOutput)
 

@@ -19,8 +19,8 @@ import plotnine as p9
 import numpy as np
 
 
-# summaryLengths =[500, 1000, 5000, 10000]
-summaryLengths = [500]
+summaryLengths =[500, 1000, 5000, 10000]
+# summaryLengths = [500]
 riverCodes = ['BCH', 'PRL', 'BOU', 'LEA', 'PAS', 'CHI', 'CHU']
 riverNames = ['Bogue Chitto R.', 'Pearl R.', 'Bouie R.', 'Leaf R.', 'Pascagoula R.', 'Chickasawhay R.', 'Chunky R.']
 
@@ -42,12 +42,13 @@ rivBasin = {'PRL': '[PRL Basin]',
             'CHU': '[PAS Basin]'
             }
 
-substrateOutputs = ['EGN', 'Raw']
+substrateOutputs = ['Raw']
 csvTopDir = '04_Substrate_Shps_Summary_All_Plots'
 outDir = '08_raw-egn_hardReacheFreq_hist'
 
-topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+# topDir = r'E:\SynologyDrive\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
 # topDir = r'S:\GulfSturgeonProject\SSS_Data_Processed\Substrate_Summaries'
+topDir = r'D:\redbo_science\projects\GulfSturgeonProject_2025\ProcessedData\Substrate_Summaries'
 topDir = os.path.normpath(topDir)
 
 
