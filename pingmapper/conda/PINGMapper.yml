@@ -2,7 +2,7 @@ name: ping
 channels:
   - conda-forge
 dependencies:
-  - python<3.13
+  - python
   - gdal
   - numpy
   - git
@@ -22,7 +22,7 @@ dependencies:
       - pinginstaller
       - doodleverse_utils
       - psutil
-      - tensorflow<=2.12
+      - tensorflow
       - tf-keras
       - opencv-python
       - transformers
