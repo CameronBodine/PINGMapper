@@ -22,7 +22,7 @@ dependencies:
       - pinginstaller
       - doodleverse_utils
       - psutil
-      - tensorflow
+      - tensorflow<=2.12
       - tf-keras
       - opencv-python
       - transformers
