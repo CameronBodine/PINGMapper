@@ -16,7 +16,7 @@ else:
 
 def main(process):
 
-    from .version import __version__
+    from pingmapper.version import __version__
     print("\n\nPINGMapper v{}".format(__version__))
     
     # Process single sonar log
