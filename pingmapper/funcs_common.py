@@ -244,82 +244,122 @@ def downloadSegmentationModelsv1_0(modelDir):
     return
 
 
-# =========================================================
-def saveDefaultParams(values):
+# # =========================================================
+# def saveDefaultParams(values):
 
-    try:
-        projDir = os.path.join(values['proj'], values['projName'])
-    except:
-        projDir = os.path.join(values['proj'], values['prefix'])
+#     try:
+#         projDir = os.path.join(values['proj'], values['projName'])
+#     except:
+#         projDir = os.path.join(values['proj'], values['prefix'])
 
-    try:
-        inDir = values['inDir']
-    except:
-        inDir = ''
+#     try:
+#         inDir = values['inDir']
+#     except:
+#         inDir = ''
 
-    try:
-        inFile = values['inFile']
-    except:
-        inFile = ''
+#     try:
+#         inFile = values['inFile']
+#     except:
+#         inFile = ''
     
-    params = {
-        'inDir':inDir,
-        'inFile':inFile,
-        'projDir':projDir,
-        'project_mode':int(values['project_mode']),
-        'tempC':float(values['tempC']),
-        'nchunk':int(values['nchunk']),
-        'cropRange':float(values['cropRange']),
-        'exportUnknown':values['exportUnknown'],
-        'fixNoDat':values['fixNoDat'],
-        'threadCnt':float(values['threadCnt']),
-        'max_heading_deviation':float(values['max_heading_deviation']),
-        'max_heading_distance':float(values['max_heading_distance']),
-        'min_speed':float(values['min_speed']),
-        'max_speed':float(values['max_speed']),
-        'filter_table':bool(values['filter_table']),
-        'aoi':values['aoi'],
-        'pix_res_son':float(values['pix_res_son']),
-        'pix_res_map':float(values['pix_res_map']),
-        'x_offset':float(values['x_offset']),
-        'y_offset':float(values['y_offset']),
-        'egn':values['egn'],
-        'egn_stretch':values['egn_stretch'],
-        'egn_stretch_factor':float(values['egn_stretch_factor']),
-        'wcp':values['wcp'],
-        'wcr':values['wcr'],
-        'wco':values['wco'],
-        'wcm':values['wcm'],
-        'sonogram_colorMap':values['sonogram_colorMap'],
-        'tileFile':values['tileFile'],
-        'spdCor':bool(values['spdCor']),
-        'maxCrop':values['maxCrop'],
-        'mask_shdw':bool(values['mask_shdw']),
-        'remShadow':values['remShadow'],
-        'detectDep':values['detectDep'],
-        'smthDep':values['smthDep'],
-        'adjDep':float(values['adjDep']),
-        'pltBedPick':values['pltBedPick'],
-        'rect_wcp':values['rect_wcp'],
-        'rect_wcr':values['rect_wcr'],
-        'rubberSheeting':values['rubberSheeting'],
-        'rectMethod':values['rectMethod'],
-        'rectInterpDist':int(values['rectInterpDist']),
-        'son_colorMap':values['son_colorMap'],
-        'pltSubClass':values['pltSubClass'],
-        'map_sub':values['map_sub'],
-        'export_poly':values['export_poly'],
-        'mosaic':values['mosaic'],
-        'map_mosaic':values['map_mosaic'],
-        'banklines':values['banklines'],
-        'coverage':values['coverage'],
-    }
+#     params = {
+#         'inDir':inDir,
+#         'inFile':inFile,
+#         'projDir':projDir,
+#         'project_mode':int(values['project_mode']),
+#         'tempC':float(values['tempC']),
+#         'nchunk':int(values['nchunk']),
+#         'cropRange':float(values['cropRange']),
+#         'exportUnknown':values['exportUnknown'],
+#         'fixNoDat':values['fixNoDat'],
+#         'threadCnt':float(values['threadCnt']),
+#         'max_heading_deviation':float(values['max_heading_deviation']),
+#         'max_heading_distance':float(values['max_heading_distance']),
+#         'min_speed':float(values['min_speed']),
+#         'max_speed':float(values['max_speed']),
+#         'filter_table':bool(values['filter_table']),
+#         'aoi':values['aoi'],
+#         'pix_res_son':float(values['pix_res_son']),
+#         'pix_res_map':float(values['pix_res_map']),
+#         'x_offset':float(values['x_offset']),
+#         'y_offset':float(values['y_offset']),
+#         'egn':values['egn'],
+#         'egn_stretch':values['egn_stretch'],
+#         'egn_stretch_factor':float(values['egn_stretch_factor']),
+#         'wcp':values['wcp'],
+#         'wcr':values['wcr'],
+#         'wco':values['wco'],
+#         'wcm':values['wcm'],
+#         'sonogram_colorMap':values['sonogram_colorMap'],
+#         'tileFile':values['tileFile'],
+#         'spdCor':bool(values['spdCor']),
+#         'maxCrop':values['maxCrop'],
+#         'mask_shdw':bool(values['mask_shdw']),
+#         'remShadow':values['remShadow'],
+#         'detectDep':values['detectDep'],
+#         'smthDep':values['smthDep'],
+#         'adjDep':float(values['adjDep']),
+#         'pltBedPick':values['pltBedPick'],
+#         'rect_wcp':values['rect_wcp'],
+#         'rect_wcr':values['rect_wcr'],
+#         'rubberSheeting':values['rubberSheeting'],
+#         'rectMethod':values['rectMethod'],
+#         'rectInterpDist':int(values['rectInterpDist']),
+#         'son_colorMap':values['son_colorMap'],
+#         'pltSubClass':values['pltSubClass'],
+#         'map_sub':values['map_sub'],
+#         'export_poly':values['export_poly'],
+#         'mosaic':values['mosaic'],
+#         'map_mosaic':values['map_mosaic'],
+#         'banklines':values['banklines'],
+#         'coverage':values['coverage'],
+#     }
 
-    json_object = json.dumps(params, indent=4)
+#     json_object = json.dumps(params, indent=4)
 
-    user_params = os.path.join(SCRIPT_DIR, 'user_params.json')
-    with open(user_params, "w") as f:
-        f.write(json_object)
+#     user_params = os.path.join(SCRIPT_DIR, 'user_params.json')
+#     with open(user_params, "w") as f:
+#         f.write(json_object)
+
+def saveDefaultParams(values, user_params=None):
+    """
+    Save provided values to user_params.json.
+    Merge with any existing file and convert common numpy types to plain Python.
+    """
+    if user_params is None:
+        user_params = os.path.join(SCRIPT_DIR, 'user_params.json')
+
+    # load existing params if present
+    try:
+        if os.path.exists(user_params):
+            with open(user_params, 'r', encoding='utf8') as f:
+                existing = json.load(f)
+        else:
+            existing = {}
+    except Exception:
+        existing = {}
+
+    def _sanitize(v):
+        if isinstance(v, dict):
+            return {k: _sanitize(val) for k, val in v.items()}
+        if isinstance(v, (np.integer, np.int_, np.int64)):
+            return int(v)
+        if isinstance(v, (np.floating, np.float64, np.float64)):
+            return float(v)
+        if isinstance(v, (np.ndarray, list, tuple)):
+            return [_sanitize(x) for x in v]
+        try:
+            json.dumps(v)
+            return v
+        except Exception:
+            return str(v)
+
+    sanitized = _sanitize(values)
+    merged = existing.copy()
+    merged.update(sanitized)
+
+    with open(user_params, 'w', encoding='utf8') as f:
+        json.dump(merged, f, indent=4, ensure_ascii=False)
 
 def clip_table(csv):    
 
@@ -332,7 +372,16 @@ def clip_table(csv):
     elif sys.platform == "darwin":
         subprocess.run(['open', "{}".format(csv)], check=True)
     else:
-        subprocess.run(['xdg-open', "{}".format(csv)], check=True)
+        try:
+            subprocess.run(['xdg-open', "{}".format(csv)], check=True)
+        except:
+            "WSL"
+            # Convert the WSL path to a Windows-style path
+            # Use -a for absolute path or -w for Windows path (can handle network shares)
+            windows_path = subprocess.check_output(["wslpath", "-w", csv]).decode().strip()
+
+            # Launch the file using the default Windows application
+            subprocess.run(["explorer.exe", windows_path])
 
     df = pd.read_csv(csv)
 
