@@ -46,7 +46,13 @@ from pingmapper.class_sonObj import sonObj
 from pingmapper.class_portstarObj import portstarObj
 
 import shutil
-from doodleverse_utils.imports import *
+
+try:
+    from doodleverse_utils.imports import *
+except ImportError:
+    print('Could not import Doodleverse Utils. Please install these packages to use PING-Mapper.')
+    print('They are not needed for GhostVision. Trying to continue...')
+    pass
 
 from scipy.signal import savgol_filter
 

@@ -42,22 +42,42 @@ from pingmapper.funcs_common import *
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 import json
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.python.client import device_lib
+# import tensorflow as tf
+# import tensorflow.keras.backend as K
+# from tensorflow.python.client import device_lib
 
 import itertools
 
-from transformers import TFSegformerForSemanticSegmentation
-from transformers import logging
-logging.set_verbosity_error()
+# from transformers import TFSegformerForSemanticSegmentation
+# from transformers import logging
+# logging.set_verbosity_error()
 
-# Fixes depth detection warning
-tf.get_logger().setLevel('ERROR')
+# # Fixes depth detection warning
+# tf.get_logger().setLevel('ERROR')
 
-from doodleverse_utils.imports import *
-from doodleverse_utils.model_imports import *
-from doodleverse_utils.prediction_imports import *
+# from doodleverse_utils.imports import *
+# from doodleverse_utils.model_imports import *
+# from doodleverse_utils.prediction_imports import *
+
+try:
+    import tensorflow as tf
+    import tensorflow.keras.backend as K
+    from tensorflow.python.client import device_lib
+
+    from transformers import TFSegformerForSemanticSegmentation
+    from transformers import logging
+    logging.set_verbosity_error()
+
+    # Fixes depth detection warning
+    tf.get_logger().setLevel('ERROR')
+
+    from doodleverse_utils.imports import *
+    from doodleverse_utils.model_imports import *
+    from doodleverse_utils.prediction_imports import *
+except ImportError:
+    print('Could not import Tensorflow and/or Transformers. Please install these packages to use PING-Mapper.')
+    print('They are not needed for GhostVision. Trying to continue...')
+    pass
 
 ################################################################################
 # model_imports.py from segmentation_gym                                       #
@@ -93,6 +113,7 @@ def initModel(weights, configfile, USE_GPU=False):
     --------------------
     self._detectDepth()
     '''
+
     SEED=42
     np.random.seed(SEED)
     AUTO = tf.data.experimental.AUTOTUNE # used in tf.data.Dataset API

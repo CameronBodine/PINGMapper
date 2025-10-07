@@ -59,9 +59,14 @@ import matplotlib.pyplot as plt
 
 import inspect
 
-from doodleverse_utils.imports import *
-from doodleverse_utils.model_imports import *
-from doodleverse_utils.prediction_imports import *
+try:
+    from doodleverse_utils.imports import *
+    from doodleverse_utils.model_imports import *
+    from doodleverse_utils.prediction_imports import *
+except ImportError:
+    print('Could not import Doodleverse Utils. Please install these packages to use PING-Mapper.')
+    print('They are not needed for GhostVision. Trying to continue...')
+    pass
 
 import geopandas as gpd
 
