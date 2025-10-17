@@ -10,16 +10,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For Debug
-# from funcs_common import *
-# from main_readFiles import read_master_func
-# from main_rectify import rectify_master_func
-# from main_mapSubstrate import map_master_func
+# For Debug
+from funcs_common import *
+from main_readFiles import read_master_func
+from main_rectify import rectify_master_func
+from main_mapSubstrate import map_master_func
 
-from pingmapper.funcs_common import *
-from pingmapper.main_readFiles import read_master_func
-from pingmapper.main_rectify import rectify_master_func
-from pingmapper.main_mapSubstrate import map_master_func
+# from pingmapper.funcs_common import *
+# from pingmapper.main_readFiles import read_master_func
+# from pingmapper.main_rectify import rectify_master_func
+# from pingmapper.main_mapSubstrate import map_master_func
 
 import json
 import pandas as pd
@@ -763,24 +763,26 @@ def gui(batch: bool):
                 print('\n===========================================')
                 print('===========================================')
                 print('***** READING *****')
-                read_master_func(**params)
+                ss_chan_avail  = read_master_func(**params)
                 # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-                if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
-                    print('\n===========================================')
-                    print('===========================================')
-                    print('***** RECTIFYING *****')
-                    rectify_master_func(**params)
-                    # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+                if ss_chan_avail:
 
-                #==================================================
-                #==================================================
-                if pred_sub or map_sub or export_poly or pltSubClass:
-                    print('\n===========================================')
-                    print('===========================================')
-                    print('***** MAPPING SUBSTRATE *****')
-                    print("working on "+projDir)
-                    map_master_func(**params)
+                    if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
+                        print('\n===========================================')
+                        print('===========================================')
+                        print('***** RECTIFYING *****')
+                        rectify_master_func(**params)
+                        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+
+                    #==================================================
+                    #==================================================
+                    if pred_sub or map_sub or export_poly or pltSubClass:
+                        print('\n===========================================')
+                        print('===========================================')
+                        print('***** MAPPING SUBSTRATE *****')
+                        print("working on "+projDir)
+                        map_master_func(**params)
 
                 gc.collect()
                 print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))

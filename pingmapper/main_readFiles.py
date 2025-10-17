@@ -36,14 +36,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For debug
-# from funcs_common import *
-# from class_sonObj import sonObj
-# from class_portstarObj import portstarObj
+# For debug
+from funcs_common import *
+from class_sonObj import sonObj
+from class_portstarObj import portstarObj
 
-from pingmapper.funcs_common import *
-from pingmapper.class_sonObj import sonObj
-from pingmapper.class_portstarObj import portstarObj
+# from pingmapper.funcs_common import *
+# from pingmapper.class_sonObj import sonObj
+# from pingmapper.class_portstarObj import portstarObj
 
 import shutil
 
@@ -419,8 +419,34 @@ def read_master_func(logfilename='',
         if son.beamName == 'ss_port' or son.beamName == 'ss_star':
             ss_chan_avail.append(son)
     if len(ss_chan_avail) == 0:
-        print('\n\nNo side-scan channels available. Aborting!')
-        sys.exit()
+        # print('\n\nNo side-scan channels available. Aborting!')
+        # sys.exit()
+
+        print('\n\nNo side-scan channels available!\nUpdating processing parameters as necessary...')
+        print('\nFiltering not avaialable...')
+        max_heading_deviation = 0
+        min_speed = 0
+        max_speed = 0
+        aoi = ''
+        time_table = ''
+
+        print('\nAuto depth picking not available...')
+        detectDep = 0
+        pltBedPick = False
+
+        print('\nShadow removal not available')
+        remShadow = 0
+        pred_sub = False
+
+        print('\nEGN not available...')
+        egn = False
+
+        print('\nWCO and WCM not available...')
+        wco = False
+        wcm = False
+
+
+
     elif len(ss_chan_avail) == 1:
         print('\n\nMaking copy of {} to ensure PINGMapper compatibility'.format(son.beamName))
         origBeam = son.beamName
@@ -1021,8 +1047,12 @@ def read_master_func(logfilename='',
         saveDepth = False
 
     if saveDepth:
-        # Save detected depth to csv
-        depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail)
+
+        if ss_chan_avail:
+            # Save detected depth to csv
+            depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail)
+        else:
+            depDF = []
 
         # Store depths in downlooking sonar files also
         for son in sonObjs:
@@ -1501,3 +1531,9 @@ def read_master_func(logfilename='',
         son._pickleSon()
     gc.collect()
     printUsage()
+
+    if len(ss_chan_avail) == 0:
+        return False
+    else:
+        return True
+

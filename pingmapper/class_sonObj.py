@@ -1301,7 +1301,10 @@ class sonObj(object):
 
                 # Distance (in meters)
                 d = sonMeta['trk_dist'].to_numpy()
-                d = np.max(d) - np.min(d)
+                # d = np.max(d) - np.min(d)
+                d = d[-1] - d[0]
+
+                
 
                 pixM = sonMeta['pixM']
                 # Find most common pixel size
@@ -1313,11 +1316,36 @@ class sonObj(object):
                 # Distance in pix
                 d = round(d / pixM, 0).astype(int)
 
-                sonDat = resize(sonDat,
-                                (sonDat.shape[0], d),
-                                mode='reflect',
-                                clip=True,
-                                preserve_range=True)
+                # to avoid oom errors
+                rows = sonDat.shape[0]
+                new_cols = d  # your target width
+                item_size = sonDat.itemsize  # bytes per element
+
+                estimated_bytes = rows * new_cols * item_size
+                estimated_MB = estimated_bytes / 1e6
+
+                available_bytes = psutil.virtual_memory().available
+                available_MB = available_bytes / 1e6
+
+
+                mem_margin = 0.9
+                safe_limit_MB = available_MB * (1 - mem_margin)
+
+                if d > 0 and estimated_MB < safe_limit_MB and new_cols<65500:
+                    sonDat = resize(
+                        sonDat,
+                        (rows, new_cols),
+                        mode='reflect',
+                        clip=True,
+                        preserve_range=True
+                    )
+                if estimated_MB > safe_limit_MB:
+                    print(f"Resize skipped for chunk {chunk}: estimated {estimated_MB:.2f} MB exceeds safe limit of {safe_limit_MB:.2f} MB.")
+                    # Optionally: fallback to chunked resize or downsampling
+                elif new_cols>65500:
+                    print(f"Resize skipped for chunk {chunk}: Maximum supported image dimension is 65500 pixels.")
+                else:
+                    print(f"Resize skipped for chunk {chunk}: Vessel did not move.")
 
             else:
                 sonDat = resize(sonDat,
