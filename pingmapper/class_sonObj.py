@@ -1344,8 +1344,10 @@ class sonObj(object):
                     # Optionally: fallback to chunked resize or downsampling
                 elif new_cols>65500:
                     print(f"Resize skipped for chunk {chunk}: Maximum supported image dimension is 65500 pixels.")
-                else:
+                elif d == 0:
                     print(f"Resize skipped for chunk {chunk}: Vessel did not move.")
+                else:
+                    pass
 
             else:
                 sonDat = resize(sonDat,
