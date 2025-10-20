@@ -17,6 +17,22 @@ nav_exclude: false
 {:toc}
 </details>
 
+## PING Ecosystem: Converting Low-Cost Sonar into Sceintific Instruments with Open-Souce Software
+
+By Cameron S. Bodine<sup>1</sup> (October 17, 2025)
+
+<sup>1</sup>Coastal Sediments, Hydrodynamics, and Engineering Lab, School of Marine Science & Policy, College of Earth, Ocean, and Environment, University of Delaware.
+
+### Abstract
+{: .no_toc }
+
+The PING Ecosystem is an expanding suite of open-source software tools that transform sonar data from low-cost, recreation-grade fishfinders into actionable scientific datasets. Designed for ease of use, these tools require no coding experience and are freely available via GitHub. At the core of the ecosystem is PINGMapper, a user-friendly interface for processing side scan sonar imagery and reproducibly mapping benthic habitats. PINGMapper has supported deep learning segmentation workflows to identify potential spawning habitats for Gulf Sturgeon (Acipenser oxyrhynchus desotoi). Complementing this, GhostVision enables near real-time object detection and georeferencing of derelict crab pots in sonar imagery. The seminar will also preview upcoming tools focused on enhanced habitat classification and fish assemblage segmentation. By lowering technical barriers and streamlining sonar data analysis, the PING Ecosystem empowers fish and wildlife researchers and managers to quantify, characterize, and map critical aquatic habitats with greater efficiency and precision.
+
+### Video
+{: .no_toc }
+
+<iframe src="https://cdnapisec.kaltura.com/p/2358381/sp/235838100/embedIframeJs/uiconf_id/43030631/partner_id/2358381?iframeembed=true&playerId=kplayer&entry_id=1_458udj20&flashvars[streamerType]=auto" width="560" height="657" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *" frameborder="0"></iframe>
+
 ## Ph.D. Defense: Automated Mapping of Gulf Sturgeon Spawning Habitat in Coastal Plain Rivers
 
 By Cameron S. Bodine<sup>1</sup> (March 29, 2024)
