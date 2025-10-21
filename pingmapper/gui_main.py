@@ -113,7 +113,7 @@ def gui(batch: bool):
 
     else:
         text_project = sg.Text('Project Name', size=(15,1))
-        in_project = sg.InputText(key='projName', size=(50,1), default_text=os.path.basename(default_params['projDir']))
+        in_project = sg.InputText(key='projName', size=(50,1), default_text=default_params['projName'])
 
         # Add to layout
         layout.append([text_project, in_project])
