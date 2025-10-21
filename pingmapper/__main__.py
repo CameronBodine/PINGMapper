@@ -22,8 +22,6 @@ def main(process):
     # Process single sonar log
     if process == 'gui':
         print('\n\nLaunching gui for processing single sonar log...\n\n')
-        # from pingmapper.gui_main import gui
-        # gui()
         from pingmapper.gui_main import gui
         gui(batch=False)
 
