@@ -1988,6 +1988,11 @@ class rectObj(sonObj):
             isChunk.iloc[chunk+1] = True
             trkMeta = trkMeta[isChunk].reset_index(drop=False)
 
+        # Set pixel resolution if 0
+        if pix_res == 0:
+            pix_res = trkMeta['pixM'].mode()[0]
+            do_resize = False
+
         # Filter sonMetaDF by chunk
         if not hasattr(self, 'sonMetaDF'):
             self._loadSonMeta()
