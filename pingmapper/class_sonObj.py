@@ -797,6 +797,94 @@ class sonObj(object):
         self.sonDat = sonDat.astype(np.uint8)
         return
 
+    # def _loadSonChunk(self, df):
+    #     """
+    #     Read pings and apply per-ping gain normalization.
+    #     - Assumes gain index is in df['gain'] aligned with loop index i.
+    #     - Uses table_value = (gidx - 255) * 137 and unit_scale to convert to physical units.
+    #     - For 'dB' mode: undo applied gain by multiplying with 10^(-gain_dB/20).
+    #     - For 'linear' mode: subtract the (scaled) offset: dat_corrected = dat - phys_value.
+    #     """
+
+    #     # Configurable defaults (set on self if desired)
+    #     gain_mode = 'linear'         # 'dB' or 'linear'
+    #     unit_scale = 100.0  # divisor to convert table units -> dB or linear units
+
+    #     # Only apply for RSD files (your earlier check)
+    #     apply_gain = self.sonFile.lower().endswith(".rsd")
+    #     sonDat = np.zeros((int(self.pingMax), len(self.pingCnt)), dtype=np.int32)
+
+    #     with open(self.sonFile, "rb") as file:
+    #         for i in range(len(self.headIdx)):
+    #             if ~np.isnan(self.headIdx[i]):
+    #                 ping_len = min(int(self.pingCnt[i]), int(self.pingMax))
+    #                 if not self.son8bit:
+    #                     ping_len *= 2
+
+    #                 headIDX = int(self.headIdx[i])
+    #                 son_offset = int(self.son_offset[i])
+    #                 pingIdx = headIDX + son_offset
+
+    #                 file.seek(pingIdx)
+    #                 buffer = file.read(ping_len)
+
+    #                 if self.flip_port:
+    #                     buffer = buffer[::-1]
+
+    #                 # Read raw samples: big-endian in file per your original code
+    #                 if self.son8bit:
+    #                     dat = np.frombuffer(buffer, dtype=">u1").astype(np.float32)
+    #                 else:
+    #                     # read big-endian uint16, then convert to native-endian float32
+    #                     try:
+    #                         dat_be = np.frombuffer(buffer, dtype=">u2")
+    #                     except Exception:
+    #                         dat_be = np.frombuffer(buffer[:-1], dtype=">u2")
+    #                     # convert to native-endian 16-bit then to float
+    #                     dat = dat_be.astype(np.uint16).astype(np.float32)
+
+    #                 # Apply gain correction if appropriate
+    #                 if apply_gain and gain_mode in ("dB", "linear"):
+    #                     # read gain index from your df (ensure integer)
+    #                     try:
+    #                         gidx = int(df.iloc[i]["gain"])
+    #                     except Exception:
+    #                         gidx = 0
+    #                     gidx = max(0, min(255, gidx))
+
+    #                     # table value in raw units
+    #                     table_unit_value = (gidx - 255) * 137
+    #                     phys_value = table_unit_value / float(unit_scale)
+
+    #                     if gain_mode == "dB":
+    #                         # phys_value is gain in dB that was applied when recording.
+    #                         # To normalize, undo that gain: multiply by 10^(-gain_dB/20).
+    #                         scale = 10.0 ** (-phys_value / 20.0)
+    #                         dat_corr = dat * scale
+    #                     else:
+    #                         # Linear offset case: subtract the stored offset to undo it.
+    #                         dat_corr = dat - phys_value
+    #                 else:
+    #                     dat_corr = dat
+
+    #                 # Clip and store into integer array, keep dynamic range
+    #                 # Here we store into sonDat as int32 to avoid overflow during processing.
+    #                 n = len(dat_corr)
+    #                 sonDat[:n, i] = np.round(dat_corr).astype(np.int32)
+
+    #     # Finalize sonDat dtype choice: keep float-like behavior downstream by using float32,
+    #     # or map to uint8/uint16 if your pipeline expects those dtypes.
+    #     if self.son8bit:
+    #         # clip to 0..255 and save as uint8
+    #         self.sonDat = np.clip(sonDat, 0, 255).astype(np.uint8)
+    #     else:
+    #         # preserve range as uint16 (clip to uint16) if desired
+    #         self.sonDat = np.clip(sonDat, 0, 65535).astype(np.uint16)
+
+    #     return
+
+
+
     # ======================================================================
     def _WC_mask(self, i, son=True):
         '''
