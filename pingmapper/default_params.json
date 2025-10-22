@@ -2,6 +2,7 @@
     "inDir":"",
     "inFile":"",
     "projDir":"",
+    "projName":"",
     "project_mode":true,
     "tempC":10,
     "nchunk":500,
