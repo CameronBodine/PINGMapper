@@ -1522,7 +1522,10 @@ class sonObj(object):
 
             # Set stride based on first image
             # stride = int(round(a_img.shape[1] * stride, 0))
-            to_stride = int(round(self.nchunk * stride, 0))
+            if stride == 0:
+                to_stride = 1
+            else:
+                to_stride = int(round(self.nchunk * stride, 0))
 
             # Set window size based on first image
             # winSize = a_img.shape[1]
