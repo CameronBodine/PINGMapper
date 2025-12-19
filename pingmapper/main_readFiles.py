@@ -37,6 +37,7 @@ PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
 from pingmapper.funcs_common import *
+from pingmapper.funcs_model import DEPTH_DETECTION_AVAILABLE
 from pingmapper.class_sonObj import sonObj
 from pingmapper.class_portstarObj import portstarObj
 
@@ -44,10 +45,29 @@ import shutil
 
 try:
     from doodleverse_utils.imports import *
-except ImportError:
+except ImportError as e:
+    import traceback
+    print('\n' + '='*80)
     print('Could not import Doodleverse Utils. Please install these packages to use PING-Mapper.')
     print('They are not needed for GhostVision. Trying to continue...')
-    pass
+    print('\nDetailed error information:')
+    print('-'*80)
+    print(f'Error Type: {type(e).__name__}')
+    print(f'Error Message: {str(e)}')
+    print('-'*80)
+    traceback.print_exc()
+    print('='*80 + '\n')
+except Exception as e:
+    import traceback
+    print('\n' + '='*80)
+    print('Unexpected error while importing Doodleverse Utils.')
+    print('Detailed error information:')
+    print('-'*80)
+    print(f'Error Type: {type(e).__name__}')
+    print(f'Error Message: {str(e)}')
+    print('-'*80)
+    traceback.print_exc()
+    print('='*80 + '\n')
 
 from scipy.signal import savgol_filter
 
@@ -834,7 +854,7 @@ def read_master_func(logfilename='',
                 elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
                     valid=False
                     invalid[son.beam+"."+att] = False
-                    detectDep=0#1
+                    detectDep=1
                 else:
                     valid=False
                     invalid[son.beam+"."+att] = False
@@ -992,45 +1012,53 @@ def read_master_func(logfilename='',
     del son
 
     chunks = np.unique(chunks).astype(int)
-
     # # Automatically estimate depth
     if detectDep > 0:
-        print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
+        # Check if depth detection dependencies are available
+        if not DEPTH_DETECTION_AVAILABLE:
+            print('\n\nCannot estimate depth automatically:')
+            print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
+            print('These packages are required for automatic depth detection.')
+            print('Please install them using: pip install tensorflow transformers doodleverse-utils')
+            print('Skipping automatic depth estimation...\n')
+            detectDep = 0
+        else:
+            print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
 
-        #Dictionary to store chunk : np.array(depth estimate)
-        psObj.portDepDetect = {}
-        psObj.starDepDetect = {}
+            #Dictionary to store chunk : np.array(depth estimate)
+            psObj.portDepDetect = {}
+            psObj.starDepDetect = {}
 
-        # Estimate depth using:
-        # Zheng et al. 2021
-        # Load model weights and configuration file
-        if detectDep == 1:
+            # Estimate depth using:
+            # Zheng et al. 2021
+            # Load model weights and configuration file
+            if detectDep == 1:
 
-            # Store configuration file and model weights
-            # These were downloaded at the beginning of the script
-            depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
-            psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
-            psObj.weights = os.path.join(modelDir, depthModelVer, 'weights', depthModelVer+'_fullmodel.h5')
-            print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
+                # Store configuration file and model weights
+                # These were downloaded at the beginning of the script
+                depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
+                psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
+                psObj.weights = os.path.join(modelDir, depthModelVer, 'weights', depthModelVer+'_fullmodel.h5')
+                print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
 
-        # With binary thresholding
-        elif detectDep == 2:
-            print('\n\tUsing binary thresholding...')
+            # With binary thresholding
+            elif detectDep == 2:
+                print('\n\tUsing binary thresholding...')
 
-        # Parallel estimate depth for each chunk using appropriate method
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
+            # Parallel estimate depth for each chunk using appropriate method
+            r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
 
-        # store the depth predictions in the class
-        for ret in r:
-            psObj.portDepDetect[ret[2]] = ret[0]
-            psObj.starDepDetect[ret[2]] = ret[1]
-            del ret
-        del r
+            # store the depth predictions in the class
+            for ret in r:
+                psObj.portDepDetect[ret[2]] = ret[0]
+                psObj.starDepDetect[ret[2]] = ret[1]
+                del ret
+            del r
 
-        # Flag indicating depth autmatically estimated
-        autoBed = True
+            # Flag indicating depth autmatically estimated
+            autoBed = True
 
-        saveDepth = True
+            saveDepth = True
 
     # Don't estimate depth, use instrument depth estimate (sonar derived)
     elif detectDep == 0:
@@ -1062,9 +1090,10 @@ def read_master_func(logfilename='',
 
                 sonDF['dep_m_Method'] = 'Instrument Depth'
                 sonDF['dep_m_smth'] = False
-                sonDF['dep_m_adjBy'] = adjDep
-                
+                sonDF['dep_m_adjBy'] = adjDep  
+
                 dep = sonDF['inst_dep_m']
+
                 if smthDep:
                     dep = savgol_filter(dep, 51, 3)
 
@@ -1072,11 +1101,23 @@ def read_master_func(logfilename='',
                 dep[dep==0] = np.nan
                 dep = np.asarray(dep)
                 nans = np.isnan(dep)
-                dep[nans] = np.interp(np.flatnonzero(nans), np.flatnonzero(~nans), dep[~nans])
                 
-                sonDF['dep_m'] = dep + adjDep
+                # Only interpolate if there are valid (non-NaN) values
+                if np.any(~nans):
+                    # There are some valid values, so we can interpolate
+                    dep[nans] = np.interp(np.flatnonzero(nans), np.flatnonzero(~nans), dep[~nans])
 
-                sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+                    sonDF['dep_m'] = dep + adjDep
+
+                    sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
+                else:
+                    # All values are NaN - cannot interpolate
+                    print("\nWarning: All instrument depth values are NaN or zero. Cannot interpolate depth.")
+                    print("This may indicate missing depth data in the sonar file.")
+                
+                # sonDF['dep_m'] = dep + adjDep
+
+                # sonDF.to_csv(son.sonMetaFile, index=False, float_format='%.14f')
                 del sonDF, son.sonMetaDF
                 son._cleanup()
 
