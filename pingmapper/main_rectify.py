@@ -38,12 +38,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
-# # For Debug
-# from funcs_common import *
-# from class_rectObj import rectObj
-# from class_portstarObj import portstarObj
-# from funcs_rectify import smoothTrackline
-
 from pingmapper.funcs_common import *
 from pingmapper.class_rectObj import rectObj
 from pingmapper.class_portstarObj import portstarObj
