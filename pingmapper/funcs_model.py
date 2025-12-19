@@ -59,6 +59,9 @@ import itertools
 # from doodleverse_utils.model_imports import *
 # from doodleverse_utils.prediction_imports import *
 
+# Flag to track if depth detection dependencies are available
+DEPTH_DETECTION_AVAILABLE = False
+
 try:
     import tensorflow as tf
     import tensorflow.keras.backend as K
@@ -74,10 +77,33 @@ try:
     from doodleverse_utils.imports import *
     from doodleverse_utils.model_imports import *
     from doodleverse_utils.prediction_imports import *
-except ImportError:
+    
+    DEPTH_DETECTION_AVAILABLE = True
+except ImportError as e:
+    import traceback
+    print('\n' + '='*80)
     print('Could not import Tensorflow and/or Transformers. Please install these packages to use PING-Mapper.')
     print('They are not needed for GhostVision. Trying to continue...')
-    pass
+    print('\nDetailed error information:')
+    print('-'*80)
+    print(f'Error Type: {type(e).__name__}')
+    print(f'Error Message: {str(e)}')
+    print('-'*80)
+    traceback.print_exc()
+    print('='*80 + '\n')
+    DEPTH_DETECTION_AVAILABLE = False
+except Exception as e:
+    import traceback
+    print('\n' + '='*80)
+    print('Unexpected error while importing depth detection dependencies.')
+    print('Detailed error information:')
+    print('-'*80)
+    print(f'Error Type: {type(e).__name__}')
+    print(f'Error Message: {str(e)}')
+    print('-'*80)
+    traceback.print_exc()
+    print('='*80 + '\n')
+    DEPTH_DETECTION_AVAILABLE = False
 
 ################################################################################
 # model_imports.py from segmentation_gym                                       #
@@ -113,6 +139,13 @@ def initModel(weights, configfile, USE_GPU=False):
     --------------------
     self._detectDepth()
     '''
+    
+    if not DEPTH_DETECTION_AVAILABLE:
+        raise ImportError(
+            "TensorFlow, Transformers, and/or Doodleverse Utils are not installed. "
+            "These packages are required for automatic depth detection. "
+            "Please install them using: pip install tensorflow transformers doodleverse-utils"
+        )
 
     SEED=42
     np.random.seed(SEED)
