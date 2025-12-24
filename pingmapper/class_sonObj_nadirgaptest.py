@@ -1136,6 +1136,10 @@ class sonObj(object):
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
         imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile), data, check_contrast=False)
 
+        # Clean up temporary data array to free memory
+        del data
+        gc.collect()
+
         return
 
     def _writeTilesPlot(self,
@@ -1197,6 +1201,9 @@ class sonObj(object):
             colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
             colored_data = (colored_data[:, :, :3] * 255).astype('uint8')
             data = colored_data
+            
+            # Clean up temporary arrays
+            del norm_data, colored_data
 
             # imsave(outfile, data)
 
@@ -1206,7 +1213,10 @@ class sonObj(object):
             # imsave(outfile, data, check_contrast=False)
 
         imsave(outfile, data, check_contrast=False)
-            
+        
+        # Clean up temporary data array to free memory
+        del data
+        gc.collect()
 
         return
 
@@ -1459,6 +1469,10 @@ class sonObj(object):
                 imsave(os.path.join(outDir, img_name+'_'+zero+str(win)+'.jpg'), window)
 
                 win += to_stride
+
+            # Clean up large arrays to free memory
+            del a_img, b_img, movWin
+            gc.collect()
 
         return
 
