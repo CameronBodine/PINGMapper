@@ -1265,6 +1265,9 @@ class portstarObj(object):
         del maxDepths, minDepths, avgDepths, Wp, portDepPixCrop, starDepPixCrop
         del portDepPix, starDepPix
         del model, self.bedpickModel ######## Not sure about this one...
+        
+        # Force garbage collection to free memory
+        gc.collect()
 
         # return #self
         return portDepPixFinal, starDepPixFinal, i
