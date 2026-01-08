@@ -2,8 +2,8 @@ name: ping
 channels:
   - conda-forge
 dependencies:
-  - python<3.13
-  - gdal
+  - python=3.12
+  - gdal=3.9
   - numpy
   - git
   - pandas
