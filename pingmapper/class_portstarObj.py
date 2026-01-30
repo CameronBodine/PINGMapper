@@ -1605,8 +1605,8 @@ class portstarObj(object):
             starDF['dep_m_adjBy'] = str(adjDep / starDF['pixM']) + ' pixels'
 
         # Interpolate over nan's (and set zeros to nan)
-        portDep = portDF['dep_m'].to_numpy()
-        starDep = starDF['dep_m'].to_numpy()
+        portDep = portDF['dep_m'].to_numpy(copy=True)
+        starDep = starDF['dep_m'].to_numpy(copy=True)
 
         portDep[portDep == 0] = np.nan
         starDep[starDep == 0] = np.nan

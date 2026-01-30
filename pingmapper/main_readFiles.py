@@ -1090,7 +1090,7 @@ def read_master_func(logfilename='',
                 sonDF['dep_m_smth'] = False
                 sonDF['dep_m_adjBy'] = adjDep  
 
-                dep = sonDF['inst_dep_m']
+                dep = sonDF['inst_dep_m'].to_numpy(copy=True)
 
                 if smthDep:
                     dep = savgol_filter(dep, 51, 3)
