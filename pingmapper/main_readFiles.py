@@ -549,14 +549,14 @@ def read_master_func(logfilename='',
         del son
 
 
-        # If Onix, need to store self._trans in object
-        if sonObjs[0].isOnix:
-            for son in sonObjs:
-                son._loadSonMeta()
-                utm_e=son.sonMetaDF.iloc[0]['utm_e']
-                utm_n=son.sonMetaDF.iloc[0]['utm_n']
-                son._getEPSG(utm_e, utm_n)
-            del son
+        # # If Onix, need to store self._trans in object
+        # if sonObjs[0].isOnix:
+        #     for son in sonObjs:
+        #         son._loadSonMeta()
+        #         utm_e=son.sonMetaDF.iloc[0]['utm_e']
+        #         utm_n=son.sonMetaDF.iloc[0]['utm_n']
+        #         son._getEPSG(utm_e, utm_n)
+        #     del son
 
 
     else:
