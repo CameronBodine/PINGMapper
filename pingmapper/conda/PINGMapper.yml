@@ -25,5 +25,5 @@ dependencies:
       - tensorflow
       - tf-keras
       - opencv-python
-      - transformers
+      - transformers<5
       - rsa
