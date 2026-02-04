@@ -246,15 +246,15 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
             
             if curTransect == t:
                 # Get second to last row of previous chunk
-                lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
+                lastRow = sDF[sDF['chunk_id'] == i-1].iloc[-2]
 
                 # Update current chunks first row from lastRow
-                sDF.at[curRow, "lons"] = lastRow["lons"]
-                sDF.at[curRow, "lats"] = lastRow["lats"]
-                sDF.at[curRow, "utm_es"] = lastRow["utm_es"]
-                sDF.at[curRow, "utm_ns"] = lastRow["utm_ns"]
-                sDF.at[curRow, "cog"] = lastRow["cog"]
-                sDF.at[curRow, "instr_heading"] = lastRow["instr_heading"]
+                sDF.at[curRow, "lons"] = float(lastRow["lons"])
+                sDF.at[curRow, "lats"] = float(lastRow["lats"])
+                sDF.at[curRow, "utm_es"] = float(lastRow["utm_es"])
+                sDF.at[curRow, "utm_ns"] = float(lastRow["utm_ns"])
+                sDF.at[curRow, "cog"] = float(lastRow["cog"])
+                sDF.at[curRow, "instr_heading"] = float(lastRow["instr_heading"])
                 # sDF.at[curRow, 'pixM'] = lastRow['pixM']
 
                 del lastRow
