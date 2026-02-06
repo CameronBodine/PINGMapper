@@ -133,7 +133,7 @@ Options to filter (i.e. clip, remove, mask) data in sonar logs:
 <img src="../../assets/running/AOI.png"/>
 
 ### Step 6
-Provide an x and y offset to account for position offset between the control head (or external GPS) and the transducer.
+Provide an x and y offset (in meters) to account for position offset between the control head (or external GPS) and the transducer.
 
 <img src="../../assets/running/gui_PositionCorrection.PNG"/>
 
