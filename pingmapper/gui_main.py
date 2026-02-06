@@ -615,214 +615,228 @@ def gui(batch: bool):
 
         globals().update(params)
 
+        from pingmapper.doWork import doWork
+
+        doWork(
+            in_file=(values['inFile'] if not batch else None),
+            in_dir=(inDir if batch else None),
+            out_dir=outDir,
+            proj_name=(values['projName'] if not batch else None),
+            prefix=(values['prefix'] if batch else ''),
+            suffix=(values['suffix'] if batch else ''),
+            batch=batch,
+            params=params,
+            script_path=os.path.abspath(__file__),
+        )
+
         #============================================
 
-        if batch:
-            # Find all DAT and SON files in all subdirectories of inDir
-            inFiles=[]
-            for root, dirs, files in os.walk(inDir):
-                if '__MACOSX' not in root:
-                    for file in files:
-                        if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3') or file.endswith('.RSD') or file.endswith('.svlog'):
-                            inFiles.append(os.path.join(root, file))
+        # if batch:
+        #     # Find all DAT and SON files in all subdirectories of inDir
+        #     inFiles=[]
+        #     for root, dirs, files in os.walk(inDir):
+        #         if '__MACOSX' not in root:
+        #             for file in files:
+        #                 if file.endswith('.DAT') or file.endswith('.sl2') or file.endswith('.sl3') or file.endswith('.RSD') or file.endswith('.svlog'):
+        #                     inFiles.append(os.path.join(root, file))
 
-            inFiles = sorted(inFiles)
+        #     inFiles = sorted(inFiles)
 
-        else:
-            inFiles = [values['inFile']]
+        # else:
+        #     inFiles = [values['inFile']]
 
-        for i, f in enumerate(inFiles):
-            print(i, ":", f)
+        # for i, f in enumerate(inFiles):
+        #     print(i, ":", f)
 
-        for datFile in inFiles:
-            logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
+        # for datFile in inFiles:
+        #     logfilename = 'log_'+time.strftime("%Y-%m-%d_%H%M")+'.txt'
 
-            try:
-                copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
-                script = os.path.abspath(__file__)
+        #     try:
+        #         copied_script_name = os.path.basename(__file__).split('.')[0]+'_'+time.strftime("%Y-%m-%d_%H%M")+'.py'
+        #         script = os.path.abspath(__file__)
 
-                start_time = time.time()  
+        #         start_time = time.time()  
 
-                inPath = os.path.dirname(datFile)
-                inFile = datFile
-                recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
+        #         inPath = os.path.dirname(datFile)
+        #         inFile = datFile
+        #         recName = '.'.join(os.path.basename(inFile).split('.')[:-1])
 
 
-                # Rename for Gulf Sturgeon Project
-                if 'GulfSturgeonProject_2025' in inPath:
-                    river = os.path.basename(inPath).split('_')[0]
-                    date = os.path.basename(inPath).split('_')[1]
-                    boat = os.path.basename(inPath).split('_')[2]
+        #         # Rename for Gulf Sturgeon Project
+        #         if 'GulfSturgeonProject_2025' in inPath:
+        #             river = os.path.basename(inPath).split('_')[0]
+        #             date = os.path.basename(inPath).split('_')[1]
+        #             boat = os.path.basename(inPath).split('_')[2]
 
-                    upRKM = os.path.basename(recName).split('_')[0]
-                    dnRKM = os.path.basename(recName).split('_')[1]
-                    recName = os.path.basename(recName).split('_')[2]
+        #             upRKM = os.path.basename(recName).split('_')[0]
+        #             dnRKM = os.path.basename(recName).split('_')[1]
+        #             recName = os.path.basename(recName).split('_')[2]
 
-                    recName = ('{}_{}_{}_{}_{}_{}_{}'.format(river, upRKM, dnRKM, date, boat, recName, '2025'))
+        #             recName = ('{}_{}_{}_{}_{}_{}_{}'.format(river, upRKM, dnRKM, date, boat, recName, '2025'))
 
-                    # Apply boat offset
-                    xOff = 'x_offset'
-                    yOff = 'y_offset'
-                    # USM used FWS Jon boat
-                    # Using offsets kasea provided
-                    if boat == 'USM1':
-                        params[xOff] = 3.6
-                        params[yOff] = -0.6
+        #             # Apply boat offset
+        #             xOff = 'x_offset'
+        #             yOff = 'y_offset'
+        #             # USM used FWS Jon boat
+        #             # Using offsets kasea provided
+        #             if boat == 'USM1':
+        #                 params[xOff] = 3.6
+        #                 params[yOff] = -0.6
                     
-                    elif boat == 'FWSA1':
-                        if '202102' in date:
-                            # Feb 2021 trip, Oquawka boat (chan)
-                            params[xOff] = 5.3
-                            params[yOff] = -0.5
-                        elif '202103' in date:
-                            # March 2021 trip, Oquawka boat (chan)
-                            params[xOff] = 5.3
-                            params[yOff] = -0.5
-                        else:
-                            print('Unknown scan!')
-                            print(recName)
-                            sys.exit()
+        #             elif boat == 'FWSA1':
+        #                 if '202102' in date:
+        #                     # Feb 2021 trip, Oquawka boat (chan)
+        #                     params[xOff] = 5.3
+        #                     params[yOff] = -0.5
+        #                 elif '202103' in date:
+        #                     # March 2021 trip, Oquawka boat (chan)
+        #                     params[xOff] = 5.3
+        #                     params[yOff] = -0.5
+        #                 else:
+        #                     print('Unknown scan!')
+        #                     print(recName)
+        #                     sys.exit()
 
-                    elif boat == 'FWSC1':
-                        if '202102' in date:
-                            # Feb 2021 trip, Whaler boat (adam)
-                            params[xOff] = 3.5
-                            params[yOff] = -0.2
-                        elif '202105' in date:
-                            # May 2021 trip, Kann boat (adam)
-                            params[xOff] = 5.4
-                            params[yOff] = -0.5
-                        else:
-                            print('Unknown scan!')
-                            print(recName)
-                            sys.exit()
+        #             elif boat == 'FWSC1':
+        #                 if '202102' in date:
+        #                     # Feb 2021 trip, Whaler boat (adam)
+        #                     params[xOff] = 3.5
+        #                     params[yOff] = -0.2
+        #                 elif '202105' in date:
+        #                     # May 2021 trip, Kann boat (adam)
+        #                     params[xOff] = 5.4
+        #                     params[yOff] = -0.5
+        #                 else:
+        #                     print('Unknown scan!')
+        #                     print(recName)
+        #                     sys.exit()
 
-                    elif boat == 'FWSB1':
-                        if '202103' in date:
-                            # March 2021 trip, Kann boat (adam)
-                            params[xOff] = 5.4
-                            params[yOff] = -0.5
-                        elif '202105' in date:
-                            # May 2021 trip, Oquawka boat (chan)
-                            params[xOff] = 5.3
-                            params[yOff] = -0.5
-                        else:
-                            print('Unknown scan!')
-                            print(recName)
-                            sys.exit()
+        #             elif boat == 'FWSB1':
+        #                 if '202103' in date:
+        #                     # March 2021 trip, Kann boat (adam)
+        #                     params[xOff] = 5.4
+        #                     params[yOff] = -0.5
+        #                 elif '202105' in date:
+        #                     # May 2021 trip, Oquawka boat (chan)
+        #                     params[xOff] = 5.3
+        #                     params[yOff] = -0.5
+        #                 else:
+        #                     print('Unknown scan!')
+        #                     print(recName)
+        #                     sys.exit()
 
-                    else: 
-                        print('Unknown scan!')
-                        print(recName)
-                        sys.exit()
+        #             else: 
+        #                 print('Unknown scan!')
+        #                 print(recName)
+        #                 sys.exit()
 
 
-                try:
-                    sonPath = inFile.split('.DAT')[0]
-                    sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
-                except:
-                    sonFiles = ''
+        #         try:
+        #             sonPath = inFile.split('.DAT')[0]
+        #             sonFiles = sorted(glob(sonPath+os.sep+'*.SON'))
+        #         except:
+        #             sonFiles = ''
 
-                if batch:
-                    recName = values['prefix'] + recName + values['suffix']
+        #         if batch:
+        #             recName = values['prefix'] + recName + values['suffix']
 
-                    projDir = os.path.join(outDir, recName)
+        #             projDir = os.path.join(outDir, recName)
 
-                else:
-                    projDir = os.path.join(os.path.normpath(values['proj']), values['projName'])
+        #         else:
+        #             projDir = os.path.join(os.path.normpath(values['proj']), values['projName'])
 
-                #============================================
+        #         #============================================
 
-                # =========================================================
-                # Determine project_mode
-                print(project_mode)
-                if project_mode == 0:
-                    # Create new project
-                    if not os.path.exists(projDir):
-                        os.mkdir(projDir)
-                    else:
-                        projectMode_1_inval()
+        #         # =========================================================
+        #         # Determine project_mode
+        #         print(project_mode)
+        #         if project_mode == 0:
+        #             # Create new project
+        #             if not os.path.exists(projDir):
+        #                 os.mkdir(projDir)
+        #             else:
+        #                 projectMode_1_inval()
 
-                elif project_mode == 1:
-                    # Overwrite existing project
-                    if os.path.exists(projDir):
-                        shutil.rmtree(projDir)
+        #         elif project_mode == 1:
+        #             # Overwrite existing project
+        #             if os.path.exists(projDir):
+        #                 shutil.rmtree(projDir)
 
-                    os.mkdir(projDir)        
+        #             os.mkdir(projDir)        
 
-                elif project_mode == 2:
-                    # Update project
-                    # Make sure project exists, exit if not.
+        #         elif project_mode == 2:
+        #             # Update project
+        #             # Make sure project exists, exit if not.
                     
-                    if not os.path.exists(projDir):
-                        projectMode_2_inval()
+        #             if not os.path.exists(projDir):
+        #                 projectMode_2_inval()
 
-                # =========================================================
-                # For logging the console output
+        #         # =========================================================
+        #         # For logging the console output
 
-                logdir = os.path.join(projDir, 'logs')
-                if not os.path.exists(logdir):
-                    os.makedirs(logdir)
+        #         logdir = os.path.join(projDir, 'logs')
+        #         if not os.path.exists(logdir):
+        #             os.makedirs(logdir)
 
-                logfilename = os.path.join(logdir, logfilename)
+        #         logfilename = os.path.join(logdir, logfilename)
 
-                sys.stdout = Logger(logfilename)
+        #         sys.stdout = Logger(logfilename)
 
-                print('\n\n', '***User Parameters***')
-                for k,v in params.items():
-                    print("| {:<20s} : {:<10s} |".format(k, str(v)))
+        #         print('\n\n', '***User Parameters***')
+        #         for k,v in params.items():
+        #             print("| {:<20s} : {:<10s} |".format(k, str(v)))
 
-                #============================================
-                # Add ofther params
-                params['sonFiles'] = sonFiles
-                params['logfilename'] = logfilename
-                params['script'] = [script, copied_script_name]
-                params['projDir'] = projDir
-                params['inFile'] = inFile
+        #         #============================================
+        #         # Add ofther params
+        #         params['sonFiles'] = sonFiles
+        #         params['logfilename'] = logfilename
+        #         params['script'] = [script, copied_script_name]
+        #         params['projDir'] = projDir
+        #         params['inFile'] = inFile
 
 
 
-                print('sonPath',sonPath)
-                print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
-                print('+++++++++++++++++++++++++++++++++++++++++++')
-                print('***** Working On *****')
-                print(inFile)
-                print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+        #         print('sonPath',sonPath)
+        #         print('\n\n\n+++++++++++++++++++++++++++++++++++++++++++')
+        #         print('+++++++++++++++++++++++++++++++++++++++++++')
+        #         print('***** Working On *****')
+        #         print(inFile)
+        #         print('Start Time: ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
 
-                print('\n===========================================')
-                print('===========================================')
-                print('***** READING *****')
-                ss_chan_avail  = read_master_func(**params)
-                # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
+        #         print('\n===========================================')
+        #         print('===========================================')
+        #         print('***** READING *****')
+        #         ss_chan_avail  = read_master_func(**params)
+        #         # read_master_func(sonFiles, humFile, projDir, t, nchunk, exportUnknown, wcp, wcr, detectDepth, smthDep, adjDep, pltBedPick, threadCnt)
 
-                if ss_chan_avail:
+        #         if ss_chan_avail:
 
-                    if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
-                        print('\n===========================================')
-                        print('===========================================')
-                        print('***** RECTIFYING *****')
-                        rectify_master_func(**params)
-                        # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
+        #             if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
+        #                 print('\n===========================================')
+        #                 print('===========================================')
+        #                 print('***** RECTIFYING *****')
+        #                 rectify_master_func(**params)
+        #                 # rectify_master_func(sonFiles, humFile, projDir, nchunk, rect_wcp, rect_wcr, mosaic, threadCnt)
 
-                    #==================================================
-                    #==================================================
-                    if pred_sub or map_sub or export_poly or pltSubClass:
-                        print('\n===========================================')
-                        print('===========================================')
-                        print('***** MAPPING SUBSTRATE *****')
-                        print("working on "+projDir)
-                        map_master_func(**params)
+        #             #==================================================
+        #             #==================================================
+        #             if pred_sub or map_sub or export_poly or pltSubClass:
+        #                 print('\n===========================================')
+        #                 print('===========================================')
+        #                 print('***** MAPPING SUBSTRATE *****')
+        #                 print("working on "+projDir)
+        #                 map_master_func(**params)
 
-                gc.collect()
-                print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
+        #         gc.collect()
+        #         print("\n\nTotal Processing Time: ",datetime.timedelta(seconds = round(time.time() - start_time, ndigits=0)))
 
-                sys.stdout.log.close()
+        #         sys.stdout.log.close()
 
-            except Exception as Argument:
-                unableToProcessError(logfilename)
-                print('\n\nCould not process:', datFile)
+        #     except Exception as Argument:
+        #         unableToProcessError(logfilename)
+        #         print('\n\nCould not process:', datFile)
 
-            sys.stdout = oldOutput
+        #     sys.stdout = oldOutput
 
         if batch:
             print("\n\nTotal Batch Processing Time: ",datetime.timedelta(seconds = round(time.time() - batch_start_time, ndigits=0)))
