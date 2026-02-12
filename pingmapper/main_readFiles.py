@@ -73,7 +73,14 @@ from scipy.signal import savgol_filter
 
 sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
 
-from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper, gar2pingmapper
+from pingverter import (
+    hum2pingmapper,
+    low2pingmapper,
+    cerul2pingmapper,
+    gar2pingmapper,
+    jsf2pingmapper,
+    xtf2pingmapper,
+)
 
 import cv2
 import copy
@@ -338,9 +345,10 @@ def read_master_func(logfilename='',
     start_time = time.time()
     # Determine sonar recording type
     _, file_type = os.path.splitext(inFile)
+    file_type = file_type.lower()
 
     # Prepare Humminbird file for PINGMapper
-    if file_type == '.DAT':
+    if file_type == '.dat':
         sonar_obj = hum2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Lowrance file for PINGMapper    
@@ -348,7 +356,7 @@ def read_master_func(logfilename='',
         sonar_obj = low2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Garmin file for PINGMapper
-    elif file_type == '.RSD':
+    elif file_type == '.rsd':
         sonar_obj = gar2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Cerulean file for PINGMapper
@@ -356,6 +364,14 @@ def read_master_func(logfilename='',
         sonar_obj = cerul2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
         detectDep = 1 # No depth in cerulean files, so set to Zheng et al. 2021
         instDepAvail = False
+
+    # Prepare JSF file for PINGMapper
+    elif file_type == '.jsf':
+        sonar_obj = jsf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
+
+    # Prepare XTF file for PINGMapper
+    elif file_type == '.xtf':
+        sonar_obj = xtf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
 
     # Unknown
     else:
@@ -380,7 +396,7 @@ def read_master_func(logfilename='',
 
         son.flip_port = False
         if beam == 'B002':
-            if file_type == '.sl2' or file_type == '.sl3':
+            if file_type in ['.sl2', '.sl3', '.xtf']:
                 son.flip_port = True
 
         # Store other parameters as attributes
@@ -397,6 +413,15 @@ def read_master_func(logfilename='',
         #     son.son8bit = sonar_obj.son8bit
         # else:
         son.son8bit = sonar_obj.son8bit
+        if hasattr(sonar_obj, 'sample_dtype'):
+            son.sample_dtype = sonar_obj.sample_dtype
+        if hasattr(sonar_obj, 'export_raw_16bit'):
+            son.export_raw_16bit = sonar_obj.export_raw_16bit
+        if hasattr(son, 'sample_dtype'):
+            try:
+                son.output_bit_depth = 16 if np.dtype(son.sample_dtype).itemsize > 1 else 8
+            except Exception:
+                son.output_bit_depth = 8
         son.export_beam = True
 
         # print(son.beamName, son.son8bit)

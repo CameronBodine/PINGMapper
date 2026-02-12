@@ -1612,11 +1612,17 @@ class portstarObj(object):
         starDep[starDep == 0] = np.nan
 
         nans, x = np.isnan(portDep), lambda z: z.nonzero()[0]
-        portDep[nans] = np.interp(x(nans), x(~nans), portDep[~nans])
+        if (~nans).any():
+            portDep[nans] = np.interp(x(nans), x(~nans), portDep[~nans])
+        else:
+            portDep[nans] = 0
         portDF['dep_m'] = portDep
 
         nans, x = np.isnan(starDep), lambda z: z.nonzero()[0]
-        starDep[nans] = np.interp(x(nans), x(~nans), starDep[~nans])
+        if (~nans).any():
+            starDep[nans] = np.interp(x(nans), x(~nans), starDep[~nans])
+        else:
+            starDep[nans] = 0
         starDF['dep_m'] = starDep
 
         # Export to csv

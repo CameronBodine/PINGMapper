@@ -794,8 +794,30 @@ class sonObj(object):
                     sonDat[:ping_len, i] = dat
         
         file.close()
-        self.sonDat = sonDat.astype(np.uint8)
+        self.sonDat = self._convert_son_dat_to_uint8(sonDat)
         return
+
+    def _convert_son_dat_to_uint8(self, sonDat):
+        if self.son8bit:
+            return np.clip(sonDat, 0, 255).astype(np.uint8)
+
+        dat_uint16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
+
+        # If values are packed in the high byte, drop the low byte to prevent black tiles.
+        low_byte_zero_ratio = np.mean((dat_uint16 & 0x00FF) == 0)
+        if low_byte_zero_ratio > 0.9:
+            return (dat_uint16 >> 8).astype(np.uint8)
+
+        nonzero = dat_uint16[dat_uint16 > 0]
+        if nonzero.size == 0:
+            return np.zeros_like(dat_uint16, dtype=np.uint8)
+
+        p_low, p_high = np.percentile(nonzero, [1, 99])
+        if p_high <= p_low:
+            return np.zeros_like(dat_uint16, dtype=np.uint8)
+
+        scaled = (dat_uint16.astype(np.float32) - p_low) * (255.0 / (p_high - p_low))
+        return np.clip(scaled, 0, 255).astype(np.uint8)
 
     # def _loadSonChunk(self, df):
     #     """

@@ -17,7 +17,7 @@ from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 
 
-SUPPORTED_EXTS = ('.DAT', '.sl2', '.sl3', '.RSD', '.svlog')
+SUPPORTED_EXTS = ('.DAT', '.sl2', '.sl3', '.RSD', '.svlog', '.jsf', '.xtf')
 
 
 def _coerce_batch(batch):
