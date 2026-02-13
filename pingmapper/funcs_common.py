@@ -29,7 +29,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os, sys, struct, gc
+import os, sys, struct, gc, io, contextlib
 
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -94,6 +94,78 @@ from tqdm import tqdm
 import subprocess
 
 # from funcs_pyhum_correct import doPyhumCorrections
+
+
+# =========================================================
+def safe_n_jobs(task_count, thread_count=0):
+    '''
+    Resolve a valid joblib n_jobs value from task count and user thread setting.
+    Always returns at least 1 to avoid joblib ValueError on n_jobs == 0.
+    '''
+    try:
+        task_count = int(task_count)
+    except Exception:
+        task_count = 0
+
+    try:
+        thread_count = int(thread_count)
+    except Exception:
+        thread_count = 0
+
+    if thread_count <= 0:
+        thread_count = cpu_count()
+
+    if thread_count < 1:
+        thread_count = 1
+
+    if task_count < 1:
+        return 1
+
+    return int(min(task_count, thread_count))
+
+
+# =========================================================
+def quiet_tensorflow_warnings():
+    '''
+    Reduce TensorFlow/absl informational and warning output.
+    Safe to call even if TensorFlow is not installed.
+    '''
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    os.environ['AUTOGRAPH_VERBOSITY'] = '0'
+
+    logging.getLogger('tensorflow').setLevel(logging.ERROR)
+    logging.getLogger('absl').setLevel(logging.ERROR)
+
+    try:
+        import absl.logging as absl_logging
+        absl_logging.set_verbosity(absl_logging.ERROR)
+        absl_logging.set_stderrthreshold('error')
+    except Exception:
+        pass
+
+    try:
+        import tensorflow as tf
+        tf.get_logger().setLevel('ERROR')
+        try:
+            tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+        except Exception:
+            pass
+        try:
+            tf.autograph.set_verbosity(0)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+# =========================================================
+@contextlib.contextmanager
+def suppress_stdout_stderr():
+    '''
+    Context manager to suppress stdout/stderr noise from third-party imports.
+    '''
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        yield
 
 
 # =========================================================

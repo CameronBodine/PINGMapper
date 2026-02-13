@@ -168,8 +168,8 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
             for name, group in sonDF.groupby('transect'):
                 for n, g in group.groupby('chunk_id'):
                     # sonDF.loc[sonDF['chunk_id'] == n]
-                    sonDF['chunk_id'].loc[sonDF['chunk_id'] == n] = c 
-                    sonDF['transect'].loc[sonDF['transect'] == name] = t
+                    sonDF.loc[sonDF['chunk_id'] == n, 'chunk_id'] = c
+                    sonDF.loc[sonDF['transect'] == name, 'transect'] = t
                     c += 1
                 t+=1
 
@@ -212,8 +212,8 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
             for name, group in sonDF.groupby('transect'):
                 for n, g in group.groupby('chunk_id'):
                     # sonDF.loc[sonDF['chunk_id'] == n]
-                    sonDF['chunk_id'].loc[sonDF['chunk_id'] == n] = c 
-                    sonDF['transect'].loc[sonDF['transect'] == name] = t
+                    sonDF.loc[sonDF['chunk_id'] == n, 'chunk_id'] = c
+                    sonDF.loc[sonDF['transect'] == name, 'transect'] = t
                     c += 1
                 t+=1
 
@@ -311,7 +311,7 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
             print("\nCalculating, smoothing, and interpolating range extent coordinates...")
         else:
             print("\nCalculating range extent coordinates from vessel heading...")
-        Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
+        Parallel(n_jobs=safe_n_jobs(len(portstar), threadCnt), verbose=10)(delayed(son._getRangeCoords)(flip, filterRange, cog) for son in portstar)
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         gc.collect()

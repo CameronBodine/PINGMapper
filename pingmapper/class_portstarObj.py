@@ -59,10 +59,13 @@ import matplotlib.pyplot as plt
 
 import inspect
 
+quiet_tensorflow_warnings()
+
 try:
-    from doodleverse_utils.imports import *
-    from doodleverse_utils.model_imports import *
-    from doodleverse_utils.prediction_imports import *
+    with suppress_stdout_stderr():
+        from doodleverse_utils.imports import *
+        from doodleverse_utils.model_imports import *
+        from doodleverse_utils.prediction_imports import *
 except ImportError as e:
     import traceback
     print('\n' + '='*80)
@@ -348,35 +351,35 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+                        _ = Parallel(n_jobs=safe_n_jobs(bands, threadCnt), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         # Create vrt
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+                        _ = Parallel(n_jobs=safe_n_jobs(bands, threadCnt), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         return
 
@@ -549,35 +552,35 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+                        _ = Parallel(n_jobs=safe_n_jobs(bands, threadCnt), verbose=10)(delayed(self._mosaicGtiff)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         # Create vrt
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs= np.min([len(wcpToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs= np.min([len(srcToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
-                    _ = Parallel(n_jobs= np.min([len(subToMosaic), threadCnt]), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
 
                 if self.port.map_predict:
                     # Determine number of bands, i.e. substrate classes
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
-                        _ = Parallel(n_jobs= np.min([bands, threadCnt]), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
+                        _ = Parallel(n_jobs=safe_n_jobs(bands, threadCnt), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
 
         return
 
@@ -2572,7 +2575,7 @@ class portstarObj(object):
             os.mkdir(outDir)
 
         print("\n\tExporting to shapefile...")
-        _ = Parallel(n_jobs= np.min([len(rasterFiles), threadCnt]), verbose=10)(delayed(self._createPolygon)(f, outDir) for f in rasterFiles)
+        _ = Parallel(n_jobs=safe_n_jobs(len(rasterFiles), threadCnt), verbose=10)(delayed(self._createPolygon)(f, outDir) for f in rasterFiles)
 
         return
 

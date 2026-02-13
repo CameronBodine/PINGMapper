@@ -309,7 +309,7 @@ for i in range(0, len(rectObjs), 2):
 
 # Smooth tracklines
 print("\nSmoothing tracklines...")
-Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
+Parallel(n_jobs=safe_n_jobs(len(portstar), threadCnt), verbose=10)(delayed(smoothTrackline)(sons) for sons in portstar)
 
 # Store smthTrkFile in rectObj
 for sons in portstar:
@@ -318,7 +318,7 @@ for sons in portstar:
 
 # Calculate range extent coordinates
 print("\nCalculating, smoothing, and interpolating range extent coordinates...")
-Parallel(n_jobs= np.min([len(portstar), threadCnt]), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
+Parallel(n_jobs=safe_n_jobs(len(portstar), threadCnt), verbose=10)(delayed(rangeCoordinates)(sons) for sons in portstar)
 
 for sons in portstar:
     for son in sons:
@@ -599,7 +599,7 @@ if rect_wcp or rect_wcr:
             son._getSonColorMap(son_colorMap)
 
             print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
-            Parallel(n_jobs= np.min([len(chunks), threadCnt]), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
+            Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt), verbose=10)(delayed(son._rectSonParallel)(i, filter, wgs=False) for i in chunks)
 
             del son.sonMetaDF
             try:

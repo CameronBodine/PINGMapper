@@ -259,7 +259,7 @@ for covShpFile in covShps:
             # Try splitting polygon with lines
 
             # Get polygon to split
-            to_split = covShp.loc[0].geometry
+            to_split = covShp.iloc[0].geometry
 
             # Split with first line
             polys = split(to_split, beginLine)
@@ -277,7 +277,7 @@ for covShpFile in covShps:
             splitGDF = splitGDF.dissolve(by=None)
 
             # Get polygon to split
-            to_split = splitGDF.loc[0].geometry
+            to_split = splitGDF.iloc[0].geometry
 
             # Split with second line
             polys = split(to_split, endLine)

@@ -234,7 +234,7 @@ def doWork(i, projDir, outDir_parent):
             os.mkdir(outDir_npz)
 
 
-        Parallel(n_jobs= np.min([len(npz_egn), threadCnt]), verbose=10)(delayed(npzAvg)(k, v, npz_raw, outDir_npz, son.nchunk) for k, v in npz_egn.items())
+        Parallel(n_jobs=max(1, min(len(npz_egn), threadCnt)), verbose=10)(delayed(npzAvg)(k, v, npz_raw, outDir_npz, son.nchunk) for k, v in npz_egn.items())
         
 
     ##########################
@@ -265,7 +265,7 @@ def doWork(i, projDir, outDir_parent):
             #     print('\n\n\n\n****Chunk', c)
             #     son._pltSubClass('max', c, f, spdCor=1, maxCrop=True)
 
-            Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(son._pltSubClass)('max', c, f, spdCor=1, maxCrop=True, probs=probs) for c, f in toMap.items())
+            Parallel(n_jobs=max(1, min(len(toMap), threadCnt)), verbose=10)(delayed(son._pltSubClass)('max', c, f, spdCor=1, maxCrop=True, probs=probs) for c, f in toMap.items())
 
             del toMap
 
@@ -313,7 +313,7 @@ def doWork(i, projDir, outDir_parent):
     #     print(c, f)
     #     psObj._mapSubstrate('max', c, f)
 
-    Parallel(n_jobs=np.min([len(toMap), threadCnt]), verbose=10)(delayed(psObj._mapSubstrate)('max', c, f) for c, f in toMap.items())
+    Parallel(n_jobs=max(1, min(len(toMap), threadCnt)), verbose=10)(delayed(psObj._mapSubstrate)('max', c, f) for c, f in toMap.items())
 
 
     del psObj
