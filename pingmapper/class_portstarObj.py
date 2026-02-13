@@ -1213,7 +1213,7 @@ class portstarObj(object):
             port = []
             for pdi, pdc in zip(portDepPix, portDepPixFinal):
                 if np.isnan(pdc): # Final pick is nan
-                    if np.isnan(pdc): # Initial pick is nan
+                    if np.isnan(pdi): # Initial pick is nan
                         port.append(0) # set to 0
                     else: # Initial pick not nan
                         port.append(pdi) # Use initial pick
@@ -1234,7 +1234,7 @@ class portstarObj(object):
                         star.append(sdi) # Use initial pick
 
                 elif sdc < 0:
-                    port.append(0)
+                    star.append(0)
 
                 else: # Final pick ok
                     star.append(sdc)

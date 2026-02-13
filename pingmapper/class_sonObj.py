@@ -814,17 +814,24 @@ class sonObj(object):
                 # Get the ping
                 buffer = file.read(ping_len)
 
-                if self.flip_port:
-                    buffer = buffer[::-1]
-
                 # Read the data
                 if self.son8bit:# and self.beamName != 'ss_star' and self.beamName != 'ss_port':
                     dat = np.frombuffer(buffer, dtype='>u1')
                 else:
+                    sample_dtype = getattr(self, 'sample_dtype', None)
                     try:
-                        dat = np.frombuffer(buffer, dtype='>u2')
+                        if sample_dtype is not None:
+                            dat = np.frombuffer(buffer, dtype=np.dtype(sample_dtype))
+                        else:
+                            dat = np.frombuffer(buffer, dtype='>u2')
                     except:
-                        dat = np.frombuffer(buffer[:-1], dtype='>u2')
+                        if sample_dtype is not None:
+                            dat = np.frombuffer(buffer[:-1], dtype=np.dtype(sample_dtype))
+                        else:
+                            dat = np.frombuffer(buffer[:-1], dtype='>u2')
+
+                if self.flip_port:
+                    dat = dat[::-1]
 
                 try:
                     sonDat[:ping_len, i] = dat
@@ -842,14 +849,21 @@ class sonObj(object):
 
         dat_uint16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
 
-        # Force high-byte for star beam to avoid black tiles.
-        beam_name = getattr(self, "beamName", "").lower()
-        if beam_name == "ss_star":
-            return (dat_uint16 >> 8).astype(np.uint8)
+        # Detect high-byte packing using only non-zero samples so ping padding
+        # (zeros below each ping length) does not trigger false detection.
+        nz = dat_uint16[dat_uint16 > 0]
+        if nz.size == 0:
+            return np.zeros(dat_uint16.shape, dtype=np.uint8)
 
-        # If values are packed in the high byte, use it to avoid black tiles.
-        low_byte_zero_ratio = np.mean((dat_uint16 & 0x00FF) == 0)
-        if low_byte_zero_ratio > 0.9:
+        max_val = int(nz.max())
+        low_byte_zero_ratio = np.mean((nz & 0x00FF) == 0)
+
+        # Some XTF chunks appear as 12-bit amplitudes packed in high-byte-aligned
+        # 16-bit words (e.g., 0..15 represented as 0, 256, 512, ...). In that case,
+        # shift by 4 (not 8) to recover usable 8-bit contrast.
+        if low_byte_zero_ratio > 0.95:
+            if max_val <= 4095:
+                return (dat_uint16 >> 4).astype(np.uint8)
             return (dat_uint16 >> 8).astype(np.uint8)
 
         return dat_uint16.astype(np.uint8)
