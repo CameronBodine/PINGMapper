@@ -39,7 +39,7 @@ PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PACKAGE_DIR)
 
 from pingmapper.funcs_common import *
-os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
+quiet_tensorflow_warnings()
 import json
 import numpy as np
 # import tensorflow as tf
@@ -72,11 +72,12 @@ try:
     logging.set_verbosity_error()
 
     # Fixes depth detection warning
-    tf.get_logger().setLevel('ERROR')
+    quiet_tensorflow_warnings()
 
-    from doodleverse_utils.imports import *
-    from doodleverse_utils.model_imports import *
-    from doodleverse_utils.prediction_imports import *
+    with suppress_stdout_stderr():
+        from doodleverse_utils.imports import *
+        from doodleverse_utils.model_imports import *
+        from doodleverse_utils.prediction_imports import *
     
     DEPTH_DETECTION_AVAILABLE = True
 except ImportError as e:

@@ -43,8 +43,11 @@ from pingmapper.class_portstarObj import portstarObj
 
 import shutil
 
+quiet_tensorflow_warnings()
+
 try:
-    from doodleverse_utils.imports import *
+    with suppress_stdout_stderr():
+        from doodleverse_utils.imports import *
 except ImportError as e:
     import traceback
     print('\n' + '='*80)
@@ -758,7 +761,7 @@ def read_master_func(logfilename='',
         startB = dfAll.iloc[0]['beam']
 
         while (r < threadCnt) and (n < rowCnt):
-            if (dfAll.loc[n]['beam']) != startB:
+            if (dfAll.iloc[n]['beam']) != startB:
                 n+=1
             else:
                 rowsToProc.append((c, n))
@@ -769,7 +772,7 @@ def read_master_func(logfilename='',
         del c, r, n, startB, rowCnt
 
         # Fix no data in parallel
-        r = Parallel(n_jobs=threadCnt)(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in tqdm(rowsToProc))
+        r = Parallel(n_jobs=safe_n_jobs(len(rowsToProc), threadCnt))(delayed(son._fixNoDat)(dfAll[r[0]:r[1]].copy().reset_index(drop=True), beams) for r in tqdm(rowsToProc))
         gc.collect()
 
         # Concatenate results from parallel processing
@@ -783,7 +786,7 @@ def read_master_func(logfilename='',
 
         # Slice dfAll by beam, update chunk_id, then save to file.
         for son in sonObjs:
-            df = dfAll[dfAll['beam'] == son.beam]
+            df = dfAll[dfAll['beam'] == son.beam].copy()
 
             if (len(df)%nchunk) != 0:
                 rdr = nchunk-(len(df)%nchunk)
@@ -808,7 +811,7 @@ def read_master_func(logfilename='',
             if len(lastChunk) <= (nchunk/2):
                 df.loc[df['chunk_id']==c, 'chunk_id'] = c-1
 
-            df.drop(columns = ['beam'], inplace=True)
+            df = df.drop(columns = ['beam'])
 
             # Check that last chunk has index anywhere in the chunk.
             ## If not, a bunch of NoData was added to the end.
@@ -1084,7 +1087,7 @@ def read_master_func(logfilename='',
                 print('\n\tUsing binary thresholding...')
 
             # Parallel estimate depth for each chunk using appropriate method
-            r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
+            r = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
 
             # store the depth predictions in the class
             for ret in r:
@@ -1173,7 +1176,7 @@ def read_master_func(logfilename='',
         start_time = time.time()
 
         print("\n\nExporting bedpick plots to {}...".format(tileFile))
-        Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in tqdm(chunks))
+        Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(psObj._plotBedPick)(int(chunk), True, autoBed, tileFile) for chunk in tqdm(chunks))
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
@@ -1259,7 +1262,7 @@ def read_master_func(logfilename='',
         psObj.port.shadow = defaultdict()
         psObj.star.shadow = defaultdict()
 
-        r = Parallel(n_jobs=np.min([len(chunks), threadCnt]))(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in tqdm(chunks))
+        r = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(psObj._detectShadow)(remShadow, int(chunk), USE_GPU, False, tileFile) for chunk in tqdm(chunks))
 
         for ret in r:
             psObj.port.shadow[ret[0]] = ret[1]
@@ -1314,7 +1317,7 @@ def read_master_func(logfilename='',
 
                 # Calculate range-wise mean intensity for each chunk
                 print('\n\tCalculating range-wise mean intensity for each chunk...')
-                chunk_means = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(chunks))
+                chunk_means = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(chunks))
 
                 # Calculate global means
                 print('\n\tCalculating range-wise global means...')
@@ -1323,7 +1326,7 @@ def read_master_func(logfilename='',
 
                 # Calculate egn min and max for each chunk
                 print('\n\tCalculating EGN min and max values for each chunk...')
-                min_max = Parallel(n_jobs= np.min([len(chunks)]))(delayed(son._egnCalcMinMax)(i) for i in tqdm(chunks))
+                min_max = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcMinMax)(i) for i in tqdm(chunks))
 
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
@@ -1375,7 +1378,7 @@ def read_master_func(logfilename='',
                     chunks = chunks[:-1] # remove last chunk
 
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
-                    hist = Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._egnCalcHist)(i) for i in tqdm(chunks))
+                    hist = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcHist)(i) for i in tqdm(chunks))
 
                     print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
@@ -1502,7 +1505,7 @@ def read_master_func(logfilename='',
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                Parallel(n_jobs= np.min([len(chunks), threadCnt]))(delayed(son._exportTilesSpd)(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(chunks))
+                Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._exportTilesSpd)(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop) for i in tqdm(chunks))
                 # for i in tqdm(chunks):
                 #     son._exportTilesSpd(i, tileFile=imgType, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop)
                 #     sys.exit()

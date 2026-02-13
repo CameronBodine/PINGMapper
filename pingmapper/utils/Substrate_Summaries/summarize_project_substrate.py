@@ -120,7 +120,7 @@ def extendLines(pnts, d):
 def calcSinuosity(df):
 
     # Calculate channel length
-    channel_len = df.iloc[-1]['trk_dist'] - df.loc[0]['trk_dist']
+    channel_len = df.iloc[-1]['trk_dist'] - df.iloc[0]['trk_dist']
 
     # Calculate downvalley length
     x_1 = df.iloc[0]['trk_utm_es']
@@ -352,7 +352,7 @@ def doWork(i, projDir):
                 # Try splitting polygon with lines
 
                 # Get polygon to split
-                to_split = diss.loc[0].geometry
+                to_split = diss.iloc[0].geometry
 
                 # Split with first line
                 polys = split(to_split, beginLine)
@@ -387,7 +387,7 @@ def doWork(i, projDir):
 
 
                 # Get polygon to split
-                to_split = splitGDF.loc[0].geometry
+                to_split = splitGDF.iloc[0].geometry
 
                 # Split with second line
                 polys = split(to_split, endLine)
@@ -583,7 +583,7 @@ projDirs = sorted(projDirs, reverse=True)
 
 proj_cnt = len(projDirs)
 
-Parallel(n_jobs= np.min([len(projDirs), threadCnt]), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
+Parallel(n_jobs=safe_n_jobs(len(projDirs), threadCnt), verbose=10)(delayed(doWork)(i, p) for i, p in enumerate(projDirs))
 
 ## For testing
 ##projDirs = projDirs[:10]
