@@ -332,32 +332,63 @@ class sonObj(object):
         dist_start = 0              # Counter for beginning of current window
         dist_end = dist_start + d   # Counbter for end of current window
 
+        df = df.copy()
         df[filtCol] = False
+
+        # If distance is invalid, do not remove all pings
+        if not np.isfinite(max_dist):
+            df[filtCol] = True
+            return df
+
+        # If heading distance window covers the entire recording,
+        # evaluate the complete record once.
+        if max_dist <= d:
+            head_vals = df[head].to_numpy(copy=True)
+            head_vals = head_vals[np.isfinite(head_vals)]
+
+            if len(head_vals) < 2:
+                df[filtCol] = True
+                return df
+
+            head_vals = np.deg2rad(head_vals)
+            head_vals = np.unwrap(head_vals)
+            vessel_dev = np.ptp(head_vals)
+
+            if vessel_dev < dev:
+                df[filtCol] = True
+
+            return df
 
         ##############################
         # Iterator through each window
 
-        # Compare heading deviation from first and last ping for current window
-        while dist_end < max_dist:
+        # Compare heading deviation across each window
+        while dist_start < max_dist:
 
             # Filter df by window
-            dfFilt = df[(df[trk_dist] >= dist_start) & (df[trk_dist] < dist_end)]
+            if dist_end < max_dist:
+                window_mask = (df[trk_dist] >= dist_start) & (df[trk_dist] < dist_end)
+            else:
+                window_mask = (df[trk_dist] >= dist_start) & (df[trk_dist] <= max_dist)
+            dfFilt = df.loc[window_mask]
 
-            dfFilt[head] = np.deg2rad(dfFilt[head])
-            # Unwrap the heading because heading is circular
-            dfFilt[head] = np.unwrap(dfFilt[head])
+            if len(dfFilt) > 1:
 
-            if len(dfFilt) > 0:
+                head_vals = dfFilt[head].to_numpy(copy=True)
+                head_vals = head_vals[np.isfinite(head_vals)]
 
-                # Get difference between start and end heading
-                start = dfFilt[head].iloc[0]
-                end = dfFilt[head].iloc[-1]
-                vessel_dev = np.abs(start - end)
+                if len(head_vals) > 1:
+                    head_vals = np.deg2rad(head_vals)
+                    # Unwrap the heading because heading is circular
+                    head_vals = np.unwrap(head_vals)
 
-                # Compare vessel deviation to threshold deviation
-                if vessel_dev < dev:
-                    # Keep these pings
-                    df[filtCol].loc[dfFilt.index] = True
+                    # Get total heading spread in the window
+                    vessel_dev = np.ptp(head_vals)
+
+                    # Compare vessel deviation to threshold deviation
+                    if vessel_dev < dev:
+                        # Keep these pings
+                        df.loc[dfFilt.index, filtCol] = True
 
                     # dist_start += win
                     # dist_start = dist_end
@@ -528,6 +559,12 @@ class sonObj(object):
         # Reassign Chunks
         nchunk = self.nchunk
 
+        if sonDF.empty:
+            sonDF = sonDF.copy()
+            sonDF['transect'] = pd.Series(dtype='int64')
+            sonDF['chunk_id'] = pd.Series(dtype='int64')
+            return sonDF
+
         # Make transects from consective pings using dataframe index
         idx = sonDF.index.values
         transect_groups = np.split(idx, np.where(np.diff(idx) != 1)[0]+1)
@@ -536,7 +573,9 @@ class sonObj(object):
         # Assign transect
         transect = 0
         for t in transect_groups:
-            sonDF.loc[sonDF.index>=t[0], 'transect'] = transect
+            if len(t) == 0:
+                continue
+            sonDF.loc[t, 'transect'] = transect
             transect += 1
 
         # Set chunks
@@ -803,21 +842,17 @@ class sonObj(object):
 
         dat_uint16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
 
-        # If values are packed in the high byte, drop the low byte to prevent black tiles.
+        # Force high-byte for star beam to avoid black tiles.
+        beam_name = getattr(self, "beamName", "").lower()
+        if beam_name == "ss_star":
+            return (dat_uint16 >> 8).astype(np.uint8)
+
+        # If values are packed in the high byte, use it to avoid black tiles.
         low_byte_zero_ratio = np.mean((dat_uint16 & 0x00FF) == 0)
         if low_byte_zero_ratio > 0.9:
             return (dat_uint16 >> 8).astype(np.uint8)
 
-        nonzero = dat_uint16[dat_uint16 > 0]
-        if nonzero.size == 0:
-            return np.zeros_like(dat_uint16, dtype=np.uint8)
-
-        p_low, p_high = np.percentile(nonzero, [1, 99])
-        if p_high <= p_low:
-            return np.zeros_like(dat_uint16, dtype=np.uint8)
-
-        scaled = (dat_uint16.astype(np.float32) - p_low) * (255.0 / (p_high - p_low))
-        return np.clip(scaled, 0, 255).astype(np.uint8)
+        return dat_uint16.astype(np.uint8)
 
     # def _loadSonChunk(self, df):
     #     """

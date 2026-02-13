@@ -965,6 +965,13 @@ def read_master_func(logfilename='',
         df0 = df0[df0['filter'] == True]
         df1 = df1[df1['filter'] == True]
 
+        if df0.empty or df1.empty:
+            raise ValueError(
+                '\n\nFiltering removed all side-scan pings. No metadata remains to process. '\
+                'Adjust filtering parameters (max_heading_deviation, min_speed, max_speed, aoi, time_table) '\
+                'or reduce nchunk.'
+            )
+
         # Reasign the chunks
         df0 = son0._reassignChunks(df0)
         df1['chunk_id'] = df0['chunk_id']
@@ -1035,6 +1042,14 @@ def read_master_func(logfilename='',
     del son
 
     chunks = np.unique(chunks).astype(int)
+
+    if len(chunks) == 0:
+        raise ValueError(
+            '\n\nNo valid side-scan chunks available for depth processing. '\
+            'This usually means prior filtering produced empty metadata CSVs. '\
+            'Relax filtering settings or reprocess from raw files.'
+        )
+
     # # Automatically estimate depth
     if detectDep > 0:
         # Check if depth detection dependencies are available
