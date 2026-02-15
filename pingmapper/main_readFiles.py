@@ -89,6 +89,11 @@ import cv2
 import copy
 
 
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
+
+
 #===========================================
 def read_master_func(logfilename='',
                      project_mode=0,
@@ -398,7 +403,7 @@ def read_master_func(logfilename='',
         son = sonObj(meta['sonFile'], sonar_obj.humFile, projDir, sonar_obj.tempC, sonar_obj.nchunk)
 
         son.flip_port = False
-        if beam == 'B002':
+        if str(beam).startswith('B002'):
             if file_type in ['.sl2', '.sl3', '.xtf']:
                 son.flip_port = True
 
@@ -451,13 +456,9 @@ def read_master_func(logfilename='',
 
     # Both port and starboard are required for side scan workflows
     ## Make copy of ss if both aren't available
-    ss_dups = {
-        'ss_port': ['ss_star', 'B003'],
-        'ss_star': ['ss_port', 'B002']
-    }
     ss_chan_avail = []
     for son in sonObjs:
-        if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+        if _is_sidescan_beam(son.beamName):
             ss_chan_avail.append(son)
     if len(ss_chan_avail) == 0:
         # print('\n\nNo side-scan channels available. Aborting!')
@@ -489,12 +490,27 @@ def read_master_func(logfilename='',
 
 
     elif len(ss_chan_avail) == 1:
+        son = ss_chan_avail[0]
         print('\n\nMaking copy of {} to ensure PINGMapper compatibility'.format(son.beamName))
-        origBeam = son.beamName
+        origBeam = str(son.beamName)
         print(son.beam, son.beamName)
         son_copy = copy.deepcopy(ss_chan_avail[0])
-        son_copy.beamName = ss_dups[origBeam][0]
-        son_copy.beam = ss_dups[origBeam][1]
+
+        if origBeam.startswith('ss_port'):
+            son_copy.beamName = origBeam.replace('ss_port', 'ss_star', 1)
+        elif origBeam.startswith('ss_star'):
+            son_copy.beamName = origBeam.replace('ss_star', 'ss_port', 1)
+        else:
+            son_copy.beamName = 'ss_star'
+
+        orig_beam_code = str(son.beam)
+        if orig_beam_code.startswith('B002'):
+            son_copy.beam = orig_beam_code.replace('B002', 'B003', 1)
+        elif orig_beam_code.startswith('B003'):
+            son_copy.beam = orig_beam_code.replace('B003', 'B002', 1)
+        else:
+            son_copy.beam = 'B003'
+
         son_copy.export_beam = False
 
         # Make copy of meta file
@@ -565,7 +581,7 @@ def read_master_func(logfilename='',
             son.wcm = wcm
 
             if wcr:
-                if beam == "ss_port" or beam == "ss_star":
+                if _is_sidescan_beam(beam):
                     son.wcr_src = True
                 else:
                     son.wcr_src = False
@@ -678,7 +694,7 @@ def read_master_func(logfilename='',
 
         if remShadow:
             for son in sonObjs:
-                if son.beamName == "ss_port":
+                if str(son.beamName).startswith("ss_port"):
                     if son.remShadow == remShadow:
                         remShadow = -1*remShadow
                         print("\nUsing previous shadow settings. No need to re-process.")
@@ -689,7 +705,7 @@ def read_master_func(logfilename='',
 
         if egn:
             for son in sonObjs:
-                if son.beamName == "ss_port":
+                if str(son.beamName).startswith("ss_port"):
                     if son.egn == egn:
                         egn = False
                         print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
@@ -699,7 +715,7 @@ def read_master_func(logfilename='',
 
         if pred_sub:
             for son in sonObjs:
-                if son.beamName == "ss_port":
+                if str(son.beamName).startswith("ss_port"):
                     if son.remShadow > 0:
                         pred_sub = 0
                         # remShadow = 0
@@ -713,7 +729,7 @@ def read_master_func(logfilename='',
 
             beam = son.beamName
             if wcr:
-                if beam == "ss_port" or beam == "ss_star":
+                if _is_sidescan_beam(beam):
                     son.wcr_src = True
                 else:
                     son.wcr_src = False
@@ -864,13 +880,26 @@ def read_master_func(logfilename='',
                         attMin = str(attMin).split('.')[0]
                         attMax = str(attMax).split('.')[0]
                 else:
-                    attMin = np.round(np.nanmin(df[att]), 3)
-                    attMax = np.round(np.nanmax(df[att]), 3)
-                    attAvg = np.round(np.nanmean(df[att]), 3)
+                    col_numeric = pd.to_numeric(df[att], errors='coerce')
+                    col_vals = col_numeric.to_numpy(dtype=float)
 
-                    # Store number of chunks
-                    if (att == 'chunk_id'):
-                        son.chunkMax = int(attMax)
+                    if np.isfinite(col_vals).any():
+                        attMin = np.round(np.nanmin(col_vals), 3)
+                        attMax = np.round(np.nanmax(col_vals), 3)
+                        attAvg = np.round(np.nanmean(col_vals), 3)
+
+                        # Store number of chunks
+                        if (att == 'chunk_id'):
+                            son.chunkMax = int(attMax)
+                    else:
+                        non_na = df[att].dropna()
+                        if len(non_na) > 0:
+                            attMin = str(non_na.iloc[0])
+                            attMax = str(non_na.iloc[-1])
+                        else:
+                            attMin = 'nan'
+                            attMax = 'nan'
+                        attAvg = '-'
 
                 # Check if data are valid.
                 if (att == "date") or (att == "time") or (att == "transect"):
@@ -926,7 +955,7 @@ def read_master_func(logfilename='',
         portstar = []
         for son in sonObjs:
             beam = son.beamName
-            if beam == "ss_port" or beam == "ss_star":
+            if _is_sidescan_beam(beam):
                 portstar.append(son)
             else:
                 # pass # Don't add non-port/star objects since they can't be rectified
@@ -1029,7 +1058,7 @@ def read_master_func(logfilename='',
     portstar = []
     for son in sonObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             portstar.append(son)
 
     # Create portstarObj
@@ -1124,7 +1153,7 @@ def read_master_func(logfilename='',
             son.detectDep = detectDep
 
             beam = son.beamName
-            if beam != "ss_port" and beam != "ss_star":
+            if not _is_sidescan_beam(beam):
                 son._loadSonMeta()
                 sonDF = son.sonMetaDF
                 son.detectDep = 0
@@ -1133,7 +1162,9 @@ def read_master_func(logfilename='',
                 sonDF['dep_m_smth'] = False
                 sonDF['dep_m_adjBy'] = adjDep  
 
-                dep = sonDF['inst_dep_m'].to_numpy(copy=True)
+                inst_dep = pd.to_numeric(sonDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                meta_dep = pd.to_numeric(sonDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                dep = np.where(np.isfinite(inst_dep) & (inst_dep > 0), inst_dep, meta_dep)
 
                 if smthDep:
                     dep = savgol_filter(dep, 51, 3)
@@ -1155,6 +1186,7 @@ def read_master_func(logfilename='',
                     # All values are NaN - cannot interpolate
                     print("\nWarning: All instrument depth values are NaN or zero. Cannot interpolate depth.")
                     print("This may indicate missing depth data in the sonar file.")
+                    sonDF['dep_m_Method'] = 'Instrument/Metadata Depth'
                 
                 # sonDF['dep_m'] = dep + adjDep
 
@@ -1210,7 +1242,7 @@ def read_master_func(logfilename='',
     # Exporting banklines require shadows
     if banklines and remShadow==0:
         for son in sonObjs:
-            if son.beamName == "ss_port":
+            if str(son.beamName).startswith("ss_port"):
                     if son.remShadow == 0:
                         print('\n\nExporting banklines requires shadow removal')
                         print('Setting remShadow==2...')
@@ -1240,7 +1272,7 @@ def read_master_func(logfilename='',
         portstar = []
         for son in sonObjs:
             beam = son.beamName
-            if beam == "ss_port" or beam == "ss_star":
+            if _is_sidescan_beam(beam):
                 if keepShadow:
                     son.remShadow = False
                 else:

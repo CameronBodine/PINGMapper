@@ -406,6 +406,21 @@ class sonObj(object):
             dist_start = dist_end
             dist_end = dist_start + d
 
+        # Explicitly reject discontinuities where adjacent pings are farther
+        # apart than the heading-distance window. These boundaries can otherwise
+        # pass when each side of the gap is internally consistent.
+        if d > 0:
+            trk_step = df[trk_dist].diff().abs()
+            jump_idx = trk_step[(trk_step > d) & np.isfinite(trk_step)].index
+
+            if len(jump_idx) > 0:
+                df.loc[jump_idx, filtCol] = False
+
+                prev_idx = jump_idx - 1
+                prev_idx = prev_idx[prev_idx >= df.index.min()]
+                if len(prev_idx) > 0:
+                    df.loc[prev_idx, filtCol] = False
+
         try:
             return df
         except:
@@ -790,7 +805,11 @@ class sonObj(object):
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
 
-        sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        use_jsf_weighting = bool(getattr(self, '_use_jsf_weighting', False))
+        if use_jsf_weighting:
+            sonDat = np.zeros((int(self.pingMax), len(self.pingCnt)), dtype=np.float32)
+        else:
+            sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
 
         for i in range(len(self.headIdx)):
@@ -833,6 +852,13 @@ class sonObj(object):
                 if self.flip_port:
                     dat = dat[::-1]
 
+                if use_jsf_weighting:
+                    dat = dat.astype(np.float32, copy=False)
+                    if hasattr(self, 'weightingFactor') and i < len(self.weightingFactor):
+                        wf = self.weightingFactor[i]
+                        if np.isfinite(wf) and wf > 0:
+                            dat = dat * (2.0 ** (-float(wf)))
+
                 try:
                     sonDat[:ping_len, i] = dat
                 except:
@@ -844,6 +870,26 @@ class sonObj(object):
         return
 
     def _convert_son_dat_to_uint8(self, sonDat):
+        if np.issubdtype(sonDat.dtype, np.floating):
+            arr = np.asarray(sonDat, dtype=np.float32)
+            arr[~np.isfinite(arr)] = 0.0
+            arr[arr < 0] = 0.0
+
+            max_val = None
+            if bool(getattr(self, '_use_jsf_weighting', False)):
+                global_max = getattr(self, '_float_global_scale_max', None)
+                if global_max is not None and np.isfinite(global_max) and float(global_max) > 0:
+                    max_val = float(global_max)
+
+            if max_val is None:
+                max_val = float(np.max(arr))
+
+            if max_val <= 0:
+                return np.zeros(arr.shape, dtype=np.uint8)
+
+            scaled = arr * (255.0 / max_val)
+            return np.clip(scaled, 0, 255).astype(np.uint8)
+
         if self.son8bit:
             return np.clip(sonDat, 0, 255).astype(np.uint8)
 
@@ -867,6 +913,70 @@ class sonObj(object):
             return (dat_uint16 >> 8).astype(np.uint8)
 
         return dat_uint16.astype(np.uint8)
+
+    def _get_sidescan_pair_meta_file(self):
+        if not hasattr(self, 'sonMetaFile'):
+            return None
+
+        meta_file = str(self.sonMetaFile)
+        base_name = os.path.basename(meta_file)
+        dir_name = os.path.dirname(meta_file)
+
+        if 'ss_port' in base_name:
+            pair_name = base_name.replace('ss_port', 'ss_star', 1)
+        elif 'ss_star' in base_name:
+            pair_name = base_name.replace('ss_star', 'ss_port', 1)
+        else:
+            return None
+
+        pair_file = os.path.join(dir_name, pair_name)
+        if os.path.exists(pair_file):
+            return pair_file
+        return None
+
+    def _compute_jsf_global_scale_max(self, son_meta_df: pd.DataFrame):
+        wf_all = pd.to_numeric(son_meta_df['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+        wf_valid = wf_all[np.isfinite(wf_all)]
+
+        global_max = np.nan
+        if 'max_abs_adc_raw' in son_meta_df.columns:
+            adc_all = pd.to_numeric(son_meta_df['max_abs_adc_raw'], errors='coerce').to_numpy(dtype=float)
+            pair_valid = np.isfinite(wf_all) & np.isfinite(adc_all) & (adc_all > 0)
+            if np.any(pair_valid):
+                scaled_adc = adc_all[pair_valid] * np.power(2.0, -wf_all[pair_valid])
+                if len(scaled_adc) > 0:
+                    global_max = float(np.nanmax(scaled_adc))
+
+        if not np.isfinite(global_max) or global_max <= 0:
+            if len(wf_valid) > 0:
+                min_wf = float(np.nanmin(wf_valid))
+                global_max = float(65535.0 * (2.0 ** (-min_wf)))
+
+        return global_max
+
+    def _ensure_jsf_global_scale_max(self, son_meta_df: pd.DataFrame):
+        cur = getattr(self, '_float_global_scale_max', np.nan)
+        if np.isfinite(cur) and float(cur) > 0:
+            return
+
+        meta_frames = [son_meta_df]
+        pair_meta_file = self._get_sidescan_pair_meta_file()
+        if pair_meta_file is not None:
+            try:
+                pair_df = pd.read_csv(pair_meta_file)
+                if 'weighting_factor' in pair_df.columns:
+                    meta_frames.append(pair_df)
+            except Exception:
+                pass
+
+        if len(meta_frames) > 1:
+            combined = pd.concat(meta_frames, ignore_index=True)
+        else:
+            combined = meta_frames[0]
+
+        global_max = self._compute_jsf_global_scale_max(combined)
+        if np.isfinite(global_max) and global_max > 0:
+            self._float_global_scale_max = float(global_max)
 
     # def _loadSonChunk(self, df):
     #     """
@@ -1587,6 +1697,12 @@ class sonObj(object):
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
+        self._use_jsf_weighting = False
+        if 'weighting_factor' in sonMeta.columns:
+            self.weightingFactor = pd.to_numeric(sonMeta['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+            self._use_jsf_weighting = True
+            self._ensure_jsf_global_scale_max(sonMetaAll)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
@@ -1597,6 +1713,9 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'weightingFactor'):
+            del self.weightingFactor
+        self._use_jsf_weighting = False
 
         return
     
@@ -1607,6 +1726,7 @@ class sonObj(object):
 
         # Open sonar metadata file to df
         sonMetaAll = pd.read_csv(self.sonMetaFile)
+        sonMetaAll_full = sonMetaAll
 
         # Filter by transect
         sonMetaAll = sonMetaAll[sonMetaAll['transect'] == transect].reset_index(drop=True)
@@ -1625,6 +1745,12 @@ class sonObj(object):
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
+        self._use_jsf_weighting = False
+        if 'weighting_factor' in sonMeta.columns:
+            self.weightingFactor = pd.to_numeric(sonMeta['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+            self._use_jsf_weighting = True
+            self._ensure_jsf_global_scale_max(sonMetaAll_full)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
 
@@ -1633,6 +1759,9 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'weightingFactor'):
+            del self.weightingFactor
+        self._use_jsf_weighting = False
 
         return
 

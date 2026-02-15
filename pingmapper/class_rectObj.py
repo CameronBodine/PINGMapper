@@ -261,10 +261,40 @@ class rectObj(sonObj):
         t = t[mask]
 
         # Check if enough points to interpolate
-        # If not, too many overlapping pings
+        # If not, too many overlapping pings. Fall back to unsmoothed coordinates
+        # while preserving expected output columns.
         if len(x) <= deg:
-            # return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
-            return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s']]
+            fb = dfOrig.copy()
+
+            if lons not in fb.columns and xlon in fb.columns:
+                fb[lons] = fb[xlon]
+            if lats not in fb.columns and ylat in fb.columns:
+                fb[lats] = fb[ylat]
+
+            if es not in fb.columns:
+                if xutm in fb.columns:
+                    fb[es] = fb[xutm]
+                elif lons in fb.columns and lats in fb.columns:
+                    e_fb, _ = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
+                    fb[es] = e_fb
+
+            if ns not in fb.columns:
+                if yutm in fb.columns:
+                    fb[ns] = fb[yutm]
+                elif lons in fb.columns and lats in fb.columns:
+                    _, n_fb = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
+                    fb[ns] = n_fb
+
+            if 'cog' not in fb.columns:
+                if 'instr_heading' in fb.columns:
+                    fb['cog'] = fb['instr_heading']
+                elif lons in fb.columns and lats in fb.columns and len(fb) > 1:
+                    brng = self._getBearing(fb, lons, lats)
+                    fb['cog'] = np.append(brng, brng[-1])
+                else:
+                    fb['cog'] = 0.0
+
+            return fb
 
         # Fit a spline to filtered coordinates and parameterize with time ellapsed
         try:
@@ -487,7 +517,7 @@ class rectObj(sonObj):
         # Store in dataframe
         sDF[utm_es] = e_smth
         sDF[utm_ns] = n_smth
-        sDF = sDF.dropna() # Drop any NA's
+        sDF = sDF.dropna(subset=[lons, lats, utm_es, utm_ns]) # Drop rows missing required coordinates
         self.smthTrk = sDF # Store df in class attribute
 
         return
@@ -565,7 +595,7 @@ class rectObj(sonObj):
         ########################
         # Calculate ping bearing
         # Determine ping bearing.  Ping bearings are perpendicular to COG.
-        if self.beamName == 'ss_port':
+        if str(self.beamName).startswith('ss_port'):
             rotate = -90  # Rotate COG by 90 degrees to the left
         else:
             rotate = 90 # Rotate COG by 90 degrees to the right
@@ -647,7 +677,7 @@ class rectObj(sonObj):
         # Store in dataframe
         sDF[re] = e_smth
         sDF[rn] = n_smth
-        sDF = sDF.dropna() # Drop any NA's
+        sDF = sDF.dropna(subset=[lons, lats, range_, rlon, rlat, re, rn, ping_bearing]) # Keep rows with valid range geometry
         self.smthTrk = sDF # Store df in class attribute
 
         ##########################################
@@ -717,6 +747,8 @@ class rectObj(sonObj):
         sDF = self.smthTrk # Load smoothed trackline coordinates
         rDF = sDF.copy() # Make a copy to work on
 
+        rs_chunks = []
+
         # Work on one chunk at a time
         for chunk, chunkDF in rDF.groupby('chunk_id'):
             chunkDF.reset_index(drop=True, inplace=True)
@@ -725,6 +757,9 @@ class rectObj(sonObj):
             last = chunkDF.iloc[-1].to_frame().T
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
+
+            if len(chunkDF) == 0:
+                continue
 
             idx = chunkDF.index.tolist() # Store ping index in list
             maxIdx = max(idx) # Find last record index value
@@ -760,24 +795,81 @@ class rectObj(sonObj):
             rchunkDF = chunkDF.copy() # Make copy of df w/ no overlapping sonar records for current chunk
             schunkDF = sDF[sDF['chunk_id']==chunk].copy() # Get original df for current chunk
 
+            if len(rchunkDF) == 0:
+                continue
+
             #################################################
             # Smooth and interpolate range extent coordinates
             smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
                                           ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
 
-            # Store smoothed range extent in output df
-            if 'rsDF' not in locals(): # If output df doesn't exist, make it
-                rsDF = smthChunk.copy()
-            else: # If output df exists, append results to it
-                rsDF = pd.concat([rsDF, smthChunk], axis=0).reset_index(drop=True)
+            if smthChunk is not None and len(smthChunk) > 0:
+                if 'range_lons' not in smthChunk.columns and 'range_lon' in smthChunk.columns:
+                    smthChunk = smthChunk.rename(columns={'range_lon': 'range_lons'})
+                if 'range_lats' not in smthChunk.columns and 'range_lat' in smthChunk.columns:
+                    smthChunk = smthChunk.rename(columns={'range_lat': 'range_lats'})
+
+                required_cols = {'record_num', 'range_lons', 'range_lats'}
+                if not required_cols.issubset(smthChunk.columns):
+                    if {'record_num', 'range_lon', 'range_lat'}.issubset(schunkDF.columns):
+                        smthChunk = schunkDF[['record_num', 'range_lon', 'range_lat', 'cog']].copy()
+                        smthChunk.rename(columns={'range_lon': 'range_lons', 'range_lat': 'range_lats'}, inplace=True)
+                    else:
+                        continue
+
+                rs_chunks.append(smthChunk.copy())
 
         ##################################################
         # Join smoothed trackline to smoothed range extent
         # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
         sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'transect', 'pixM']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
-        rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
-        rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
+        if len(rs_chunks) == 0:
+            src_df = self.smthTrk.copy()
+
+            lon_src = None
+            for candidate in ['range_lons', 'range_lon', 'lons', 'trk_lons']:
+                if candidate in src_df.columns:
+                    lon_src = candidate
+                    break
+
+            lat_src = None
+            for candidate in ['range_lats', 'range_lat', 'lats', 'trk_lats']:
+                if candidate in src_df.columns:
+                    lat_src = candidate
+                    break
+
+            cog_src = None
+            for candidate in ['range_cog', 'cog', 'trk_cog']:
+                if candidate in src_df.columns:
+                    cog_src = candidate
+                    break
+
+            rsDF = sDF[['record_num', 'trk_lons', 'trk_lats', 'trk_cog']].copy()
+            rsDF.rename(columns={'trk_lons': 'range_lons', 'trk_lats': 'range_lats', 'trk_cog': 'range_cog'}, inplace=True)
+
+            if lon_src is not None:
+                lon_map = src_df[['record_num', lon_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_lons'] = lon_map[lon_src]
+                rsDF = rsDF.reset_index()
+
+            if lat_src is not None:
+                lat_map = src_df[['record_num', lat_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_lats'] = lat_map[lat_src]
+                rsDF = rsDF.reset_index()
+
+            if cog_src is not None:
+                cog_map = src_df[['record_num', cog_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_cog'] = cog_map[cog_src]
+                rsDF = rsDF.reset_index()
+        else:
+            rsDF = pd.concat(rs_chunks, axis=0).reset_index(drop=True)
+            rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
+            rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
+
         rsDF = sDF.set_index('record_num').join(rsDF.set_index('record_num'))
 
         # Calculate easting/northing for smoothed range extent
@@ -1095,7 +1187,7 @@ class rectObj(sonObj):
         ########################
         # Calculate ping bearing
         # Determine ping bearing.  Ping bearings are perpendicular to COG.
-        if self.beamName == 'ss_port':
+        if str(self.beamName).startswith('ss_port'):
             rotate = -90  # Rotate COG by 90 degrees to the left
         else:
             rotate = 90 # Rotate COG by 90 degrees to the right
@@ -1809,11 +1901,17 @@ class rectObj(sonObj):
 
         # Iterate chunks
         for chunk in range(0, chunkMax+1):
+            lat_list = []
+            lon_list = []
+
             # Iterate dfs
             for df in dfs:
                 # Get chunk
                 isChunk = df['chunk_id'] == chunk
                 df = df[isChunk].reset_index()
+
+                if len(df) == 0:
+                    continue
 
                 # Get last row
                 dfLast = df.iloc[-1]
@@ -1837,6 +1935,9 @@ class rectObj(sonObj):
 
                 del df
 
+            if len(lat_list) < 3 or len(lon_list) < 3:
+                continue
+
             # Create polygon from points
             chunk_geom = Polygon(zip(lon_list, lat_list))
             chunk_geom = gpd.GeoDataFrame(index=[chunk], crs=epsg, geometry=[chunk_geom])
@@ -1853,6 +1954,9 @@ class rectObj(sonObj):
             else:
                 gdf = pd.concat([gdf, chunk_geom])
             del chunk_geom
+
+        if 'gdf' not in locals() or len(gdf) == 0:
+            return
 
         gdf['chunk_id'] = gdf.index
 
@@ -2031,6 +2135,9 @@ class rectObj(sonObj):
             
             if filtSon:
                 idx_to_filt = dropped_sonMeta_idx.tolist()
+
+        if len(sonMeta) == 0 or len(trkMeta) == 0:
+            return
         
 
         #################################

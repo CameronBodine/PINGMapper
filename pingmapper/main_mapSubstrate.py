@@ -42,6 +42,11 @@ from pingmapper.funcs_model import *
 
 import itertools
 
+
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
+
 #===============================================================================
 def map_master_func(logfilename='',
                     project_mode=0,
@@ -170,7 +175,7 @@ def map_master_func(logfilename='',
     mapObjs = []
     for son in sonObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             mapObjs.append(son)
         else:
             pass # Don't add non-port/star objects since they can't be rectified

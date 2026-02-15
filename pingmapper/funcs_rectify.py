@@ -44,6 +44,11 @@ from pingmapper.funcs_common import *
 from pingmapper.class_rectObj import rectObj
 
 
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
+
+
 # =========================================================
 def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, threadCnt=''):
 
@@ -84,11 +89,17 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
     portstar = []
     for son in rectObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             portstar.append(son)
         else:
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, rectObjs
+
+    if len(portstar) == 0:
+        raise ValueError(
+            "No side-scan channels found for rectification. Expected beam names like "
+            "ss_port/ss_star (including suffixed variants such as ss_port_low)."
+        )
 
     #############################################
     # Determine if smoothed trackline was created
@@ -270,22 +281,22 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
         if x_offset != 0.0 or y_offset != 0.0:
             son0._applyPosOffset(x_offset, y_offset)
 
-        # Update other channel with smoothed coordinates
-        # Determine which rectObj we need to update
-        for i, son in enumerate(portstar):
-            if i != maxRec:
-                son1 = son # rectObj to update
+        # Update all other side-scan channels with smoothed coordinates
+        for i, son1 in enumerate(portstar):
+            if i == maxRec:
+                continue
 
-        sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
-        # Update with correct record_num
-        son1._loadSonMeta() # Load ping metadata
-        df = son1.sonMetaDF
-        sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
-        sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
-        # sDF['pixM'] = df['pixM']
-        son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
+            sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
+            son1._loadSonMeta() # Load ping metadata
+            df = son1.sonMetaDF
+            sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
+            sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
+            # sDF['pixM'] = df['pixM']
+            son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
-        del sDF, df, son0, son1
+            del sDF, df
+
+        del son0
 
         # Save smoothed trackline coordinates to file
         csvNames = {}
