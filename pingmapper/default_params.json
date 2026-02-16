@@ -27,6 +27,8 @@
     "wcm":true,
     "wcr":false,
     "wco":false,
+    "export_16bit":false,
+    "export_16bit_colormap":false,
     "tileFile":".jpg",
     "sonogram_colorMap":"copper",
     "spdCor":false,

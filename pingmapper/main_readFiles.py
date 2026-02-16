@@ -118,6 +118,8 @@ def read_master_func(logfilename='',
                      pix_res_map=0,
                      x_offset=0,
                      y_offset=0,
+                     export_16bit=False,
+                     export_16bit_colormap=False,
                      tileFile='.png',
                      egn=False,
                      egn_stretch=0,
@@ -430,6 +432,10 @@ def read_master_func(logfilename='',
                 son.output_bit_depth = 16 if np.dtype(son.sample_dtype).itemsize > 1 else 8
             except Exception:
                 son.output_bit_depth = 8
+        son.export_16bit = bool(export_16bit) and (
+            (getattr(son, 'output_bit_depth', 8) > 8) or (not bool(getattr(son, 'son8bit', True)))
+        )
+        son.export_16bit_colormap = bool(export_16bit_colormap) and bool(son.export_16bit)
         son.export_beam = True
 
         # print(son.beamName, son.son8bit)
@@ -1504,7 +1510,9 @@ def read_master_func(logfilename='',
     # window_stride = 0.1
     # tileFile = '.mp4'
     # frameRate = 5
-    if tileFile == '.mp4':
+    if bool(export_16bit):
+        imgType = '.tif'
+    elif tileFile == '.mp4':
         imgType = '.png'
     else:
         imgType = tileFile

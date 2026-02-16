@@ -274,7 +274,10 @@ def gui(batch: bool):
 
     # Options
     text_file_type = sg.Text('Image Format:', size=(15,1))
-    combo_file_type = sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])
+    combo_file_type = sg.Combo(['.jpg', '.png', '.tif'], key='tileFile', default_value=default_params['tileFile'])
+
+    check_export_16bit = sg.Checkbox('Export 16-bit Sonograms (TIFF)', key='export_16bit', default=default_params.get('export_16bit', False))
+    check_export_16bit_colormap = sg.Checkbox('Also export 16-bit colorized TIFF (_cmap)', key='export_16bit_colormap', default=default_params.get('export_16bit_colormap', False))
 
     text_tile_color = sg.Text('Tile Colormap:', size=(15,1))
     combo_tile_color = sg.Combo(plt.colormaps(), key='sonogram_colorMap', default_value=default_params['sonogram_colorMap'])
@@ -289,7 +292,7 @@ def gui(batch: bool):
     
     # Turn into columns
     col_tile_1 = sg.Column([[check_wcp], [check_wcm], [check_wcr], [check_wco]], pad=0)
-    col_tile_2 = sg.Column([[check_speed_cor], [check_mask_shdw], [check_max_crop]], pad=0)
+    col_tile_2 = sg.Column([[check_speed_cor], [check_mask_shdw], [check_max_crop], [check_export_16bit], [check_export_16bit_colormap]], pad=0)
     col_tile_3 = sg.Column([[text_file_type, combo_file_type], [text_tile_color, combo_tile_color]], pad=0)
     
 
@@ -596,6 +599,8 @@ def gui(batch: bool):
             'wco':values['wco'],
             'sonogram_colorMap':values['sonogram_colorMap'],
             'mask_shdw':values['mask_shdw'],
+            'export_16bit':values['export_16bit'],
+            'export_16bit_colormap':values['export_16bit_colormap'],
             'tileFile':values['tileFile'],
             'spdCor':values['spdCor'],
             'maxCrop':values['maxCrop'],
