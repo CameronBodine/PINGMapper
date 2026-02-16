@@ -268,10 +268,11 @@ def gui(batch: bool):
     check_export_16bit = sg.Checkbox(
         'Export 16-bit TIFFs (applies to Sonogram + Rectified outputs)',
         key='export_16bit',
-        default=default_params.get('export_16bit', False)
+        default=default_params.get('export_16bit', False),
+        enable_events=True,
     )
     check_export_colormap_uint8 = sg.Checkbox(
-        'Save colormapped TIFFs as 8-bit RGB (smaller files)',
+        'Colormapped RGB uses 8-bit channels (smaller files)',
         key='export_colormap_uint8',
         default=default_params.get('export_colormap_uint8', True)
     )
@@ -298,7 +299,7 @@ def gui(batch: bool):
 
     text_tile_color = sg.Text('Tile Colormap:', size=(15,1))
     tile_colormaps = ['None'] + list(plt.colormaps())
-    combo_tile_color = sg.Combo(tile_colormaps, key='sonogram_colorMap', default_value=default_params.get('sonogram_colorMap', 'copper'))
+    combo_tile_color = sg.Combo(tile_colormaps, key='sonogram_colorMap', default_value=default_params.get('sonogram_colorMap', 'copper'), enable_events=True)
 
 
     check_speed_cor = sg.Checkbox('Speed Correct', key='spdCor', default=default_params['spdCor'])
@@ -373,7 +374,7 @@ def gui(batch: bool):
 
     text_color = sg.Text('Sonar Colormap', size=(30,1))
     rect_colormaps = ['None'] + list(plt.colormaps())
-    combo_color = sg.Combo(rect_colormaps, key='son_colorMap', default_value=default_params.get('son_colorMap', 'Greys_r'))
+    combo_color = sg.Combo(rect_colormaps, key='son_colorMap', default_value=default_params.get('son_colorMap', 'Greys_r'), enable_events=True)
 
     text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
     combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'])
@@ -443,10 +444,32 @@ def gui(batch: bool):
         window_text = 'Batch Process Sonar Logs'
     else:
         window_text = 'Process Sonar Log'
-    window = sg.Window(window_text, layout2, resizable=True)
+    window = sg.Window(window_text, layout2, resizable=True, finalize=True)
+
+    def _is_cmap_selected(value):
+        if value is None:
+            return False
+        return str(value).strip().lower() not in ['', 'none', 'false']
+
+    def _update_colormap_depth_toggle(values_dict):
+        use_16bit = bool(values_dict.get('export_16bit', False))
+        tile_cmap_selected = _is_cmap_selected(values_dict.get('sonogram_colorMap'))
+        rect_cmap_selected = _is_cmap_selected(values_dict.get('son_colorMap'))
+        enable_toggle = use_16bit and (tile_cmap_selected or rect_cmap_selected)
+        window['export_colormap_uint8'].update(disabled=not enable_toggle)
+
+    initial_values = {
+        'export_16bit': default_params.get('export_16bit', False),
+        'sonogram_colorMap': default_params.get('sonogram_colorMap', 'copper'),
+        'son_colorMap': default_params.get('son_colorMap', 'Greys_r'),
+    }
+    _update_colormap_depth_toggle(initial_values)
 
     while True:
         event, values = window.read()
+
+        if event not in (None, 'Quit'):
+            _update_colormap_depth_toggle(values)
 
         # values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
 
