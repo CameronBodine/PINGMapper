@@ -945,7 +945,11 @@ class sonObj(object):
             if np.any(pair_valid):
                 scaled_adc = adc_all[pair_valid] * np.power(2.0, -wf_all[pair_valid])
                 if len(scaled_adc) > 0:
-                    global_max = float(np.nanmax(scaled_adc))
+                    pct = float(getattr(self, '_jsf_global_scale_percentile', 99.5))
+                    pct = min(max(pct, 95.0), 100.0)
+                    global_max = float(np.nanpercentile(scaled_adc, pct))
+                    if (not np.isfinite(global_max)) or (global_max <= 0):
+                        global_max = float(np.nanmax(scaled_adc))
 
         if not np.isfinite(global_max) or global_max <= 0:
             if len(wf_valid) > 0:
