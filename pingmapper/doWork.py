@@ -68,6 +68,7 @@ def doWork(
     prefix='',
     suffix='',
     batch=False,
+    preserve_subdirs=False,
     params=None,
     script_path=None,
 ):
@@ -87,6 +88,7 @@ def doWork(
         prefix (str): Batch project name prefix.
         suffix (str): Batch project name suffix.
         batch (bool | str): True/False or "true"/"false"; controls batch logic.
+        preserve_subdirs (bool | str): For batch runs, mirror input folder structure under out_dir.
         params (dict | None): Processing parameters (see below).
         script_path (str | None): Source script path saved into processing_scripts (default: doWork.py).
 
@@ -114,6 +116,7 @@ def doWork(
     """
 
     batch = _coerce_batch(batch)
+    preserve_subdirs = _coerce_batch(preserve_subdirs)
     params = {} if params is None else dict(params)
 
     project_mode = int(params.get('project_mode', 0))
@@ -223,18 +226,26 @@ def doWork(
             else:
                 proj_name_final = proj_name or rec_name
 
-            proj_dir = os.path.join(out_dir, proj_name_final)
+            proj_base = out_dir
+            if batch and preserve_subdirs and in_dir:
+                rel_parent = os.path.relpath(in_path, in_dir)
+                if rel_parent in {'.', ''} or rel_parent.startswith('..'):
+                    rel_parent = ''
+                if rel_parent:
+                    proj_base = os.path.join(out_dir, rel_parent)
+
+            proj_dir = os.path.join(proj_base, proj_name_final)
 
             if project_mode == 0:
                 if not os.path.exists(proj_dir):
-                    os.mkdir(proj_dir)
+                    os.makedirs(proj_dir)
                 else:
                     projectMode_1_inval()
 
             elif project_mode == 1:
                 if os.path.exists(proj_dir):
                     shutil.rmtree(proj_dir)
-                os.mkdir(proj_dir)
+                os.makedirs(proj_dir)
 
             elif project_mode == 2:
                 if not os.path.exists(proj_dir):

@@ -121,8 +121,15 @@ def gui(batch: bool):
         text_suffix = sg.Text('Project Name Suffix:', size=(20,1))
         in_suffix = sg.Input(key='suffix', size=(10,1))
 
+        check_preserve_subdirs = sg.Checkbox(
+            'Preserve Input Subdirectory Structure',
+            key='preserve_subdirs',
+            default=default_params.get('preserve_subdirs', False),
+        )
+
         # Add to layout
         layout.append([text_prefix, in_prefix, sg.VerticalSeparator(), text_suffix, in_suffix])
+        layout.append([check_preserve_subdirs])
 
     else:
         text_project = sg.Text('Project Name', size=(15,1))
@@ -628,6 +635,7 @@ def gui(batch: bool):
             prefix=(values['prefix'] if batch else ''),
             suffix=(values['suffix'] if batch else ''),
             batch=batch,
+            preserve_subdirs=(values.get('preserve_subdirs', False) if batch else False),
             params=params,
             script_path=os.path.abspath(__file__),
         )
