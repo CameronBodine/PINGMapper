@@ -1678,6 +1678,8 @@ class rectObj(sonObj):
             row = df[yPix].to_numpy().astype(int)
             col = df[xPix].to_numpy().astype(int)
             data = df[sonCol].to_numpy()
+            if son:
+                data = self._reserve_zero_for_nodata(data)
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -1785,6 +1787,8 @@ class rectObj(sonObj):
                             sonRect_out = np.clip(cmap[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
                             sonRect_out = np.clip(cmap[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = sonRect_raw16 > 0
+                        sonRect_out[valid_mask] = np.maximum(sonRect_out[valid_mask], 1)
                     else:
                         sonRect_out = self._colorize_pre_normalized_uint16(sonRect_raw16, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
                 else:
@@ -2466,6 +2470,8 @@ class rectObj(sonObj):
                     self._egnDoStretch()
 
             img = self.sonDat.copy()
+            if son:
+                img = self._reserve_zero_for_nodata(img)
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2510,6 +2516,8 @@ class rectObj(sonObj):
                             out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
                             out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = out16_raw > 0
+                        out16[valid_mask] = np.maximum(out16[valid_mask], 1)
                     else:
                         out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
                 else:
@@ -2549,6 +2557,8 @@ class rectObj(sonObj):
                         self._egnDoStretch()
 
             img = self.sonDat
+            if son:
+                img = self._reserve_zero_for_nodata(img)
             apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2647,6 +2657,8 @@ class rectObj(sonObj):
                             out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
                             out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = out16_raw > 0
+                        out16[valid_mask] = np.maximum(out16[valid_mask], 1)
                     else:
                         out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
                 else:

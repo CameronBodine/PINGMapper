@@ -1402,13 +1402,22 @@ class sonObj(object):
             norm_data = self._normalize_for_colormap(arr, bit_depth=16)
             colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
             if rgb_uint8:
-                return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
-            return np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                valid = arr > 0
+                out[valid] = np.maximum(out[valid], 1)
+                return out
+            out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+            valid = arr > 0
+            out[valid] = np.maximum(out[valid], 1)
+            return out
 
         arr = np.clip(np.asarray(data), 0, 255).astype(np.uint8)
         norm_data = self._normalize_for_colormap(arr, bit_depth=8)
         colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
-        return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+        out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+        valid = arr > 0
+        out[valid] = np.maximum(out[valid], 1)
+        return out
 
     # ======================================================================
     def _colorize_pre_normalized_uint16(self, data, cmap_name, rgb_uint8=False):
@@ -1416,8 +1425,14 @@ class sonObj(object):
         norm_data = np.clip(arr / 65535.0, 0.0, 1.0)
         colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
         if rgb_uint8:
-            return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
-        return np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+            out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+            valid = arr > 0
+            out[valid] = np.maximum(out[valid], 1)
+            return out
+        out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+        valid = arr > 0
+        out[valid] = np.maximum(out[valid], 1)
+        return out
 
     # ======================================================================
     def _is_colormap_selected(self, cmap_name):
@@ -1429,6 +1444,26 @@ class sonObj(object):
     # ======================================================================
     def _export_colormap_as_uint8(self):
         return bool(getattr(self, 'export_colormap_uint8', True))
+
+    # ======================================================================
+    def _reserve_zero_for_nodata(self, data):
+        arr = np.asarray(data)
+
+        if arr.size == 0:
+            return arr
+
+        out = arr.copy()
+
+        if np.issubdtype(out.dtype, np.floating):
+            mask = np.isfinite(out) & (out == 0)
+            out[mask] = 1.0
+            return out
+
+        if np.issubdtype(out.dtype, np.integer) or np.issubdtype(out.dtype, np.bool_):
+            out[out == 0] = 1
+            return out
+
+        return out
 
     # ======================================================================
     def _save_tile_image(self, outfile, data):
@@ -1499,8 +1534,10 @@ class sonObj(object):
 
         if export_16bit:
             data = self._prepare_export_uint16(self.sonDat)
+            data = self._reserve_zero_for_nodata(data)
         else:
             data = self.sonDat.astype('uint8') # Get the sonar data
+            data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
         addZero = self._addZero(k)
@@ -1558,8 +1595,10 @@ class sonObj(object):
 
         if export_16bit:
             data = self._prepare_export_uint16(self.sonDat)
+            data = self._reserve_zero_for_nodata(data)
         else:
             data = self.sonDat.astype('uint8') # Get the sonar data
+            data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
         addZero = self._addZero(k)
