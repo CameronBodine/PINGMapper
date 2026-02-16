@@ -133,7 +133,124 @@ class rectObj(sonObj):
         if not hasattr(self, 'rect_wcr'):
             self.rect_wcr = False
 
+        if not hasattr(self, 'export_16bit'):
+            self.export_16bit = False
+
+        if not hasattr(self, 'export_colormap_uint8'):
+            self.export_colormap_uint8 = True
+
+        if not hasattr(self, 'son_colorMap_name'):
+            self.son_colorMap_name = 'Greys_r'
+
         return
+
+    #=======================================================================
+    def _rect_export_16bit(self, son=True):
+        return bool(son) and bool(getattr(self, 'export_16bit', False))
+
+    #=======================================================================
+    def _is_colormap_selected(self, cmap_name):
+        if cmap_name is None:
+            return False
+        name = str(cmap_name).strip().lower()
+        return name not in ['', 'none', 'false']
+
+    #=======================================================================
+    def _rect_colormap_selected(self, son=True):
+        if not son:
+            return True
+        return self._is_colormap_selected(getattr(self, 'son_colorMap_name', None))
+
+    #=======================================================================
+    def _get_colormap_bounds(self, data):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        valid = arr > 0
+        if not np.any(valid):
+            return 0.0, 1.0
+
+        vals = arr[valid]
+        lo = float(np.nanpercentile(vals, 1.0))
+        hi = float(np.nanpercentile(vals, 99.5))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(vals))
+            hi = float(np.nanmax(vals))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return 0.0, 1.0
+
+        return lo, hi
+
+    #=======================================================================
+    def _normalize_with_bounds(self, data, lo, hi):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return self._normalize_for_colormap(arr, bit_depth=16)
+
+        norm = (arr - float(lo)) / (float(hi) - float(lo))
+        norm = np.clip(norm, 0.0, 1.0)
+        return norm.astype(np.float32)
+
+    #=======================================================================
+    def _write_rect_geotiff(self, gtiff, data, epsg, transform, colormap=None):
+        arr = np.asarray(data)
+
+        if arr.ndim == 2:
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=arr.shape[0],
+                width=arr.shape[1],
+                count=1,
+                dtype=arr.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='deflate',
+                zlevel=9,
+                predictor=2,
+                tiled=True,
+                blockxsize=256,
+                blockysize=256,
+                resampling=Resampling.bilinear,
+            ) as dst:
+                dst.nodata = 0
+                if colormap is not None and arr.dtype == np.uint8:
+                    dst.write_colormap(1, colormap)
+                dst.write(arr, 1)
+            return
+
+        if arr.ndim == 3 and arr.shape[2] in [3, 4]:
+            band_count = arr.shape[2]
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=arr.shape[0],
+                width=arr.shape[1],
+                count=band_count,
+                dtype=arr.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='deflate',
+                zlevel=9,
+                predictor=2,
+                tiled=True,
+                blockxsize=256,
+                blockysize=256,
+                photometric='RGB',
+                resampling=Resampling.bilinear,
+            ) as dst:
+                dst.nodata = 0
+                for band_idx in range(band_count):
+                    dst.write(arr[:, :, band_idx], band_idx + 1)
+            return
+
+        raise ValueError(f'Unsupported rectified data shape: {arr.shape}')
 
     ############################################################################
     # Smooth GPS trackpoint coordinates                                        #
@@ -1548,6 +1665,8 @@ class rectObj(sonObj):
 
         for imgOutPrefix, sonCol in to_rect:
 
+            use_16bit = self._rect_export_16bit(son=son)
+
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
             try:
@@ -1559,19 +1678,32 @@ class rectObj(sonObj):
             row = df[yPix].to_numpy().astype(int)
             col = df[xPix].to_numpy().astype(int)
             data = df[sonCol].to_numpy()
-
-            # Create a dictionary to store the maximum value for each coordinate
-            max_values = {}
+            apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                data = self._prepare_export_uint16_display(data)
+                source_scale_bounds = self._get_colormap_bounds(data)
+            # Aggregate repeated pixel hits by mean intensity so rectified
+            # outputs better match non-rectified contrast (max aggregation tends
+            # to bias brightness high and look washed out).
+            sum_values = {}
+            count_values = {}
             for r, c, d in zip(row, col, data):
-                if (r, c) in max_values:
-                    max_values[(r, c)] = max(max_values[(r, c)], d)
+                key = (r, c)
+                if key in sum_values:
+                    sum_values[key] += float(d)
+                    count_values[key] += 1
                 else:
-                    max_values[(r, c)] = d
+                    sum_values[key] = float(d)
+                    count_values[key] = 1
 
-            # Convert the dictionary back to arrays
-            row = np.array([k[0] for k in max_values.keys()])
-            col = np.array([k[1] for k in max_values.keys()])
-            data = np.array(list(max_values.values()))
+            # Convert aggregated values back to arrays
+            row = np.array([k[0] for k in sum_values.keys()], dtype=np.int32)
+            col = np.array([k[1] for k in sum_values.keys()], dtype=np.int32)
+            data = np.array(
+                [sum_values[k] / max(count_values[k], 1) for k in sum_values.keys()],
+                dtype=np.float32,
+            )
 
             # Create the sparse matrix
             sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
@@ -1626,7 +1758,8 @@ class rectObj(sonObj):
                 # Get sonRect back to original dims
                 sonRect = sonRect[interpolation_distance-1:-interpolation_distance+1, interpolation_distance-1:-interpolation_distance+1]
 
-                sonRect = sonRect.astype('uint8')
+                if not use_16bit:
+                    sonRect = sonRect.astype('uint8')
 
 
             ###############
@@ -1641,30 +1774,26 @@ class rectObj(sonObj):
             if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
-            if son:
-                colormap = self.son_colorMap
+            if use_16bit:
+                sonRect_raw16 = self._prepare_export_uint16(sonRect)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(sonRect_raw16, source_scale_bounds[0], source_scale_bounds[1])
+                        cmap = plt.cm.get_cmap(self.son_colorMap_name)(norm_data)
+                        if use_uint8_rgb:
+                            sonRect_out = np.clip(cmap[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            sonRect_out = np.clip(cmap[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                    else:
+                        sonRect_out = self._colorize_pre_normalized_uint16(sonRect_raw16, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    sonRect_out = sonRect_raw16
+                self._write_rect_geotiff(gtiff, sonRect_out, epsg, transform, colormap=None)
             else:
-                # colormap = class_colormap
-                pass
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=sonRect.shape[0],
-                width=sonRect.shape[1],
-                count=1,
-                dtype=sonRect.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw',
-                resampling=Resampling.bilinear
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, colormap)
-                    dst.write(sonRect,1)
-                    dst=None
-
-            del dst
+                sonRect_out = np.clip(sonRect, 0, 255).astype(np.uint8)
+                colormap = self.son_colorMap if son else None
+                self._write_rect_geotiff(gtiff, sonRect_out, epsg, transform, colormap=colormap)
 
             #############
             # Do resizing
@@ -2318,6 +2447,8 @@ class rectObj(sonObj):
         ## of upper left corner of the image and the pixel size
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
+        use_16bit = self._rect_export_16bit(son=son)
+
         if self.rect_wcp:
             imgOutPrefix = 'rect_wcp'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
@@ -2335,7 +2466,11 @@ class rectObj(sonObj):
                     self._egnDoStretch()
 
             img = self.sonDat.copy()
-
+            apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                img = self._prepare_export_uint16_display(img)
+                source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2349,7 +2484,11 @@ class rectObj(sonObj):
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+            out = np.flip(np.flip(np.flip(out,1),0),1)
+            if use_16bit:
+                out = out.astype(np.float32)
+            else:
+                out = out.astype('uint8')
 
             projName = os.path.split(self.projDir)[-1] # Get project name
             beamName = self.beamName # Determine which sonar beam we are working with
@@ -2361,24 +2500,26 @@ class rectObj(sonObj):
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
-                count=1,
-                dtype=out.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw'
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, self.son_colorMap)
-                    dst.write(out,1)
-                    dst=None
+            if use_16bit:
+                out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
+                        if use_uint8_rgb:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                    else:
+                        out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    out16 = out16_raw
+                self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
+            else:
+                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=self.son_colorMap)
 
-            del out, dst, img
+            del out, img
 
             if do_resize:
                 self._pixresResize(gtiff)
@@ -2408,7 +2549,11 @@ class rectObj(sonObj):
                         self._egnDoStretch()
 
             img = self.sonDat
-
+            apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                img = self._prepare_export_uint16_display(img)
+                source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2471,7 +2616,11 @@ class rectObj(sonObj):
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+            out = np.flip(np.flip(np.flip(out,1),0),1)
+            if son and use_16bit:
+                out = out.astype(np.float32)
+            else:
+                out = out.astype('uint8')
 
             if son:
                 projName = os.path.split(self.projDir)[-1] # Get project name
@@ -2488,29 +2637,27 @@ class rectObj(sonObj):
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
-            if son:
-                colormap = self.son_colorMap
+            if son and use_16bit:
+                out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
+                        if use_uint8_rgb:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                    else:
+                        out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    out16 = out16_raw
+                self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
             else:
-                colormap = class_colormap
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
-                count=1,
-                dtype=out.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw',
-                resampling=Resampling.bilinear
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, colormap)
-                    dst.write(out,1)
-                    dst=None
+                colormap = self.son_colorMap if son else class_colormap
+                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=colormap)
 
-            del out, dst
+            del out
 
             if do_resize:
                 self._pixresResize(gtiff)
@@ -2527,6 +2674,11 @@ class rectObj(sonObj):
     def _getSonColorMap(self, name):
         '''
         '''
+
+        self.son_colorMap_name = name
+        if not self._is_colormap_selected(name):
+            self.son_colorMap = None
+            return
 
         son_colorMap = {}
         try:

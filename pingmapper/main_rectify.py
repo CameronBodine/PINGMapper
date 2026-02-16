@@ -117,6 +117,9 @@ def rectify_master_func(logfilename='',
                         pix_res_map=0,
                         x_offset=0,
                         y_offset=0,
+                        export_16bit=False,
+                        export_colormap_uint8=True,
+                        export_16bit_colormap=False,
                         tileFile=False,
                         egn=False,
                         egn_stretch=0,
@@ -351,6 +354,8 @@ def rectify_master_func(logfilename='',
     for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
+        son.export_16bit = bool(export_16bit) and (not bool(getattr(son, 'son8bit', True)))
+        son.export_colormap_uint8 = bool(export_colormap_uint8)
 
     # ############################################################################
     # # Rectify Heading sonar imagery - Pingwise, not Rubbersheeting             #

@@ -1396,6 +1396,41 @@ class sonObj(object):
         return out
 
     # ======================================================================
+    def _colorize_sonar_array(self, data, cmap_name, bit_depth=8, rgb_uint8=False):
+        if bit_depth >= 16:
+            arr = self._prepare_export_uint16(data)
+            norm_data = self._normalize_for_colormap(arr, bit_depth=16)
+            colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+            if rgb_uint8:
+                return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+            return np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+
+        arr = np.clip(np.asarray(data), 0, 255).astype(np.uint8)
+        norm_data = self._normalize_for_colormap(arr, bit_depth=8)
+        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+        return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+
+    # ======================================================================
+    def _colorize_pre_normalized_uint16(self, data, cmap_name, rgb_uint8=False):
+        arr = self._prepare_export_uint16(data).astype(np.float32, copy=False)
+        norm_data = np.clip(arr / 65535.0, 0.0, 1.0)
+        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+        if rgb_uint8:
+            return np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+        return np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+
+    # ======================================================================
+    def _is_colormap_selected(self, cmap_name):
+        if cmap_name is None:
+            return False
+        name = str(cmap_name).strip().lower()
+        return name not in ['', 'none', 'false']
+
+    # ======================================================================
+    def _export_colormap_as_uint8(self):
+        return bool(getattr(self, 'export_colormap_uint8', True))
+
+    # ======================================================================
     def _save_tile_image(self, outfile, data):
         ext = os.path.splitext(outfile)[1].lower()
 
@@ -1404,9 +1439,20 @@ class sonObj(object):
                 import tifffile
 
                 if data.ndim == 3 and data.shape[-1] in [3, 4]:
-                    tifffile.imwrite(outfile, data, compression='deflate', predictor=True, photometric='rgb')
+                    tifffile.imwrite(
+                        outfile,
+                        data,
+                        compression='deflate',
+                        predictor=True,
+                        photometric='rgb',
+                    )
                 else:
-                    tifffile.imwrite(outfile, data, compression='deflate', predictor=True)
+                    tifffile.imwrite(
+                        outfile,
+                        data,
+                        compression='deflate',
+                        predictor=True,
+                    )
                 return
             except Exception:
                 pass
@@ -1452,7 +1498,7 @@ class sonObj(object):
             tileFile = '.tif'
 
         if export_16bit:
-            data = self._prepare_export_uint16_display(self.sonDat)
+            data = self._prepare_export_uint16(self.sonDat)
         else:
             data = self.sonDat.astype('uint8') # Get the sonar data
 
@@ -1506,13 +1552,12 @@ class sonObj(object):
         NA
         '''
         export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-        export_16bit_colormap = bool(getattr(self, 'export_16bit_colormap', False)) and export_16bit
+        colormap_requested = bool(colormap) and self._is_colormap_selected(getattr(self, 'sonogram_colorMap', None))
         if export_16bit and str(tileFile).lower() not in ['.tif', '.tiff']:
             tileFile = '.tif'
 
         if export_16bit:
-            data = self._prepare_export_uint16_display(self.sonDat)
-            colormap = bool(colormap) and export_16bit_colormap
+            data = self._prepare_export_uint16(self.sonDat)
         else:
             data = self.sonDat.astype('uint8') # Get the sonar data
 
@@ -1533,19 +1578,19 @@ class sonObj(object):
         outfile = base_outfile + tileFile
 
         # Save as a plot for colormap
-        if colormap:
+        if colormap_requested:
             # plt.imshow(data, cmap=self.sonogram_colorMap)
             # plt.savefig(outfile)
 
             if export_16bit:
-                norm_data = self._normalize_for_colormap(data, bit_depth=16)
-                colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
-                data = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
-                outfile = base_outfile + '_cmap' + tileFile
+                data = self._colorize_sonar_array(
+                    data,
+                    self.sonogram_colorMap,
+                    bit_depth=16,
+                    rgb_uint8=self._export_colormap_as_uint8(),
+                )
             else:
-                norm_data = self._normalize_for_colormap(data, bit_depth=8)
-                colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
-                data = (colored_data[:, :, :3] * 255).astype('uint8')
+                data = self._colorize_sonar_array(data, self.sonogram_colorMap, bit_depth=8)
 
             # imsave(outfile, data)
 
@@ -1583,64 +1628,40 @@ class sonObj(object):
         if self.wcp:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            export_16bit_colormap = bool(getattr(self, 'export_16bit_colormap', False)) and export_16bit
             self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
-                if export_16bit:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=False)
-                    if export_16bit_colormap:
-                        self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
-                else:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
             else:
                 pass
 
         if self.wcm:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            export_16bit_colormap = bool(getattr(self, 'export_16bit_colormap', False)) and export_16bit
             self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
-                if export_16bit:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=False)
-                    if export_16bit_colormap:
-                        self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
-                else:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
             else:
                 pass
 
         if self.wcr_src:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            export_16bit_colormap = bool(getattr(self, 'export_16bit_colormap', False)) and export_16bit
             self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
-                if export_16bit:
-                    self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=False)
-                    if export_16bit_colormap:
-                        self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
-                else:
-                    self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
             else:
                 pass
 
         if self.wco:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            export_16bit_colormap = bool(getattr(self, 'export_16bit_colormap', False)) and export_16bit
             self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
-                if export_16bit:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=False)
-                    if export_16bit_colormap:
-                        self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
-                else:
-                    self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
             else:
                 pass
 

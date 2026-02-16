@@ -262,6 +262,26 @@ def gui(batch: bool):
     layout.append([col_egn_1, sg.VerticalSeparator(), col_egn_2])
 
     #######################
+    # Global Export Options
+
+    text_global_export = sg.Text('Global Export Options\n', font=("Helvetica", 14, "underline"))
+    check_export_16bit = sg.Checkbox(
+        'Export 16-bit TIFFs (applies to Sonogram + Rectified outputs)',
+        key='export_16bit',
+        default=default_params.get('export_16bit', False)
+    )
+    check_export_colormap_uint8 = sg.Checkbox(
+        'Save colormapped TIFFs as 8-bit RGB (smaller files)',
+        key='export_colormap_uint8',
+        default=default_params.get('export_colormap_uint8', True)
+    )
+
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_global_export])
+    layout.append([check_export_16bit])
+    layout.append([check_export_colormap_uint8])
+
+    #######################
     # Sonogram Tile Exports
 
     text_tile = sg.Text('Sonogram Tile Exports\n', font=("Helvetica", 14, "underline"))
@@ -276,11 +296,9 @@ def gui(batch: bool):
     text_file_type = sg.Text('Image Format:', size=(15,1))
     combo_file_type = sg.Combo(['.jpg', '.png', '.tif'], key='tileFile', default_value=default_params['tileFile'])
 
-    check_export_16bit = sg.Checkbox('Export 16-bit Sonograms (TIFF)', key='export_16bit', default=default_params.get('export_16bit', False))
-    check_export_16bit_colormap = sg.Checkbox('Also export 16-bit colorized TIFF (_cmap)', key='export_16bit_colormap', default=default_params.get('export_16bit_colormap', False))
-
     text_tile_color = sg.Text('Tile Colormap:', size=(15,1))
-    combo_tile_color = sg.Combo(plt.colormaps(), key='sonogram_colorMap', default_value=default_params['sonogram_colorMap'])
+    tile_colormaps = ['None'] + list(plt.colormaps())
+    combo_tile_color = sg.Combo(tile_colormaps, key='sonogram_colorMap', default_value=default_params.get('sonogram_colorMap', 'copper'))
 
 
     check_speed_cor = sg.Checkbox('Speed Correct', key='spdCor', default=default_params['spdCor'])
@@ -292,7 +310,7 @@ def gui(batch: bool):
     
     # Turn into columns
     col_tile_1 = sg.Column([[check_wcp], [check_wcm], [check_wcr], [check_wco]], pad=0)
-    col_tile_2 = sg.Column([[check_speed_cor], [check_mask_shdw], [check_max_crop], [check_export_16bit], [check_export_16bit_colormap]], pad=0)
+    col_tile_2 = sg.Column([[check_speed_cor], [check_mask_shdw], [check_max_crop]], pad=0)
     col_tile_3 = sg.Column([[text_file_type, combo_file_type], [text_tile_color, combo_tile_color]], pad=0)
     
 
@@ -354,7 +372,8 @@ def gui(batch: bool):
     slide_rect_interp = sg.Slider(range=(0, 200), resolution=5, orientation='h', key='rectInterpDist', default_value=default_params['rectInterpDist'], disabled=rect_meth_status)
 
     text_color = sg.Text('Sonar Colormap', size=(30,1))
-    combo_color = sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'])
+    rect_colormaps = ['None'] + list(plt.colormaps())
+    combo_color = sg.Combo(rect_colormaps, key='son_colorMap', default_value=default_params.get('son_colorMap', 'Greys_r'))
 
     text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
     combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'])
@@ -600,7 +619,7 @@ def gui(batch: bool):
             'sonogram_colorMap':values['sonogram_colorMap'],
             'mask_shdw':values['mask_shdw'],
             'export_16bit':values['export_16bit'],
-            'export_16bit_colormap':values['export_16bit_colormap'],
+            'export_colormap_uint8':values['export_colormap_uint8'],
             'tileFile':values['tileFile'],
             'spdCor':values['spdCor'],
             'maxCrop':values['maxCrop'],

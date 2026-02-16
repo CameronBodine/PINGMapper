@@ -670,6 +670,20 @@ class portstarObj(object):
         outMosaic = []
         for imgs in imgsToMosaic:
 
+            # Preserve all source bands for sonar mosaics when no explicit band
+            # selection is provided. This is required for colorized 16-bit
+            # rectified outputs (RGB) so mosaics do not collapse to band 1.
+            bands_to_use = bands
+            if son and bands == [1] and len(imgs) > 0:
+                try:
+                    src_ds = gdal.Open(imgs[0])
+                    src_band_count = int(src_ds.RasterCount) if src_ds is not None else 1
+                    src_ds = None
+                    if src_band_count > 1:
+                        bands_to_use = list(range(1, src_band_count + 1))
+                except Exception:
+                    pass
+
             # Set output file names
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             filePrefix = os.path.split(self.port.projDir)[-1]
@@ -698,7 +712,7 @@ class portstarObj(object):
                     pass
 
             # First built a vrt
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Create GeoTiff from vrt
@@ -777,6 +791,19 @@ class portstarObj(object):
         outMosaic = []
         for imgs in imgsToMosaic:
 
+            # Preserve all source bands for sonar mosaics when no explicit band
+            # selection is provided.
+            bands_to_use = bands
+            if son and bands == [1] and len(imgs) > 0:
+                try:
+                    src_ds = gdal.Open(imgs[0])
+                    src_band_count = int(src_ds.RasterCount) if src_ds is not None else 1
+                    src_ds = None
+                    if src_band_count > 1:
+                        bands_to_use = list(range(1, src_band_count + 1))
+                except Exception:
+                    pass
+
             # Set output file names
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             filePrefix = os.path.split(self.port.projDir)[-1]
@@ -809,7 +836,7 @@ class portstarObj(object):
 
             # Build VRT
             # vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews

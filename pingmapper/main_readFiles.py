@@ -119,6 +119,7 @@ def read_master_func(logfilename='',
                      x_offset=0,
                      y_offset=0,
                      export_16bit=False,
+                     export_colormap_uint8=True,
                      export_16bit_colormap=False,
                      tileFile='.png',
                      egn=False,
@@ -435,7 +436,7 @@ def read_master_func(logfilename='',
         son.export_16bit = bool(export_16bit) and (
             (getattr(son, 'output_bit_depth', 8) > 8) or (not bool(getattr(son, 'son8bit', True)))
         )
-        son.export_16bit_colormap = bool(export_16bit_colormap) and bool(son.export_16bit)
+        son.export_colormap_uint8 = bool(export_colormap_uint8)
         son.export_beam = True
 
         # print(son.beamName, son.son8bit)
