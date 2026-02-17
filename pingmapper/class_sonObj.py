@@ -806,7 +806,19 @@ class sonObj(object):
         '''
 
         use_jsf_weighting = bool(getattr(self, '_use_jsf_weighting', False))
-        if use_jsf_weighting:
+        use_tvg = bool(getattr(self, 'tvg', False))
+        crop_samples_after_flip = getattr(self, '_range_crop_samples_after_flip', None)
+
+        if crop_samples_after_flip is not None:
+            try:
+                crop_samples_after_flip = int(crop_samples_after_flip)
+            except Exception:
+                crop_samples_after_flip = None
+
+        if crop_samples_after_flip is not None and crop_samples_after_flip <= 0:
+            crop_samples_after_flip = None
+
+        if use_jsf_weighting or use_tvg:
             sonDat = np.zeros((int(self.pingMax), len(self.pingCnt)), dtype=np.float32)
         else:
             sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
@@ -814,7 +826,11 @@ class sonObj(object):
 
         for i in range(len(self.headIdx)):
             if ~np.isnan(self.headIdx[i]):
-                ping_len = min(self.pingCnt[i].astype(int), self.pingMax)
+                full_ping_len = self.pingCnt[i].astype(int)
+                if crop_samples_after_flip is not None:
+                    ping_len = full_ping_len
+                else:
+                    ping_len = min(full_ping_len, self.pingMax)
 
 
                 # #### Do not commit!!!!
@@ -852,6 +868,9 @@ class sonObj(object):
                 if self.flip_port:
                     dat = dat[::-1]
 
+                if crop_samples_after_flip is not None:
+                    dat = dat[:crop_samples_after_flip]
+
                 if use_jsf_weighting:
                     dat = dat.astype(np.float32, copy=False)
                     if hasattr(self, 'weightingFactor') and i < len(self.weightingFactor):
@@ -867,6 +886,12 @@ class sonObj(object):
         
         file.close()
 
+        if crop_samples_after_flip is not None and sonDat.shape[0] > crop_samples_after_flip:
+            sonDat = sonDat[:crop_samples_after_flip, :]
+
+        if use_tvg:
+            sonDat = self._apply_tvg(sonDat)
+
         if bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', True)):
             self.sonDat16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
         else:
@@ -874,6 +899,41 @@ class sonObj(object):
 
         self.sonDat = self._convert_son_dat_to_uint8(sonDat)
         return
+
+    def _apply_tvg(self, sonDat):
+        sonDat = np.asarray(sonDat, dtype=np.float32)
+
+        if sonDat.size == 0 or sonDat.shape[0] == 0:
+            return sonDat
+
+        pix_m = getattr(self, '_chunk_pixM', np.nan)
+        if not np.isfinite(pix_m) or pix_m <= 0:
+            pix_m = getattr(self, 'pixM', np.nan)
+        if not np.isfinite(pix_m) or pix_m <= 0:
+            return sonDat
+
+        k = float(getattr(self, 'tvg_spreading_k', 40.0))
+        alpha = float(getattr(self, 'tvg_absorption_db_m', 0.035))
+        min_r = float(getattr(self, 'tvg_min_range', 0.2))
+        cap_db = float(getattr(self, 'tvg_cap_db', 50.0))
+
+        if not np.isfinite(k):
+            k = 40.0
+        if not np.isfinite(alpha):
+            alpha = 0.035
+        if not np.isfinite(min_r) or min_r <= 0:
+            min_r = 0.2
+        if not np.isfinite(cap_db) or cap_db <= 0:
+            cap_db = 50.0
+
+        sample_idx = np.arange(sonDat.shape[0], dtype=np.float32)
+        ranges_m = np.maximum(sample_idx * np.float32(pix_m), np.float32(min_r))
+        tvg_db = (k * np.log10(ranges_m)) + (2.0 * alpha * ranges_m)
+        tvg_db = np.clip(tvg_db, 0.0, cap_db)
+        gain = np.power(10.0, tvg_db / 20.0).astype(np.float32)
+
+        sonDat *= gain[:, None]
+        return sonDat
 
     def _convert_son_dat_to_uint8(self, sonDat):
         if np.issubdtype(sonDat.dtype, np.floating):
@@ -1901,6 +1961,26 @@ class sonObj(object):
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
+        if 'pixM' in sonMeta.columns:
+            chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
+            if np.any(np.isfinite(chunk_pix_m)):
+                self._chunk_pixM = float(np.nanmedian(chunk_pix_m[np.isfinite(chunk_pix_m)]))
+            elif hasattr(self, '_chunk_pixM'):
+                del self._chunk_pixM
+        elif hasattr(self, '_chunk_pixM'):
+            del self._chunk_pixM
+
+        if bool(getattr(self, 'range_crop_after_flip', False)):
+            self._range_crop_samples_after_flip = None
+            crop_range_m = float(getattr(self, 'cropRange', 0.0))
+            pix_m = getattr(self, '_chunk_pixM', np.nan)
+            if crop_range_m > 0 and np.isfinite(pix_m) and pix_m > 0:
+                crop_samples = int(round(crop_range_m / pix_m, 0))
+                if crop_samples > 0:
+                    self._range_crop_samples_after_flip = crop_samples
+        elif hasattr(self, '_range_crop_samples_after_flip'):
+            del self._range_crop_samples_after_flip
+
         self._use_jsf_weighting = False
         if 'weighting_factor' in sonMeta.columns:
             self.weightingFactor = pd.to_numeric(sonMeta['weighting_factor'], errors='coerce').to_numpy(dtype=float)
@@ -1948,6 +2028,15 @@ class sonObj(object):
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+
+        if 'pixM' in sonMeta.columns:
+            chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
+            if np.any(np.isfinite(chunk_pix_m)):
+                self._chunk_pixM = float(np.nanmedian(chunk_pix_m[np.isfinite(chunk_pix_m)]))
+            elif hasattr(self, '_chunk_pixM'):
+                del self._chunk_pixM
+        elif hasattr(self, '_chunk_pixM'):
+            del self._chunk_pixM
 
         self._use_jsf_weighting = False
         if 'weighting_factor' in sonMeta.columns:

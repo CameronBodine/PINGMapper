@@ -125,6 +125,11 @@ def read_master_func(logfilename='',
                      egn=False,
                      egn_stretch=0,
                      egn_stretch_factor=1,
+                     tvg=False,
+                     tvg_spreading_k=40.0,
+                     tvg_absorption_db_m=0.035,
+                     tvg_min_range=0.2,
+                     tvg_cap_db=50.0,
                      wcp=False,
                      wcm=False,
                      wcr=False,
@@ -409,11 +414,16 @@ def read_master_func(logfilename='',
         if str(beam).startswith('B002'):
             if file_type in ['.sl2', '.sl3', '.xtf']:
                 son.flip_port = True
+        son.range_crop_after_flip = False
 
         # Store other parameters as attributes
         son.fixNotDat = fixNoDat
         son.metaDir = sonar_obj.metaDir
         son.beamName = meta['beamName']
+        if file_type == '.xtf':
+            is_xtf_sidescan = str(son.beamName).startswith('ss_port') or str(son.beamName).startswith('ss_star')
+            son.flip_port = str(son.beamName).startswith('ss_port')
+            son.range_crop_after_flip = is_xtf_sidescan
         son.beam = beam
         son.headBytes = sonar_obj.headBytes
         # son.pixM = sonar_obj.pixM
@@ -438,6 +448,11 @@ def read_master_func(logfilename='',
         )
         son.export_colormap_uint8 = bool(export_colormap_uint8)
         son.export_beam = True
+        son.tvg = bool(tvg)
+        son.tvg_spreading_k = float(tvg_spreading_k)
+        son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+        son.tvg_min_range = float(tvg_min_range)
+        son.tvg_cap_db = float(tvg_cap_db)
 
         # print(son.beamName, son.son8bit)
 
@@ -560,6 +575,9 @@ def read_master_func(logfilename='',
             son.cropRange = cropRange
             # Do range crop, if necessary
             if cropRange > 0.0:
+                if file_type == '.xtf' and _is_sidescan_beam(getattr(son, 'beamName', '')):
+                    continue
+
                 # # Convert to distance in pix
                 # d = round(cropRange / son.pixM, 0).astype(int)
 
@@ -639,6 +657,23 @@ def read_master_func(logfilename='',
             for attr, value in metaFile.__dict__.items():
                 setattr(son, attr, value)
 
+            if not hasattr(son, 'tvg'):
+                son.tvg = False
+            if not hasattr(son, 'tvg_spreading_k'):
+                son.tvg_spreading_k = 40.0
+            if not hasattr(son, 'tvg_absorption_db_m'):
+                son.tvg_absorption_db_m = 0.035
+            if not hasattr(son, 'tvg_min_range'):
+                son.tvg_min_range = 0.2
+            if not hasattr(son, 'tvg_cap_db'):
+                son.tvg_cap_db = 50.0
+
+            son.tvg = bool(tvg)
+            son.tvg_spreading_k = float(tvg_spreading_k)
+            son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+            son.tvg_min_range = float(tvg_min_range)
+            son.tvg_cap_db = float(tvg_cap_db)
+
             sonObjs.append(son)
 
         #################################################
@@ -713,7 +748,14 @@ def read_master_func(logfilename='',
         if egn:
             for son in sonObjs:
                 if str(son.beamName).startswith("ss_port"):
-                    if son.egn == egn:
+                    if (
+                        son.egn == egn and
+                        bool(getattr(son, 'tvg', False)) == bool(tvg) and
+                        float(getattr(son, 'tvg_spreading_k', 40.0)) == float(tvg_spreading_k) and
+                        float(getattr(son, 'tvg_absorption_db_m', 0.035)) == float(tvg_absorption_db_m) and
+                        float(getattr(son, 'tvg_min_range', 0.2)) == float(tvg_min_range) and
+                        float(getattr(son, 'tvg_cap_db', 50.0)) == float(tvg_cap_db)
+                    ):
                         egn = False
                         print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
                         print("\tSetting egn to 0.")
@@ -1342,10 +1384,18 @@ def read_master_func(logfilename='',
         start_time = time.time()
         print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 print('\n\tCalculating EGN for', son.beamName)
                 son.egn = True
                 son.egn_stretch = egn_stretch
+                son.tvg = bool(tvg)
+                son.tvg_spreading_k = float(tvg_spreading_k)
+                son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+                son.tvg_min_range = float(tvg_min_range)
+                son.tvg_cap_db = float(tvg_cap_db)
+
+                tvg_enabled_for_export = bool(son.tvg)
+                son.tvg = False
 
                 # Determine what chunks to process
                 chunks = son._getChunkID()
@@ -1371,6 +1421,8 @@ def read_master_func(logfilename='',
                 son._egnCalcGlobalMinMax(min_max)
                 del min_max
 
+                son.tvg = tvg_enabled_for_export
+
                 son._cleanup()
                 son._pickleSon()
 
@@ -1379,6 +1431,7 @@ def read_master_func(logfilename='',
 
             else:
                 son.egn = False # Dont bother with down-facing beams
+                son.tvg = False
 
         # Get true global min and max
 
@@ -1387,7 +1440,7 @@ def read_master_func(logfilename='',
         wc_mins = []
         wc_maxs = []
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 bed_mins.append(son.egn_bed_min)
                 bed_maxs.append(son.egn_bed_max)
                 wc_mins.append(son.egn_wc_min)
@@ -1397,7 +1450,7 @@ def read_master_func(logfilename='',
         wc_min = np.min(wc_mins)
         wc_max = np.max(wc_maxs)
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 son.egn_bed_min = bed_min
                 son.egn_bed_max = bed_max
                 son.egn_wc_min = wc_min
@@ -1411,10 +1464,13 @@ def read_master_func(logfilename='',
         # Need to calculate histogram if egn_stretch is greater then 0
         if egn_stretch > 0:
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     # Determine what chunks to process
                     chunks = son._getChunkID()
                     chunks = chunks[:-1] # remove last chunk
+
+                    tvg_enabled_for_export = bool(son.tvg)
+                    son.tvg = False
 
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
                     hist = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcHist)(i) for i in tqdm(chunks))
@@ -1422,17 +1478,19 @@ def read_master_func(logfilename='',
                     print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
 
+                    son.tvg = tvg_enabled_for_export
+
             # Now calculate true global histogram
             egn_wcp_hist = np.zeros((255))
             egn_wcr_hist = np.zeros((255))
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     egn_wcp_hist += son.egn_wcp_hist
                     egn_wcr_hist += son.egn_wcr_hist
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     son.egn_wcp_hist = egn_wcp_hist
                     son.egn_wcr_hist = egn_wcr_hist
 
@@ -1452,7 +1510,7 @@ def read_master_func(logfilename='',
                 wcr_pcnt[i] = egn_wcr_hist[i] / wcr_sum
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     son.egn_wcp_hist_pcnt = wcp_pcnt
                     son.egn_wcr_hist_pcnt = wcr_pcnt
 
@@ -1462,7 +1520,7 @@ def read_master_func(logfilename='',
 
             # Calculate min and max for rescale
             for son in sonObjs:
-                if son.beamName == 'ss_port':
+                if str(son.beamName).startswith('ss_port'):
                     wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
                     # wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
 
@@ -1472,7 +1530,7 @@ def read_master_func(logfilename='',
                     gc.collect()
 
             for son in sonObjs:
-                if son.beamName == 'ss_star':
+                if str(son.beamName).startswith('ss_star'):
                     son.egn_stretch = egn_stretch
                     son.egn_stretch_factor = egn_stretch_factor
 
