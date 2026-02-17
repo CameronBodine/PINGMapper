@@ -124,6 +124,11 @@ def rectify_master_func(logfilename='',
                         egn=False,
                         egn_stretch=0,
                         egn_stretch_factor=1,
+                        tvg=False,
+                        tvg_spreading_k=40.0,
+                        tvg_absorption_db_m=0.035,
+                        tvg_min_range=0.2,
+                        tvg_cap_db=50.0,
                         wcp=False,
                         wcm=False,
                         wcr=False,
@@ -405,6 +410,12 @@ def rectify_master_func(logfilename='',
                 # Get colormap
                 son._getSonColorMap(son_colorMap)
 
+                if son.export_16bit and son._rect_colormap_selected(son=True):
+                    if rect_wcp:
+                        son._prime_rect_global_colormap_bounds('rect_wcp')
+                    if rect_wcr:
+                        son._prime_rect_global_colormap_bounds('rect_wcr')
+
                 print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
                 # Parallel(n_jobs= np.min([len(sDF), threadCnt]))(delayed(son._rectSonHeadingMain)(sonarCoordsDF[sonarCoordsDF['chunk_id']==chunk], chunk) for chunk in tqdm(range(len(chunks))))
@@ -461,6 +472,12 @@ def rectify_master_func(logfilename='',
 
                 # Get colormap
                 son._getSonColorMap(son_colorMap)
+
+                if son.export_16bit and son._rect_colormap_selected(son=True):
+                    if rect_wcp:
+                        son._prime_rect_global_colormap_bounds('rect_wcp')
+                    if rect_wcr:
+                        son._prime_rect_global_colormap_bounds('rect_wcr')
 
                 print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
                 # for i in chunks:

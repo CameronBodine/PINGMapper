@@ -254,8 +254,26 @@ def gui(batch: bool):
     text_egn_factor = sg.Text('EGN Stretch Factor', size=(20,1))
     in_egn_factor = sg.Input(key='egn_stretch_factor', default_text=default_params['egn_stretch_factor'], size=(10,1))
 
-    col_egn_1 = sg.Column([[check_egn]], pad=0)
-    col_egn_2 = sg.Column([[text_egn_stretch, combo_egn_stretch], [text_egn_factor, in_egn_factor]], pad=0)
+    # TVG options
+    check_tvg = sg.Checkbox('Time Varying Gain (TVG) [independent correction]', key='tvg', default=default_params.get('tvg', False))
+    text_tvg_k = sg.Text('TVG Spreading k', size=(20,1))
+    in_tvg_k = sg.Input(key='tvg_spreading_k', default_text=default_params.get('tvg_spreading_k', 40.0), size=(10,1))
+    text_tvg_alpha = sg.Text('TVG Absorption [dB/m]', size=(20,1))
+    in_tvg_alpha = sg.Input(key='tvg_absorption_db_m', default_text=default_params.get('tvg_absorption_db_m', 0.035), size=(10,1))
+    text_tvg_min_r = sg.Text('TVG Min Range [m]', size=(20,1))
+    in_tvg_min_r = sg.Input(key='tvg_min_range', default_text=default_params.get('tvg_min_range', 0.2), size=(10,1))
+    text_tvg_cap = sg.Text('TVG Cap [dB]', size=(20,1))
+    in_tvg_cap = sg.Input(key='tvg_cap_db', default_text=default_params.get('tvg_cap_db', 50.0), size=(10,1))
+
+    col_egn_1 = sg.Column([[check_egn], [check_tvg]], pad=0)
+    col_egn_2 = sg.Column([
+        [text_egn_stretch, combo_egn_stretch],
+        [text_egn_factor, in_egn_factor],
+        [text_tvg_k, in_tvg_k],
+        [text_tvg_alpha, in_tvg_alpha],
+        [text_tvg_min_r, in_tvg_min_r],
+        [text_tvg_cap, in_tvg_cap],
+    ], pad=0)
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
     layout.append([text_egn])
@@ -635,6 +653,11 @@ def gui(batch: bool):
             'egn':values['egn'],
             'egn_stretch':egn_stretch,
             'egn_stretch_factor':float(values['egn_stretch_factor']),
+            'tvg':values['tvg'],
+            'tvg_spreading_k':float(values['tvg_spreading_k']),
+            'tvg_absorption_db_m':float(values['tvg_absorption_db_m']),
+            'tvg_min_range':float(values['tvg_min_range']),
+            'tvg_cap_db':float(values['tvg_cap_db']),
             'wcp':values['wcp'],
             'wcm':values['wcm'],
             'wcr':values['wcr'],

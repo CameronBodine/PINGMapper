@@ -196,6 +196,171 @@ class rectObj(sonObj):
         return norm.astype(np.float32)
 
     #=======================================================================
+    def _get_rect_global_colormap_bounds(self, img_prefix, son=True):
+        if not son:
+            return None
+
+        cache = getattr(self, '_rect_global_colormap_bounds', None)
+        if not isinstance(cache, dict):
+            return None
+
+        return cache.get(str(img_prefix), None)
+
+    #=======================================================================
+    def _set_rect_global_colormap_bounds(self, img_prefix, bounds, son=True):
+        if not son:
+            return
+
+        if not isinstance(getattr(self, '_rect_global_colormap_bounds', None), dict):
+            self._rect_global_colormap_bounds = {}
+
+        self._rect_global_colormap_bounds[str(img_prefix)] = bounds
+
+    #=======================================================================
+    def _get_rect_global_target_median(self, img_prefix, son=True):
+        if not son:
+            return None
+
+        cache = getattr(self, '_rect_global_target_median', None)
+        if not isinstance(cache, dict):
+            return None
+
+        return cache.get(str(img_prefix), None)
+
+    #=======================================================================
+    def _set_rect_global_target_median(self, img_prefix, median_value, son=True):
+        if not son:
+            return
+
+        if not isinstance(getattr(self, '_rect_global_target_median', None), dict):
+            self._rect_global_target_median = {}
+
+        self._rect_global_target_median[str(img_prefix)] = median_value
+
+    #=======================================================================
+    def _match_rect_chunk_global_median(self, data, img_prefix, son=True):
+        if not son:
+            return data
+
+        target = self._get_rect_global_target_median(img_prefix, son=True)
+        if target is None or (not np.isfinite(target)) or target <= 0:
+            return data
+
+        arr = np.asarray(data, dtype=np.float32)
+        valid = arr > 0
+        if not np.any(valid):
+            return data
+
+        local_med = float(np.nanmedian(arr[valid]))
+        if (not np.isfinite(local_med)) or local_med <= 0:
+            return data
+
+        scale = float(target) / local_med
+        scale = float(np.clip(scale, 0.75, 1.25))
+
+        out = arr.copy()
+        out[valid] = out[valid] * scale
+        out = np.clip(out, 0.0, 65535.0)
+        return out.astype(np.uint16)
+
+    #=======================================================================
+    def _prime_rect_global_colormap_bounds(self, img_prefix, max_samples=64):
+        if str(img_prefix) not in ['rect_wcp', 'rect_wcr']:
+            return None
+
+        existing = self._get_rect_global_colormap_bounds(img_prefix, son=True)
+        existing_median = self._get_rect_global_target_median(img_prefix, son=True)
+        if existing is not None and existing_median is not None:
+            return existing
+
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
+        sonMetaAll = getattr(self, 'sonMetaDF', None)
+        if sonMetaAll is None or len(sonMetaAll) == 0 or 'chunk_id' not in sonMetaAll.columns:
+            return None
+
+        chunk_ids = np.sort(pd.to_numeric(sonMetaAll['chunk_id'], errors='coerce').dropna().astype(int).unique())
+        if len(chunk_ids) == 0:
+            return None
+
+        if len(chunk_ids) > int(max_samples):
+            step = int(np.ceil(len(chunk_ids) / float(max_samples)))
+            sampled_chunks = chunk_ids[::step]
+            if sampled_chunks[-1] != chunk_ids[-1]:
+                sampled_chunks = np.append(sampled_chunks, chunk_ids[-1])
+        else:
+            sampled_chunks = chunk_ids
+
+        sampled_vals = []
+        max_vals_per_chunk = 20000
+
+        for chunk in sampled_chunks:
+            isChunk = sonMetaAll['chunk_id'] == int(chunk)
+            sonMeta = sonMetaAll[isChunk].reset_index(drop=True)
+            if len(sonMeta) == 0:
+                continue
+
+            try:
+                self._getScanChunkSingle(int(chunk))
+            except Exception:
+                continue
+
+            if self.remShadow:
+                try:
+                    self._SHW_mask(int(chunk))
+                    self.sonDat = self.sonDat * self.shadowMask
+                    del self.shadowMask
+                except Exception:
+                    pass
+
+            if str(img_prefix) == 'rect_wcp':
+                if self.egn:
+                    self._egn_wcp(int(chunk), sonMeta)
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+            else:
+                self._WCR_SRC(sonMeta)
+                if (not bool(getattr(self, 'rect_wcp', False))) and self.egn:
+                    self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+
+            img = self._reserve_zero_for_nodata(self.sonDat)
+            img = self._prepare_export_uint16(img)
+            vals = img[img > 0]
+            if vals.size == 0:
+                continue
+
+            if vals.size > max_vals_per_chunk:
+                idx = np.linspace(0, vals.size - 1, num=max_vals_per_chunk, dtype=np.int64)
+                vals = vals[idx]
+
+            sampled_vals.append(vals.astype(np.float64, copy=False))
+
+        if len(sampled_vals) == 0:
+            return None
+
+        pooled = np.concatenate(sampled_vals)
+        lo = float(np.nanpercentile(pooled, 1.0))
+        hi = float(np.nanpercentile(pooled, 99.5))
+        med = float(np.nanpercentile(pooled, 50.0))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(pooled))
+            hi = float(np.nanmax(pooled))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return None
+
+        bounds = (lo, hi)
+        self._set_rect_global_colormap_bounds(img_prefix, bounds, son=True)
+        if np.isfinite(med) and med > 0:
+            self._set_rect_global_target_median(img_prefix, med, son=True)
+        return bounds
+
+    #=======================================================================
     def _write_rect_geotiff(self, gtiff, data, epsg, transform, colormap=None):
         arr = np.asarray(data)
 
@@ -1683,8 +1848,10 @@ class rectObj(sonObj):
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
-                data = self._prepare_export_uint16_display(data)
-                source_scale_bounds = self._get_colormap_bounds(data)
+                data = self._prepare_export_uint16(data)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(data)
             # Aggregate repeated pixel hits by mean intensity so rectified
             # outputs better match non-rectified contrast (max aggregation tends
             # to bias brightness high and look washed out).
@@ -1778,6 +1945,8 @@ class rectObj(sonObj):
 
             if use_16bit:
                 sonRect_raw16 = self._prepare_export_uint16(sonRect)
+                if apply_post_rect_colormap:
+                    sonRect_raw16 = self._match_rect_chunk_global_median(sonRect_raw16, imgOutPrefix, son=son)
                 if apply_post_rect_colormap:
                     use_uint8_rgb = self._export_colormap_as_uint8()
                     if source_scale_bounds is not None:
@@ -2475,8 +2644,10 @@ class rectObj(sonObj):
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
-                img = self._prepare_export_uint16_display(img)
-                source_scale_bounds = self._get_colormap_bounds(img)
+                img = self._prepare_export_uint16(img)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2508,6 +2679,8 @@ class rectObj(sonObj):
             # Export georectified image
             if use_16bit:
                 out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    out16_raw = self._match_rect_chunk_global_median(out16_raw, imgOutPrefix, son=son)
                 if apply_post_rect_colormap:
                     use_uint8_rgb = self._export_colormap_as_uint8()
                     if source_scale_bounds is not None:
@@ -2562,8 +2735,10 @@ class rectObj(sonObj):
             apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
-                img = self._prepare_export_uint16_display(img)
-                source_scale_bounds = self._get_colormap_bounds(img)
+                img = self._prepare_export_uint16(img)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2649,6 +2824,8 @@ class rectObj(sonObj):
             # Export georectified image
             if son and use_16bit:
                 out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    out16_raw = self._match_rect_chunk_global_median(out16_raw, imgOutPrefix, son=son)
                 if apply_post_rect_colormap:
                     use_uint8_rgb = self._export_colormap_as_uint8()
                     if source_scale_bounds is not None:

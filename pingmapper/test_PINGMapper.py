@@ -164,6 +164,11 @@ def test(ds):
     egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
     egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
                             ## If std, the number of standard deviations to retain
+    tvg = True # Additional range-based correction applied before EGN
+    tvg_spreading_k = 40.0 # Geometric spreading term (typical two-way is 40)
+    tvg_absorption_db_m = 0.035 # Absorption term [dB/m]
+    tvg_min_range = 0.2 # Minimum range floor [m] to avoid near-range over-gain
+    tvg_cap_db = 50.0 # Cap TVG boost [dB] to limit far-range noise amplification
 
 
     # Sonogram Exports
@@ -277,6 +282,11 @@ def test(ds):
         'egn':egn,
         'egn_stretch':egn_stretch,
         'egn_stretch_factor':egn_stretch_factor,
+        'tvg':tvg,
+        'tvg_spreading_k':tvg_spreading_k,
+        'tvg_absorption_db_m':tvg_absorption_db_m,
+        'tvg_min_range':tvg_min_range,
+        'tvg_cap_db':tvg_cap_db,
         'tileFile':tileFile,
         'wcp':wcp,
         'wcr':wcr,
