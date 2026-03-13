@@ -242,38 +242,41 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
         chunks = pd.unique(sDF['chunk_id'])
         transects = pd.unique(sDF['transect'])
 
-        i = 1
-        t = 0
-        while i <= max(chunks):
+        if len(chunks) > 1:
+            i = 1
+            t = 0
+            max_chunk = int(max(chunks))
 
-        # for i in chunks:
+            while i <= max_chunk:
+                cur_chunk = sDF[sDF['chunk_id'] == i]
+                if cur_chunk.empty:
+                    i += 1
+                    continue
 
-            # # Get second to last row of previous chunk
-            # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-            # Get index of first row of current chunk
-            curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-            curTransect = curRow['transect'].values[0]
-            curRow = curRow.index[0]
-            
-            if curTransect == t:
-                # Get second to last row of previous chunk
-                lastRow = sDF[sDF['chunk_id'] == i-1].iloc[-2]
+                cur_row = cur_chunk.iloc[[0]]
+                cur_transect = cur_row['transect'].values[0]
+                cur_idx = cur_row.index[0]
 
-                # Update current chunks first row from lastRow
-                sDF.at[curRow, "lons"] = float(lastRow["lons"])
-                sDF.at[curRow, "lats"] = float(lastRow["lats"])
-                sDF.at[curRow, "utm_es"] = float(lastRow["utm_es"])
-                sDF.at[curRow, "utm_ns"] = float(lastRow["utm_ns"])
-                sDF.at[curRow, "cog"] = float(lastRow["cog"])
-                sDF.at[curRow, "instr_heading"] = float(lastRow["instr_heading"])
-                # sDF.at[curRow, 'pixM'] = lastRow['pixM']
+                if cur_transect == t:
+                    prev_chunk = sDF[sDF['chunk_id'] == i - 1]
+                    if not prev_chunk.empty:
+                        # Prefer second-to-last row, but fall back to last row
+                        # when very small datasets have only one ping in chunk.
+                        if len(prev_chunk) >= 2:
+                            last_row = prev_chunk.iloc[-2]
+                        else:
+                            last_row = prev_chunk.iloc[-1]
 
-                del lastRow
-            else:
-                t += 1
+                        sDF.at[cur_idx, "lons"] = float(last_row["lons"])
+                        sDF.at[cur_idx, "lats"] = float(last_row["lats"])
+                        sDF.at[cur_idx, "utm_es"] = float(last_row["utm_es"])
+                        sDF.at[cur_idx, "utm_ns"] = float(last_row["utm_ns"])
+                        sDF.at[cur_idx, "cog"] = float(last_row["cog"])
+                        sDF.at[cur_idx, "instr_heading"] = float(last_row["instr_heading"])
+                else:
+                    t += 1
 
-            i+=1
-        del curRow, i
+                i += 1
 
         son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
         

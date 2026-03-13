@@ -83,6 +83,7 @@ from pingverter import (
     gar2pingmapper,
     jsf2pingmapper,
     xtf2pingmapper,
+    sdf2pingmapper,
 )
 
 import cv2
@@ -388,6 +389,10 @@ def read_master_func(logfilename='',
     # Prepare XTF file for PINGMapper
     elif file_type == '.xtf':
         sonar_obj = xtf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
+
+    # Prepare SDF file for PINGMapper
+    elif file_type == '.sdf':
+        sonar_obj = sdf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
 
     # Unknown
     else:

@@ -1409,14 +1409,27 @@ class rectObj(sonObj):
 
         '''
         '''
+        if df is None or len(df) == 0:
+            return
+
         start_time = time.time()
 
         # Calculate the sonar return coordinates
         dfOut = []
-        for i, row in df.iterrows():
-            dfOut.append(self._calcSonReturnCoords(row, heading))
+        for _, row in df.iterrows():
+            ping_df = self._calcSonReturnCoords(row, heading)
+            if ping_df is None:
+                continue
+            if hasattr(ping_df, 'empty') and ping_df.empty:
+                continue
+            dfOut.append(ping_df)
 
-        dfAll = pd.concat(dfOut)
+        if len(dfOut) == 0:
+            return
+
+        dfAll = pd.concat(dfOut, ignore_index=True)
+        if dfAll.empty:
+            return
 
         t1 = round(time.time() - start_time, ndigits=1)
 
@@ -1424,6 +1437,8 @@ class rectObj(sonObj):
         start_time = time.time()
         # dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
         dfAll = self._getSonarReturns(dfAll, chunk, son=son)
+        if dfAll is None or len(dfAll) == 0:
+            return
         t2 = round(time.time() - start_time, ndigits=1)
 
         # Do rectification

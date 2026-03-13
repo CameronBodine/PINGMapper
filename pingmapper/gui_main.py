@@ -91,7 +91,7 @@ def gui(batch: bool):
         # in_input = sg.In(key='inFile', size=(80,1))
         in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
         browse_input = sg.FileBrowse(
-            file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog *.jsf *.xtf"),),
+            file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog *.jsf *.xtf *.sdf"),),
             initial_folder=os.path.dirname(default_params['inFile']),
         )
         # browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))

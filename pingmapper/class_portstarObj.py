@@ -669,6 +669,8 @@ class portstarObj(object):
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
+            if imgs is None or len(imgs) == 0:
+                continue
 
             # Preserve all source bands for sonar mosaics when no explicit band
             # selection is provided. This is required for colorized 16-bit
@@ -743,7 +745,7 @@ class portstarObj(object):
             outMosaic.append(outTIF)
 
         gc.collect()
-        return outTIF
+        return outMosaic
 
     #=======================================================================
     def _mosaicVRT(self,
@@ -790,6 +792,8 @@ class portstarObj(object):
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
+            if imgs is None or len(imgs) == 0:
+                continue
 
             # Preserve all source bands for sonar mosaics when no explicit band
             # selection is provided.

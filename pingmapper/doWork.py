@@ -17,7 +17,7 @@ from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
 
 
-SUPPORTED_EXTS = ('.DAT', '.sl2', '.sl3', '.RSD', '.svlog', '.jsf', '.xtf')
+SUPPORTED_EXTS = ('.DAT', '.sl2', '.sl3', '.RSD', '.svlog', '.jsf', '.xtf', '.sdf')
 
 
 def _coerce_batch(batch):
@@ -80,7 +80,7 @@ def doWork(
         - Explicit list: set ``in_files``
 
     Args:
-        in_file (str | None): Path to a single sonar file (.DAT/.sl2/.sl3/.RSD/.svlog).
+        in_file (str | None): Path to a single sonar file (.DAT/.sl2/.sl3/.RSD/.svlog/.jsf/.xtf/.sdf).
         in_dir (str | None): Parent directory to search recursively when batch=True.
         in_files (list[str] | None): Explicit list of sonar files to process.
         out_dir (str): Output project root folder.
