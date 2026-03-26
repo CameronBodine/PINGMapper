@@ -1022,11 +1022,14 @@ def read_master_func(logfilename='',
     chunks = np.unique(chunks).astype(int)
 
     if len(chunks) == 0:
-        raise ValueError(
+        print(
             '\n\nNo valid side-scan chunks available for depth processing. '\
-            'This usually means prior filtering produced empty metadata CSVs. '\
-            'Relax filtering settings or reprocess from raw files.'
+            'Continuing with down-looking beams only.'
         )
+        print('Disabling side-scan-only operations (auto depth, bedpick plot, shadow removal).')
+        detectDep = 0
+        pltBedPick = False
+        remShadow = 0
 
     # # Automatically estimate depth
     if detectDep > 0:
