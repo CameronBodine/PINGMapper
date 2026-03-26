@@ -1,6 +1,11 @@
 
 import os, sys
 
+# Configure TensorFlow runtime logging/CPU backend before any TF import occurs.
+# Use setdefault so user-provided environment values still take precedence.
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
+os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
+
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
