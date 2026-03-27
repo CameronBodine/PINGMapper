@@ -2384,11 +2384,11 @@ class sonObj(object):
 
         Notes
         -----
-        - egn_tone_gamma < 1.0 brightens mid-tones; > 1.0 darkens.
-        - egn_tone_gain > 1.0 boosts overall brightness; < 1.0 reduces.
+        - tone_gamma < 1.0 brightens mid-tones; > 1.0 darkens.
+        - tone_gain > 1.0 boosts overall brightness; < 1.0 reduces.
         '''
-        gamma = getattr(self, 'egn_tone_gamma', 1.0)
-        gain = getattr(self, 'egn_tone_gain', 1.0)
+        gamma = getattr(self, 'tone_gamma', 1.0)
+        gain = getattr(self, 'tone_gain', 1.0)
 
         try:
             gamma = float(gamma)

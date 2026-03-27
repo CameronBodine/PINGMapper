@@ -285,8 +285,8 @@ def gui(batch: bool):
         range=(0.1, 3.0),
         resolution=0.05,
         orientation='h',
-        key='egn_tone_gamma',
-        default_value=float(default_params['egn_tone_gamma']),
+        key='tone_gamma',
+        default_value=float(default_params['tone_gamma']),
         tooltip=tip_gamma,
     )
     text_egn_gain = sg.Text('Tone Gain [0.0-3.0]', size=(20,1))
@@ -294,8 +294,8 @@ def gui(batch: bool):
         range=(0.0, 3.0),
         resolution=0.05,
         orientation='h',
-        key='egn_tone_gain',
-        default_value=float(default_params['egn_tone_gain']),
+        key='tone_gain',
+        default_value=float(default_params['tone_gain']),
         tooltip=tip_gain,
     )
 
@@ -664,8 +664,8 @@ def gui(batch: bool):
             'egn':values['egn'],
             'egn_stretch':egn_stretch,
             'egn_stretch_factor':float(values['egn_stretch_factor']),
-            'egn_tone_gamma':float(values['egn_tone_gamma']),
-            'egn_tone_gain':float(values['egn_tone_gain']),
+            'tone_gamma':float(values['tone_gamma']),
+            'tone_gain':float(values['tone_gain']),
             'wcp':values['wcp'],
             'wcm':values['wcm'],
             'wcr':values['wcr'],
