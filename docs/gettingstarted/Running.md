@@ -21,9 +21,20 @@ After [installing](./Installation.md) `PINGMapper` and running the [tests](./Tes
 
 ## Process single sonar log
 
-### Note on Humminbird sonar file structure
+### Note on sonar file structure
 
-Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure:
+PINGMapper supports multiple sonar file formats:
+
+| Format | Extension(s) | Compatible Systems |
+|--------|-------------|-------------------|
+| Humminbird&reg; | `.DAT` | All Humminbird&reg; side-imaging models |
+| Lowrance&reg; | `.sl2`, `.sl3` | Lowrance&reg; side-imaging units |
+| Garmin&reg; | `.RSD` | Garmin&reg; Panoptix / LiveScope systems |
+| Cerulean&reg; | `.svlog` | Cerulean&reg; sonar systems |
+| JSF | `.jsf` | EdgeTech&reg; and other JSF-compatible systems |
+| XTF | `.xtf` | Triton&reg; and other XTF-compatible systems |
+
+**Humminbird&reg; file structure:**  Sonar recordings consist of a `DAT` file and a commonly named subdirectory containing `SON` and `IDX` files:
 
 ```bash
 ParentFolder
@@ -67,10 +78,10 @@ First, let's navigate to the `.DAT` file we want to process. For this example, w
 
 <img src="../../assets/running/browse_Window.PNG"/>
 
-Navigate to the sonar log (.DAT, .sl2, .sl3) and select it. 
+Navigate to the sonar log and select it. 
 
 {: .g2k }
-> Compatible with .DAT (Humminbird&reg;) and .sl2/.sl3 (i.e. Lowrance&reg;) sonar logs. *NOTE: v3.0 added support for .sl2 and .sl3 ([Release Notes](https://github.com/CameronBodine/PINGMapper/releases/tag/v3.0.0)).*
+> Compatible with `.DAT` (Humminbird&reg;), `.sl2`/`.sl3` (Lowrance&reg;), `.RSD` (Garmin&reg;), `.svlog` (Cerulean&reg;), `.jsf` (JSF format), and `.xtf` (XTF format) sonar logs. See [Note on sonar file structure](#note-on-sonar-file-structure) for details. *Support for `.jsf` and `.xtf` added in v5.2.0.*
 
 
 The name of the file will be visible in the `File name:` box, indicating it is selected:
@@ -150,17 +161,42 @@ Decide if you want the sonar intensities to be corrected.
 
 <img src="../../assets/running/gui_EGN.PNG"/>
 
-1. `Empirical Gain Normalization (EGN)`: Option to do Empirical Gain Normalization (EGN) to correct for sonar attenuation.
+**Tone Controls** (applied before or independently of EGN):
 
-2. `EGN Stretch`: Specify how to stretch the pixel values after correction:
+1. `Tone Gamma [0.1–3.0]`: Apply gamma correction to mid-tone brightness.
+    - `1.0`: No correction (default).
+    - `< 1.0`: Brighten mid-tones.
+    - `> 1.0`: Darken mid-tones.
+
+2. `Tone Gain [0.0–3.0]`: Linear brightness multiplier applied to all intensities.
+    - `1.0`: No correction (default).
+    - `> 1.0`: Brighten overall intensity.
+    - `< 1.0`: Darken overall intensity.
+
+**Empirical Gain Normalization (EGN)**:
+
+3. `Empirical Gain Normalization (EGN)`: Option to do Empirical Gain Normalization (EGN) to correct for sonar attenuation.
+
+4. `EGN Stretch`: Specify how to stretch the pixel values after correction:
     - `None`: Do not apply stretch.
     - `Min-Max`: Stretch to global minimum and maximum.
     - `Percent Clip`: Do percent clip [Recommended]
 
-3. `EGN Stretch Factor``
+5. `EGN Stretch Factor`
     - If `Percent Clip` is selected, the value supplied to `EGN Stretch Factor` specifies percent of the histogram tails to clip. This is similar to the [stretch function](https://desktop.arcgis.com/en/arcmap/latest/manage-data/raster-and-images/stretch-function.htm) provided by ArcGIS.
 
 ### Step 8
+Configure global export options that apply to all image outputs.
+
+1. `Export 16-bit TIFFs`: When checked, sonogram tiles and georectified imagery are exported as 16-bit grayscale TIFFs instead of 8-bit images. This preserves the full dynamic range of the sonar data and is recommended for quantitative analysis.
+    - Requires `Image Format` (Step 9) to be set to `.tif`.
+
+2. `Colormapped RGB uses 8-bit channels`: When a colormap is applied, the resulting RGB image uses 8-bit channels per channel (standard 24-bit color). Uncheck only if you need 16-bit color channels per channel (uncommon). Enabling this keeps file sizes smaller.
+
+{: .g2k }
+> *16-bit TIFF export was added in v5.2.0.*
+
+### Step 9
 Decide if raw (waterfall) sonograms should be exported.
 
 {: .g2k }
@@ -170,19 +206,19 @@ Decide if raw (waterfall) sonograms should be exported.
 
 1. `WCP`: Export raw (waterfall) sonograms with the water column present.
 2. `WCM`: Export raw (waterfall) sonograms with the water column masked.
-3. `SRC`: Export raw (waterfall) sonograms with the water column removed and slant range corrected.
+3. `WCR`: Export raw (waterfall) sonograms with the water column removed and slant range corrected.
 4. `WCO`: Export raw (waterfall) sonograms with the water column only.
 
 5. `Speed Correct`: Create speed corrected (based on distance traveled) tiles.
-6. `Mask Shadows`: Mask sonar shadows. *Shadow Removal must be selected [see Step 9](#step-9)*.
+6. `Mask Shadows`: Mask sonar shadows. *Shadow Removal must be selected [see Step 10](#step-10)*.
 7. `Max Crop`: Crop to minimum depth and maximum range.
-8. `Image Format`: Specify sonogram file type (".png" or ".jpg"). This applies to sonograms and plots.
+8. `Image Format`: Specify sonogram file type (`.png`, `.jpg`, or `.tif`). This applies to sonograms and plots. Use `.tif` when exporting 16-bit TIFFs (see [Step 8](#step-8)).
 9. `Tile Colormap`: Apply colormap to sonogram. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
 {: .g2k }
 > Check out the [Colormap Tutorial](../tutorials/Colormaps.md) for recommendations.
 
-### Step 9
+### Step 10
 Update depth detection and shadow removal parameters as necessary:
 
 <img src="../../assets/running/gui_DepthShadow.PNG"/>
@@ -204,7 +240,7 @@ Update depth detection and shadow removal parameters as necessary:
     - `Remove all shadows`: Remove all shadows.
     - `Remove only bank shadows`: Remove only those shadows in the far-field. In a river, this is usually caused by the river bank.
 
-### Step 10
+### Step 11
 Update georectification parameters as necessary:
 
 <img src="../../assets/running/gui_Rectify.PNG"/>
@@ -219,28 +255,32 @@ Update georectification parameters as necessary:
 
 4. `Sonar Colormap`: Apply colormap to rectified imagery. Any [Matplotlib colormap](https://matplotlib.org/stable/tutorials/colors/colormaps.html) can be used. If the colormap needs to be reversed, append `_r` to the colormap name.
 
-5. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery (exported from step 10). Options include:
-    - `0` or `False`: Don't Mosaic.
+5. `Export Sonar Mosaic`: Option to mosaic georectified sonar imagery. Options include:
+    - `False`: Don't Mosaic.
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
 
-{: .g2k }
-> You must check `WCP` and/or `WCR` in [Step 10](#step-10) in order to export sonar mosaics.
+6. `# Chunks per Mosaic [0==All Chunks]`: Limit mosaic to a subset of chunks.
+    - `0`: Include all chunks in mosaic.
+    - `> 0`: Use only this many chunks per mosaic (useful for very large recordings).
 
-### Step 11
+{: .g2k }
+> You must check `WCP` and/or `WCR` in [Step 11](#step-11) in order to export sonar mosaics.
+
+### Step 12
 Update automated substrate mapping parameters as necessary:
 
 <img src="../../assets/running/gui_Substrate.PNG"/>
 
 1. `Map Substrate [Raster]`: Export raster georectified substrate maps. Required to export maps as polygon shapefile.
 
-2. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters (exported from step 11). Options include:
-    - `0` or `False`: Don't Mosaic.
+2. `Export Substrate Mosaic`: Option to mosaic georectified substrate classification rasters. Options include:
+    - `False`: Don't Mosaic.
     - `GTiff`: Export mosaic as GeoTiff.
     - `VRT`: Export mosaic as VRT (virtual raster).
 
 {: .g2k }
-> You must check `Map Substrate [Raster]` in [Step 11](#step-11) in order to export substrate mosaics.
+> You must check `Map Substrate [Raster]` in [Step 12](#step-12) in order to export substrate mosaics.
 
 3. `Pixel Resolution`: Specify an output pixel resolution [in meters]:
     - `0`: Use default resolution [~0.02 m].
@@ -251,7 +291,7 @@ Update automated substrate mapping parameters as necessary:
 5. `Export Substrate Plots`: Option to export substrate plots.
 
 
-### Step 12
+### Step 13
 Select miscellaneous exports:
 
 <img src="../../assets/running/gui_Misc.PNG"/>
@@ -262,7 +302,7 @@ Select miscellaneous exports:
 2. `Coverage`: Export polygon shapefile of sonar coverage and point shapefile of vessel track.
 
 
-### Step 13
+### Step 14
 Buttons: 
 
 <img src="../../assets/running/gui_Buttons.PNG"/>
@@ -280,7 +320,9 @@ PING-Mapper includes a script which will find all sonar recordings in a director
 
 ### Note on sonar file structure
 
-Sonar recordings from Humminbird&reg; side imaging sonar systems are saved to a SD card inserted into the control head. Each sonar recording consists of a `DAT` file and commonly named subdirectory containing `SON` and `IDX` files.  The directory of saved recordings have the following structure, where `ParentDirectory`:
+PINGMapper supports the same file formats in batch mode as in single-log mode. See the [Note on sonar file structure](#note-on-sonar-file-structure) above for the full list of supported formats and their directory structures.
+
+For Humminbird&reg; recordings, the directory of saved recordings should have the following structure:
 
 ```
 AllRecordings
@@ -324,11 +366,11 @@ Press the `Batch Sonar Logs` button:
 
 1. Provide the path to the `Parent Folder of Recordings to Process` by browsing to the appropriate location. In the example above, you would browse and select the `AllRecordings` folder.
 2. Provide path to the `Output Folder` where all processed outputs will be saved.
-
-<img src="../../assets/running/gui_Batch.PNG"/>
+3. Optionally provide a `Project Name Prefix` and/or `Project Name Suffix` to label output folders for this batch run.
+4. `Preserve Input Subdirectory Structure`: When checked, the output folder will mirror the directory structure of the input folder. This is useful when recordings are organized into subfolders (e.g., by survey date or location).
 
 {: .warning }
 > There have been issues with exporting datasets to cloud drives, specifically OneDrive (see [Issue 133](https://github.com/CameronBodine/PINGMapper/issues/133)). This may also be a problem for Google Drive. Please export datasets to a local folder instead.
 
-### Step 3
+### Step 4
 Enter all remaining process parameters as detailed [above](#step-4).

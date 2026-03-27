@@ -32,21 +32,27 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
   - Decode Cerulean&reg; Omniscan 450SS *.svlog files. Cerulean&reg; support made possible by open-source svlog file format. Information available from the [Cerulean Website](https://ceruleansonar.com/), [Cerulean Ping Protocol](https://docs.ceruleansonar.com/c/cerulean-ping-protocol/), and [Blue Robotics Ping Protocol](https://github.com/bluerobotics/ping-protocol).
 
+  - Decode JSF (*.jsf) files. JSF format used by EdgeTech&reg; and other compatible systems. *Added in v5.2.0.*
+
+  - Decode XTF (*.xtf) files. XTF format used by Triton&reg; and a wide range of sonar systems. *Added in v5.2.0.*
+
   - If it doesn't work for these supported recordings, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 - Export all metadata from sonar files to .CSV.
 
 - Automatically detect depth (i.e. [Zheng et al. 2021](https://www.mdpi.com/2072-4292/13/10/1945)) and shadows in side scan channels.
 
-- Correct sonar backscatter with Empiracle Gain Normalization.
+- Correct sonar backscatter with Empirical Gain Normalization (EGN) and tone controls (gamma correction and gain adjustment). *Tone controls added in v5.2.0.*
 
-- Export un-rectified sonar tiles with water column present (WCP) AND/OR export un-rectified sonograms with water column removed (WCR) using Humminbird depth estimates OR automated depth detections.
+- Export un-rectified sonar tiles with water column present (WCP), water column masked (WCM), water column removed (WCR), or water column only (WCO).
+
+- Export sonogram tiles as 8-bit or 16-bit TIFFs. *16-bit export added in v5.2.0.*
 
 - Export speed corrected un-rectified sonograms.
 
 - Smooth and interpolate GPS track points.
 
-- Export georectified WCP (spatially inaccurate due to presence of water column) AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
+- Export georectified WCP AND/OR WCR sonar imagery for use in GIS w/wo shadows removed.
 
 - Mosaic georectified sonar imagery.
 
@@ -59,7 +65,7 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 
 ## Compatible Sonar Systems
 
-`PINGMapper` is currently compatible with Humminbird&reg; and Lowrance&reg; side imaging sonar systems. The software has been tested with:
+`PINGMapper` is currently compatible with the following sonar systems and file formats:
 
 ### Humminbird&reg; Models:
 - 998
@@ -80,7 +86,13 @@ More information on PING-Mapper exports can be found [here](https://cameronbodin
 ### Cerulean&reg; Models:
 - Omniscan 450SS
 
-If `PINGMapper` doesn't work for these support systems and file formats, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+### JSF File Format *(v5.2.0+)*:
+- `.jsf` — EdgeTech&reg; and other JSF-compatible systems
+
+### XTF File Format *(v5.2.0+)*:
+- `.xtf` — Triton&reg; and a wide range of sonar systems
+
+If `PINGMapper` doesn't work for these supported systems and file formats, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
 
 
 
