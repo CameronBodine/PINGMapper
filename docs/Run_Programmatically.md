@@ -6,7 +6,7 @@ single sonar file or a batch directory.
 ### Prerequisites
 
 - PINGMapper is installed or the repo is on `PYTHONPATH`.
-- You have a valid sonar file (e.g., `.DAT`, `.sl2`, `.sl3`, `.RSD`, `.svlog`).
+- You have a valid sonar file (e.g., `.DAT`, `.sl2`, `.sl3`, `.RSD`, `.svlog`, `.jsf`, `.xtf`, `.sdf`).
 - You have write access to the output folder.
 
 ### Minimal Single-File Example

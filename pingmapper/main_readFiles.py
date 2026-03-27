@@ -76,10 +76,23 @@ from scipy.signal import savgol_filter
 
 sys.path.insert(0, r'Z:\UDEL\PythonRepos\PINGVerter')
 
-from pingverter import hum2pingmapper, low2pingmapper, cerul2pingmapper, gar2pingmapper
+from pingverter import (
+    hum2pingmapper,
+    low2pingmapper,
+    cerul2pingmapper,
+    gar2pingmapper,
+    jsf2pingmapper,
+    xtf2pingmapper,
+    sdf2pingmapper,
+)
 
 import cv2
 import copy
+
+
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
 
 
 #===========================================
@@ -106,6 +119,9 @@ def read_master_func(logfilename='',
                      pix_res_map=0,
                      x_offset=0,
                      y_offset=0,
+                     export_16bit=False,
+                     export_colormap_uint8=True,
+                     export_16bit_colormap=False,
                      tileFile='.png',
                      egn=False,
                      egn_stretch=0,
@@ -343,9 +359,10 @@ def read_master_func(logfilename='',
     start_time = time.time()
     # Determine sonar recording type
     _, file_type = os.path.splitext(inFile)
+    file_type = file_type.lower()
 
     # Prepare Humminbird file for PINGMapper
-    if file_type == '.DAT':
+    if file_type == '.dat':
         sonar_obj = hum2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Lowrance file for PINGMapper    
@@ -353,7 +370,7 @@ def read_master_func(logfilename='',
         sonar_obj = low2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Garmin file for PINGMapper
-    elif file_type == '.RSD':
+    elif file_type == '.rsd':
         sonar_obj = gar2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
 
     # Prepare Cerulean file for PINGMapper
@@ -361,6 +378,18 @@ def read_master_func(logfilename='',
         sonar_obj = cerul2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
         detectDep = 1 # No depth in cerulean files, so set to Zheng et al. 2021
         instDepAvail = False
+
+    # Prepare JSF file for PINGMapper
+    elif file_type == '.jsf':
+        sonar_obj = jsf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
+
+    # Prepare XTF file for PINGMapper
+    elif file_type == '.xtf':
+        sonar_obj = xtf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
+
+    # Prepare SDF file for PINGMapper
+    elif file_type == '.sdf':
+        sonar_obj = sdf2pingmapper(inFile, projDir, nchunk=nchunk, tempC=tempC, exportUnknown=exportUnknown)
 
     # Unknown
     else:
@@ -384,14 +413,19 @@ def read_master_func(logfilename='',
         son = sonObj(meta['sonFile'], sonar_obj.humFile, projDir, sonar_obj.tempC, sonar_obj.nchunk)
 
         son.flip_port = False
-        if beam == 'B002':
-            if file_type == '.sl2' or file_type == '.sl3':
+        if str(beam).startswith('B002'):
+            if file_type in ['.sl2', '.sl3', '.xtf']:
                 son.flip_port = True
+        son.range_crop_after_flip = False
 
         # Store other parameters as attributes
         son.fixNotDat = fixNoDat
         son.metaDir = sonar_obj.metaDir
         son.beamName = meta['beamName']
+        if file_type == '.xtf':
+            is_xtf_sidescan = str(son.beamName).startswith('ss_port') or str(son.beamName).startswith('ss_star')
+            son.flip_port = str(son.beamName).startswith('ss_port')
+            son.range_crop_after_flip = is_xtf_sidescan
         son.beam = beam
         son.headBytes = sonar_obj.headBytes
         # son.pixM = sonar_obj.pixM
@@ -402,7 +436,25 @@ def read_master_func(logfilename='',
         #     son.son8bit = sonar_obj.son8bit
         # else:
         son.son8bit = sonar_obj.son8bit
+        if hasattr(sonar_obj, 'sample_dtype'):
+            son.sample_dtype = sonar_obj.sample_dtype
+        if hasattr(sonar_obj, 'export_raw_16bit'):
+            son.export_raw_16bit = sonar_obj.export_raw_16bit
+        if hasattr(son, 'sample_dtype'):
+            try:
+                son.output_bit_depth = 16 if np.dtype(son.sample_dtype).itemsize > 1 else 8
+            except Exception:
+                son.output_bit_depth = 8
+        son.export_16bit = bool(export_16bit) and (
+            (getattr(son, 'output_bit_depth', 8) > 8) or (not bool(getattr(son, 'son8bit', True)))
+        )
+        son.export_colormap_uint8 = bool(export_colormap_uint8)
         son.export_beam = True
+        son.tvg = bool(tvg)
+        son.tvg_spreading_k = float(tvg_spreading_k)
+        son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+        son.tvg_min_range = float(tvg_min_range)
+        son.tvg_cap_db = float(tvg_cap_db)
 
         # print(son.beamName, son.son8bit)
 
@@ -428,13 +480,9 @@ def read_master_func(logfilename='',
 
     # Both port and starboard are required for side scan workflows
     ## Make copy of ss if both aren't available
-    ss_dups = {
-        'ss_port': ['ss_star', 'B003'],
-        'ss_star': ['ss_port', 'B002']
-    }
     ss_chan_avail = []
     for son in sonObjs:
-        if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+        if _is_sidescan_beam(son.beamName):
             ss_chan_avail.append(son)
     if len(ss_chan_avail) == 0:
         # print('\n\nNo side-scan channels available. Aborting!')
@@ -466,12 +514,27 @@ def read_master_func(logfilename='',
 
 
     elif len(ss_chan_avail) == 1:
+        son = ss_chan_avail[0]
         print('\n\nMaking copy of {} to ensure PINGMapper compatibility'.format(son.beamName))
-        origBeam = son.beamName
+        origBeam = str(son.beamName)
         print(son.beam, son.beamName)
         son_copy = copy.deepcopy(ss_chan_avail[0])
-        son_copy.beamName = ss_dups[origBeam][0]
-        son_copy.beam = ss_dups[origBeam][1]
+
+        if origBeam.startswith('ss_port'):
+            son_copy.beamName = origBeam.replace('ss_port', 'ss_star', 1)
+        elif origBeam.startswith('ss_star'):
+            son_copy.beamName = origBeam.replace('ss_star', 'ss_port', 1)
+        else:
+            son_copy.beamName = 'ss_star'
+
+        orig_beam_code = str(son.beam)
+        if orig_beam_code.startswith('B002'):
+            son_copy.beam = orig_beam_code.replace('B002', 'B003', 1)
+        elif orig_beam_code.startswith('B003'):
+            son_copy.beam = orig_beam_code.replace('B003', 'B002', 1)
+        else:
+            son_copy.beam = 'B003'
+
         son_copy.export_beam = False
 
         # Make copy of meta file
@@ -516,6 +579,9 @@ def read_master_func(logfilename='',
             son.tone_gain = tone_gain
             # Do range crop, if necessary
             if cropRange > 0.0:
+                if file_type == '.xtf' and _is_sidescan_beam(getattr(son, 'beamName', '')):
+                    continue
+
                 # # Convert to distance in pix
                 # d = round(cropRange / son.pixM, 0).astype(int)
 
@@ -544,7 +610,7 @@ def read_master_func(logfilename='',
             son.wcm = wcm
 
             if wcr:
-                if beam == "ss_port" or beam == "ss_star":
+                if _is_sidescan_beam(beam):
                     son.wcr_src = True
                 else:
                     son.wcr_src = False
@@ -594,6 +660,23 @@ def read_master_func(logfilename='',
             # Update sonObj with metadat items
             for attr, value in metaFile.__dict__.items():
                 setattr(son, attr, value)
+
+            if not hasattr(son, 'tvg'):
+                son.tvg = False
+            if not hasattr(son, 'tvg_spreading_k'):
+                son.tvg_spreading_k = 40.0
+            if not hasattr(son, 'tvg_absorption_db_m'):
+                son.tvg_absorption_db_m = 0.035
+            if not hasattr(son, 'tvg_min_range'):
+                son.tvg_min_range = 0.2
+            if not hasattr(son, 'tvg_cap_db'):
+                son.tvg_cap_db = 50.0
+
+            son.tvg = bool(tvg)
+            son.tvg_spreading_k = float(tvg_spreading_k)
+            son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+            son.tvg_min_range = float(tvg_min_range)
+            son.tvg_cap_db = float(tvg_cap_db)
 
             sonObjs.append(son)
 
@@ -657,7 +740,7 @@ def read_master_func(logfilename='',
 
         if remShadow:
             for son in sonObjs:
-                if son.beamName == "ss_port":
+                if str(son.beamName).startswith("ss_port"):
                     if son.remShadow == remShadow:
                         remShadow = -1*remShadow
                         print("\nUsing previous shadow settings. No need to re-process.")
@@ -668,8 +751,15 @@ def read_master_func(logfilename='',
 
         if egn:
             for son in sonObjs:
-                if son.beamName == "ss_port":
-                    if son.egn == egn:
+                if str(son.beamName).startswith("ss_port"):
+                    if (
+                        son.egn == egn and
+                        bool(getattr(son, 'tvg', False)) == bool(tvg) and
+                        float(getattr(son, 'tvg_spreading_k', 40.0)) == float(tvg_spreading_k) and
+                        float(getattr(son, 'tvg_absorption_db_m', 0.035)) == float(tvg_absorption_db_m) and
+                        float(getattr(son, 'tvg_min_range', 0.2)) == float(tvg_min_range) and
+                        float(getattr(son, 'tvg_cap_db', 50.0)) == float(tvg_cap_db)
+                    ):
                         egn = False
                         print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
                         print("\tSetting egn to 0.")
@@ -678,7 +768,7 @@ def read_master_func(logfilename='',
 
         if pred_sub:
             for son in sonObjs:
-                if son.beamName == "ss_port":
+                if str(son.beamName).startswith("ss_port"):
                     if son.remShadow > 0:
                         pred_sub = 0
                         # remShadow = 0
@@ -694,7 +784,7 @@ def read_master_func(logfilename='',
 
             beam = son.beamName
             if wcr:
-                if beam == "ss_port" or beam == "ss_star":
+                if _is_sidescan_beam(beam):
                     son.wcr_src = True
                 else:
                     son.wcr_src = False
@@ -845,13 +935,26 @@ def read_master_func(logfilename='',
                         attMin = str(attMin).split('.')[0]
                         attMax = str(attMax).split('.')[0]
                 else:
-                    attMin = np.round(np.nanmin(df[att]), 3)
-                    attMax = np.round(np.nanmax(df[att]), 3)
-                    attAvg = np.round(np.nanmean(df[att]), 3)
+                    col_numeric = pd.to_numeric(df[att], errors='coerce')
+                    col_vals = col_numeric.to_numpy(dtype=float)
 
-                    # Store number of chunks
-                    if (att == 'chunk_id'):
-                        son.chunkMax = int(attMax)
+                    if np.isfinite(col_vals).any():
+                        attMin = np.round(np.nanmin(col_vals), 3)
+                        attMax = np.round(np.nanmax(col_vals), 3)
+                        attAvg = np.round(np.nanmean(col_vals), 3)
+
+                        # Store number of chunks
+                        if (att == 'chunk_id'):
+                            son.chunkMax = int(attMax)
+                    else:
+                        non_na = df[att].dropna()
+                        if len(non_na) > 0:
+                            attMin = str(non_na.iloc[0])
+                            attMax = str(non_na.iloc[-1])
+                        else:
+                            attMin = 'nan'
+                            attMax = 'nan'
+                        attAvg = '-'
 
                 # Check if data are valid.
                 if (att == "date") or (att == "time") or (att == "transect"):
@@ -907,7 +1010,7 @@ def read_master_func(logfilename='',
         portstar = []
         for son in sonObjs:
             beam = son.beamName
-            if beam == "ss_port" or beam == "ss_star":
+            if _is_sidescan_beam(beam):
                 portstar.append(son)
             else:
                 # pass # Don't add non-port/star objects since they can't be rectified
@@ -1010,7 +1113,7 @@ def read_master_func(logfilename='',
     portstar = []
     for son in sonObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             portstar.append(son)
 
     # Create portstarObj
@@ -1108,7 +1211,7 @@ def read_master_func(logfilename='',
             son.detectDep = detectDep
 
             beam = son.beamName
-            if beam != "ss_port" and beam != "ss_star":
+            if not _is_sidescan_beam(beam):
                 son._loadSonMeta()
                 sonDF = son.sonMetaDF
                 son.detectDep = 0
@@ -1117,7 +1220,9 @@ def read_master_func(logfilename='',
                 sonDF['dep_m_smth'] = False
                 sonDF['dep_m_adjBy'] = adjDep  
 
-                dep = sonDF['inst_dep_m'].to_numpy(copy=True)
+                inst_dep = pd.to_numeric(sonDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                meta_dep = pd.to_numeric(sonDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                dep = np.where(np.isfinite(inst_dep) & (inst_dep > 0), inst_dep, meta_dep)
 
                 if smthDep:
                     dep = savgol_filter(dep, 51, 3)
@@ -1139,6 +1244,7 @@ def read_master_func(logfilename='',
                     # All values are NaN - cannot interpolate
                     print("\nWarning: All instrument depth values are NaN or zero. Cannot interpolate depth.")
                     print("This may indicate missing depth data in the sonar file.")
+                    sonDF['dep_m_Method'] = 'Instrument/Metadata Depth'
                 
                 # sonDF['dep_m'] = dep + adjDep
 
@@ -1194,7 +1300,7 @@ def read_master_func(logfilename='',
     # Exporting banklines require shadows
     if banklines and remShadow==0:
         for son in sonObjs:
-            if son.beamName == "ss_port":
+            if str(son.beamName).startswith("ss_port"):
                     if son.remShadow == 0:
                         print('\n\nExporting banklines requires shadow removal')
                         print('Setting remShadow==2...')
@@ -1224,7 +1330,7 @@ def read_master_func(logfilename='',
         portstar = []
         for son in sonObjs:
             beam = son.beamName
-            if beam == "ss_port" or beam == "ss_star":
+            if _is_sidescan_beam(beam):
                 if keepShadow:
                     son.remShadow = False
                 else:
@@ -1287,10 +1393,18 @@ def read_master_func(logfilename='',
         start_time = time.time()
         print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 print('\n\tCalculating EGN for', son.beamName)
                 son.egn = True
                 son.egn_stretch = egn_stretch
+                son.tvg = bool(tvg)
+                son.tvg_spreading_k = float(tvg_spreading_k)
+                son.tvg_absorption_db_m = float(tvg_absorption_db_m)
+                son.tvg_min_range = float(tvg_min_range)
+                son.tvg_cap_db = float(tvg_cap_db)
+
+                tvg_enabled_for_export = bool(son.tvg)
+                son.tvg = False
 
                 # Determine what chunks to process
                 chunks = son._getChunkID()
@@ -1316,6 +1430,8 @@ def read_master_func(logfilename='',
                 son._egnCalcGlobalMinMax(min_max)
                 del min_max
 
+                son.tvg = tvg_enabled_for_export
+
                 son._cleanup()
                 son._pickleSon()
 
@@ -1324,6 +1440,7 @@ def read_master_func(logfilename='',
 
             else:
                 son.egn = False # Dont bother with down-facing beams
+                son.tvg = False
 
         # Get true global min and max
 
@@ -1332,7 +1449,7 @@ def read_master_func(logfilename='',
         wc_mins = []
         wc_maxs = []
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 bed_mins.append(son.egn_bed_min)
                 bed_maxs.append(son.egn_bed_max)
                 wc_mins.append(son.egn_wc_min)
@@ -1342,7 +1459,7 @@ def read_master_func(logfilename='',
         wc_min = np.min(wc_mins)
         wc_max = np.max(wc_maxs)
         for son in sonObjs:
-            if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+            if _is_sidescan_beam(son.beamName):
                 son.egn_bed_min = bed_min
                 son.egn_bed_max = bed_max
                 son.egn_wc_min = wc_min
@@ -1356,10 +1473,13 @@ def read_master_func(logfilename='',
         # Need to calculate histogram if egn_stretch is greater then 0
         if egn_stretch > 0:
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     # Determine what chunks to process
                     chunks = son._getChunkID()
                     chunks = chunks[:-1] # remove last chunk
+
+                    tvg_enabled_for_export = bool(son.tvg)
+                    son.tvg = False
 
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
                     hist = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcHist)(i) for i in tqdm(chunks))
@@ -1367,17 +1487,19 @@ def read_master_func(logfilename='',
                     print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
 
+                    son.tvg = tvg_enabled_for_export
+
             # Now calculate true global histogram
             egn_wcp_hist = np.zeros((255))
             egn_wcr_hist = np.zeros((255))
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     egn_wcp_hist += son.egn_wcp_hist
                     egn_wcr_hist += son.egn_wcr_hist
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     son.egn_wcp_hist = egn_wcp_hist
                     son.egn_wcr_hist = egn_wcr_hist
 
@@ -1397,7 +1519,7 @@ def read_master_func(logfilename='',
                 wcr_pcnt[i] = egn_wcr_hist[i] / wcr_sum
 
             for son in sonObjs:
-                if son.beamName == 'ss_port' or son.beamName == 'ss_star':
+                if _is_sidescan_beam(son.beamName):
                     son.egn_wcp_hist_pcnt = wcp_pcnt
                     son.egn_wcr_hist_pcnt = wcr_pcnt
 
@@ -1407,7 +1529,7 @@ def read_master_func(logfilename='',
 
             # Calculate min and max for rescale
             for son in sonObjs:
-                if son.beamName == 'ss_port':
+                if str(son.beamName).startswith('ss_port'):
                     wcp_stretch, wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
                     # wcr_stretch = son._egnCalcStretch(egn_stretch, egn_stretch_factor)
 
@@ -1417,7 +1539,7 @@ def read_master_func(logfilename='',
                     gc.collect()
 
             for son in sonObjs:
-                if son.beamName == 'ss_star':
+                if str(son.beamName).startswith('ss_star'):
                     son.egn_stretch = egn_stretch
                     son.egn_stretch_factor = egn_stretch_factor
 
@@ -1456,7 +1578,9 @@ def read_master_func(logfilename='',
     # window_stride = 0.1
     # tileFile = '.mp4'
     # frameRate = 5
-    if tileFile == '.mp4':
+    if bool(export_16bit):
+        imgType = '.tif'
+    elif tileFile == '.mp4':
         imgType = '.png'
     else:
         imgType = tileFile

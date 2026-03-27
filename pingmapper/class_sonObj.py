@@ -406,6 +406,21 @@ class sonObj(object):
             dist_start = dist_end
             dist_end = dist_start + d
 
+        # Explicitly reject discontinuities where adjacent pings are farther
+        # apart than the heading-distance window. These boundaries can otherwise
+        # pass when each side of the gap is internally consistent.
+        if d > 0:
+            trk_step = df[trk_dist].diff().abs()
+            jump_idx = trk_step[(trk_step > d) & np.isfinite(trk_step)].index
+
+            if len(jump_idx) > 0:
+                df.loc[jump_idx, filtCol] = False
+
+                prev_idx = jump_idx - 1
+                prev_idx = prev_idx[prev_idx >= df.index.min()]
+                if len(prev_idx) > 0:
+                    df.loc[prev_idx, filtCol] = False
+
         try:
             return df
         except:
@@ -790,12 +805,32 @@ class sonObj(object):
         Return numpy array to self._getScanChunkALL() or self._getScanChunkSingle()
         '''
 
-        sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
+        use_jsf_weighting = bool(getattr(self, '_use_jsf_weighting', False))
+        use_tvg = bool(getattr(self, 'tvg', False))
+        crop_samples_after_flip = getattr(self, '_range_crop_samples_after_flip', None)
+
+        if crop_samples_after_flip is not None:
+            try:
+                crop_samples_after_flip = int(crop_samples_after_flip)
+            except Exception:
+                crop_samples_after_flip = None
+
+        if crop_samples_after_flip is not None and crop_samples_after_flip <= 0:
+            crop_samples_after_flip = None
+
+        if use_jsf_weighting or use_tvg:
+            sonDat = np.zeros((int(self.pingMax), len(self.pingCnt)), dtype=np.float32)
+        else:
+            sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
 
         for i in range(len(self.headIdx)):
             if ~np.isnan(self.headIdx[i]):
-                ping_len = min(self.pingCnt[i].astype(int), self.pingMax)
+                full_ping_len = self.pingCnt[i].astype(int)
+                if crop_samples_after_flip is not None:
+                    ping_len = full_ping_len
+                else:
+                    ping_len = min(full_ping_len, self.pingMax)
 
 
                 # #### Do not commit!!!!
@@ -813,9 +848,6 @@ class sonObj(object):
 
                 # Get the ping
                 buffer = file.read(ping_len)
-
-                if self.flip_port:
-                    buffer = buffer[::-1]
 
                 # Read the data
                 if self.son8bit:# and self.beamName != 'ss_star' and self.beamName != 'ss_port':
@@ -839,6 +871,154 @@ class sonObj(object):
         
 
         return
+
+    def _apply_tvg(self, sonDat):
+        sonDat = np.asarray(sonDat, dtype=np.float32)
+
+        if sonDat.size == 0 or sonDat.shape[0] == 0:
+            return sonDat
+
+        pix_m = getattr(self, '_chunk_pixM', np.nan)
+        if not np.isfinite(pix_m) or pix_m <= 0:
+            pix_m = getattr(self, 'pixM', np.nan)
+        if not np.isfinite(pix_m) or pix_m <= 0:
+            return sonDat
+
+        k = float(getattr(self, 'tvg_spreading_k', 40.0))
+        alpha = float(getattr(self, 'tvg_absorption_db_m', 0.035))
+        min_r = float(getattr(self, 'tvg_min_range', 0.2))
+        cap_db = float(getattr(self, 'tvg_cap_db', 50.0))
+
+        if not np.isfinite(k):
+            k = 40.0
+        if not np.isfinite(alpha):
+            alpha = 0.035
+        if not np.isfinite(min_r) or min_r <= 0:
+            min_r = 0.2
+        if not np.isfinite(cap_db) or cap_db <= 0:
+            cap_db = 50.0
+
+        sample_idx = np.arange(sonDat.shape[0], dtype=np.float32)
+        ranges_m = np.maximum(sample_idx * np.float32(pix_m), np.float32(min_r))
+        tvg_db = (k * np.log10(ranges_m)) + (2.0 * alpha * ranges_m)
+        tvg_db = np.clip(tvg_db, 0.0, cap_db)
+        gain = np.power(10.0, tvg_db / 20.0).astype(np.float32)
+
+        sonDat *= gain[:, None]
+        return sonDat
+
+    def _convert_son_dat_to_uint8(self, sonDat):
+        if np.issubdtype(sonDat.dtype, np.floating):
+            arr = np.asarray(sonDat, dtype=np.float32)
+            arr[~np.isfinite(arr)] = 0.0
+            arr[arr < 0] = 0.0
+
+            max_val = None
+            if bool(getattr(self, '_use_jsf_weighting', False)):
+                global_max = getattr(self, '_float_global_scale_max', None)
+                if global_max is not None and np.isfinite(global_max) and float(global_max) > 0:
+                    max_val = float(global_max)
+
+            if max_val is None:
+                max_val = float(np.max(arr))
+
+            if max_val <= 0:
+                return np.zeros(arr.shape, dtype=np.uint8)
+
+            scaled = arr * (255.0 / max_val)
+            return np.clip(scaled, 0, 255).astype(np.uint8)
+
+        if self.son8bit:
+            return np.clip(sonDat, 0, 255).astype(np.uint8)
+
+        dat_uint16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
+
+        # Detect high-byte packing using only non-zero samples so ping padding
+        # (zeros below each ping length) does not trigger false detection.
+        nz = dat_uint16[dat_uint16 > 0]
+        if nz.size == 0:
+            return np.zeros(dat_uint16.shape, dtype=np.uint8)
+
+        max_val = int(nz.max())
+        low_byte_zero_ratio = np.mean((nz & 0x00FF) == 0)
+
+        # Some XTF chunks appear as 12-bit amplitudes packed in high-byte-aligned
+        # 16-bit words (e.g., 0..15 represented as 0, 256, 512, ...). In that case,
+        # shift by 4 (not 8) to recover usable 8-bit contrast.
+        if low_byte_zero_ratio > 0.95:
+            if max_val <= 4095:
+                return (dat_uint16 >> 4).astype(np.uint8)
+            return (dat_uint16 >> 8).astype(np.uint8)
+
+        return dat_uint16.astype(np.uint8)
+
+    def _get_sidescan_pair_meta_file(self):
+        if not hasattr(self, 'sonMetaFile'):
+            return None
+
+        meta_file = str(self.sonMetaFile)
+        base_name = os.path.basename(meta_file)
+        dir_name = os.path.dirname(meta_file)
+
+        if 'ss_port' in base_name:
+            pair_name = base_name.replace('ss_port', 'ss_star', 1)
+        elif 'ss_star' in base_name:
+            pair_name = base_name.replace('ss_star', 'ss_port', 1)
+        else:
+            return None
+
+        pair_file = os.path.join(dir_name, pair_name)
+        if os.path.exists(pair_file):
+            return pair_file
+        return None
+
+    def _compute_jsf_global_scale_max(self, son_meta_df: pd.DataFrame):
+        wf_all = pd.to_numeric(son_meta_df['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+        wf_valid = wf_all[np.isfinite(wf_all)]
+
+        global_max = np.nan
+        if 'max_abs_adc_raw' in son_meta_df.columns:
+            adc_all = pd.to_numeric(son_meta_df['max_abs_adc_raw'], errors='coerce').to_numpy(dtype=float)
+            pair_valid = np.isfinite(wf_all) & np.isfinite(adc_all) & (adc_all > 0)
+            if np.any(pair_valid):
+                scaled_adc = adc_all[pair_valid] * np.power(2.0, -wf_all[pair_valid])
+                if len(scaled_adc) > 0:
+                    pct = float(getattr(self, '_jsf_global_scale_percentile', 99.5))
+                    pct = min(max(pct, 95.0), 100.0)
+                    global_max = float(np.nanpercentile(scaled_adc, pct))
+                    if (not np.isfinite(global_max)) or (global_max <= 0):
+                        global_max = float(np.nanmax(scaled_adc))
+
+        if not np.isfinite(global_max) or global_max <= 0:
+            if len(wf_valid) > 0:
+                min_wf = float(np.nanmin(wf_valid))
+                global_max = float(65535.0 * (2.0 ** (-min_wf)))
+
+        return global_max
+
+    def _ensure_jsf_global_scale_max(self, son_meta_df: pd.DataFrame):
+        cur = getattr(self, '_float_global_scale_max', np.nan)
+        if np.isfinite(cur) and float(cur) > 0:
+            return
+
+        meta_frames = [son_meta_df]
+        pair_meta_file = self._get_sidescan_pair_meta_file()
+        if pair_meta_file is not None:
+            try:
+                pair_df = pd.read_csv(pair_meta_file)
+                if 'weighting_factor' in pair_df.columns:
+                    meta_frames.append(pair_df)
+            except Exception:
+                pass
+
+        if len(meta_frames) > 1:
+            combined = pd.concat(meta_frames, ignore_index=True)
+        else:
+            combined = meta_frames[0]
+
+        global_max = self._compute_jsf_global_scale_max(combined)
+        if np.isfinite(global_max) and global_max > 0:
+            self._float_global_scale_max = float(global_max)
 
     # def _loadSonChunk(self, df):
     #     """
@@ -1186,6 +1366,167 @@ class sonObj(object):
         return max_r
 
     # ======================================================================
+    def _prepare_export_uint16(self, data):
+        cached = getattr(self, 'sonDat16', None)
+        if cached is not None:
+            try:
+                if cached.shape == data.shape:
+                    return cached.astype(np.uint16, copy=False)
+            except Exception:
+                pass
+
+        arr = np.asarray(data)
+
+        if arr.dtype == np.uint16:
+            return arr
+
+        if np.issubdtype(arr.dtype, np.floating):
+            arr = np.nan_to_num(arr, nan=0.0, posinf=65535.0, neginf=0.0)
+            arr[arr < 0] = 0
+            max_val = float(np.max(arr)) if arr.size > 0 else 0.0
+            if 0 < max_val <= 255.0:
+                arr = arr * 257.0
+            return np.clip(arr, 0, 65535).astype(np.uint16)
+
+        if arr.dtype == np.uint8:
+            return (arr.astype(np.uint16) * 257).astype(np.uint16)
+
+        return np.clip(arr, 0, 65535).astype(np.uint16)
+
+    # ======================================================================
+    def _normalize_for_colormap(self, data, bit_depth=8):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        valid = arr > 0
+        if not np.any(valid):
+            return np.zeros(arr.shape, dtype=np.float32)
+
+        vals = arr[valid]
+        lo = float(np.nanpercentile(vals, 1.0))
+        hi = float(np.nanpercentile(vals, 99.5))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(vals))
+            hi = float(np.nanmax(vals))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            denom = 255.0 if bit_depth <= 8 else 65535.0
+            if denom <= 0:
+                return np.zeros(arr.shape, dtype=np.float32)
+            return np.clip(arr / denom, 0.0, 1.0)
+
+        norm = (arr - lo) / (hi - lo)
+        norm = np.clip(norm, 0.0, 1.0)
+        return norm.astype(np.float32)
+
+    # ======================================================================
+    def _prepare_export_uint16_display(self, data):
+        arr = self._prepare_export_uint16(data).astype(np.float32, copy=False)
+        norm = self._normalize_for_colormap(arr, bit_depth=16)
+        out = np.clip(norm * 65535.0, 0, 65535).astype(np.uint16)
+        return out
+
+    # ======================================================================
+    def _colorize_sonar_array(self, data, cmap_name, bit_depth=8, rgb_uint8=False):
+        if bit_depth >= 16:
+            arr = self._prepare_export_uint16(data)
+            norm_data = self._normalize_for_colormap(arr, bit_depth=16)
+            colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+            if rgb_uint8:
+                out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                valid = arr > 0
+                out[valid] = np.maximum(out[valid], 1)
+                return out
+            out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+            valid = arr > 0
+            out[valid] = np.maximum(out[valid], 1)
+            return out
+
+        arr = np.clip(np.asarray(data), 0, 255).astype(np.uint8)
+        norm_data = self._normalize_for_colormap(arr, bit_depth=8)
+        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+        out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+        valid = arr > 0
+        out[valid] = np.maximum(out[valid], 1)
+        return out
+
+    # ======================================================================
+    def _colorize_pre_normalized_uint16(self, data, cmap_name, rgb_uint8=False):
+        arr = self._prepare_export_uint16(data).astype(np.float32, copy=False)
+        norm_data = np.clip(arr / 65535.0, 0.0, 1.0)
+        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
+        if rgb_uint8:
+            out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+            valid = arr > 0
+            out[valid] = np.maximum(out[valid], 1)
+            return out
+        out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+        valid = arr > 0
+        out[valid] = np.maximum(out[valid], 1)
+        return out
+
+    # ======================================================================
+    def _is_colormap_selected(self, cmap_name):
+        if cmap_name is None:
+            return False
+        name = str(cmap_name).strip().lower()
+        return name not in ['', 'none', 'false']
+
+    # ======================================================================
+    def _export_colormap_as_uint8(self):
+        return bool(getattr(self, 'export_colormap_uint8', True))
+
+    # ======================================================================
+    def _reserve_zero_for_nodata(self, data):
+        arr = np.asarray(data)
+
+        if arr.size == 0:
+            return arr
+
+        out = arr.copy()
+
+        if np.issubdtype(out.dtype, np.floating):
+            mask = np.isfinite(out) & (out == 0)
+            out[mask] = 1.0
+            return out
+
+        if np.issubdtype(out.dtype, np.integer) or np.issubdtype(out.dtype, np.bool_):
+            out[out == 0] = 1
+            return out
+
+        return out
+
+    # ======================================================================
+    def _save_tile_image(self, outfile, data):
+        ext = os.path.splitext(outfile)[1].lower()
+
+        if ext in ['.tif', '.tiff']:
+            try:
+                import tifffile
+
+                if data.ndim == 3 and data.shape[-1] in [3, 4]:
+                    tifffile.imwrite(
+                        outfile,
+                        data,
+                        compression='deflate',
+                        predictor=True,
+                        photometric='rgb',
+                    )
+                else:
+                    tifffile.imwrite(
+                        outfile,
+                        data,
+                        compression='deflate',
+                        predictor=True,
+                    )
+                return
+            except Exception:
+                pass
+
+        imsave(outfile, data, check_contrast=False)
+
+    # ======================================================================
     def _writeTiles(self,
                     k,
                     imgOutPrefix,
@@ -1219,13 +1560,16 @@ class sonObj(object):
         --------------------
         NA
         '''
-        data = self.sonDat
+        export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+        if export_16bit and str(tileFile).lower() not in ['.tif', '.tiff']:
+            tileFile = '.tif'
 
-        # Apply tone controls even when EGN is disabled.
-        if not getattr(self, 'egn', False):
-            data = self._applyEGNTone(data)
-
-        data = data.astype('uint8') # Get the sonar data
+        if export_16bit:
+            data = self._prepare_export_uint16(self.sonDat)
+            data = self._reserve_zero_for_nodata(data)
+        else:
+            data = self.sonDat.astype('uint8') # Get the sonar data
+            data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
         addZero = self._addZero(k)
@@ -1239,7 +1583,7 @@ class sonObj(object):
 
         channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
-        imsave(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile), data, check_contrast=False)
+        self._save_tile_image(os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile), data)
 
         return
 
@@ -1276,13 +1620,17 @@ class sonObj(object):
         --------------------
         NA
         '''
-        data = self.sonDat
+        export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+        colormap_requested = bool(colormap) and self._is_colormap_selected(getattr(self, 'sonogram_colorMap', None))
+        if export_16bit and str(tileFile).lower() not in ['.tif', '.tiff']:
+            tileFile = '.tif'
 
-        # Apply tone controls even when EGN is disabled.
-        if not getattr(self, 'egn', False):
-            data = self._applyEGNTone(data)
-
-        data = data.astype('uint8') # Get the sonar data
+        if export_16bit:
+            data = self._prepare_export_uint16(self.sonDat)
+            data = self._reserve_zero_for_nodata(data)
+        else:
+            data = self.sonDat.astype('uint8') # Get the sonar data
+            data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
         addZero = self._addZero(k)
@@ -1297,17 +1645,23 @@ class sonObj(object):
         # Prepare the name
         channel = os.path.split(self.outDir)[-1] #ss_port, ss_star, etc.
         projName = os.path.split(self.projDir)[-1] #to append project name to filename
-        outfile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k)+tileFile)
+        base_outfile = os.path.join(outDir, projName+'_'+imgOutPrefix+'_'+channel+'_'+addZero+str(k))
+        outfile = base_outfile + tileFile
 
         # Save as a plot for colormap
-        if colormap:
+        if colormap_requested:
             # plt.imshow(data, cmap=self.sonogram_colorMap)
             # plt.savefig(outfile)
 
-            norm_data = data / 255.0
-            colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
-            colored_data = (colored_data[:, :, :3] * 255).astype('uint8')
-            data = colored_data
+            if export_16bit:
+                data = self._colorize_sonar_array(
+                    data,
+                    self.sonogram_colorMap,
+                    bit_depth=16,
+                    rgb_uint8=self._export_colormap_as_uint8(),
+                )
+            else:
+                data = self._colorize_sonar_array(data, self.sonogram_colorMap, bit_depth=8)
 
             # imsave(outfile, data)
 
@@ -1316,7 +1670,7 @@ class sonObj(object):
         
             # imsave(outfile, data, check_contrast=False)
 
-        imsave(outfile, data, check_contrast=False)
+        self._save_tile_image(outfile, data)
             
 
         return
@@ -1344,7 +1698,8 @@ class sonObj(object):
 
         if self.wcp:
             # Do speed correction
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+            export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
                 self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
@@ -1353,7 +1708,8 @@ class sonObj(object):
 
         if self.wcm:
             # Do speed correction
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+            export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
                 self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
@@ -1362,7 +1718,8 @@ class sonObj(object):
 
         if self.wcr_src:
             # Do speed correction
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+            export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
                 self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
@@ -1371,7 +1728,8 @@ class sonObj(object):
 
         if self.wco:
             # Do speed correction
-            self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True)
+            export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
 
             if self.sonDat is not np.nan:
                 self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
@@ -1411,6 +1769,10 @@ class sonObj(object):
             if son:
                 # self._loadSonChunk()
                 self._getScanChunkSingle(chunk)
+
+            export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
+            if export_16bit and getattr(self, 'sonDat16', None) is not None:
+                self.sonDat = self.sonDat16.astype(np.float32, copy=False)
 
             # egn
             if do_egn:
@@ -1571,6 +1933,32 @@ class sonObj(object):
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
+        if 'pixM' in sonMeta.columns:
+            chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
+            if np.any(np.isfinite(chunk_pix_m)):
+                self._chunk_pixM = float(np.nanmedian(chunk_pix_m[np.isfinite(chunk_pix_m)]))
+            elif hasattr(self, '_chunk_pixM'):
+                del self._chunk_pixM
+        elif hasattr(self, '_chunk_pixM'):
+            del self._chunk_pixM
+
+        if bool(getattr(self, 'range_crop_after_flip', False)):
+            self._range_crop_samples_after_flip = None
+            crop_range_m = float(getattr(self, 'cropRange', 0.0))
+            pix_m = getattr(self, '_chunk_pixM', np.nan)
+            if crop_range_m > 0 and np.isfinite(pix_m) and pix_m > 0:
+                crop_samples = int(round(crop_range_m / pix_m, 0))
+                if crop_samples > 0:
+                    self._range_crop_samples_after_flip = crop_samples
+        elif hasattr(self, '_range_crop_samples_after_flip'):
+            del self._range_crop_samples_after_flip
+
+        self._use_jsf_weighting = False
+        if 'weighting_factor' in sonMeta.columns:
+            self.weightingFactor = pd.to_numeric(sonMeta['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+            self._use_jsf_weighting = True
+            self._ensure_jsf_global_scale_max(sonMetaAll)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
@@ -1581,6 +1969,9 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'weightingFactor'):
+            del self.weightingFactor
+        self._use_jsf_weighting = False
 
         return
     
@@ -1591,6 +1982,7 @@ class sonObj(object):
 
         # Open sonar metadata file to df
         sonMetaAll = pd.read_csv(self.sonMetaFile)
+        sonMetaAll_full = sonMetaAll
 
         # Filter by transect
         sonMetaAll = sonMetaAll[sonMetaAll['transect'] == transect].reset_index(drop=True)
@@ -1609,6 +2001,21 @@ class sonObj(object):
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
 
+        if 'pixM' in sonMeta.columns:
+            chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
+            if np.any(np.isfinite(chunk_pix_m)):
+                self._chunk_pixM = float(np.nanmedian(chunk_pix_m[np.isfinite(chunk_pix_m)]))
+            elif hasattr(self, '_chunk_pixM'):
+                del self._chunk_pixM
+        elif hasattr(self, '_chunk_pixM'):
+            del self._chunk_pixM
+
+        self._use_jsf_weighting = False
+        if 'weighting_factor' in sonMeta.columns:
+            self.weightingFactor = pd.to_numeric(sonMeta['weighting_factor'], errors='coerce').to_numpy(dtype=float)
+            self._use_jsf_weighting = True
+            self._ensure_jsf_global_scale_max(sonMetaAll_full)
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
 
@@ -1617,6 +2024,9 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'weightingFactor'):
+            del self.weightingFactor
+        self._use_jsf_weighting = False
 
         return
 
