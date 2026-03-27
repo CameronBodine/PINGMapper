@@ -126,11 +126,8 @@ def read_master_func(logfilename='',
                      egn=False,
                      egn_stretch=0,
                      egn_stretch_factor=1,
-                     tvg=False,
-                     tvg_spreading_k=40.0,
-                     tvg_absorption_db_m=0.035,
-                     tvg_min_range=0.2,
-                     tvg_cap_db=50.0,
+                     tone_gamma=1.0,
+                     tone_gain=1.0,
                      wcp=False,
                      wcm=False,
                      wcr=False,
@@ -578,6 +575,8 @@ def read_master_func(logfilename='',
         # Store cropRange in object
         for son in sonObjs:
             son.cropRange = cropRange
+            son.tone_gamma = tone_gamma
+            son.tone_gain = tone_gain
             # Do range crop, if necessary
             if cropRange > 0.0:
                 if file_type == '.xtf' and _is_sidescan_beam(getattr(son, 'beamName', '')):
@@ -780,6 +779,8 @@ def read_master_func(logfilename='',
 
         for son in sonObjs:
             son.wcp = wcp
+            son.tone_gamma = tone_gamma
+            son.tone_gain = tone_gain
 
             beam = son.beamName
             if wcr:
@@ -1130,11 +1131,14 @@ def read_master_func(logfilename='',
     chunks = np.unique(chunks).astype(int)
 
     if len(chunks) == 0:
-        raise ValueError(
+        print(
             '\n\nNo valid side-scan chunks available for depth processing. '\
-            'This usually means prior filtering produced empty metadata CSVs. '\
-            'Relax filtering settings or reprocess from raw files.'
+            'Continuing with down-looking beams only.'
         )
+        print('Disabling side-scan-only operations (auto depth, bedpick plot, shadow removal).')
+        detectDep = 0
+        pltBedPick = False
+        remShadow = 0
 
     # # Automatically estimate depth
     if detectDep > 0:

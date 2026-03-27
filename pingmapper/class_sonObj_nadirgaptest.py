@@ -2387,6 +2387,9 @@ class sonObj(object):
 
         sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
+        # Optional tone adjustment to brighten/darken mid-tones after EGN stretch.
+        sonDat = self._applyEGNTone(sonDat)
+
         # Try masking out zeros
         sonDat = sonDat*mask
         del mask
@@ -2394,3 +2397,37 @@ class sonObj(object):
         self.sonDat = sonDat.astype('uint8')
         del sonDat
         return
+
+
+    # ======================================================================
+    def _applyEGNTone(self, sonDat):
+        '''
+        Apply optional post-EGN tone controls.
+
+        Notes
+        -----
+        - tone_gamma < 1.0 brightens mid-tones; > 1.0 darkens.
+        - tone_gain > 1.0 boosts overall brightness; < 1.0 reduces.
+        '''
+        gamma = getattr(self, 'tone_gamma', 1.0)
+        gain = getattr(self, 'tone_gain', 1.0)
+
+        try:
+            gamma = float(gamma)
+            gain = float(gain)
+        except Exception:
+            gamma = 1.0
+            gain = 1.0
+
+        if gamma <= 0:
+            gamma = 1.0
+        if gain < 0:
+            gain = 0.0
+
+        # Preserve legacy behavior when defaults are used.
+        if gamma == 1.0 and gain == 1.0:
+            return sonDat
+
+        sonNorm = np.clip(sonDat, 0, 255) / 255.0
+        sonNorm = np.power(sonNorm, gamma) * gain
+        return np.clip(sonNorm * 255.0, 0, 255)

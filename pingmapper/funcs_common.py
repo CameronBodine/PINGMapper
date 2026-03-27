@@ -482,17 +482,26 @@ def unableToProcessError(logfilename):
 class FastPiecewiseAffineTransform(PiecewiseAffineTransform):
     def __call__(self, coords):
         coords = np.asarray(coords)
+        n = coords.shape[0]
 
-        simplex = self._tesselation.find_simplex(coords)
-
-        affines = np.array(
+        # Build per-simplex affine lookup once — shape (n_simplices, 3, 3), small.
+        all_affines = np.array(
             [self.affines[i].params for i in range(len(self._tesselation.simplices))]
-        )[simplex]
+        )
 
-        pts = np.c_[coords, np.ones((coords.shape[0], 1))]
+        result = np.empty((n, 3), dtype=np.float64)
 
-        result = np.einsum("ij,ikj->ik", pts, affines)
-        result[simplex == -1, :] = -1
+        # Process in batches to avoid large allocations in find_simplex and the
+        # affine einsum, both of which scale with n_coords and can exceed several GiB.
+        _BATCH = 500_000
+        for start in range(0, n, _BATCH):
+            end = min(start + _BATCH, n)
+            batch_coords = coords[start:end]
+            s = self._tesselation.find_simplex(batch_coords)
+            pts = np.c_[batch_coords, np.ones(end - start)]
+            batch_result = np.einsum("ij,ikj->ik", pts, all_affines[s])
+            batch_result[s == -1] = -1
+            result[start:end] = batch_result
 
         return result
 

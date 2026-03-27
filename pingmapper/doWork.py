@@ -101,6 +101,7 @@ def doWork(
         pix_res_son (float), pix_res_map (float)
         x_offset (float), y_offset (float)
         egn (bool), egn_stretch (int: 0/1/2), egn_stretch_factor (float)
+        tone_gamma (float), tone_gain (float)
         wcp/wcm/wcr/wco (bool)
         sonogram_colorMap (str), mask_shdw (bool), tileFile (str)
         spdCor (bool), maxCrop (bool)
