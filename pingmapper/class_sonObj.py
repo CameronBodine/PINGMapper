@@ -834,13 +834,6 @@ class sonObj(object):
                     sonDat[:ping_len, i] = dat
         
         file.close()
-
-        # Scale intensity (0.0-2.0)
-        scale_intensity = False
-        scale_intensity_factor = 1.005
-        if scale_intensity:
-            sonDat = sonDat * scale_intensity_factor
-
         self.sonDat = sonDat.astype(np.uint8)
 
         
