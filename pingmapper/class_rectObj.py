@@ -2174,6 +2174,15 @@ class rectObj(sonObj):
         outShape[0], outShape[1] = round(outShapeM[0]/pix_res,0), round(outShapeM[1]/pix_res,0)
         outShape = np.array(outShape).astype(int) # Convert to int
 
+        # Cap output shape to avoid OOM in warp_coords, which allocates (2, H, W) float64.
+        # For large chunks this can exceed several GiB; downscale proportionally when needed.
+        _MEM_CAP_BYTES = 1 * 1024**3  # 1 GiB limit
+        _bytes_needed = 2 * int(outShape[0]) * int(outShape[1]) * 8
+        if _bytes_needed > _MEM_CAP_BYTES:
+            _scale = (_MEM_CAP_BYTES / _bytes_needed) ** 0.5
+            outShape = np.array([max(1, int(outShape[0] * _scale)),
+                                 max(1, int(outShape[1] * _scale))], dtype=int)
+
         # Rescale destination coordinates
         # X values
         xStd = (dst[:,0]-xMin) / (xMax-xMin) # Standardize
