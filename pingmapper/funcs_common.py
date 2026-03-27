@@ -316,6 +316,19 @@ def downloadSegmentationModelsv1_0(modelDir):
     return
 
 
+# =========================================================
+def get_segmentation_model_dir():
+    """
+    Return the default local directory for segmentation models.
+    Models are stored in the user's home folder to avoid deep environment paths
+    that can break zip extraction on Windows.
+    """
+    home_dir = os.path.expanduser('~')
+    return os.path.normpath(
+        os.path.join(home_dir, '.pingmapper', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    )
+
+
 # # =========================================================
 # def saveDefaultParams(values):
 

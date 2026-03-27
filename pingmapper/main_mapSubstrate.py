@@ -124,8 +124,7 @@ def map_master_func(logfilename='',
     ############
     # Parameters
     # modelDir = os.path.join(SCRIPT_DIR, 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
-    d = os.environ['CONDA_PREFIX']
-    modelDir = os.path.join(d, 'pingmapper_config', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
+    modelDir = get_segmentation_model_dir()
     flip = False #Flip port/star
     filter = int(nchunk*0.1) #Filters trackline coordinates for smoothing
     filterRange = filter #int(nchunk*0.05) #Filters range extent coordinates for smoothing

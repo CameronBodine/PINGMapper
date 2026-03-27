@@ -300,9 +300,7 @@ def read_master_func(logfilename='',
 
     #####################################
     # Download models if they don't exist
-    d = os.environ['CONDA_PREFIX']
-    modelDir = os.path.join(d, 'pingmapper_config', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
-    modelDir = os.path.normpath(modelDir)
+    modelDir = get_segmentation_model_dir()
     if not os.path.exists(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
         getSegformer = True
