@@ -83,7 +83,6 @@ from pingverter import (
     gar2pingmapper,
     jsf2pingmapper,
     xtf2pingmapper,
-    sdf2pingmapper,
 )
 
 import cv2
@@ -450,11 +449,11 @@ def read_master_func(logfilename='',
         )
         son.export_colormap_uint8 = bool(export_colormap_uint8)
         son.export_beam = True
-        son.tvg = bool(tvg)
-        son.tvg_spreading_k = float(tvg_spreading_k)
-        son.tvg_absorption_db_m = float(tvg_absorption_db_m)
-        son.tvg_min_range = float(tvg_min_range)
-        son.tvg_cap_db = float(tvg_cap_db)
+        son.tvg = False
+        son.tvg_spreading_k = float(getattr(son, 'tvg_spreading_k', 40.0))
+        son.tvg_absorption_db_m = float(getattr(son, 'tvg_absorption_db_m', 0.035))
+        son.tvg_min_range = float(getattr(son, 'tvg_min_range', 0.2))
+        son.tvg_cap_db = float(getattr(son, 'tvg_cap_db', 50.0))
 
         # print(son.beamName, son.son8bit)
 
@@ -672,11 +671,7 @@ def read_master_func(logfilename='',
             if not hasattr(son, 'tvg_cap_db'):
                 son.tvg_cap_db = 50.0
 
-            son.tvg = bool(tvg)
-            son.tvg_spreading_k = float(tvg_spreading_k)
-            son.tvg_absorption_db_m = float(tvg_absorption_db_m)
-            son.tvg_min_range = float(tvg_min_range)
-            son.tvg_cap_db = float(tvg_cap_db)
+            son.tvg = False
 
             sonObjs.append(son)
 
@@ -752,14 +747,7 @@ def read_master_func(logfilename='',
         if egn:
             for son in sonObjs:
                 if str(son.beamName).startswith("ss_port"):
-                    if (
-                        son.egn == egn and
-                        bool(getattr(son, 'tvg', False)) == bool(tvg) and
-                        float(getattr(son, 'tvg_spreading_k', 40.0)) == float(tvg_spreading_k) and
-                        float(getattr(son, 'tvg_absorption_db_m', 0.035)) == float(tvg_absorption_db_m) and
-                        float(getattr(son, 'tvg_min_range', 0.2)) == float(tvg_min_range) and
-                        float(getattr(son, 'tvg_cap_db', 50.0)) == float(tvg_cap_db)
-                    ):
+                    if son.egn == egn:
                         egn = False
                         print("\nUsing previous empiracal gain normalization settings. No need to re-process.")
                         print("\tSetting egn to 0.")
@@ -1221,7 +1209,10 @@ def read_master_func(logfilename='',
                 sonDF['dep_m_adjBy'] = adjDep  
 
                 inst_dep = pd.to_numeric(sonDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-                meta_dep = pd.to_numeric(sonDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                if 'dep_m' in sonDF.columns:
+                    meta_dep = pd.to_numeric(sonDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                else:
+                    meta_dep = inst_dep.copy()
                 dep = np.where(np.isfinite(inst_dep) & (inst_dep > 0), inst_dep, meta_dep)
 
                 if smthDep:
@@ -1397,13 +1388,6 @@ def read_master_func(logfilename='',
                 print('\n\tCalculating EGN for', son.beamName)
                 son.egn = True
                 son.egn_stretch = egn_stretch
-                son.tvg = bool(tvg)
-                son.tvg_spreading_k = float(tvg_spreading_k)
-                son.tvg_absorption_db_m = float(tvg_absorption_db_m)
-                son.tvg_min_range = float(tvg_min_range)
-                son.tvg_cap_db = float(tvg_cap_db)
-
-                tvg_enabled_for_export = bool(son.tvg)
                 son.tvg = False
 
                 # Determine what chunks to process
@@ -1429,8 +1413,6 @@ def read_master_func(logfilename='',
                 # Calculate global min max for each channel
                 son._egnCalcGlobalMinMax(min_max)
                 del min_max
-
-                son.tvg = tvg_enabled_for_export
 
                 son._cleanup()
                 son._pickleSon()
@@ -1477,8 +1459,6 @@ def read_master_func(logfilename='',
                     # Determine what chunks to process
                     chunks = son._getChunkID()
                     chunks = chunks[:-1] # remove last chunk
-
-                    tvg_enabled_for_export = bool(son.tvg)
                     son.tvg = False
 
                     print('\n\tCalculating EGN corrected histogram for', son.beamName)
@@ -1486,8 +1466,6 @@ def read_master_func(logfilename='',
 
                     print('\n\tCalculating global EGN corrected histogram')
                     son._egnCalcGlobalHist(hist)
-
-                    son.tvg = tvg_enabled_for_export
 
             # Now calculate true global histogram
             egn_wcp_hist = np.zeros((255))

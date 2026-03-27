@@ -1567,11 +1567,19 @@ class portstarObj(object):
         chunks = pd.unique(portDF['chunk_id'])
 
         if detectDep == 0:
+            def _depth_series(df):
+                # Some formats (e.g., Garmin RSD) may not include dep_m in metadata.
+                if 'dep_m' in df.columns:
+                    return pd.to_numeric(df['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                if 'inst_dep_m' in df.columns:
+                    return pd.to_numeric(df['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                return np.zeros(len(df), dtype=float)
+
             portInstDepth = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
             starInstDepth = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
 
-            portMetaDepth = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-            starMetaDepth = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            portMetaDepth = _depth_series(portDF)
+            starMetaDepth = _depth_series(starDF)
 
             portValid = np.isfinite(portInstDepth) & (portInstDepth > 0)
             starValid = np.isfinite(starInstDepth) & (starInstDepth > 0)

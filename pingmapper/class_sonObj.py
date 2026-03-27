@@ -726,6 +726,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
@@ -818,31 +819,76 @@ class sonObj(object):
         if crop_samples_after_flip is not None and crop_samples_after_flip <= 0:
             crop_samples_after_flip = None
 
-        if use_jsf_weighting or use_tvg:
+        sample_dtype = getattr(self, 'sample_dtype', None)
+        sample_is_float = False
+        if sample_dtype is not None:
+            try:
+                sample_is_float = np.dtype(sample_dtype).kind == 'f'
+            except Exception:
+                sample_is_float = False
+
+        if use_jsf_weighting or use_tvg or sample_is_float:
             sonDat = np.zeros((int(self.pingMax), len(self.pingCnt)), dtype=np.float32)
         else:
             sonDat = np.zeros((int(self.pingMax), len(self.pingCnt))).astype(int) # Initialize array to hold sonar returns
         file = open(self.sonFile, 'rb') # Open .SON file
+        file_size = os.path.getsize(self.sonFile)
+        skipped_reads = 0
 
         for i in range(len(self.headIdx)):
             if ~np.isnan(self.headIdx[i]):
                 full_ping_len = self.pingCnt[i].astype(int)
                 if crop_samples_after_flip is not None:
-                    ping_len = full_ping_len
+                    ping_samples = full_ping_len
                 else:
-                    ping_len = min(full_ping_len, self.pingMax)
+                    ping_samples = min(full_ping_len, self.pingMax)
+
+                try:
+                    bytes_per_sample = int(self.bytesPerSample[i])
+                    if bytes_per_sample <= 0:
+                        raise ValueError
+                except Exception:
+                    try:
+                        sample_dtype = getattr(self, 'sample_dtype', None)
+                        if sample_dtype is not None:
+                            bytes_per_sample = int(np.dtype(sample_dtype).itemsize)
+                        else:
+                            bytes_per_sample = 1 if self.son8bit else 2
+                    except Exception:
+                        bytes_per_sample = 1 if self.son8bit else 2
 
 
                 # #### Do not commit!!!!
                 # # if self.beamName == 'ss_star' or self.beamName == 'ss_port':
                 # #     ping_len *= 2
-                if not self.son8bit:
-                    ping_len *= 2
+                ping_len = int(ping_samples) * int(bytes_per_sample)
 
                 headIDX = self.headIdx[i].astype(int)
                 son_offset = self.son_offset[i].astype(int)
                 # pingIdx = headIDX + self.headBytes # Determine byte offset to sonar returns
                 pingIdx = headIDX + son_offset
+
+                if pingIdx < 0 or pingIdx >= file_size:
+                    skipped_reads += 1
+                    continue
+
+                remaining_bytes = int(file_size - pingIdx)
+                if remaining_bytes <= 0:
+                    skipped_reads += 1
+                    continue
+
+                max_samples_available = int(remaining_bytes // max(1, int(bytes_per_sample)))
+                if max_samples_available <= 0:
+                    skipped_reads += 1
+                    continue
+
+                if int(ping_samples) > max_samples_available:
+                    ping_samples = max_samples_available
+
+                ping_len = int(ping_samples) * int(bytes_per_sample)
+                if ping_len <= 0:
+                    skipped_reads += 1
+                    continue
 
                 file.seek(pingIdx) # Move to that location
 
@@ -853,23 +899,59 @@ class sonObj(object):
                 if self.son8bit:# and self.beamName != 'ss_star' and self.beamName != 'ss_port':
                     dat = np.frombuffer(buffer, dtype='>u1')
                 else:
-                    # try:
-                    #     dat = np.frombuffer(buffer, dtype='>u2')
-                    # except:
-                    #     dat = np.frombuffer(buffer[:-1], dtype='>u2')
-                    dat = np.frombuffer(buffer, dtype='>u2')
+                    sample_dtype = getattr(self, 'sample_dtype', None)
+                    try:
+                        if sample_dtype is not None:
+                            dat = np.frombuffer(buffer, dtype=np.dtype(sample_dtype))
+                        else:
+                            dat = np.frombuffer(buffer, dtype='>u2')
+                    except:
+                        if sample_dtype is not None:
+                            dat = np.frombuffer(buffer[:-1], dtype=np.dtype(sample_dtype))
+                        else:
+                            dat = np.frombuffer(buffer[:-1], dtype='>u2')
+
+                if self.flip_port:
+                    dat = dat[::-1]
+
+                if crop_samples_after_flip is not None:
+                    dat = dat[:crop_samples_after_flip]
+
+                if use_jsf_weighting:
+                    dat = dat.astype(np.float32, copy=False)
+                    if hasattr(self, 'weightingFactor') and i < len(self.weightingFactor):
+                        wf = self.weightingFactor[i]
+                        if np.isfinite(wf) and wf > 0:
+                            dat = dat * (2.0 ** (-float(wf)))
+
+                n_samples = min(len(dat), sonDat.shape[0])
+                if n_samples <= 0:
+                    skipped_reads += 1
+                    continue
 
                 try:
-                    sonDat[:ping_len, i] = dat
+                    sonDat[:n_samples, i] = dat[:n_samples]
                 except:
-                    ping_len = len(dat)
-                    sonDat[:ping_len, i] = dat
+                    n_samples = min(len(dat), sonDat.shape[0])
+                    sonDat[:n_samples, i] = dat[:n_samples]
         
         file.close()
-        self.sonDat = sonDat.astype(np.uint8)
 
-        
+        if skipped_reads > 0:
+            print(f"Warning: skipped {skipped_reads} out-of-bounds sonar reads for {getattr(self, 'beamName', 'unknown beam')}")
 
+        if crop_samples_after_flip is not None and sonDat.shape[0] > crop_samples_after_flip:
+            sonDat = sonDat[:crop_samples_after_flip, :]
+
+        if use_tvg:
+            sonDat = self._apply_tvg(sonDat)
+
+        if bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', True)):
+            self.sonDat16 = np.clip(sonDat, 0, 65535).astype(np.uint16, copy=False)
+        else:
+            self.sonDat16 = None
+
+        self.sonDat = self._convert_son_dat_to_uint8(sonDat)
         return
 
     def _apply_tvg(self, sonDat):
@@ -913,19 +995,30 @@ class sonObj(object):
             arr[~np.isfinite(arr)] = 0.0
             arr[arr < 0] = 0.0
 
+            valid = arr > 0
+            if not np.any(valid):
+                return np.zeros(arr.shape, dtype=np.uint8)
+
+            vals = arr[valid]
+
+            lo = float(np.nanpercentile(vals, 1.0))
+            hi = float(np.nanpercentile(vals, 99.5))
+
             max_val = None
             if bool(getattr(self, '_use_jsf_weighting', False)):
                 global_max = getattr(self, '_float_global_scale_max', None)
                 if global_max is not None and np.isfinite(global_max) and float(global_max) > 0:
                     max_val = float(global_max)
+                    hi = min(hi, max_val)
 
-            if max_val is None:
-                max_val = float(np.max(arr))
+            if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+                lo = float(np.nanmin(vals))
+                hi = float(np.nanmax(vals))
 
-            if max_val <= 0:
+            if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
                 return np.zeros(arr.shape, dtype=np.uint8)
 
-            scaled = arr * (255.0 / max_val)
+            scaled = (arr - lo) * (255.0 / (hi - lo))
             return np.clip(scaled, 0, 255).astype(np.uint8)
 
         if self.son8bit:
@@ -951,6 +1044,38 @@ class sonObj(object):
             return (dat_uint16 >> 8).astype(np.uint8)
 
         return dat_uint16.astype(np.uint8)
+
+    def _sanitize_chunk_sonmeta(self, sonMeta):
+        if sonMeta is None or len(sonMeta) == 0 or 'ping_cnt' not in sonMeta.columns:
+            return sonMeta
+
+        df = sonMeta.copy()
+        ping_cnt = pd.to_numeric(df['ping_cnt'], errors='coerce')
+        valid = np.isfinite(ping_cnt) & (ping_cnt > 0)
+
+        filtered = df.loc[valid].copy()
+
+        if 'pixM' in filtered.columns:
+            pix_m = pd.to_numeric(filtered['pixM'], errors='coerce')
+            plausible_pix = np.isfinite(pix_m) & (pix_m > 1e-4)
+            if np.any(plausible_pix):
+                filtered = filtered.loc[plausible_pix].copy()
+
+        if len(filtered) == 0:
+            filtered = df.loc[valid].copy()
+
+        if len(filtered) == 0:
+            return sonMeta
+
+        ping_cnt = pd.to_numeric(filtered['ping_cnt'], errors='coerce')
+        plausible_ping = np.isfinite(ping_cnt) & (ping_cnt > 0) & (ping_cnt < 1_000_000)
+        if np.any(plausible_ping):
+            filtered = filtered.loc[plausible_ping].copy()
+
+        if len(filtered) == 0:
+            return sonMeta
+
+        return filtered.reset_index(drop=True)
 
     def _get_sidescan_pair_meta_file(self):
         if not hasattr(self, 'sonMetaFile'):
@@ -1124,6 +1249,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==i
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Load depth (in real units) and convert to pixels
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
@@ -1427,44 +1553,45 @@ class sonObj(object):
         out = np.clip(norm * 65535.0, 0, 65535).astype(np.uint16)
         return out
 
+    def _colorize_array_batched(self, norm_data, valid_mask, cmap_name, scale_max, out_dtype):
+        cmap = plt.cm.get_cmap(cmap_name)
+        height, width = norm_data.shape
+        out = np.zeros((height, width, 3), dtype=out_dtype)
+
+        target_batch_bytes = 256 * 1024 * 1024
+        bytes_per_row = max(width * 4 * 8, 1)
+        rows_per_batch = max(1, int(target_batch_bytes // bytes_per_row))
+
+        for start in range(0, height, rows_per_batch):
+            end = min(start + rows_per_batch, height)
+            colored = cmap(norm_data[start:end])
+            rgb = np.clip(colored[:, :, :3] * scale_max, 0, scale_max).astype(out_dtype)
+            valid = valid_mask[start:end]
+            rgb[valid] = np.maximum(rgb[valid], 1)
+            out[start:end] = rgb
+
+        return out
+
     # ======================================================================
     def _colorize_sonar_array(self, data, cmap_name, bit_depth=8, rgb_uint8=False):
         if bit_depth >= 16:
             arr = self._prepare_export_uint16(data)
             norm_data = self._normalize_for_colormap(arr, bit_depth=16)
-            colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
             if rgb_uint8:
-                out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
-                valid = arr > 0
-                out[valid] = np.maximum(out[valid], 1)
-                return out
-            out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
-            valid = arr > 0
-            out[valid] = np.maximum(out[valid], 1)
-            return out
+                return self._colorize_array_batched(norm_data, arr > 0, cmap_name, 255.0, np.uint8)
+            return self._colorize_array_batched(norm_data, arr > 0, cmap_name, 65535.0, np.uint16)
 
         arr = np.clip(np.asarray(data), 0, 255).astype(np.uint8)
         norm_data = self._normalize_for_colormap(arr, bit_depth=8)
-        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
-        out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
-        valid = arr > 0
-        out[valid] = np.maximum(out[valid], 1)
-        return out
+        return self._colorize_array_batched(norm_data, arr > 0, cmap_name, 255.0, np.uint8)
 
     # ======================================================================
     def _colorize_pre_normalized_uint16(self, data, cmap_name, rgb_uint8=False):
         arr = self._prepare_export_uint16(data).astype(np.float32, copy=False)
         norm_data = np.clip(arr / 65535.0, 0.0, 1.0)
-        colored_data = plt.cm.get_cmap(cmap_name)(norm_data)
         if rgb_uint8:
-            out = np.clip(colored_data[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
-            valid = arr > 0
-            out[valid] = np.maximum(out[valid], 1)
-            return out
-        out = np.clip(colored_data[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
-        valid = arr > 0
-        out[valid] = np.maximum(out[valid], 1)
-        return out
+            return self._colorize_array_batched(norm_data, arr > 0, cmap_name, 255.0, np.uint8)
+        return self._colorize_array_batched(norm_data, arr > 0, cmap_name, 65535.0, np.uint16)
 
     # ======================================================================
     def _is_colormap_selected(self, cmap_name):
@@ -1760,6 +1887,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
@@ -1923,6 +2051,7 @@ class sonObj(object):
             isChunk = sonMetaAll['chunk_id_2']==chunk
             isChunk.iloc[chunk+1] = True
         sonMeta = sonMetaAll[isChunk].reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
@@ -1932,6 +2061,10 @@ class sonObj(object):
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+        if 'bytes_per_sample' in sonMeta.columns:
+            self.bytesPerSample = sonMeta['bytes_per_sample']
+        elif hasattr(self, 'bytesPerSample'):
+            del self.bytesPerSample
 
         if 'pixM' in sonMeta.columns:
             chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
@@ -1969,6 +2102,8 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'bytesPerSample'):
+            del self.bytesPerSample
         if hasattr(self, 'weightingFactor'):
             del self.weightingFactor
         self._use_jsf_weighting = False
@@ -1991,6 +2126,7 @@ class sonObj(object):
         # sonMeta = sonMeta[(sonMeta['index'] >= start_idx) & (sonMeta['index'] <= end_idx)]
         sonMeta = sonMeta.iloc[start_idx:end_idx]
         sonMeta = sonMeta.reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         rangeCnt = np.unique(sonMeta['ping_cnt'], return_counts=True)
@@ -2000,6 +2136,10 @@ class sonObj(object):
         self.headIdx = sonMeta['index']#.astype(int) # store byte offset per ping
         self.son_offset = sonMeta['son_offset']
         self.pingCnt = sonMeta['ping_cnt']#.astype(int) # store ping count per ping
+        if 'bytes_per_sample' in sonMeta.columns:
+            self.bytesPerSample = sonMeta['bytes_per_sample']
+        elif hasattr(self, 'bytesPerSample'):
+            del self.bytesPerSample
 
         if 'pixM' in sonMeta.columns:
             chunk_pix_m = pd.to_numeric(sonMeta['pixM'], errors='coerce').to_numpy(dtype=float)
@@ -2024,6 +2164,8 @@ class sonObj(object):
             self._WCR(sonMeta)     
 
         del self.headIdx, self.pingCnt
+        if hasattr(self, 'bytesPerSample'):
+            del self.bytesPerSample
         if hasattr(self, 'weightingFactor'):
             del self.weightingFactor
         self._use_jsf_weighting = False
@@ -2166,6 +2308,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
@@ -2269,6 +2412,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
@@ -2353,6 +2497,7 @@ class sonObj(object):
         # Filter sonMetaDF by chunk
         isChunk = self.sonMetaDF['chunk_id']==chunk
         sonMeta = self.sonMetaDF[isChunk].copy().reset_index()
+        sonMeta = self._sanitize_chunk_sonmeta(sonMeta)
 
         # Update class attributes based on current chunk
         self.pingMax = np.nanmax(sonMeta['ping_cnt']) # store to determine max range per chunk
