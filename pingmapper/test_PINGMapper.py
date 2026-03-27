@@ -164,6 +164,8 @@ def test(ds):
     egn_stretch = 1 # 0==Min-Max; 1==% Clip; 2==Standard deviation
     egn_stretch_factor = 0.5 # If % Clip, the percent of histogram tails to clip (1.0 == 1%);
                             ## If std, the number of standard deviations to retain
+    tone_gamma = 1.0 # Post-EGN tone curve; <1 brightens mids, >1 darkens mids
+    tone_gain = 1.0 # Post-EGN linear brightness multiplier
 
 
     # Sonogram Exports
@@ -277,6 +279,8 @@ def test(ds):
         'egn':egn,
         'egn_stretch':egn_stretch,
         'egn_stretch_factor':egn_stretch_factor,
+        'tone_gamma':tone_gamma,
+        'tone_gain':tone_gain,
         'tileFile':tileFile,
         'wcp':wcp,
         'wcr':wcr,

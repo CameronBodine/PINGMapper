@@ -47,6 +47,52 @@ import inspect
 
 from scipy.signal import savgol_filter
 
+
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
+
+
+def _get_sidescan_group_key(beam_name):
+    beam_name = str(beam_name)
+    if beam_name.startswith('ss_port_'):
+        return beam_name[len('ss_port_'):]
+    if beam_name.startswith('ss_star_'):
+        return beam_name[len('ss_star_'):]
+    if beam_name == 'ss_port' or beam_name == 'ss_star':
+        return ''
+    return None
+
+
+def _build_sidescan_pairs(objs):
+    grouped = {}
+
+    for son in objs:
+        beam_name = str(son.beamName)
+        if not _is_sidescan_beam(beam_name):
+            continue
+
+        key = _get_sidescan_group_key(beam_name)
+        if key not in grouped:
+            grouped[key] = {'port': None, 'star': None}
+
+        if beam_name.startswith('ss_port'):
+            grouped[key]['port'] = son
+        elif beam_name.startswith('ss_star'):
+            grouped[key]['star'] = son
+
+    pairs = []
+    missing = []
+    for key in sorted(grouped.keys(), key=lambda value: str(value)):
+        port = grouped[key]['port']
+        star = grouped[key]['star']
+        if port is not None and star is not None:
+            pairs.append((key, [port, star]))
+        else:
+            missing.append((key, port is not None, star is not None))
+
+    return pairs, missing
+
 #===============================================================================
 def rectify_master_func(logfilename='',
                         project_mode=0,
@@ -71,6 +117,9 @@ def rectify_master_func(logfilename='',
                         pix_res_map=0,
                         x_offset=0,
                         y_offset=0,
+                        export_16bit=False,
+                        export_colormap_uint8=True,
+                        export_16bit_colormap=False,
                         tileFile=False,
                         egn=False,
                         egn_stretch=0,
@@ -252,7 +301,7 @@ def rectify_master_func(logfilename='',
     portstar = []
     for son in rectObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             portstar.append(son)
         else:
             pass # Don't add non-port/star objects since they can't be rectified
@@ -273,7 +322,7 @@ def rectify_master_func(logfilename='',
     smthTrkFilenames = smoothTrackline(projDir=projDir, x_offset=x_offset, y_offset=y_offset, nchunk=nchunk, cog=cog, threadCnt=threadCnt)
     for son in portstar:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam) and beam in smthTrkFilenames:
             son.smthTrkFile = smthTrkFilenames[beam]
 
     ############################################################################
@@ -307,6 +356,8 @@ def rectify_master_func(logfilename='',
     for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
+        son.export_16bit = bool(export_16bit) and (not bool(getattr(son, 'son8bit', True)))
+        son.export_colormap_uint8 = bool(export_colormap_uint8)
 
     # ############################################################################
     # # Rectify Heading sonar imagery - Pingwise, not Rubbersheeting             #
@@ -355,6 +406,12 @@ def rectify_master_func(logfilename='',
 
                 # Get colormap
                 son._getSonColorMap(son_colorMap)
+
+                if son.export_16bit and son._rect_colormap_selected(son=True):
+                    if rect_wcp:
+                        son._prime_rect_global_colormap_bounds('rect_wcp')
+                    if rect_wcr:
+                        son._prime_rect_global_colormap_bounds('rect_wcr')
 
                 print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
 
@@ -413,6 +470,12 @@ def rectify_master_func(logfilename='',
                 # Get colormap
                 son._getSonColorMap(son_colorMap)
 
+                if son.export_16bit and son._rect_colormap_selected(son=True):
+                    if rect_wcp:
+                        son._prime_rect_global_colormap_bounds('rect_wcp')
+                    if rect_wcr:
+                        son._prime_rect_global_colormap_bounds('rect_wcr')
+
                 print('\n\tExporting', len(chunks), 'GeoTiffs for', son.beamName)
                 # for i in chunks:
                 #     son._rectSonRubber(i, filter, cog, wgs=False)
@@ -447,14 +510,29 @@ def rectify_master_func(logfilename='',
     if mosaic > 0:
         start_time = time.time()
         print("\nMosaicing GeoTiffs...")
-        psObj = portstarObj(portstar)
-        if aoi or max_heading_deviation or min_speed or max_speed or time_table:
-            psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
-        else:
-            psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
+        side_pairs, missing_pairs = _build_sidescan_pairs(portstar)
+
+        if len(missing_pairs) > 0:
+            for key, has_port, has_star in missing_pairs:
+                print(
+                    "\nSkipping side-scan mosaic group",
+                    repr(key),
+                    "because pair is incomplete:",
+                    f"port={has_port}, star={has_star}",
+                )
+
+        if len(side_pairs) == 0:
+            raise ValueError('No complete side-scan port/star pairs available for mosaicing.')
+
+        for _, pair in side_pairs:
+            psObj = portstarObj(pair)
+            if aoi or max_heading_deviation or min_speed or max_speed or time_table:
+                psObj._createMosaicTransect(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk, cog=cog)
+            else:
+                psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
+            del psObj
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
         gc.collect()
         printUsage()
 
@@ -464,11 +542,26 @@ def rectify_master_func(logfilename='',
     if banklines: 
         start_time = time.time()
         print("\nExporting Banklines...")
-        psObj = portstarObj(portstar)
-        psObj._exportBanklines(threadCnt)
+        side_pairs, missing_pairs = _build_sidescan_pairs(portstar)
+
+        if len(missing_pairs) > 0:
+            for key, has_port, has_star in missing_pairs:
+                print(
+                    "\nSkipping bankline export group",
+                    repr(key),
+                    "because pair is incomplete:",
+                    f"port={has_port}, star={has_star}",
+                )
+
+        if len(side_pairs) == 0:
+            raise ValueError('No complete side-scan port/star pairs available for bankline export.')
+
+        for _, pair in side_pairs:
+            psObj = portstarObj(pair)
+            psObj._exportBanklines(threadCnt)
+            del psObj
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
-        del psObj
         gc.collect()
         printUsage()
 

@@ -44,6 +44,11 @@ from pingmapper.funcs_common import *
 from pingmapper.class_rectObj import rectObj
 
 
+def _is_sidescan_beam(beam_name):
+    beam_name = str(beam_name)
+    return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
+
+
 # =========================================================
 def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, threadCnt=''):
 
@@ -84,11 +89,17 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
     portstar = []
     for son in rectObjs:
         beam = son.beamName
-        if beam == "ss_port" or beam == "ss_star":
+        if _is_sidescan_beam(beam):
             portstar.append(son)
         else:
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, rectObjs
+
+    if len(portstar) == 0:
+        raise ValueError(
+            "No side-scan channels found for rectification. Expected beam names like "
+            "ss_port/ss_star (including suffixed variants such as ss_port_low)."
+        )
 
     #############################################
     # Determine if smoothed trackline was created
@@ -231,38 +242,41 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
         chunks = pd.unique(sDF['chunk_id'])
         transects = pd.unique(sDF['transect'])
 
-        i = 1
-        t = 0
-        while i <= max(chunks):
+        if len(chunks) > 1:
+            i = 1
+            t = 0
+            max_chunk = int(max(chunks))
 
-        # for i in chunks:
+            while i <= max_chunk:
+                cur_chunk = sDF[sDF['chunk_id'] == i]
+                if cur_chunk.empty:
+                    i += 1
+                    continue
 
-            # # Get second to last row of previous chunk
-            # lastRow = sDF[sDF['chunk_id'] == i-1].iloc[[-2]]
-            # Get index of first row of current chunk
-            curRow = sDF[sDF['chunk_id'] == i].iloc[[0]]
-            curTransect = curRow['transect'].values[0]
-            curRow = curRow.index[0]
-            
-            if curTransect == t:
-                # Get second to last row of previous chunk
-                lastRow = sDF[sDF['chunk_id'] == i-1].iloc[-2]
+                cur_row = cur_chunk.iloc[[0]]
+                cur_transect = cur_row['transect'].values[0]
+                cur_idx = cur_row.index[0]
 
-                # Update current chunks first row from lastRow
-                sDF.at[curRow, "lons"] = float(lastRow["lons"])
-                sDF.at[curRow, "lats"] = float(lastRow["lats"])
-                sDF.at[curRow, "utm_es"] = float(lastRow["utm_es"])
-                sDF.at[curRow, "utm_ns"] = float(lastRow["utm_ns"])
-                sDF.at[curRow, "cog"] = float(lastRow["cog"])
-                sDF.at[curRow, "instr_heading"] = float(lastRow["instr_heading"])
-                # sDF.at[curRow, 'pixM'] = lastRow['pixM']
+                if cur_transect == t:
+                    prev_chunk = sDF[sDF['chunk_id'] == i - 1]
+                    if not prev_chunk.empty:
+                        # Prefer second-to-last row, but fall back to last row
+                        # when very small datasets have only one ping in chunk.
+                        if len(prev_chunk) >= 2:
+                            last_row = prev_chunk.iloc[-2]
+                        else:
+                            last_row = prev_chunk.iloc[-1]
 
-                del lastRow
-            else:
-                t += 1
+                        sDF.at[cur_idx, "lons"] = float(last_row["lons"])
+                        sDF.at[cur_idx, "lats"] = float(last_row["lats"])
+                        sDF.at[cur_idx, "utm_es"] = float(last_row["utm_es"])
+                        sDF.at[cur_idx, "utm_ns"] = float(last_row["utm_ns"])
+                        sDF.at[cur_idx, "cog"] = float(last_row["cog"])
+                        sDF.at[cur_idx, "instr_heading"] = float(last_row["instr_heading"])
+                else:
+                    t += 1
 
-            i+=1
-        del curRow, i
+                i += 1
 
         son0.smthTrk = sDF # Store smoothed trackline coordinates in rectObj.
         
@@ -270,22 +284,22 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
         if x_offset != 0.0 or y_offset != 0.0:
             son0._applyPosOffset(x_offset, y_offset)
 
-        # Update other channel with smoothed coordinates
-        # Determine which rectObj we need to update
-        for i, son in enumerate(portstar):
-            if i != maxRec:
-                son1 = son # rectObj to update
+        # Update all other side-scan channels with smoothed coordinates
+        for i, son1 in enumerate(portstar):
+            if i == maxRec:
+                continue
 
-        sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
-        # Update with correct record_num
-        son1._loadSonMeta() # Load ping metadata
-        df = son1.sonMetaDF
-        sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
-        sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
-        # sDF['pixM'] = df['pixM']
-        son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
+            sDF = son0.smthTrk.copy() # Make copy of smoothed trackline coordinates
+            son1._loadSonMeta() # Load ping metadata
+            df = son1.sonMetaDF
+            sDF['chunk_id'] = df['chunk_id'] # Update chunk_id for smoothed coordinates
+            sDF['record_num'] = df['record_num'] # Update record_num for smoothed coordinates
+            # sDF['pixM'] = df['pixM']
+            son1.smthTrk = sDF # Store smoothed trackline coordinates in rectObj
 
-        del sDF, df, son0, son1
+            del sDF, df
+
+        del son0
 
         # Save smoothed trackline coordinates to file
         csvNames = {}

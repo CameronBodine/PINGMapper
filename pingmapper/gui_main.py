@@ -102,8 +102,11 @@ def gui(batch: bool):
     else:
         text_input = sg.Text('Recording to Process')
         # in_input = sg.In(key='inFile', size=(80,1))
-        in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'], tooltip=tip_input)
-        browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
+        in_input = sg.In(key='inFile', size=(80,1), default_text=default_params['inFile'])
+        browse_input = sg.FileBrowse(
+            file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.RSD *.svlog *.jsf *.xtf *.sdf"),),
+            initial_folder=os.path.dirname(default_params['inFile']),
+        )
         # browse_input = sg.FileBrowse(file_types=(("Sonar File", "*.DAT *.sl2 *.sl3 *.svlog") ), initial_folder=os.path.dirname(default_params['inFile']))
 
     # Add to layout
@@ -136,8 +139,15 @@ def gui(batch: bool):
         text_suffix = sg.Text('Project Name Suffix:', size=(20,1))
         in_suffix = sg.Input(key='suffix', size=(10,1), tooltip=tip_suffix)
 
+        check_preserve_subdirs = sg.Checkbox(
+            'Preserve Input Subdirectory Structure',
+            key='preserve_subdirs',
+            default=default_params.get('preserve_subdirs', False),
+        )
+
         # Add to layout
         layout.append([text_prefix, in_prefix, sg.VerticalSeparator(), text_suffix, in_suffix])
+        layout.append([check_preserve_subdirs])
 
     else:
         text_project = sg.Text('Project Name', size=(15,1))
@@ -307,6 +317,27 @@ def gui(batch: bool):
     layout.append([col_egn_1, sg.VerticalSeparator(), col_egn_2])
 
     #######################
+    # Global Export Options
+
+    text_global_export = sg.Text('Global Export Options\n', font=("Helvetica", 14, "underline"))
+    check_export_16bit = sg.Checkbox(
+        'Export 16-bit TIFFs (applies to Sonogram + Rectified outputs)',
+        key='export_16bit',
+        default=default_params.get('export_16bit', False),
+        enable_events=True,
+    )
+    check_export_colormap_uint8 = sg.Checkbox(
+        'Colormapped RGB uses 8-bit channels (smaller files)',
+        key='export_colormap_uint8',
+        default=default_params.get('export_colormap_uint8', True)
+    )
+
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_global_export])
+    layout.append([check_export_16bit])
+    layout.append([check_export_colormap_uint8])
+
+    #######################
     # Sonogram Tile Exports
 
     text_tile = sg.Text('Sonogram Tile Exports\n', font=("Helvetica", 14, "underline"))
@@ -328,10 +359,12 @@ def gui(batch: bool):
 
     # Options
     text_file_type = sg.Text('Image Format:', size=(15,1))
-    combo_file_type = sg.Combo(['.jpg', '.png'], key='tileFile', default_value=default_params['tileFile'])
+    combo_file_type = sg.Combo(['.jpg', '.png', '.tif'], key='tileFile', default_value=default_params['tileFile'])
 
     text_tile_color = sg.Text('Tile Colormap:', size=(15,1))
-    combo_tile_color = sg.Combo(plt.colormaps(), key='sonogram_colorMap', default_value=default_params['sonogram_colorMap'], tooltip=tip_tile_color)
+    tile_colormaps = ['None'] + list(plt.colormaps())
+    combo_tile_color = sg.Combo(tile_colormaps, key='sonogram_colorMap', default_value=default_params.get('sonogram_colorMap', 'copper'), enable_events=True)
+
 
     check_speed_cor = sg.Checkbox('Speed Correct', key='spdCor', default=default_params['spdCor'], tooltip=tip_speed_cor)
 
@@ -418,7 +451,8 @@ def gui(batch: bool):
     slide_rect_interp = sg.Slider(range=(0, 200), resolution=5, orientation='h', key='rectInterpDist', default_value=default_params['rectInterpDist'], disabled=rect_meth_status, tooltip=tip_interp)
 
     text_color = sg.Text('Sonar Colormap', size=(30,1))
-    combo_color = sg.Combo(plt.colormaps(), key='son_colorMap', default_value=default_params['son_colorMap'], tooltip=tip_son_color)
+    rect_colormaps = ['None'] + list(plt.colormaps())
+    combo_color = sg.Combo(rect_colormaps, key='son_colorMap', default_value=default_params.get('son_colorMap', 'Greys_r'), enable_events=True)
 
     text_rect_mosaic = sg.Text('Export Sonar Mosaic', size=(30,1))
     combo_rect_mosaic = sg.Combo(['False', 'GTiff', 'VRT'], key='mosaic', default_value=default_params['mosaic'], tooltip=tip_mosaic)
@@ -495,10 +529,32 @@ def gui(batch: bool):
         window_text = 'Batch Process Sonar Logs'
     else:
         window_text = 'Process Sonar Log'
-    window = sg.Window(window_text, layout2, resizable=True)
+    window = sg.Window(window_text, layout2, resizable=True, finalize=True)
+
+    def _is_cmap_selected(value):
+        if value is None:
+            return False
+        return str(value).strip().lower() not in ['', 'none', 'false']
+
+    def _update_colormap_depth_toggle(values_dict):
+        use_16bit = bool(values_dict.get('export_16bit', False))
+        tile_cmap_selected = _is_cmap_selected(values_dict.get('sonogram_colorMap'))
+        rect_cmap_selected = _is_cmap_selected(values_dict.get('son_colorMap'))
+        enable_toggle = use_16bit and (tile_cmap_selected or rect_cmap_selected)
+        window['export_colormap_uint8'].update(disabled=not enable_toggle)
+
+    initial_values = {
+        'export_16bit': default_params.get('export_16bit', False),
+        'sonogram_colorMap': default_params.get('sonogram_colorMap', 'copper'),
+        'son_colorMap': default_params.get('son_colorMap', 'Greys_r'),
+    }
+    _update_colormap_depth_toggle(initial_values)
 
     while True:
         event, values = window.read()
+
+        if event not in (None, 'Quit'):
+            _update_colormap_depth_toggle(values)
 
         # values['humFile'] = os.path.join(values['inDir'], 'R1.DAT')
 
@@ -672,6 +728,8 @@ def gui(batch: bool):
             'wco':values['wco'],
             'sonogram_colorMap':values['sonogram_colorMap'],
             'mask_shdw':values['mask_shdw'],
+            'export_16bit':values['export_16bit'],
+            'export_colormap_uint8':values['export_colormap_uint8'],
             'tileFile':values['tileFile'],
             'spdCor':values['spdCor'],
             'maxCrop':values['maxCrop'],
@@ -711,6 +769,7 @@ def gui(batch: bool):
             prefix=(values['prefix'] if batch else ''),
             suffix=(values['suffix'] if batch else ''),
             batch=batch,
+            preserve_subdirs=(values.get('preserve_subdirs', False) if batch else False),
             params=params,
             script_path=os.path.abspath(__file__),
         )

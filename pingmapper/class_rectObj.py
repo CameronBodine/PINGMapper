@@ -133,7 +133,289 @@ class rectObj(sonObj):
         if not hasattr(self, 'rect_wcr'):
             self.rect_wcr = False
 
+        if not hasattr(self, 'export_16bit'):
+            self.export_16bit = False
+
+        if not hasattr(self, 'export_colormap_uint8'):
+            self.export_colormap_uint8 = True
+
+        if not hasattr(self, 'son_colorMap_name'):
+            self.son_colorMap_name = 'Greys_r'
+
         return
+
+    #=======================================================================
+    def _rect_export_16bit(self, son=True):
+        return bool(son) and bool(getattr(self, 'export_16bit', False))
+
+    #=======================================================================
+    def _is_colormap_selected(self, cmap_name):
+        if cmap_name is None:
+            return False
+        name = str(cmap_name).strip().lower()
+        return name not in ['', 'none', 'false']
+
+    #=======================================================================
+    def _rect_colormap_selected(self, son=True):
+        if not son:
+            return True
+        return self._is_colormap_selected(getattr(self, 'son_colorMap_name', None))
+
+    #=======================================================================
+    def _get_colormap_bounds(self, data):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        valid = arr > 0
+        if not np.any(valid):
+            return 0.0, 1.0
+
+        vals = arr[valid]
+        lo = float(np.nanpercentile(vals, 1.0))
+        hi = float(np.nanpercentile(vals, 99.5))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(vals))
+            hi = float(np.nanmax(vals))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return 0.0, 1.0
+
+        return lo, hi
+
+    #=======================================================================
+    def _normalize_with_bounds(self, data, lo, hi):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return self._normalize_for_colormap(arr, bit_depth=16)
+
+        norm = (arr - float(lo)) / (float(hi) - float(lo))
+        norm = np.clip(norm, 0.0, 1.0)
+        return norm.astype(np.float32)
+
+    #=======================================================================
+    def _get_rect_global_colormap_bounds(self, img_prefix, son=True):
+        if not son:
+            return None
+
+        cache = getattr(self, '_rect_global_colormap_bounds', None)
+        if not isinstance(cache, dict):
+            return None
+
+        return cache.get(str(img_prefix), None)
+
+    #=======================================================================
+    def _set_rect_global_colormap_bounds(self, img_prefix, bounds, son=True):
+        if not son:
+            return
+
+        if not isinstance(getattr(self, '_rect_global_colormap_bounds', None), dict):
+            self._rect_global_colormap_bounds = {}
+
+        self._rect_global_colormap_bounds[str(img_prefix)] = bounds
+
+    #=======================================================================
+    def _get_rect_global_target_median(self, img_prefix, son=True):
+        if not son:
+            return None
+
+        cache = getattr(self, '_rect_global_target_median', None)
+        if not isinstance(cache, dict):
+            return None
+
+        return cache.get(str(img_prefix), None)
+
+    #=======================================================================
+    def _set_rect_global_target_median(self, img_prefix, median_value, son=True):
+        if not son:
+            return
+
+        if not isinstance(getattr(self, '_rect_global_target_median', None), dict):
+            self._rect_global_target_median = {}
+
+        self._rect_global_target_median[str(img_prefix)] = median_value
+
+    #=======================================================================
+    def _match_rect_chunk_global_median(self, data, img_prefix, son=True):
+        if not son:
+            return data
+
+        target = self._get_rect_global_target_median(img_prefix, son=True)
+        if target is None or (not np.isfinite(target)) or target <= 0:
+            return data
+
+        arr = np.asarray(data, dtype=np.float32)
+        valid = arr > 0
+        if not np.any(valid):
+            return data
+
+        local_med = float(np.nanmedian(arr[valid]))
+        if (not np.isfinite(local_med)) or local_med <= 0:
+            return data
+
+        scale = float(target) / local_med
+        scale = float(np.clip(scale, 0.75, 1.25))
+
+        out = arr.copy()
+        out[valid] = out[valid] * scale
+        out = np.clip(out, 0.0, 65535.0)
+        return out.astype(np.uint16)
+
+    #=======================================================================
+    def _prime_rect_global_colormap_bounds(self, img_prefix, max_samples=64):
+        if str(img_prefix) not in ['rect_wcp', 'rect_wcr']:
+            return None
+
+        existing = self._get_rect_global_colormap_bounds(img_prefix, son=True)
+        existing_median = self._get_rect_global_target_median(img_prefix, son=True)
+        if existing is not None and existing_median is not None:
+            return existing
+
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
+        sonMetaAll = getattr(self, 'sonMetaDF', None)
+        if sonMetaAll is None or len(sonMetaAll) == 0 or 'chunk_id' not in sonMetaAll.columns:
+            return None
+
+        chunk_ids = np.sort(pd.to_numeric(sonMetaAll['chunk_id'], errors='coerce').dropna().astype(int).unique())
+        if len(chunk_ids) == 0:
+            return None
+
+        if len(chunk_ids) > int(max_samples):
+            step = int(np.ceil(len(chunk_ids) / float(max_samples)))
+            sampled_chunks = chunk_ids[::step]
+            if sampled_chunks[-1] != chunk_ids[-1]:
+                sampled_chunks = np.append(sampled_chunks, chunk_ids[-1])
+        else:
+            sampled_chunks = chunk_ids
+
+        sampled_vals = []
+        max_vals_per_chunk = 20000
+
+        for chunk in sampled_chunks:
+            isChunk = sonMetaAll['chunk_id'] == int(chunk)
+            sonMeta = sonMetaAll[isChunk].reset_index(drop=True)
+            if len(sonMeta) == 0:
+                continue
+
+            try:
+                self._getScanChunkSingle(int(chunk))
+            except Exception:
+                continue
+
+            if self.remShadow:
+                try:
+                    self._SHW_mask(int(chunk))
+                    self.sonDat = self.sonDat * self.shadowMask
+                    del self.shadowMask
+                except Exception:
+                    pass
+
+            if str(img_prefix) == 'rect_wcp':
+                if self.egn:
+                    self._egn_wcp(int(chunk), sonMeta)
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+            else:
+                self._WCR_SRC(sonMeta)
+                if (not bool(getattr(self, 'rect_wcp', False))) and self.egn:
+                    self._egn()
+                    self.sonDat = np.nan_to_num(self.sonDat, nan=0)
+                    if self.egn_stretch > 0:
+                        self._egnDoStretch()
+
+            img = self._reserve_zero_for_nodata(self.sonDat)
+            img = self._prepare_export_uint16(img)
+            vals = img[img > 0]
+            if vals.size == 0:
+                continue
+
+            if vals.size > max_vals_per_chunk:
+                idx = np.linspace(0, vals.size - 1, num=max_vals_per_chunk, dtype=np.int64)
+                vals = vals[idx]
+
+            sampled_vals.append(vals.astype(np.float64, copy=False))
+
+        if len(sampled_vals) == 0:
+            return None
+
+        pooled = np.concatenate(sampled_vals)
+        lo = float(np.nanpercentile(pooled, 1.0))
+        hi = float(np.nanpercentile(pooled, 99.5))
+        med = float(np.nanpercentile(pooled, 50.0))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(pooled))
+            hi = float(np.nanmax(pooled))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return None
+
+        bounds = (lo, hi)
+        self._set_rect_global_colormap_bounds(img_prefix, bounds, son=True)
+        if np.isfinite(med) and med > 0:
+            self._set_rect_global_target_median(img_prefix, med, son=True)
+        return bounds
+
+    #=======================================================================
+    def _write_rect_geotiff(self, gtiff, data, epsg, transform, colormap=None):
+        arr = np.asarray(data)
+
+        if arr.ndim == 2:
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=arr.shape[0],
+                width=arr.shape[1],
+                count=1,
+                dtype=arr.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='deflate',
+                zlevel=9,
+                predictor=2,
+                tiled=True,
+                blockxsize=256,
+                blockysize=256,
+                resampling=Resampling.bilinear,
+            ) as dst:
+                dst.nodata = 0
+                if colormap is not None and arr.dtype == np.uint8:
+                    dst.write_colormap(1, colormap)
+                dst.write(arr, 1)
+            return
+
+        if arr.ndim == 3 and arr.shape[2] in [3, 4]:
+            band_count = arr.shape[2]
+            with rasterio.open(
+                gtiff,
+                'w',
+                driver='GTiff',
+                height=arr.shape[0],
+                width=arr.shape[1],
+                count=band_count,
+                dtype=arr.dtype,
+                crs=epsg,
+                transform=transform,
+                compress='deflate',
+                zlevel=9,
+                predictor=2,
+                tiled=True,
+                blockxsize=256,
+                blockysize=256,
+                photometric='RGB',
+                resampling=Resampling.bilinear,
+            ) as dst:
+                dst.nodata = 0
+                for band_idx in range(band_count):
+                    dst.write(arr[:, :, band_idx], band_idx + 1)
+            return
+
+        raise ValueError(f'Unsupported rectified data shape: {arr.shape}')
 
     ############################################################################
     # Smooth GPS trackpoint coordinates                                        #
@@ -261,10 +543,40 @@ class rectObj(sonObj):
         t = t[mask]
 
         # Check if enough points to interpolate
-        # If not, too many overlapping pings
+        # If not, too many overlapping pings. Fall back to unsmoothed coordinates
+        # while preserving expected output columns.
         if len(x) <= deg:
-            # return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s', 'pix_m']]
-            return dfOrig[['chunk_id', 'record_num', 'ping_cnt', 'time_s']]
+            fb = dfOrig.copy()
+
+            if lons not in fb.columns and xlon in fb.columns:
+                fb[lons] = fb[xlon]
+            if lats not in fb.columns and ylat in fb.columns:
+                fb[lats] = fb[ylat]
+
+            if es not in fb.columns:
+                if xutm in fb.columns:
+                    fb[es] = fb[xutm]
+                elif lons in fb.columns and lats in fb.columns:
+                    e_fb, _ = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
+                    fb[es] = e_fb
+
+            if ns not in fb.columns:
+                if yutm in fb.columns:
+                    fb[ns] = fb[yutm]
+                elif lons in fb.columns and lats in fb.columns:
+                    _, n_fb = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
+                    fb[ns] = n_fb
+
+            if 'cog' not in fb.columns:
+                if 'instr_heading' in fb.columns:
+                    fb['cog'] = fb['instr_heading']
+                elif lons in fb.columns and lats in fb.columns and len(fb) > 1:
+                    brng = self._getBearing(fb, lons, lats)
+                    fb['cog'] = np.append(brng, brng[-1])
+                else:
+                    fb['cog'] = 0.0
+
+            return fb
 
         # Fit a spline to filtered coordinates and parameterize with time ellapsed
         try:
@@ -487,7 +799,7 @@ class rectObj(sonObj):
         # Store in dataframe
         sDF[utm_es] = e_smth
         sDF[utm_ns] = n_smth
-        sDF = sDF.dropna() # Drop any NA's
+        sDF = sDF.dropna(subset=[lons, lats, utm_es, utm_ns]) # Drop rows missing required coordinates
         self.smthTrk = sDF # Store df in class attribute
 
         return
@@ -565,7 +877,7 @@ class rectObj(sonObj):
         ########################
         # Calculate ping bearing
         # Determine ping bearing.  Ping bearings are perpendicular to COG.
-        if self.beamName == 'ss_port':
+        if str(self.beamName).startswith('ss_port'):
             rotate = -90  # Rotate COG by 90 degrees to the left
         else:
             rotate = 90 # Rotate COG by 90 degrees to the right
@@ -647,7 +959,7 @@ class rectObj(sonObj):
         # Store in dataframe
         sDF[re] = e_smth
         sDF[rn] = n_smth
-        sDF = sDF.dropna() # Drop any NA's
+        sDF = sDF.dropna(subset=[lons, lats, range_, rlon, rlat, re, rn, ping_bearing]) # Keep rows with valid range geometry
         self.smthTrk = sDF # Store df in class attribute
 
         ##########################################
@@ -717,6 +1029,8 @@ class rectObj(sonObj):
         sDF = self.smthTrk # Load smoothed trackline coordinates
         rDF = sDF.copy() # Make a copy to work on
 
+        rs_chunks = []
+
         # Work on one chunk at a time
         for chunk, chunkDF in rDF.groupby('chunk_id'):
             chunkDF.reset_index(drop=True, inplace=True)
@@ -725,6 +1039,9 @@ class rectObj(sonObj):
             last = chunkDF.iloc[-1].to_frame().T
             chunkDF = chunkDF.iloc[::filt]
             chunkDF = pd.concat([chunkDF, last]).reset_index(drop=True)
+
+            if len(chunkDF) == 0:
+                continue
 
             idx = chunkDF.index.tolist() # Store ping index in list
             maxIdx = max(idx) # Find last record index value
@@ -760,24 +1077,81 @@ class rectObj(sonObj):
             rchunkDF = chunkDF.copy() # Make copy of df w/ no overlapping sonar records for current chunk
             schunkDF = sDF[sDF['chunk_id']==chunk].copy() # Get original df for current chunk
 
+            if len(rchunkDF) == 0:
+                continue
+
             #################################################
             # Smooth and interpolate range extent coordinates
             smthChunk = self._interpTrack(df=rchunkDF, dfOrig=schunkDF, xlon=rlon,
                                           ylat=rlat, xutm=re, yutm=rn, filt=0, deg=1)
 
-            # Store smoothed range extent in output df
-            if 'rsDF' not in locals(): # If output df doesn't exist, make it
-                rsDF = smthChunk.copy()
-            else: # If output df exists, append results to it
-                rsDF = pd.concat([rsDF, smthChunk], axis=0).reset_index(drop=True)
+            if smthChunk is not None and len(smthChunk) > 0:
+                if 'range_lons' not in smthChunk.columns and 'range_lon' in smthChunk.columns:
+                    smthChunk = smthChunk.rename(columns={'range_lon': 'range_lons'})
+                if 'range_lats' not in smthChunk.columns and 'range_lat' in smthChunk.columns:
+                    smthChunk = smthChunk.rename(columns={'range_lat': 'range_lats'})
+
+                required_cols = {'record_num', 'range_lons', 'range_lats'}
+                if not required_cols.issubset(smthChunk.columns):
+                    if {'record_num', 'range_lon', 'range_lat'}.issubset(schunkDF.columns):
+                        smthChunk = schunkDF[['record_num', 'range_lon', 'range_lat', 'cog']].copy()
+                        smthChunk.rename(columns={'range_lon': 'range_lons', 'range_lat': 'range_lats'}, inplace=True)
+                    else:
+                        continue
+
+                rs_chunks.append(smthChunk.copy())
 
         ##################################################
         # Join smoothed trackline to smoothed range extent
         # sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'pix_m', 'lons', 'lats', 'utm_es', 'utm_ns', 'cog', 'dep_m']].copy()
         sDF = sDF[['record_num', 'chunk_id', 'ping_cnt', 'time_s', 'lons', 'lats', 'utm_es', 'utm_ns', 'instr_heading', 'cog', 'dep_m', 'transect', 'pixM']].copy()
         sDF.rename(columns={'lons': 'trk_lons', 'lats': 'trk_lats', 'utm_es': 'trk_utm_es', 'utm_ns': 'trk_utm_ns', 'cog': 'trk_cog'}, inplace=True)
-        rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
-        rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
+        if len(rs_chunks) == 0:
+            src_df = self.smthTrk.copy()
+
+            lon_src = None
+            for candidate in ['range_lons', 'range_lon', 'lons', 'trk_lons']:
+                if candidate in src_df.columns:
+                    lon_src = candidate
+                    break
+
+            lat_src = None
+            for candidate in ['range_lats', 'range_lat', 'lats', 'trk_lats']:
+                if candidate in src_df.columns:
+                    lat_src = candidate
+                    break
+
+            cog_src = None
+            for candidate in ['range_cog', 'cog', 'trk_cog']:
+                if candidate in src_df.columns:
+                    cog_src = candidate
+                    break
+
+            rsDF = sDF[['record_num', 'trk_lons', 'trk_lats', 'trk_cog']].copy()
+            rsDF.rename(columns={'trk_lons': 'range_lons', 'trk_lats': 'range_lats', 'trk_cog': 'range_cog'}, inplace=True)
+
+            if lon_src is not None:
+                lon_map = src_df[['record_num', lon_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_lons'] = lon_map[lon_src]
+                rsDF = rsDF.reset_index()
+
+            if lat_src is not None:
+                lat_map = src_df[['record_num', lat_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_lats'] = lat_map[lat_src]
+                rsDF = rsDF.reset_index()
+
+            if cog_src is not None:
+                cog_map = src_df[['record_num', cog_src]].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+                rsDF = rsDF.set_index('record_num')
+                rsDF['range_cog'] = cog_map[cog_src]
+                rsDF = rsDF.reset_index()
+        else:
+            rsDF = pd.concat(rs_chunks, axis=0).reset_index(drop=True)
+            rsDF.rename(columns={'cog': 'range_cog'}, inplace=True)
+            rsDF = rsDF[['record_num', 'range_lons', 'range_lats', 'range_cog']]
+
         rsDF = sDF.set_index('record_num').join(rsDF.set_index('record_num'))
 
         # Calculate easting/northing for smoothed range extent
@@ -1035,14 +1409,27 @@ class rectObj(sonObj):
 
         '''
         '''
+        if df is None or len(df) == 0:
+            return
+
         start_time = time.time()
 
         # Calculate the sonar return coordinates
         dfOut = []
-        for i, row in df.iterrows():
-            dfOut.append(self._calcSonReturnCoords(row, heading))
+        for _, row in df.iterrows():
+            ping_df = self._calcSonReturnCoords(row, heading)
+            if ping_df is None:
+                continue
+            if hasattr(ping_df, 'empty') and ping_df.empty:
+                continue
+            dfOut.append(ping_df)
 
-        dfAll = pd.concat(dfOut)
+        if len(dfOut) == 0:
+            return
+
+        dfAll = pd.concat(dfOut, ignore_index=True)
+        if dfAll.empty:
+            return
 
         t1 = round(time.time() - start_time, ndigits=1)
 
@@ -1050,6 +1437,8 @@ class rectObj(sonObj):
         start_time = time.time()
         # dfAll = self._calcSonReturnPixCoords(dfAll, chunk, son=son)
         dfAll = self._getSonarReturns(dfAll, chunk, son=son)
+        if dfAll is None or len(dfAll) == 0:
+            return
         t2 = round(time.time() - start_time, ndigits=1)
 
         # Do rectification
@@ -1095,7 +1484,7 @@ class rectObj(sonObj):
         ########################
         # Calculate ping bearing
         # Determine ping bearing.  Ping bearings are perpendicular to COG.
-        if self.beamName == 'ss_port':
+        if str(self.beamName).startswith('ss_port'):
             rotate = -90  # Rotate COG by 90 degrees to the left
         else:
             rotate = 90 # Rotate COG by 90 degrees to the right
@@ -1456,6 +1845,8 @@ class rectObj(sonObj):
 
         for imgOutPrefix, sonCol in to_rect:
 
+            use_16bit = self._rect_export_16bit(son=son)
+
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
 
             try:
@@ -1467,19 +1858,36 @@ class rectObj(sonObj):
             row = df[yPix].to_numpy().astype(int)
             col = df[xPix].to_numpy().astype(int)
             data = df[sonCol].to_numpy()
-
-            # Create a dictionary to store the maximum value for each coordinate
-            max_values = {}
+            if son:
+                data = self._reserve_zero_for_nodata(data)
+            apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                data = self._prepare_export_uint16(data)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(data)
+            # Aggregate repeated pixel hits by mean intensity so rectified
+            # outputs better match non-rectified contrast (max aggregation tends
+            # to bias brightness high and look washed out).
+            sum_values = {}
+            count_values = {}
             for r, c, d in zip(row, col, data):
-                if (r, c) in max_values:
-                    max_values[(r, c)] = max(max_values[(r, c)], d)
+                key = (r, c)
+                if key in sum_values:
+                    sum_values[key] += float(d)
+                    count_values[key] += 1
                 else:
-                    max_values[(r, c)] = d
+                    sum_values[key] = float(d)
+                    count_values[key] = 1
 
-            # Convert the dictionary back to arrays
-            row = np.array([k[0] for k in max_values.keys()])
-            col = np.array([k[1] for k in max_values.keys()])
-            data = np.array(list(max_values.values()))
+            # Convert aggregated values back to arrays
+            row = np.array([k[0] for k in sum_values.keys()], dtype=np.int32)
+            col = np.array([k[1] for k in sum_values.keys()], dtype=np.int32)
+            data = np.array(
+                [sum_values[k] / max(count_values[k], 1) for k in sum_values.keys()],
+                dtype=np.float32,
+            )
 
             # Create the sparse matrix
             sonRect = coo_matrix((data, (row, col)), shape=(yPixMax+1, xPixMax+1))
@@ -1534,7 +1942,8 @@ class rectObj(sonObj):
                 # Get sonRect back to original dims
                 sonRect = sonRect[interpolation_distance-1:-interpolation_distance+1, interpolation_distance-1:-interpolation_distance+1]
 
-                sonRect = sonRect.astype('uint8')
+                if not use_16bit:
+                    sonRect = sonRect.astype('uint8')
 
 
             ###############
@@ -1549,30 +1958,30 @@ class rectObj(sonObj):
             if do_resize:
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
-            if son:
-                colormap = self.son_colorMap
+            if use_16bit:
+                sonRect_raw16 = self._prepare_export_uint16(sonRect)
+                if apply_post_rect_colormap:
+                    sonRect_raw16 = self._match_rect_chunk_global_median(sonRect_raw16, imgOutPrefix, son=son)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(sonRect_raw16, source_scale_bounds[0], source_scale_bounds[1])
+                        cmap = plt.cm.get_cmap(self.son_colorMap_name)(norm_data)
+                        if use_uint8_rgb:
+                            sonRect_out = np.clip(cmap[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            sonRect_out = np.clip(cmap[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = sonRect_raw16 > 0
+                        sonRect_out[valid_mask] = np.maximum(sonRect_out[valid_mask], 1)
+                    else:
+                        sonRect_out = self._colorize_pre_normalized_uint16(sonRect_raw16, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    sonRect_out = sonRect_raw16
+                self._write_rect_geotiff(gtiff, sonRect_out, epsg, transform, colormap=None)
             else:
-                # colormap = class_colormap
-                pass
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=sonRect.shape[0],
-                width=sonRect.shape[1],
-                count=1,
-                dtype=sonRect.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw',
-                resampling=Resampling.bilinear
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, colormap)
-                    dst.write(sonRect,1)
-                    dst=None
-
-            del dst
+                sonRect_out = np.clip(sonRect, 0, 255).astype(np.uint8)
+                colormap = self.son_colorMap if son else None
+                self._write_rect_geotiff(gtiff, sonRect_out, epsg, transform, colormap=colormap)
 
             #############
             # Do resizing
@@ -1809,11 +2218,17 @@ class rectObj(sonObj):
 
         # Iterate chunks
         for chunk in range(0, chunkMax+1):
+            lat_list = []
+            lon_list = []
+
             # Iterate dfs
             for df in dfs:
                 # Get chunk
                 isChunk = df['chunk_id'] == chunk
                 df = df[isChunk].reset_index()
+
+                if len(df) == 0:
+                    continue
 
                 # Get last row
                 dfLast = df.iloc[-1]
@@ -1837,6 +2252,9 @@ class rectObj(sonObj):
 
                 del df
 
+            if len(lat_list) < 3 or len(lon_list) < 3:
+                continue
+
             # Create polygon from points
             chunk_geom = Polygon(zip(lon_list, lat_list))
             chunk_geom = gpd.GeoDataFrame(index=[chunk], crs=epsg, geometry=[chunk_geom])
@@ -1853,6 +2271,9 @@ class rectObj(sonObj):
             else:
                 gdf = pd.concat([gdf, chunk_geom])
             del chunk_geom
+
+        if 'gdf' not in locals() or len(gdf) == 0:
+            return
 
         gdf['chunk_id'] = gdf.index
 
@@ -2031,6 +2452,9 @@ class rectObj(sonObj):
             
             if filtSon:
                 idx_to_filt = dropped_sonMeta_idx.tolist()
+
+        if len(sonMeta) == 0 or len(trkMeta) == 0:
+            return
         
 
         #################################
@@ -2220,6 +2644,8 @@ class rectObj(sonObj):
         ## of upper left corner of the image and the pixel size
         transform = from_origin(xMin - xres/2, yMax - yres/2, xres, yres)
 
+        use_16bit = self._rect_export_16bit(son=son)
+
         if self.rect_wcp:
             imgOutPrefix = 'rect_wcp'
             outDir = os.path.join(self.outDir, imgOutPrefix) # Sub-directory
@@ -2237,7 +2663,15 @@ class rectObj(sonObj):
                     self._egnDoStretch()
 
             img = self.sonDat.copy()
-
+            if son:
+                img = self._reserve_zero_for_nodata(img)
+            apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                img = self._prepare_export_uint16(img)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2251,7 +2685,11 @@ class rectObj(sonObj):
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+            out = np.flip(np.flip(np.flip(out,1),0),1)
+            if use_16bit:
+                out = out.astype(np.float32)
+            else:
+                out = out.astype('uint8')
 
             projName = os.path.split(self.projDir)[-1] # Get project name
             beamName = self.beamName # Determine which sonar beam we are working with
@@ -2263,24 +2701,30 @@ class rectObj(sonObj):
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
-                count=1,
-                dtype=out.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw'
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, self.son_colorMap)
-                    dst.write(out,1)
-                    dst=None
+            if use_16bit:
+                out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    out16_raw = self._match_rect_chunk_global_median(out16_raw, imgOutPrefix, son=son)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
+                        if use_uint8_rgb:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = out16_raw > 0
+                        out16[valid_mask] = np.maximum(out16[valid_mask], 1)
+                    else:
+                        out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    out16 = out16_raw
+                self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
+            else:
+                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=self.son_colorMap)
 
-            del out, dst, img
+            del out, img
 
             if do_resize:
                 self._pixresResize(gtiff)
@@ -2310,7 +2754,15 @@ class rectObj(sonObj):
                         self._egnDoStretch()
 
             img = self.sonDat
-
+            if son:
+                img = self._reserve_zero_for_nodata(img)
+            apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
+            source_scale_bounds = None
+            if apply_post_rect_colormap:
+                img = self._prepare_export_uint16(img)
+                source_scale_bounds = self._get_rect_global_colormap_bounds(imgOutPrefix, son=son)
+                if source_scale_bounds is None:
+                    source_scale_bounds = self._get_colormap_bounds(img)
             img[0]=0 # To fix extra white on curves
 
             # Warp image from the input shape to output shape
@@ -2373,7 +2825,11 @@ class rectObj(sonObj):
 
             # Rotate 180 and flip
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
-            out = np.flip(np.flip(np.flip(out,1),0),1).astype('uint8')
+            out = np.flip(np.flip(np.flip(out,1),0),1)
+            if son and use_16bit:
+                out = out.astype(np.float32)
+            else:
+                out = out.astype('uint8')
 
             if son:
                 projName = os.path.split(self.projDir)[-1] # Get project name
@@ -2390,29 +2846,31 @@ class rectObj(sonObj):
                 gtiff = gtiff.replace('.tif', 'temp.tif')
 
             # Export georectified image
-            if son:
-                colormap = self.son_colorMap
+            if son and use_16bit:
+                out16_raw = self._prepare_export_uint16(out)
+                if apply_post_rect_colormap:
+                    out16_raw = self._match_rect_chunk_global_median(out16_raw, imgOutPrefix, son=son)
+                if apply_post_rect_colormap:
+                    use_uint8_rgb = self._export_colormap_as_uint8()
+                    if source_scale_bounds is not None:
+                        norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
+                        if use_uint8_rgb:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                        else:
+                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                        valid_mask = out16_raw > 0
+                        out16[valid_mask] = np.maximum(out16[valid_mask], 1)
+                    else:
+                        out16 = self._colorize_pre_normalized_uint16(out16_raw, self.son_colorMap_name, rgb_uint8=use_uint8_rgb)
+                else:
+                    out16 = out16_raw
+                self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
             else:
-                colormap = class_colormap
-            with rasterio.open(
-                gtiff,
-                'w',
-                driver='GTiff',
-                height=out.shape[0],
-                width=out.shape[1],
-                count=1,
-                dtype=out.dtype,
-                crs=epsg,
-                transform=transform,
-                compress='lzw',
-                resampling=Resampling.bilinear
-                ) as dst:
-                    dst.nodata=0
-                    dst.write_colormap(1, colormap)
-                    dst.write(out,1)
-                    dst=None
+                colormap = self.son_colorMap if son else class_colormap
+                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=colormap)
 
-            del out, dst
+            del out
 
             if do_resize:
                 self._pixresResize(gtiff)
@@ -2429,6 +2887,11 @@ class rectObj(sonObj):
     def _getSonColorMap(self, name):
         '''
         '''
+
+        self.son_colorMap_name = name
+        if not self._is_colormap_selected(name):
+            self.son_colorMap = None
+            return
 
         son_colorMap = {}
         try:

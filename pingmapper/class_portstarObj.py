@@ -149,18 +149,37 @@ class portstarObj(object):
         -------
         portstarObj instance.
         '''
+        beam_names = []
         for obj in objs:
-            if obj.beamName == 'ss_port':
+            beam_name = str(obj.beamName)
+            beam_names.append(beam_name)
+
+            if beam_name.startswith('ss_port'):
                 self.port = obj
-            elif obj.beamName == 'ss_star':
+            elif beam_name.startswith('ss_star'):
                 self.star = obj
             else:
                 print("Object is unknown...")
+
+        if not hasattr(self, 'port') or not hasattr(self, 'star'):
+            raise ValueError(
+                "portstarObj requires both side-scan channels (port and star). "
+                f"Received beam names: {beam_names}"
+            )
         return
 
     ############################################################################
     # Get Port/Star Sonar Intensity and Merge                                  #
     ############################################################################
+
+    #=======================================================================
+    def _get_sonar_mosaic_name_token(self):
+        beam_name = str(self.port.beamName)
+        if beam_name.startswith('ss_port_'):
+            return beam_name.replace('ss_port_', 'ss_', 1)
+        if beam_name.startswith('ss_port'):
+            return ''
+        return beam_name
 
     #=======================================================================
     def _getPortStarScanChunk(self,
@@ -428,6 +447,13 @@ class portstarObj(object):
 
         chunkField = 'chunk_id'
 
+        def _iter_groups(df):
+            if 'transect' in df.columns:
+                groups = list(df.groupby('transect', dropna=False))
+                if len(groups) > 0:
+                    return groups
+            return [(0, df)]
+
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
                 self.port._loadSonMeta()
@@ -436,15 +462,18 @@ class portstarObj(object):
                 portPath = os.path.join(self.port.outDir, 'rect_wcp')
 
                 port = []
-                for name, group in df.groupby('transect'):
+                for name, group in _iter_groups(df):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
                         zero = self.port._addZero(chunk)
                         img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
-                        img = glob(img_path)[0]
-                        port_transect.append(img)
-                    port.append(port_transect)
+                        imgs = glob(img_path)
+                        if len(imgs) == 0:
+                            continue
+                        port_transect.append(imgs[0])
+                    if len(port_transect) > 0:
+                        port.append(port_transect)
 
                 self.star._loadSonMeta()
                 df = self.star.sonMetaDF
@@ -452,15 +481,18 @@ class portstarObj(object):
                 starPath = os.path.join(self.star.outDir, 'rect_wcp')
 
                 star = []
-                for name, group in df.groupby('transect'):
+                for name, group in _iter_groups(df):
                     chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
                         zero = self.port._addZero(chunk)
                         img_path = os.path.join(starPath, '*_{}{}.tif'.format(zero, chunk))
-                        img = glob(img_path)[0]
-                        star_transect.append(img)
-                    star.append(star_transect)
+                        imgs = glob(img_path)
+                        if len(imgs) == 0:
+                            continue
+                        star_transect.append(imgs[0])
+                    if len(star_transect) > 0:
+                        star.append(star_transect)
 
                 wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
 
@@ -472,18 +504,21 @@ class portstarObj(object):
                 portPath = os.path.join(self.port.outDir, 'rect_wcr')
 
                 port = []
-                for name, group in df.groupby('transect'):
+                for name, group in _iter_groups(df):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
                         # try:
                         zero = self.port._addZero(chunk)
                         img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
-                        img = glob(img_path)[0]
-                        port_transect.append(img)
+                        imgs = glob(img_path)
+                        if len(imgs) == 0:
+                            continue
+                        port_transect.append(imgs[0])
                         # except:
                         #     pass
-                    port.append(port_transect)
+                    if len(port_transect) > 0:
+                        port.append(port_transect)
 
                 self.star._loadSonMeta()
                 df = self.star.sonMetaDF
@@ -491,18 +526,21 @@ class portstarObj(object):
                 starPath = os.path.join(self.star.outDir, 'rect_wcr')
 
                 star = []
-                for name, group in df.groupby('transect'):
+                for name, group in _iter_groups(df):
                     chunks = pd.unique(group[chunkField])
                     star_transect = []
                     for chunk in chunks:
                         # try:
                         zero = self.star._addZero(chunk)
                         img_path = os.path.join(starPath, '*_{}{}.tif'.format(zero, chunk))
-                        img = glob(img_path)[0]
-                        star_transect.append(img)
+                        imgs = glob(img_path)
+                        if len(imgs) == 0:
+                            continue
+                        star_transect.append(imgs[0])
                         # except:
                         #     pass
-                    star.append(star_transect)
+                    if len(star_transect) > 0:
+                        star.append(star_transect)
 
                 srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
 
@@ -524,15 +562,18 @@ class portstarObj(object):
                 portPath = os.path.join(self.port.substrateDir, 'map_substrate_raster')
 
                 subToMosaic = []
-                for name, group in df.groupby('transect'):
+                for name, group in _iter_groups(df):
                     chunks = pd.unique(group[chunkField])
                     port_transect = []
                     for chunk in chunks:
                         zero = self.port._addZero(chunk)
                         img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
-                        img = glob(img_path)[0]
-                        port_transect.append(img)
-                    subToMosaic.append(port_transect)
+                        imgs = glob(img_path)
+                        if len(imgs) == 0:
+                            continue
+                        port_transect.append(imgs[0])
+                    if len(port_transect) > 0:
+                        subToMosaic.append(port_transect)
 
             if self.port.map_predict:
                 # Locate map files
@@ -552,9 +593,11 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    if len(wcpToMosaic) > 0:
+                        _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    if len(srcToMosaic) > 0:
+                        _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
@@ -626,10 +669,27 @@ class portstarObj(object):
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
+            if imgs is None or len(imgs) == 0:
+                continue
+
+            # Preserve all source bands for sonar mosaics when no explicit band
+            # selection is provided. This is required for colorized 16-bit
+            # rectified outputs (RGB) so mosaics do not collapse to band 1.
+            bands_to_use = bands
+            if son and bands == [1] and len(imgs) > 0:
+                try:
+                    src_ds = gdal.Open(imgs[0])
+                    src_band_count = int(src_ds.RasterCount) if src_ds is not None else 1
+                    src_ds = None
+                    if src_band_count > 1:
+                        bands_to_use = list(range(1, src_band_count + 1))
+                except Exception:
+                    pass
 
             # Set output file names
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             filePrefix = os.path.split(self.port.projDir)[-1]
+            sonar_token = self._get_sonar_mosaic_name_token()
             if 'substrate' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
@@ -641,7 +701,10 @@ class portstarObj(object):
                 outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+                if sonar_token:
+                    outVRT = os.path.join(outDir, filePrefix+'_'+sonar_token+'_'+fileSuffix)
+                else:
+                    outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
             outTIF = outVRT.replace('.vrt', '.tif')
 
             if not os.path.isdir(outDir):
@@ -651,7 +714,7 @@ class portstarObj(object):
                     pass
 
             # First built a vrt
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Create GeoTiff from vrt
@@ -682,7 +745,7 @@ class portstarObj(object):
             outMosaic.append(outTIF)
 
         gc.collect()
-        return outTIF
+        return outMosaic
 
     #=======================================================================
     def _mosaicVRT(self,
@@ -729,10 +792,26 @@ class portstarObj(object):
         # Iterate each sublist of images
         outMosaic = []
         for imgs in imgsToMosaic:
+            if imgs is None or len(imgs) == 0:
+                continue
+
+            # Preserve all source bands for sonar mosaics when no explicit band
+            # selection is provided.
+            bands_to_use = bands
+            if son and bands == [1] and len(imgs) > 0:
+                try:
+                    src_ds = gdal.Open(imgs[0])
+                    src_band_count = int(src_ds.RasterCount) if src_ds is not None else 1
+                    src_ds = None
+                    if src_band_count > 1:
+                        bands_to_use = list(range(1, src_band_count + 1))
+                except Exception:
+                    pass
 
             # Set output file names
             fileSuffix = os.path.split(os.path.dirname(imgs[0]))[-1] + '_mosaic_'+str(i)+'.vrt'
             filePrefix = os.path.split(self.port.projDir)[-1]
+            sonar_token = self._get_sonar_mosaic_name_token()
             if 'substrate' in fileSuffix:
                 outDir = os.path.join(self.port.substrateDir, 'map_substrate_mosaic')
                 outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
@@ -744,7 +823,10 @@ class portstarObj(object):
                 outVRT = os.path.join(outDir, filePrefix+'_'+'class_'+str(bands[0]-1)+'_'+fileSuffix)
             else:
                 outDir = os.path.join(self.port.projDir, 'sonar_mosaic')
-                outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
+                if sonar_token:
+                    outVRT = os.path.join(outDir, filePrefix+'_'+sonar_token+'_'+fileSuffix)
+                else:
+                    outVRT = os.path.join(outDir, filePrefix+'_'+fileSuffix)
 
             if not os.path.isdir(outDir):
                 try:
@@ -758,7 +840,7 @@ class portstarObj(object):
 
             # Build VRT
             # vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands)
+            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
@@ -1213,7 +1295,7 @@ class portstarObj(object):
             port = []
             for pdi, pdc in zip(portDepPix, portDepPixFinal):
                 if np.isnan(pdc): # Final pick is nan
-                    if np.isnan(pdc): # Initial pick is nan
+                    if np.isnan(pdi): # Initial pick is nan
                         port.append(0) # set to 0
                     else: # Initial pick not nan
                         port.append(pdi) # Use initial pick
@@ -1234,7 +1316,7 @@ class portstarObj(object):
                         star.append(sdi) # Use initial pick
 
                 elif sdc < 0:
-                    port.append(0)
+                    star.append(0)
 
                 else: # Final pick ok
                     star.append(sdc)
@@ -1485,8 +1567,25 @@ class portstarObj(object):
         chunks = pd.unique(portDF['chunk_id'])
 
         if detectDep == 0:
-            portInstDepth = portDF['inst_dep_m']
-            starInstDepth = starDF['inst_dep_m']
+            def _depth_series(df):
+                # Some formats (e.g., Garmin RSD) may not include dep_m in metadata.
+                if 'dep_m' in df.columns:
+                    return pd.to_numeric(df['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                if 'inst_dep_m' in df.columns:
+                    return pd.to_numeric(df['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+                return np.zeros(len(df), dtype=float)
+
+            portInstDepth = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            starInstDepth = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+
+            portMetaDepth = _depth_series(portDF)
+            starMetaDepth = _depth_series(starDF)
+
+            portValid = np.isfinite(portInstDepth) & (portInstDepth > 0)
+            starValid = np.isfinite(starInstDepth) & (starInstDepth > 0)
+
+            portInstDepth = np.where(portValid, portInstDepth, portMetaDepth)
+            starInstDepth = np.where(starValid, starInstDepth, starMetaDepth)
 
             if smthDep:
                 # print("\nSmoothing depth values...")
@@ -1512,8 +1611,8 @@ class portstarObj(object):
             portDF['dep_m'] = portInstDepth
             starDF['dep_m'] = starInstDepth
 
-            portDF['dep_m_Method'] = 'Instrument Depth'
-            starDF['dep_m_Method'] = 'Instrument Depth'
+            portDF['dep_m_Method'] = 'Instrument/Metadata Depth'
+            starDF['dep_m_Method'] = 'Instrument/Metadata Depth'
 
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
@@ -1615,11 +1714,17 @@ class portstarObj(object):
         starDep[starDep == 0] = np.nan
 
         nans, x = np.isnan(portDep), lambda z: z.nonzero()[0]
-        portDep[nans] = np.interp(x(nans), x(~nans), portDep[~nans])
+        if (~nans).any():
+            portDep[nans] = np.interp(x(nans), x(~nans), portDep[~nans])
+        else:
+            portDep[nans] = 0
         portDF['dep_m'] = portDep
 
         nans, x = np.isnan(starDep), lambda z: z.nonzero()[0]
-        starDep[nans] = np.interp(x(nans), x(~nans), starDep[~nans])
+        if (~nans).any():
+            starDep[nans] = np.interp(x(nans), x(~nans), starDep[~nans])
+        else:
+            starDep[nans] = 0
         starDF['dep_m'] = starDep
 
         # Export to csv
@@ -1700,10 +1805,16 @@ class portstarObj(object):
         portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
         starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
 
-        portInst = (portDF['inst_dep_m'] / portDF['pixM']).to_numpy(dtype=int, copy=True)
+        portInstDepth = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        portMetaDepth = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        portInstDepth = np.where(np.isfinite(portInstDepth) & (portInstDepth > 0), portInstDepth, portMetaDepth)
+        portInst = np.nan_to_num(portInstDepth / portDF['pixM'].to_numpy(dtype=float), nan=0.0).astype(int)
         portAuto = (portDF['dep_m'] / portDF['pixM']).to_numpy(dtype=int, copy=True)
 
-        starInst = (starDF['inst_dep_m'] / starDF['pixM']).to_numpy(dtype=int, copy=True)
+        starInstDepth = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starMetaDepth = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starInstDepth = np.where(np.isfinite(starInstDepth) & (starInstDepth > 0), starInstDepth, starMetaDepth)
+        starInst = np.nan_to_num(starInstDepth / starDF['pixM'].to_numpy(dtype=float), nan=0.0).astype(int)
         starAuto = (starDF['dep_m'] / starDF['pixM']).to_numpy(dtype=int, copy=True)
 
         # Ensure port/star same length
