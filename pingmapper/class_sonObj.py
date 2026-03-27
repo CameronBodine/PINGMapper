@@ -821,10 +821,11 @@ class sonObj(object):
                 if self.son8bit:# and self.beamName != 'ss_star' and self.beamName != 'ss_port':
                     dat = np.frombuffer(buffer, dtype='>u1')
                 else:
-                    try:
-                        dat = np.frombuffer(buffer, dtype='>u2')
-                    except:
-                        dat = np.frombuffer(buffer[:-1], dtype='>u2')
+                    # try:
+                    #     dat = np.frombuffer(buffer, dtype='>u2')
+                    # except:
+                    #     dat = np.frombuffer(buffer[:-1], dtype='>u2')
+                    dat = np.frombuffer(buffer, dtype='>u2')
 
                 try:
                     sonDat[:ping_len, i] = dat
@@ -833,7 +834,17 @@ class sonObj(object):
                     sonDat[:ping_len, i] = dat
         
         file.close()
+
+        # Scale intensity (0.0-2.0)
+        scale_intensity = False
+        scale_intensity_factor = 1.005
+        if scale_intensity:
+            sonDat = sonDat * scale_intensity_factor
+
         self.sonDat = sonDat.astype(np.uint8)
+
+        
+
         return
 
     # def _loadSonChunk(self, df):
@@ -1215,7 +1226,13 @@ class sonObj(object):
         --------------------
         NA
         '''
-        data = self.sonDat.astype('uint8') # Get the sonar data
+        data = self.sonDat
+
+        # Apply tone controls even when EGN is disabled.
+        if not getattr(self, 'egn', False):
+            data = self._applyEGNTone(data)
+
+        data = data.astype('uint8') # Get the sonar data
 
         # File name zero padding
         addZero = self._addZero(k)
@@ -1266,7 +1283,13 @@ class sonObj(object):
         --------------------
         NA
         '''
-        data = self.sonDat.astype('uint8') # Get the sonar data
+        data = self.sonDat
+
+        # Apply tone controls even when EGN is disabled.
+        if not getattr(self, 'egn', False):
+            data = self._applyEGNTone(data)
+
+        data = data.astype('uint8') # Get the sonar data
 
         # File name zero padding
         addZero = self._addZero(k)
@@ -2356,6 +2379,9 @@ class sonObj(object):
 
         sonDat = (mx-mn)*(sonDat-m)/(M-m)+mn
 
+        # Optional tone adjustment to brighten/darken mid-tones after EGN stretch.
+        sonDat = self._applyEGNTone(sonDat)
+
         # Try masking out zeros
         sonDat = sonDat*mask
         del mask
@@ -2363,3 +2389,37 @@ class sonObj(object):
         self.sonDat = sonDat.astype('uint8')
         del sonDat
         return
+
+
+    # ======================================================================
+    def _applyEGNTone(self, sonDat):
+        '''
+        Apply optional post-EGN tone controls.
+
+        Notes
+        -----
+        - egn_tone_gamma < 1.0 brightens mid-tones; > 1.0 darkens.
+        - egn_tone_gain > 1.0 boosts overall brightness; < 1.0 reduces.
+        '''
+        gamma = getattr(self, 'egn_tone_gamma', 1.0)
+        gain = getattr(self, 'egn_tone_gain', 1.0)
+
+        try:
+            gamma = float(gamma)
+            gain = float(gain)
+        except Exception:
+            gamma = 1.0
+            gain = 1.0
+
+        if gamma <= 0:
+            gamma = 1.0
+        if gain < 0:
+            gain = 0.0
+
+        # Preserve legacy behavior when defaults are used.
+        if gamma == 1.0 and gain == 1.0:
+            return sonDat
+
+        sonNorm = np.clip(sonDat, 0, 255) / 255.0
+        sonNorm = np.power(sonNorm, gamma) * gain
+        return np.clip(sonNorm * 255.0, 0, 255)

@@ -110,6 +110,8 @@ def read_master_func(logfilename='',
                      egn=False,
                      egn_stretch=0,
                      egn_stretch_factor=1,
+                     egn_tone_gamma=1.0,
+                     egn_tone_gain=1.0,
                      wcp=False,
                      wcm=False,
                      wcr=False,
@@ -510,6 +512,8 @@ def read_master_func(logfilename='',
         # Store cropRange in object
         for son in sonObjs:
             son.cropRange = cropRange
+            son.egn_tone_gamma = egn_tone_gamma
+            son.egn_tone_gain = egn_tone_gain
             # Do range crop, if necessary
             if cropRange > 0.0:
                 # # Convert to distance in pix
@@ -685,6 +689,8 @@ def read_master_func(logfilename='',
 
         for son in sonObjs:
             son.wcp = wcp
+            son.egn_tone_gamma = egn_tone_gamma
+            son.egn_tone_gain = egn_tone_gain
 
             beam = son.beamName
             if wcr:
