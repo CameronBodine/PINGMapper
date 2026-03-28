@@ -89,7 +89,9 @@ def test(ds):
         print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
         sys.exit()
 
-    d = os.environ['CONDA_PREFIX']
+    d = os.environ.get('PINGMAPPER_DATA_DIR',
+        os.environ.get('CONDA_PREFIX',
+            os.path.join(os.path.expanduser('~'), '.pingmapper')))
     exampleDir = os.path.join(d, 'exampleData')
     ds_path = os.path.join(exampleDir, ds_name)
     ds_path = os.path.normpath(ds_path)

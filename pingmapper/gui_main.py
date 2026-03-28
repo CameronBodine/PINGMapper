@@ -51,8 +51,10 @@ def gui(batch: bool):
     primary_default_params = os.path.join(SCRIPT_DIR, "default_params.json")
 
     if not os.path.exists(primary_default_params):
-        d = os.environ['CONDA_PREFIX']
-        primary_default_params = os.path.join(d, 'pingmapper_config', 'default_params.json')
+        # Fallback: look in environment prefix (works with both conda and pixi)
+        prefix = os.environ.get('CONDA_PREFIX', '')
+        if prefix:
+            primary_default_params = os.path.join(prefix, 'pingmapper_config', 'default_params.json')
     
     default_params_file = os.path.join(SCRIPT_DIR, "user_params.json")
 
