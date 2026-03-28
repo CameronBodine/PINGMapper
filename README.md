@@ -102,6 +102,33 @@ Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEc
 
 **Advocates & Mentors**: Vincent Capone - [Black Laser Learning](https://blacklaserlearning.com/)
 
+## Quick Start
+
+### Option A: Pixi
+
+[Pixi](https://pixi.sh) manages all dependencies (including GDAL) automatically from a single `pyproject.toml`.
+
+1. [Install pixi](https://pixi.sh)
+2. Clone and run:
+   ```bash
+   git clone https://github.com/CameronBodine/PINGMapper.git
+   cd PINGMapper
+   pixi run gui            # Launch the GUI
+   pixi run test           # Run tests with small dataset
+   ```
+3. For machine learning features (substrate mapping):
+   ```bash
+   pixi run -e full gui    # GUI with ML support
+   ```
+
+### Option B: Conda
+
+```bash
+conda env create -f pingmapper/conda/PINGMapper.yml
+conda activate ping
+python -m pingmapper gui
+```
+
 ## Ready to get started?
 
 Follow the installation and testing instructions to [Get Started!](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted)
