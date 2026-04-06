@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm"]
-build-backend = "setuptools.backends._legacy:_Backend"
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "pingmapper"
-version = "5.2.1"
+dynamic = ["version"]
 description = "Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat"
 readme = "README.md"
 license = "MIT"
@@ -16,7 +16,6 @@ authors = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Visualization",
@@ -60,6 +59,9 @@ ml = [
 Homepage = "https://cameronbodine.github.io/PINGMapper/"
 GitHub = "https://github.com/CameronBodine/PINGMapper"
 Issues = "https://github.com/CameronBodine/PINGMapper/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "pingmapper.version.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["pingmapper*"]
