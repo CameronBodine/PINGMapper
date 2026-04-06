@@ -104,7 +104,17 @@ Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEc
 
 ## Quick Start
 
-### Option A: Pixi
+### Option A: Conda
+
+
+
+```bash
+conda env create -f pingmapper/conda/PINGMapper.yml
+conda activate ping
+python -m pingmapper gui
+```
+
+### Option B: Pixi
 
 [Pixi](https://pixi.sh) manages all dependencies (including GDAL) automatically from a single `pyproject.toml`.
 
@@ -120,14 +130,6 @@ Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEc
    ```bash
    pixi run -e full gui    # GUI with ML support
    ```
-
-### Option B: Conda
-
-```bash
-conda env create -f pingmapper/conda/PINGMapper.yml
-conda activate ping
-python -m pingmapper gui
-```
 
 ## Ready to get started?
 
