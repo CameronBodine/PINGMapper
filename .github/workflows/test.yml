@@ -20,4 +20,4 @@ jobs:
           pixi-version: v0.54.1
 
       - name: Run tests
-        run: pixi run test
+        run: pixi run -e full test
