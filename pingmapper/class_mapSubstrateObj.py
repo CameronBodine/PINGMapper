@@ -1059,7 +1059,7 @@ class mapSubObj(rectObj):
             c = int(c.split('_')[-1])
             toMap[c] = n
 
-        del npzDir, npzs, n, c
+        del npzDir, npzs
         return toMap
 
 

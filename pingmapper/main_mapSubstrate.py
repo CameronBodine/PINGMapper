@@ -243,6 +243,14 @@ def map_master_func(logfilename='',
     # For Substrate Prediction                                                 #
     ############################################################################
 
+    if pred_sub > 0 and not DEPTH_DETECTION_AVAILABLE:
+        print('\n\nCannot predict substrate automatically:')
+        print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
+        print('These packages are required for substrate prediction.')
+        print('Please install them using: pip install tensorflow transformers doodleverse-utils')
+        print('Skipping substrate prediction...\n')
+        pred_sub = 0
+
     if pred_sub > 0:
         start_time = time.time()
 
@@ -294,7 +302,11 @@ def map_master_func(logfilename='',
     # Fot Substrate Plotting                                                   #
     ############################################################################
 
-    print(pltSubClass)
+    if pltSubClass and not DEPTH_DETECTION_AVAILABLE:
+        print('\n\nCannot export substrate plots:')
+        print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
+        print('Skipping substrate plot export...\n')
+        pltSubClass = False
 
     if pltSubClass:
         start_time = time.time()

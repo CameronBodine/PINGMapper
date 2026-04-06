@@ -45,6 +45,7 @@ sys.path.append(PACKAGE_DIR)
 # from main_mapSubstrate import map_master_func
 
 from pingmapper.funcs_common import *
+from pingmapper.funcs_model import DEPTH_DETECTION_AVAILABLE
 from pingmapper.main_readFiles import read_master_func
 from pingmapper.main_rectify import rectify_master_func
 from pingmapper.main_mapSubstrate import map_master_func
@@ -89,7 +90,9 @@ def test(ds):
         print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
         sys.exit()
 
-    d = os.environ['CONDA_PREFIX']
+    d = os.environ.get('PINGMAPPER_DATA_DIR',
+        os.environ.get('CONDA_PREFIX',
+            os.path.join(os.path.expanduser('~'), '.pingmapper')))
     exampleDir = os.path.join(d, 'exampleData')
     ds_path = os.path.join(exampleDir, ds_name)
     ds_path = os.path.normpath(ds_path)
@@ -184,6 +187,11 @@ def test(ds):
     detectDep = 1 #0==Use Humminbird depth; 1==Auto detect depth w/ Zheng et al. 2021;
     ## 2==Auto detect depth w/ Thresholding
 
+    # Disable ML-dependent features if required packages are not installed
+    if not DEPTH_DETECTION_AVAILABLE:
+        remShadow = 0
+        detectDep = 0
+
     smthDep = True #Smooth depth before water column removal
     adjDep = 0 #Aditional depth adjustment (in meters) for water column removaL
     pltBedPick = True #Plot bedpick on sonogram
@@ -201,6 +209,13 @@ def test(ds):
     map_sub = 1 # Export substrate maps (as rasters): 0==False; 1==True. Requires substrate predictions saved to npz.
     export_poly = True # Convert substrate maps to shapefile: map_sub must be > 0 or raster maps previously exported
     map_predict = False # Export substrate heat maps (probabilities) for each class. Requires substrate predictions saved to npz.
+
+    if not DEPTH_DETECTION_AVAILABLE:
+        pred_sub = 0
+        pltSubClass = False
+        map_sub = 0
+        export_poly = False
+        map_predict = False
     map_class_method = 'max' # 'max' only current option. Take argmax of substrate predictions to get final classification.
 
 

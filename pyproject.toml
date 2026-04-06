@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "pingmapper"
+version = "5.2.1"
+description = "Open-source interface for processing recreation-grade side scan sonar datasets and reproducibly mapping benthic habitat"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Cameron Bodine", email = "bodine.cs@gmail.email" },
+    { name = "Daniel Buscombe" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Scientific/Engineering :: Oceanography",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+keywords = [
+    "pingmapper",
+    "sonar",
+    "ecology",
+    "remotesensing",
+    "sidescan",
+    "sidescan-sonar",
+    "aquatic",
+    "humminbird",
+    "lowrance",
+    "gis",
+    "oceanography",
+    "limnology",
+]
+dependencies = [
+    "pinginstaller>=2,<3",
+    "pingwizard>=1,<2",
+    "pingverter>=2,<3",
+    "psutil>=7,<8",
+    "opencv-python>=4.12,<5",
+    "rsa>=4.9,<5",
+    "FreeSimpleGUI>=5,<6",
+]
+
+[project.optional-dependencies]
+ml = [
+    "doodleverse_utils>=0.0.39",
+    "tensorflow>=2.20,<3",
+    "tf-keras>=2.20,<3",
+    "transformers>=4.57,<5",
+]
+
+[project.urls]
+Homepage = "https://cameronbodine.github.io/PINGMapper/"
+GitHub = "https://github.com/CameronBodine/PINGMapper"
+Issues = "https://github.com/CameronBodine/PINGMapper/issues"
+
+[tool.setuptools.packages.find]
+include = ["pingmapper*"]
+
+[tool.setuptools.package-data]
+pingmapper = ["default_params.json"]
+
+# ---------------------------------------------------------------------------
+# Pixi configuration
+# ---------------------------------------------------------------------------
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
+
+# Conda-forge dependencies — pinned to match upstream env
+[tool.pixi.dependencies]
+python = "3.12.*"
+gdal = "3.10.*"
+numpy = ">=2.2,<2.3"
+pandas = ">=2.3,<3"
+geopandas = ">=1.1,<1.2"
+pyproj = ">=3.7,<3.8"
+scikit-image = ">=0.25,<0.26"
+joblib = ">=1.5,<2"
+matplotlib = ">=3.10,<3.11"
+rasterio = ">=1.4,<1.5"
+h5py = ">=3.15,<4"
+scipy = ">=1.16,<1.17"
+pillow = ">=11.3,<12"
+tqdm = ">=4.67,<5"
+
+# Environments
+[tool.pixi.environments]
+default = { solve-group = "default" }
+full = { features = ["ml"], solve-group = "default" }
+
+# Tasks
+[tool.pixi.tasks]
+pingmapper = "python -m pingwizard"
+gui = "python -m pingmapper gui"
+gui-batch = "python -m pingmapper gui_batch"
+test = "python -m pingmapper test"
+test-large = "python -m pingmapper test_large"
