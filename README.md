@@ -106,7 +106,7 @@ Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEc
 
 ### Option A: Conda
 
-
+Please see [Getting Started](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted) for full instructions, or simply run:
 
 ```bash
 conda env create -f pingmapper/conda/PINGMapper.yml
@@ -123,8 +123,7 @@ python -m pingmapper gui
    ```bash
    git clone https://github.com/CameronBodine/PINGMapper.git
    cd PINGMapper
-   pixi run gui            # Launch the GUI
-   pixi run test           # Run tests with small dataset
+   pixi run pingmapper  # Launches PINGWizard
    ```
 3. For machine learning features (substrate mapping):
    ```bash
