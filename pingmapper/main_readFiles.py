@@ -1136,6 +1136,8 @@ def read_master_func(logfilename='',
             print('Please install them using: pip install tensorflow transformers doodleverse-utils')
             print('Skipping automatic depth estimation...\n')
             detectDep = 0
+            autoBed = False
+            saveDepth = True
         else:
             print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
 
@@ -1305,6 +1307,26 @@ def read_master_func(logfilename='',
             keepShadow = True
         else:
             keepShadow = False
+
+    if remShadow > 0 and not DEPTH_DETECTION_AVAILABLE:
+        print('\n\nCannot detect shadows automatically:')
+        print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
+        print('These packages are required for automatic shadow detection.')
+        print('Please install them using: pip install tensorflow transformers doodleverse-utils')
+        print('Skipping automatic shadow detection...\n')
+        remShadow = 0
+        keepShadow = True
+        for son in sonObjs:
+            son.remShadow = 0
+
+    if pred_sub and not DEPTH_DETECTION_AVAILABLE:
+        print('\n\nCannot map substrate automatically:')
+        print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
+        print('These packages are required for substrate mapping.')
+        print('Please install them using: pip install tensorflow transformers doodleverse-utils')
+        print('Skipping substrate mapping...\n')
+        pred_sub = 0
+        map_sub = 0
 
     if remShadow > 0:
         start_time = time.time()
