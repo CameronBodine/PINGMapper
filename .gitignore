@@ -215,3 +215,5 @@ cython_debug/
 
 # Pixi
 .pixi/
+# Pixi lock
+pixi.lock
