@@ -1,7 +1,10 @@
 import sys
 sys.path.insert(0, 'src')
 import os
-import PySimpleGUI as sg
+try:
+    import FreeSimpleGUI as sg
+except ImportError:
+    import PySimpleGUI as sg
 import matplotlib.pyplot as plt
 
 from funcs_common import *

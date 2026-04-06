@@ -52,7 +52,15 @@ from osgeo import gdal
 import pyproj
 
 if 'GDAL_DATA' not in os.environ:
-    os.environ['GDAL_DATA'] = os.path.join(f'{os.sep}'.join(sys.executable.split(os.sep)[:-1]), 'Library', 'share', 'gdal')
+    prefix = os.environ.get('CONDA_PREFIX', os.path.dirname(os.path.dirname(sys.executable)))
+    candidates = [
+        os.path.join(prefix, 'share', 'gdal'),            # conda/pixi on Linux/macOS
+        os.path.join(prefix, 'Library', 'share', 'gdal'),  # conda/pixi on Windows
+    ]
+    for _candidate in candidates:
+        if os.path.isdir(_candidate):
+            os.environ['GDAL_DATA'] = _candidate
+            break
 
 import rasterio
 import geopandas as gpd
