@@ -10,8 +10,9 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Cameron Bodine", email = "bodine.cs@gmail.email" },
+    { name = "Cameron Bodine"},
     { name = "Daniel Buscombe" },
+    { name = "Iury T Simoes-Sousa"}
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
