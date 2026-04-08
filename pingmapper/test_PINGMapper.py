@@ -90,10 +90,12 @@ def test(ds):
         print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
         sys.exit()
 
-    d = os.environ.get('PINGMAPPER_DATA_DIR',
-        os.environ.get('CONDA_PREFIX',
-            os.path.join(os.path.expanduser('~'), '.pingmapper')))
-    exampleDir = os.path.join(d, 'exampleData')
+    repo_root = PACKAGE_DIR
+    d = os.environ.get(
+        'PINGMAPPER_DATA_DIR',
+        os.path.join(repo_root, '.data'),
+    )
+    exampleDir = os.path.join(d, 'example_data')
     ds_path = os.path.join(exampleDir, ds_name)
     ds_path = os.path.normpath(ds_path)
 
@@ -120,7 +122,12 @@ def test(ds):
     # Path to data/output
     inFile = ds_path+'.DAT'
     sonPath = ds_path
-    projDir = os.path.join(user_home_path, 'Desktop', 'PINGMapper-'+ds_name)
+    proj_base_dir = os.environ.get(
+        'PINGMAPPER_TEST_OUTPUT_DIR',
+        os.path.join(d, 'test_runs'),
+    )
+
+    projDir = os.path.join(proj_base_dir, 'PINGMapper-'+ds_name)
 
     inFile = os.path.abspath(inFile)
     sonPath = os.path.abspath(sonPath)
@@ -239,7 +246,7 @@ def test(ds):
     if project_mode == 0:
         # Create new project
         if not os.path.exists(projDir):
-            os.mkdir(projDir)
+            os.makedirs(projDir, exist_ok=False)
         else:
             projectMode_1_inval()
 
@@ -248,7 +255,7 @@ def test(ds):
         if os.path.exists(projDir):
             shutil.rmtree(projDir)
 
-        os.mkdir(projDir)        
+        os.makedirs(projDir, exist_ok=False)
 
     elif project_mode == 2:
         # Update project
