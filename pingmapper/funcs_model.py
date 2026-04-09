@@ -42,6 +42,14 @@ from pingmapper.funcs_common import *
 quiet_tensorflow_warnings()
 import json
 import numpy as np
+
+# Prevent the transformers/huggingface_hub libraries from making network calls
+# to huggingface.co to check for model updates. The model weights are stored
+# locally, so no internet access is needed. These flags can also be set as
+# system environment variables (TRANSFORMERS_OFFLINE=1, HF_HUB_OFFLINE=1)
+# before launching PINGMapper to achieve the same effect without a code change.
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 # import tensorflow as tf
 # import tensorflow.keras.backend as K
 # from tensorflow.python.client import device_lib
@@ -113,6 +121,47 @@ except Exception as e:
 Utilities provided courtesy Dr. Dan Buscombe from segmentation_gym
 https://github.com/Doodleverse/segmentation_gym
 '''
+
+#=======================================================================
+def _build_segformer_from_config(id2label, num_classes, num_channels=3):
+    '''
+    Construct a SegFormer model (nvidia/mit-b0 backbone architecture) entirely
+    from a hardcoded local config, without contacting HuggingFace Hub.
+
+    The config values below are the canonical mit-b0 architecture spec.
+    The backbone weights loaded here are random initialisation — they are
+    immediately overwritten by model.load_weights() with the Zenodo-hosted
+    fine-tuned weights, so no HF-sourced weights are ever used.
+    '''
+    from transformers import TFSegformerForSemanticSegmentation, SegformerConfig
+
+    label2id = {label: id for id, label in id2label.items()}
+
+    config = SegformerConfig(
+        num_channels=num_channels,
+        num_encoder_blocks=4,
+        depths=[2, 2, 2, 2],
+        sr_ratios=[8, 4, 2, 1],
+        hidden_sizes=[32, 64, 160, 256],
+        patch_sizes=[7, 3, 3, 3],
+        strides=[4, 2, 2, 2],
+        num_attention_heads=[1, 2, 5, 8],
+        mlp_ratios=[4, 4, 4, 4],
+        hidden_act='gelu',
+        hidden_dropout_prob=0.0,
+        attention_probs_dropout_prob=0.0,
+        classifier_dropout_prob=0.1,
+        initializer_range=0.02,
+        drop_path_rate=0.1,
+        layer_norm_eps=1e-06,
+        decoder_hidden_size=256,
+        semantic_loss_ignore_index=255,
+        num_labels=num_classes,
+        id2label=id2label,
+        label2id=label2id,
+    )
+
+    return TFSegformerForSemanticSegmentation(config)
 
 #=======================================================================
 def initModel(weights, configfile, USE_GPU=False):
@@ -192,7 +241,16 @@ def initModel(weights, configfile, USE_GPU=False):
         id2label = {}
         for k in range(NCLASSES):
             id2label[k]=str(k)
-        model = segformer(id2label,num_classes=NCLASSES)
+        # SegFormer always uses 3 input channels: seg_file2tensor() converts
+        # single-channel images to 3-channel via np.dstack before inference,
+        # so the Zenodo weights are always saved with num_channels=3.
+        model = _build_segformer_from_config(id2label, NCLASSES, num_channels=3)
+        # Subclassed Keras models are lazy — variables don't exist until the
+        # first forward pass. Do a dummy call to build them so load_weights()
+        # can match the saved HDF5 file's variable names.
+        # Input to TFSegformer is NCHW: (batch, channels, height, width)
+        dummy = tf.zeros((1, 3, TARGET_SIZE[0], TARGET_SIZE[1]))
+        model(dummy, training=False)
 
     model.load_weights(weights)
     # model = compile_models([model[0]], MODEL)
