@@ -2101,48 +2101,24 @@ class portstarObj(object):
             del son.sonDat
 
             # Get rid of zeros along water column area
+            # Vectorized: replace class-8 (water column) labels in non-WC area with 0
+            dep_arr = np.asarray(son.bedPick, dtype=int)  # (W,)
+            row_idx = np.arange(label.shape[0])[:, np.newaxis]  # (H, 1)
+            below_wc = row_idx >= dep_arr[np.newaxis, :]  # (H, W)
+            label = np.where(below_wc & (label == 8), 0, label)
+
+            # Zero-fill per ping: propagate the class at the edge of any zero region
+            # into that region. Zeros should form at most one contiguous block per ping
+            # (the comment in the original confirms this). Skip pings with no zeros.
             for p in range(label.shape[1]):
-                # Get depth
-                d = son.bedPick[p]
-
-                # Get ping classification
-                ping = label[:, p]
-
-                # Get water column
-                wc = ping[:d]
-
-                # Remove water column
-                ping = ping[d:]
-
-                # If any water column pics remain, set to zero
-                ping = np.where(ping==8, 0, ping)
-
-                ##############
-                # Remove zeros
-                # Find zeros. Should be grouped in contiguous arrays (array[0, 1, 2], array[100, 101, 102], ...
-                zero = np.where(ping==0)
-
-                if len(zero[0])>0:
-                    for z in zero:
-                        # Get index of first and last zero
-                        f, l = z[0], z[-1]
-
-                        # Don't fall off edge
-                        if l+1 < ping.shape[0]:
-
-                            # Get classification of next pixel
-                            c = ping[l+1]
-
-                            # Fill zero region with c
-                            ping[f:l+1] = c
-
-                    # Add water column back in
-                    ping = list(wc)+list(ping)
-
-                    # Update objects filled with ping
-                    label[:, p] = ping
-
-                del ping
+                d = int(son.bedPick[p])
+                ping_below = label[d:, p]
+                zero_idx = np.where(ping_below == 0)[0]
+                if len(zero_idx) == 0:
+                    continue
+                f, l = int(zero_idx[0]), int(zero_idx[-1])
+                if d + l + 1 < label.shape[0]:
+                    label[d + f : d + l + 1, p] = ping_below[l + 1]
 
             son.sonDat = label
 
@@ -2299,30 +2275,58 @@ class portstarObj(object):
             # # Do shadow and water column removal
 
             # Store pred stack in variable
-            predStack = son.sonDat
+            predStack = son.sonDat  # (H, W, C)
+            H_pred, W_pred, C_pred = predStack.shape
 
-            # Iterate each classification layer
-            for c in range(classes):
-                # Get class prediction
-                son.sonDat = predStack[:,:,c]
+            # Compute shadow mask ONCE — geometry depends only on son.shadow[chunk],
+            # not on which class band we are processing.
+            son.sonDat = predStack[:, :, 0]
+            son._SHW_mask(chunk, son=False)
+            shw_mask = son.shadowMask  # (H, W)
+            del son.shadowMask
 
-                # Remove shadows
-                # Get mask
-                son._SHW_mask(chunk, son=False)
+            # Apply shadow mask to all classes in a single vectorised broadcast
+            predStack = predStack * shw_mask[:, :, np.newaxis]
 
-                # Mask out shadows
-                son.sonDat = son.sonDat*son.shadowMask
+            # Apply slant range correction (SRC) to all classes in one pass.
+            # Original _WCR_SRC ran an O(H) Python inner loop for every (class, ping)
+            # pair.  Here we vectorise the H dimension with numpy and process all C
+            # classes simultaneously, reducing Python iterations from C×W×H → W×C.
+            bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).reset_index(drop=True)
+            srcStack = np.zeros((H_pred, W_pred, C_pred), dtype=np.float32)
+            for j in range(W_pred):
+                depth = int(bedPick[j])
+                if depth >= H_pred:
+                    continue
+                dd = float(depth * depth)
+                row_arr = np.arange(depth, H_pred)
+                src_idx = np.round(
+                    np.sqrt(row_arr.astype(np.float64) ** 2 - dd)
+                ).astype(int)
+                valid = src_idx < H_pred
+                rows_v = row_arr[valid]
+                sidx_v = src_idx[valid]
+                if len(sidx_v) == 0:
+                    continue
+                data_extent = int(sidx_v[-1])
 
-                # Remove Water Column
-                son._WCR_SRC(sonMeta, son=False)
+                # Scatter all C classes at once, then zero past range extent
+                pingStack = np.full((H_pred, C_pred), np.nan, dtype=np.float32)
+                pingStack[sidx_v, :] = predStack[rows_v, j, :].astype(np.float32)
+                pingStack[data_extent:, :] = 0
 
-                # Update predStack
-                predStack[:,:,c] = son.sonDat
+                # Interpolate gaps — NaN pattern is geometry-driven, same for all classes
+                nans = np.isnan(pingStack[:, 0])
+                if nans.any():
+                    x = np.arange(H_pred)
+                    xnans, xvalid = x[nans], x[~nans]
+                    for c in range(C_pred):
+                        pingStack[nans, c] = np.interp(
+                            xnans, xvalid, pingStack[~nans, c]
+                        )
+                srcStack[:, j, :] = pingStack
 
-                del son.sonDat
-
-            # Store in son.sonDat
-            son.sonDat = predStack
+            son.sonDat = srcStack
 
         # Iterate each class again and:
         for c in range(classes):
