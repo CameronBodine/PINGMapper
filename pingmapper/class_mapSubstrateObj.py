@@ -119,7 +119,7 @@ class mapSubObj(rectObj):
         # Save predictions to npz
         self._saveSubstrateNpz(substratePred, i, MY_CLASS_NAMES)
 
-        del self.substrateModel, substratePred
+        del substratePred
         gc.collect()
 
         return

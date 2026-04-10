@@ -253,7 +253,9 @@ def initModel(weights, configfile, USE_GPU=False):
         model(dummy, training=False)
 
     model.load_weights(weights)
-    # model = compile_models([model[0]], MODEL)
+    # Compile once here so doPredict never needs to recompile between chunks.
+    # compile_models mutates the model in-place; we discard the returned list.
+    compile_models([model], MODEL)
 
     return model, MODEL, N_DATA_BANDS
 
@@ -267,7 +269,8 @@ def doPredict(model, MODEL, arr, N_DATA_BANDS, NCLASSES, TARGET_SIZE, OTSU_THRES
     '''
     '''
 
-    model = compile_models([model[0]], MODEL)
+    # Model is compiled once in initModel; just normalise to a list here.
+    model = [model[0]]
 
     # Read array into a cropped and resized tensor
     image, w, h, bigimage = seg_file2tensor(arr, N_DATA_BANDS, TARGET_SIZE, MODEL)

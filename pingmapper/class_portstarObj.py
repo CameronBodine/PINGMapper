@@ -1349,7 +1349,7 @@ class portstarObj(object):
         del son3bnd, init_label, init_prob, crop_label, crop_prob, sonCrop
         del maxDepths, minDepths, avgDepths, Wp, portDepPixCrop, starDepPixCrop
         del portDepPix, starDepPix
-        del model, self.bedpickModel ######## Not sure about this one...
+        del model
 
         # return #self
         return portDepPixFinal, starDepPixFinal, i
@@ -2052,7 +2052,7 @@ class portstarObj(object):
         port_pix = self._getShadowPix(port_label, remShadow)
         star_pix = self._getShadowPix(star_label, remShadow)
 
-        del self.shadowModel, model
+        del model
         gc.collect()
         return i, port_pix, star_pix
 
