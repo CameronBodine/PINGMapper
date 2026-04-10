@@ -162,6 +162,12 @@ def quiet_tensorflow_warnings():
             tf.autograph.set_verbosity(0)
         except Exception:
             pass
+        try:
+            # Suppress Keras per-batch/per-step progress bar output
+            # (e.g. "1/1 [==============================] - 1s 1s/step")
+            tf.keras.utils.disable_interactive_logging()
+        except Exception:
+            pass
     except Exception:
         pass
 
