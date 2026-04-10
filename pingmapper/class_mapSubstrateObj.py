@@ -198,8 +198,20 @@ class mapSubObj(rectObj):
             del sonWin, wStart, wEnd, softmax_score, est_label
 
         # Take mean across all windows to get one final softmax_score array
-        fSoftmax = np.nanmean(np.stack(winSoftMax, axis=0), axis=0)
+        # Compute nan-mean incrementally to avoid allocating a large stacked array
+        _first = winSoftMax[0]
+        fSum = np.where(~np.isnan(_first), _first, 0.0)
+        fCount = (~np.isnan(_first)).astype(np.float32)
+        del _first
+        for _arr in winSoftMax[1:]:
+            _valid = ~np.isnan(_arr)
+            fSum += np.where(_valid, _arr, 0.0)
+            fCount += _valid
+            del _arr, _valid
         del winSoftMax
+        with np.errstate(invalid='ignore'):
+            fSoftmax = np.where(fCount > 0, fSum / fCount, np.nan)
+        del fSum, fCount
 
         # Crop center chunk predictions and recover original dims
         h, w = origDims # Center chunks original dims
