@@ -934,75 +934,64 @@ class sonObj(object):
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
         bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).reset_index(drop=True)
 
+        H, W = self.sonDat.shape[0], self.sonDat.shape[1]
+
         # Get max depth
         maxDep = max(bedPick)
         maxGap = int(round(np.tan(np.deg2rad(4)) * maxDep, 0)) # Max nadir gap (assume 4 degrees)
 
+        H_out = H + maxGap
+
         # Initialize 2d array to store relocated sonar records
-        srcDat = np.zeros((self.sonDat.shape[0]+maxGap, self.sonDat.shape[1])).astype(np.float32)#.astype(int)
+        srcDat = np.zeros((H_out, W), dtype=np.float32)
 
-        print(srcDat.shape, maxGap, self.sonDat.shape)
+        #Iterate each ping (inner row-loop replaced with numpy vector ops)
+        for j in range(W):
+            depth = int(bedPick[j])  # Get depth (in pixels) at nadir
+            dd = float(depth * depth)
 
-        #Iterate each ping
-        for j in range(self.sonDat.shape[1]):
-            depth = bedPick[j] # Get depth (in pixels) at nadir
-            dd = depth**2
-
-            # Calculate gap at nadir (assume 4 degrees)
+            # Calculate nadir gap (assume 4 degrees) for this ping
             nadirGap = int(round(np.tan(np.deg2rad(4)) * depth, 0))
 
-            print(depth, nadirGap)
+            # Rows at or beyond the water column boundary
+            row_arr = np.arange(depth, H)
+            # Horizontal range via Pythagorean theorem, plus nadir gap offset
+            src_idx = np.round(
+                np.sqrt(row_arr.astype(np.float64) ** 2 - dd)
+            ).astype(int) + nadirGap
 
-            # Create 1d array to store relocated bed pixels.  Set to nan so we
-            ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0]+maxGap)).astype(np.float32)) * np.nan
-            dataExtent = 0
+            # Discard out-of-bounds indices
+            valid = src_idx < H_out
+            rows_v = row_arr[valid]
+            sidx_v = src_idx[valid]
 
-            # # Calculate nadir gap (assume 4 degrees)
-            # nadirGap = int(round(np.tan(np.deg2rad(4)) * depth, 0))
+            pingDat = np.full(H_out, np.nan, dtype=np.float32)
+            if len(sidx_v) > 0:
+                data_extent = int(sidx_v[-1])
+                pingDat[sidx_v] = self.sonDat[rows_v, j].astype(np.float32)
+                pingDat[data_extent:] = 0  # Zero out values past range extent
 
-            #Iterate each sonar/ping return
-            for i in range(self.sonDat.shape[0]):
-                if i >= depth:
-                    intensity = self.sonDat[i,j] # Get the intensity value
-                    srcIndex = int(round(math.sqrt((i)**2 - dd),0)) #Calculate horizontal range (in pixels) using pathagorean theorem
+            pingDat[:nadirGap] = np.nan  # Remove relocated water column
 
-                    srcIndex = srcIndex + nadirGap # Add nadir gap to horizontal range
-
-                    pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
-                    dataExtent = srcIndex # Store range extent (max range) of ping
-                else:
-                    pass
-            pingDat[dataExtent:]=0 # Zero out values past range extent so we don't interpolate past this
-
-            # # Process of relocating bed pixels will introduce across track gaps
-            # ## in the array so we will interpolate over gaps to fill them.
-            # nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
-            # pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
-
-            pingDat[:nadirGap] = np.nan # Zero out top maxGap pixels to remove relocated water column
-            print(pingDat)
-
-            # Find where firs non-zero pixel is
-            nonZero = np.where(pingDat>0)[0]
-            print(pingDat[nonZero])
-            
-            # Interpolate over gaps past nonZero
+            # Interpolate over gaps starting from first non-zero pixel
+            nonZero = np.where(pingDat > 0)[0]
             if len(nonZero) > 0:
                 firstNonZero = nonZero[0]
-                nans, x = np.isnan(pingDat[firstNonZero:]), lambda z: z.nonzero()[0]
-                pingDat[firstNonZero:][nans] = np.interp(x(nans), x(~nans), pingDat[firstNonZero:][~nans])
+                tail = pingDat[firstNonZero:]
+                nans = np.isnan(tail)
+                if nans.any():
+                    x = np.arange(len(tail))
+                    tail[nans] = np.interp(x[nans], x[~nans], tail[~nans])
+                    pingDat[firstNonZero:] = tail
 
             # Store relocated ping in output array
             if son:
-                srcDat[:,j] = np.around(pingDat, 0)
+                srcDat[:, j] = np.around(pingDat, 0)
             else:
-                srcDat[:,j] = pingDat
-
-            del pingDat
+                srcDat[:, j] = pingDat
 
         if son:
-            self.sonDat = srcDat.astype(int) # Store in class attribute for later use
+            self.sonDat = srcDat.astype(int)  # Store in class attribute for later use
         else:
             self.sonDat = srcDat
         del srcDat
