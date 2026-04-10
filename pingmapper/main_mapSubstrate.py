@@ -402,6 +402,9 @@ def map_master_func(logfilename='',
         # Create portstarObj
         psObj = portstarObj(mapObjs)
 
+        # Pre-load CSVs once so each joblib-serialised copy already has the data
+        psObj._preloadRectifyCache()
+
         Parallel(n_jobs=safe_n_jobs(len(toMap), threadCnt))(delayed(psObj._mapSubstrate)(map_class_method, c, f) for c, f in tqdm(toMap.items()))
 
         del toMap

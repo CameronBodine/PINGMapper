@@ -1310,43 +1310,55 @@ class sonObj(object):
         # bedPick = round(sonMeta['dep_m'] / sonMeta['pix_m'], 0).astype(int)
         bedPick = round(sonMeta['dep_m'] / sonMeta['pixM'], 0).astype(int).reset_index(drop=True)
 
+        H, W = self.sonDat.shape[0], self.sonDat.shape[1]
+
         # Initialize 2d array to store relocated sonar records
-        srcDat = np.zeros((self.sonDat.shape[0], self.sonDat.shape[1])).astype(np.float32)#.astype(int)
+        srcDat = np.zeros((H, W), dtype=np.float32)
 
-        #Iterate each ping
-        for j in range(self.sonDat.shape[1]):
-            depth = bedPick[j] # Get depth (in pixels) at nadir
-            dd = depth**2
-            # Create 1d array to store relocated bed pixels.  Set to nan so we
-            ## can later interpolate over gaps.
-            pingDat = (np.ones((self.sonDat.shape[0])).astype(np.float32)) * np.nan
-            dataExtent = 0
-            #Iterate each sonar/ping return
-            for i in range(self.sonDat.shape[0]):
-                if i >= depth:
-                    intensity = self.sonDat[i,j] # Get the intensity value
-                    srcIndex = int(round(math.sqrt(i**2 - dd),0)) #Calculate horizontal range (in pixels) using pathagorean theorem
-                    pingDat[srcIndex] = intensity # Store intensity at appropriate horizontal range
-                    dataExtent = srcIndex # Store range extent (max range) of ping
-                else:
-                    pass
-            pingDat[dataExtent:]=0 # Zero out values past range extent so we don't interpolate past this
+        # Iterate each ping.  The inner row-loop is replaced with numpy vector
+        # ops: compute all slant→horizontal index mappings at once, scatter
+        # intensities, then interpolate gaps.
+        for j in range(W):
+            depth = int(bedPick[j])  # depth at nadir (pixels)
+            if depth >= H:
+                continue
+            dd = float(depth * depth)
 
-            # Process of relocating bed pixels will introduce across track gaps
-            ## in the array so we will interpolate over gaps to fill them.
-            nans, x = np.isnan(pingDat), lambda z: z.nonzero()[0]
-            pingDat[nans] = np.interp(x(nans), x(~nans), pingDat[~nans])
+            # Rows at or beyond the water column boundary
+            row_arr = np.arange(depth, H)
+            # Horizontal range index via Pythagorean theorem (vectorised)
+            src_idx = np.round(
+                np.sqrt(row_arr.astype(np.float64) ** 2 - dd)
+            ).astype(int)
+
+            # Discard out-of-bounds indices
+            valid = src_idx < H
+            rows_v = row_arr[valid]
+            sidx_v = src_idx[valid]
+            if len(sidx_v) == 0:
+                continue
+
+            data_extent = int(sidx_v[-1])
+
+            # Scatter intensities; duplicate src_idx writes keep last value
+            pingDat = np.full(H, np.nan, dtype=np.float32)
+            pingDat[sidx_v] = self.sonDat[rows_v, j].astype(np.float32)
+            pingDat[data_extent:] = 0  # zero past range extent
+
+            # Interpolate across-track gaps introduced by SRC
+            nans = np.isnan(pingDat)
+            if nans.any():
+                x = np.arange(H)
+                pingDat[nans] = np.interp(x[nans], x[~nans], pingDat[~nans])
 
             # Store relocated ping in output array
             if son:
-                srcDat[:,j] = np.around(pingDat, 0)
+                srcDat[:, j] = np.around(pingDat, 0)
             else:
-                srcDat[:,j] = pingDat
-
-            del pingDat
+                srcDat[:, j] = pingDat
 
         if son:
-            self.sonDat = srcDat.astype(int) # Store in class attribute for later use
+            self.sonDat = srcDat.astype(int)  # Store in class attribute for later use
         else:
             self.sonDat = srcDat
         del srcDat

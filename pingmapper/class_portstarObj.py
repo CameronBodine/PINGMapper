@@ -2416,6 +2416,20 @@ class portstarObj(object):
 
 
     #=======================================================================
+    def _preloadRectifyCache(self):
+        '''
+        Pre-load the trackline and sonar-metadata CSVs that _rectify reads
+        on every chunk call.  Call this ONCE on the portstarObj in the main
+        process before Parallel dispatch so that each serialised copy of the
+        object already has the data, avoiding per-chunk disk reads.
+        '''
+        portTrkMetaFile = os.path.join(self.port.metaDir, "Trackline_Smth_"+self.port.beamName+".csv")
+        starTrkMetaFile = os.path.join(self.star.metaDir, "Trackline_Smth_"+self.star.beamName+".csv")
+        self.port._trkMetaDF = pd.read_csv(portTrkMetaFile)
+        self.star._trkMetaDF = pd.read_csv(starTrkMetaFile)
+        self.port._loadSonMeta()   # populates self.port.sonMetaDF
+
+    #=======================================================================
     def _rectify(self, dat, chunk, imgOutPrefix, filt=50, wgs=False, return_rect=False):
         '''
         '''
@@ -2477,8 +2491,11 @@ class portstarObj(object):
 
         ###
         # Get top (port range) coordinates
-        trkMeta = pd.read_csv(portTrkMetaFile)
-        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        # Cache the full CSV on self.port so we only read from disk once per portstarObj
+        if not hasattr(self.port, '_trkMetaDF') or self.port._trkMetaDF is None:
+            self.port._trkMetaDF = pd.read_csv(portTrkMetaFile)
+        portTrkFull = self.port._trkMetaDF
+        trkMeta = portTrkFull[portTrkFull['chunk_id']==chunk].reset_index(drop=False)
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
         xTop, yTop = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
@@ -2486,8 +2503,11 @@ class portstarObj(object):
 
         ###
         # Get bottom (star range) coordinates
-        trkMeta = pd.read_csv(starTrkMetaFile)
-        trkMeta = trkMeta[trkMeta['chunk_id']==chunk].reset_index(drop=False) # Filter df by chunk_id
+        # Cache the full CSV on self.star so we only read from disk once per portstarObj
+        if not hasattr(self.star, '_trkMetaDF') or self.star._trkMetaDF is None:
+            self.star._trkMetaDF = pd.read_csv(starTrkMetaFile)
+        starTrkFull = self.star._trkMetaDF
+        trkMeta = starTrkFull[starTrkFull['chunk_id']==chunk].reset_index(drop=False)
 
         # Get range (outer extent) coordinates [xR, yR] to transposed numpy arrays
         xBot, yBot = trkMeta[xRange].to_numpy().T, trkMeta[yRange].to_numpy().T
@@ -2511,7 +2531,9 @@ class portstarObj(object):
 
         # Get pixel size
         # pix_m = self.port.pixM
-        self.port._loadSonMeta()
+        # Cache sonMetaDF — _loadSonMeta reads the same CSV every call
+        if not hasattr(self.port, 'sonMetaDF') or self.port.sonMetaDF is None:
+            self.port._loadSonMeta()
         isChunk = self.port.sonMetaDF['chunk_id']==chunk
         sonMeta = self.port.sonMetaDF[isChunk].reset_index()
 
