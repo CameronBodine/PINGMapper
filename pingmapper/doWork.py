@@ -266,6 +266,7 @@ def doWork(
                 'inFile': in_file,
                 'sonFiles': son_files,
                 'projDir': proj_dir,
+                'return_context': True,
             })
 
             print('\n\n', '***User Parameters***')
@@ -281,7 +282,13 @@ def doWork(
             print('\n===========================================')
             print('===========================================')
             print('***** READING *****')
-            ss_chan_avail = read_master_func(**run_params)
+            read_ctx = read_master_func(**run_params)
+            if isinstance(read_ctx, dict):
+                ss_chan_avail = bool(read_ctx.get('has_sidescan', False))
+                nav_available = bool(read_ctx.get('has_nav', True))
+            else:
+                ss_chan_avail = bool(read_ctx)
+                nav_available = True
 
             if ss_chan_avail:
                 rect_wcp = run_params.get('rect_wcp', False)
@@ -292,6 +299,19 @@ def doWork(
                 map_sub = run_params.get('map_sub', False)
                 export_poly = run_params.get('export_poly', False)
                 plt_subclass = run_params.get('pltSubClass', False)
+
+                if not nav_available:
+                    if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly or plt_subclass:
+                        print('\nWARNING: Navigation info is unavailable for this recording.')
+                        print('Skipping rectification and substrate mapping workflows (non-georeferenced sonogram-only processing).')
+                    rect_wcp = False
+                    rect_wcr = False
+                    banklines = False
+                    coverage = False
+                    pred_sub = False
+                    map_sub = False
+                    export_poly = False
+                    plt_subclass = False
 
                 if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
                     print('\n===========================================')

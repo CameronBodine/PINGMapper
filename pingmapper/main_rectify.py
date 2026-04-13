@@ -307,6 +307,15 @@ def rectify_master_func(logfilename='',
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, rectObjs
 
+    if len(portstar) == 0:
+        print("\nNo side-scan channels available for rectification. Skipping rectification.")
+        return
+
+    nav_available = all(getattr(son, 'trans', None) is not None for son in portstar)
+    if not nav_available:
+        print("\nNavigation info unavailable for side-scan channels. Skipping rectification.")
+        return
+
     ############################################################################
     # Smooth Trackline                                                         #
     ############################################################################

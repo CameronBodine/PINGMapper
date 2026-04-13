@@ -157,7 +157,8 @@ def read_master_func(logfilename='',
                      mosaic_nchunk=50,
                      mosaic=False,
                      map_mosaic=0,
-                     banklines=False):
+                     banklines=False,
+                     return_context=False):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been
@@ -371,6 +372,27 @@ def read_master_func(logfilename='',
     else:
         print('\n\nERROR!\n\nFile type {} not supported at this time.'.format(file_type))
         sys.exit()
+
+    nav_available = bool(getattr(sonar_obj, 'has_position', True))
+
+    # Sonar-only fallback for sources without navigation fields (e.g., some Cerulean logs).
+    # Disable filters that rely on geospatial motion/position so processing can continue.
+    if getattr(sonar_obj, 'has_position', True) is False:
+        nav_filters_requested = (
+            (max_heading_deviation > 0) or
+            (min_speed > 0) or
+            (max_speed > 0) or
+            bool(aoi)
+        )
+
+        if nav_filters_requested:
+            print('\nWARNING: Navigation fields are unavailable for this recording (sonar-only mode).')
+            print('Disabling nav-dependent filters: max_heading_deviation, min_speed, max_speed, aoi.')
+
+        max_heading_deviation = 0
+        min_speed = 0
+        max_speed = 0
+        aoi = False
 
     ####################
     # Create son objects
@@ -1081,29 +1103,41 @@ def read_master_func(logfilename='',
         if _is_sidescan_beam(beam):
             portstar.append(son)
 
-    # Create portstarObj
-    psObj = portstarObj(portstar)
+    psObj = None
+    chunks = np.array([], dtype=int)
 
-    chunks = []
-    for son in portstar:
-        # Get chunk id's, ignoring those with nodata
-        c = son._getChunkID()
-
-        chunks.extend(c)
-        del c
-    del son
-
-    chunks = np.unique(chunks).astype(int)
-
-    if len(chunks) == 0:
+    if len(portstar) == 0:
         print(
-            '\n\nNo valid side-scan chunks available for depth processing. '\
+            '\n\nNo recognized side-scan channels available for depth processing. '\
             'Continuing with down-looking beams only.'
         )
         print('Disabling side-scan-only operations (auto depth, bedpick plot, shadow removal).')
         detectDep = 0
         pltBedPick = False
         remShadow = 0
+    else:
+        # Create portstarObj
+        psObj = portstarObj(portstar)
+
+        chunks = []
+        for son in portstar:
+            # Get chunk id's, ignoring those with nodata
+            c = son._getChunkID()
+
+            chunks.extend(c)
+            del c
+
+        chunks = np.unique(chunks).astype(int)
+
+        if len(chunks) == 0:
+            print(
+                '\n\nNo valid side-scan chunks available for depth processing. '\
+                'Continuing with down-looking beams only.'
+            )
+            print('Disabling side-scan-only operations (auto depth, bedpick plot, shadow removal).')
+            detectDep = 0
+            pltBedPick = False
+            remShadow = 0
 
     # # Automatically estimate depth
     if detectDep > 0:
@@ -1166,7 +1200,7 @@ def read_master_func(logfilename='',
 
     if saveDepth:
 
-        if ss_chan_avail:
+        if ss_chan_avail and psObj is not None:
             # Save detected depth to csv
             depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail)
         else:
@@ -1225,14 +1259,15 @@ def read_master_func(logfilename='',
         del depDF
 
         # Cleanup
-        psObj._cleanup()
+        if psObj is not None:
+            psObj._cleanup()
 
         print("\nDone!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 
     # Plot sonar depth and auto depth estimate (if available) on sonogram
-    if pltBedPick:
+    if pltBedPick and psObj is not None and len(chunks) > 0:
         start_time = time.time()
 
         print("\n\nExporting bedpick plots to {}...".format(tileFile))
@@ -1243,7 +1278,8 @@ def read_master_func(logfilename='',
         printUsage()
 
     # Cleanup
-    psObj._cleanup()
+    if psObj is not None:
+        psObj._cleanup()
     del psObj, portstar
 
     for son in sonObjs:
@@ -1617,8 +1653,13 @@ def read_master_func(logfilename='',
     gc.collect()
     printUsage()
 
-    if len(ss_chan_avail) == 0:
-        return False
-    else:
-        return True
+    has_sidescan = len(ss_chan_avail) > 0
+
+    if return_context:
+        return {
+            'has_sidescan': has_sidescan,
+            'has_nav': nav_available,
+        }
+
+    return has_sidescan
 

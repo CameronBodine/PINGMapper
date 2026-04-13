@@ -185,6 +185,15 @@ def map_master_func(logfilename='',
             pass # Don't add non-port/star objects since they can't be rectified
     del son, beam, sonObjs
 
+    if len(mapObjs) == 0:
+        print("\nNo side-scan channels available for substrate mapping. Skipping mapping.")
+        return
+
+    nav_available = all(getattr(son, 'trans', None) is not None for son in mapObjs)
+    if not nav_available:
+        print("\nNavigation info unavailable for side-scan channels. Skipping substrate mapping.")
+        return
+
     ################################################
     # Prepare output directory and update attributes
     for son in mapObjs:
