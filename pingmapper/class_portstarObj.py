@@ -1952,9 +1952,13 @@ class portstarObj(object):
 
     #=======================================================================
     def _detectShadow(self, remShadow, i, USE_GPU, doPlot=True, tileFile='.jpg'):
+
         '''
 
         '''
+        # Suppress Keras/TensorFlow verbose output (progress bar)
+        quiet_tensorflow_warnings()
+
         # Open model configuration file
         with open(self.configfile) as f:
             config = json.load(f)
