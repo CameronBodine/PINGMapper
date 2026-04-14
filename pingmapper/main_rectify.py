@@ -156,7 +156,8 @@ def rectify_master_func(logfilename='',
                         mosaic_nchunk=50,
                         mosaic=False,
                         map_mosaic=0,
-                        banklines=False):
+                        banklines=False,
+                        **kwargs):
     '''
     Main script to rectify side scan sonar imagery from a Humminbird.
 
