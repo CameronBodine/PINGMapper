@@ -1,13 +1,14 @@
 ## Run PINGMapper Programmatically
 
 This guide shows how to call `doWork` from your own Python script to process a
-single sonar file or a batch directory.
+single sonar file, a batch directory, or an explicit list of files.
 
 ### Prerequisites
 
 - PINGMapper is installed or the repo is on `PYTHONPATH`.
 - You have a valid sonar file (e.g., `.DAT`, `.sl2`, `.sl3`, `.RSD`, `.svlog`, `.jsf`, `.xtf`, `.sdf`).
 - You have write access to the output folder.
+
 
 ### Minimal Single-File Example
 
@@ -73,7 +74,25 @@ results = doWork(
 print(results)
 ```
 
+
 ### Batch Directory Example
+### Explicit List of Files Example
+
+```python
+from pingmapper.doWork import doWork
+
+params = {"project_mode": 1, "nchunk": 500}
+file_list = [r"Z:\path\to\file1.DAT", r"Z:\path\to\file2.sl2"]
+
+results = doWork(
+	in_files=file_list,
+	out_dir=r"Z:\path\to\output_root",
+	batch=True,
+	params=params,
+)
+
+print(results)
+```
 
 ```python
 from pingmapper.doWork import doWork
@@ -95,11 +114,14 @@ results = doWork(
 print(results)
 ```
 
+
 ### Notes
 
 - `project_mode`:
-  - `0` = create new project (fails if it already exists)
-  - `1` = overwrite existing project
-  - `2` = update existing project
+	- `0` = create new project (fails if it already exists)
+	- `1` = overwrite existing project
+	- `2` = update existing project
 - Output logs are written to `projDir\logs\log_YYYY-MM-DD_HHMM.txt`.
 - `doWork` returns a list of dicts with `inFile`, `projDir`, `logfilename`, and `success`.
+- You can use `in_file` (single file), `in_dir` (batch directory), or `in_files` (explicit list) as input. For batch or list processing, set `batch=True`.
+- The `params` dictionary accepts many additional keys for advanced processing. See the `doWork` docstring for all supported options.
