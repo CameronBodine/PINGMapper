@@ -2305,7 +2305,7 @@ class portstarObj(object):
                 dd = float(depth * depth)
                 row_arr = np.arange(depth, H_pred)
                 src_idx = np.round(
-                    np.sqrt(row_arr.astype(np.float64) ** 2 - dd)
+                    np.sqrt(row_arr.astype(np.float32) ** 2 - dd)
                 ).astype(int)
                 valid = src_idx < H_pred
                 rows_v = row_arr[valid]

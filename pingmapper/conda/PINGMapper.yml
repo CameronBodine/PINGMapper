@@ -27,3 +27,4 @@ dependencies:
       - opencv-python
       - transformers<5
       - rsa
+      - freesimplegui

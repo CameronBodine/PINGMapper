@@ -443,7 +443,7 @@ def saveDefaultParams(values, user_params=None):
             return {k: _sanitize(val) for k, val in v.items()}
         if isinstance(v, (np.integer, np.int_, np.int64)):
             return int(v)
-        if isinstance(v, (np.floating, np.float64, np.float64)):
+        if isinstance(v, (np.floating, np.float32, np.float32)):
             return float(v)
         if isinstance(v, (np.ndarray, list, tuple)):
             return [_sanitize(x) for x in v]
@@ -516,7 +516,7 @@ class FastPiecewiseAffineTransform(PiecewiseAffineTransform):
             [self.affines[i].params for i in range(len(self._tesselation.simplices))]
         )
 
-        result = np.empty((n, 3), dtype=np.float64)
+        result = np.empty((n, 3), dtype=np.float32)
 
         # Process in batches to avoid large allocations in find_simplex and the
         # affine einsum, both of which scale with n_coords and can exceed several GiB.

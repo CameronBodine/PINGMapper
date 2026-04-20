@@ -1328,7 +1328,7 @@ class sonObj(object):
             row_arr = np.arange(depth, H)
             # Horizontal range index via Pythagorean theorem (vectorised)
             src_idx = np.round(
-                np.sqrt(row_arr.astype(np.float64) ** 2 - dd)
+                np.sqrt(row_arr.astype(np.float32) ** 2 - dd)
             ).astype(int)
 
             # Discard out-of-bounds indices
@@ -2919,7 +2919,7 @@ class sonObj(object):
         '''
 
         # Get sonDat
-        sonDat = self.sonDat.astype('float64')
+        sonDat = self.sonDat.astype('float32')
 
         # Create mask from zero values
         mask = np.where(sonDat == 0, 0, 1)
