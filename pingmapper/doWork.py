@@ -293,6 +293,7 @@ def doWork(
             if ss_chan_avail:
                 rect_wcp = run_params.get('rect_wcp', False)
                 rect_wcr = run_params.get('rect_wcr', False)
+                force_rectify = run_params.get('force_rectify', False)
                 banklines = run_params.get('banklines', False)
                 coverage = run_params.get('coverage', False)
                 pred_sub = run_params.get('pred_sub', False)
@@ -301,11 +302,12 @@ def doWork(
                 plt_subclass = run_params.get('pltSubClass', False)
 
                 if not nav_available:
-                    if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly or plt_subclass:
+                    if rect_wcp or rect_wcr or force_rectify or banklines or coverage or pred_sub or map_sub or export_poly or plt_subclass:
                         print('\nWARNING: Navigation info is unavailable for this recording.')
                         print('Skipping rectification and substrate mapping workflows (non-georeferenced sonogram-only processing).')
                     rect_wcp = False
                     rect_wcr = False
+                    force_rectify = False
                     banklines = False
                     coverage = False
                     pred_sub = False
@@ -313,7 +315,7 @@ def doWork(
                     export_poly = False
                     plt_subclass = False
 
-                if rect_wcp or rect_wcr or banklines or coverage or pred_sub or map_sub or export_poly:
+                if rect_wcp or rect_wcr or force_rectify or banklines or coverage or pred_sub or map_sub or export_poly:
                     print('\n===========================================')
                     print('===========================================')
                     print('***** RECTIFYING *****')

@@ -97,11 +97,25 @@ import json
 
 import logging
 
-from tqdm import tqdm
+from tqdm import tqdm as _tqdm
 
 import subprocess
 
 # from funcs_pyhum_correct import doPyhumCorrections
+
+
+# =========================================================
+def tqdm(*args, **kwargs):
+    '''
+    Shared tqdm wrapper so CLI progress bars stay readable in the GUI console.
+    Use PINGMAPPER_TQDM_NCOLS to override the default width when needed.
+    '''
+    if 'ncols' not in kwargs:
+        try:
+            kwargs['ncols'] = int(os.environ.get('PINGMAPPER_TQDM_NCOLS', '80'))
+        except (TypeError, ValueError):
+            kwargs['ncols'] = 80
+    return _tqdm(*args, **kwargs)
 
 
 # =========================================================

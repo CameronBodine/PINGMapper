@@ -158,6 +158,7 @@ def read_master_func(logfilename='',
                      mosaic=False,
                      map_mosaic=0,
                      banklines=False,
+                     side_scan_only=False,
                      return_context=False,
                      **kwargs):
 
@@ -375,6 +376,7 @@ def read_master_func(logfilename='',
         sys.exit()
 
     nav_available = bool(getattr(sonar_obj, 'has_position', True))
+    side_scan_only = bool(side_scan_only)
 
     # Sonar-only fallback for sources without navigation fields (e.g., some Cerulean logs).
     # Disable filters that rely on geospatial motion/position so processing can continue.
@@ -546,6 +548,19 @@ def read_master_func(logfilename='',
         sonObjs.append(son_copy)
     else:
         pass
+
+    if side_scan_only:
+        if len(ss_chan_avail) == 0:
+            print('\n\nSide-scan only mode enabled, but no side-scan channels were recognized. Skipping processing.')
+            if return_context:
+                return {
+                    'has_sidescan': False,
+                    'has_nav': nav_available,
+                }
+            return False
+
+        print('\n\nSide-scan only mode enabled. Skipping non-side-scan channels.')
+        sonObjs = [son for son in sonObjs if _is_sidescan_beam(getattr(son, 'beamName', ''))]
 
     print(sonObjs)
     ####
