@@ -158,7 +158,8 @@ def read_master_func(logfilename='',
                      mosaic=False,
                      map_mosaic=0,
                      banklines=False,
-                     return_context=False):
+                     return_context=False,
+                     **kwargs):
 
     '''
     Main script to read data from Humminbird sonar recordings. Scripts have been

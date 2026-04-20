@@ -110,7 +110,8 @@ def map_master_func(logfilename='',
                     banklines=False,
                     export_16bit=False,
                     export_16bit_colormap=False,
-                    export_colormap_uint8=True):
+                    export_colormap_uint8=True,
+                    **kwargs):
 
     '''
     Main script to map substrates from side scan sonar imagery.
