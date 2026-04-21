@@ -31,6 +31,12 @@
 
 import os, sys, struct, gc, io, contextlib
 
+# Configure TensorFlow runtime defaults as early as possible so informational
+# startup messages do not leak to stderr before logging is initialized.
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '3')
+os.environ.setdefault('TF_ENABLE_ONEDNN_OPTS', '0')
+os.environ.setdefault('AUTOGRAPH_VERBOSITY', '0')
+
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
@@ -153,6 +159,7 @@ def quiet_tensorflow_warnings():
     Safe to call even if TensorFlow is not installed.
     '''
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
     os.environ['AUTOGRAPH_VERBOSITY'] = '0'
 
     logging.getLogger('tensorflow').setLevel(logging.ERROR)

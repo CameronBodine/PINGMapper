@@ -1563,6 +1563,43 @@ class portstarObj(object):
                           Integer < 0 = decrease depth estimate by x pixels.
                           0 = use depth estimate with no adjustment.
         '''
+        def _format_depth_adjustment(pix_m_series):
+            pix_m = pd.to_numeric(pix_m_series, errors='coerce')
+            valid_pix = pix_m[np.isfinite(pix_m) & (pix_m > 0)]
+            if len(valid_pix) == 0:
+                return '0 pixels'
+            return str(float(adjDep) / float(valid_pix.iloc[0])) + ' pixels'
+
+        def _sync_trackline_depth(beam_obj, beam_df):
+            trk_file = os.path.join(beam_obj.metaDir, 'Trackline_Smth_' + beam_obj.beamName + '.csv')
+            if not os.path.exists(trk_file):
+                return
+
+            trk_df = pd.read_csv(trk_file)
+            if 'record_num' not in trk_df.columns or 'record_num' not in beam_df.columns:
+                return
+
+            depth_cols = ['record_num', 'dep_m']
+            if 'dep_m_Method' in beam_df.columns:
+                depth_cols.append('dep_m_Method')
+            if 'dep_m_smth' in beam_df.columns:
+                depth_cols.append('dep_m_smth')
+            if 'dep_m_adjBy' in beam_df.columns:
+                depth_cols.append('dep_m_adjBy')
+
+            depth_df = beam_df[depth_cols].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
+            trk_df = trk_df.set_index('record_num')
+
+            trk_df['dep_m'] = depth_df['dep_m']
+            if 'dep_m_Method' in depth_df.columns:
+                trk_df['dep_m_Method'] = depth_df['dep_m_Method']
+            if 'dep_m_smth' in depth_df.columns:
+                trk_df['dep_m_smth'] = depth_df['dep_m_smth']
+            if 'dep_m_adjBy' in depth_df.columns:
+                trk_df['dep_m_adjBy'] = depth_df['dep_m_adjBy']
+
+            trk_df.reset_index().to_csv(trk_file, index=False, float_format='%.14f')
+
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
@@ -1623,8 +1660,8 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep / portDF['pixM']) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep / starDF['pixM']) + ' pixels'
+            portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
+            starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
 
         elif detectDep > 0:
             # Prepare depth detection dictionaries
@@ -1709,8 +1746,8 @@ class portstarObj(object):
             portDF['dep_m_smth'] = smthDep
             starDF['dep_m_smth'] = smthDep
 
-            portDF['dep_m_adjBy'] = str(adjDep / portDF['pixM']) + ' pixels'
-            starDF['dep_m_adjBy'] = str(adjDep / starDF['pixM']) + ' pixels'
+            portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
+            starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
 
         # Interpolate over nan's (and set zeros to nan)
         portDep = portDF['dep_m'].to_numpy(copy=True)
@@ -1736,6 +1773,8 @@ class portstarObj(object):
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
+        _sync_trackline_depth(self.port, portDF)
+        _sync_trackline_depth(self.star, starDF)
 
         try:
             # Take average of both estimates to store with downlooking sonar csv
