@@ -253,6 +253,13 @@ class sonObj(object):
                           max_speed,
                           aoi,
                           time_table,
+                          dq_table=False,
+                          dq_time_field=False,
+                          dq_flag_field=False,
+                          dq_keep_values=False,
+                          dq_src_utc_offset=0.0,
+                          dq_target_utc_offset=0.0,
+                          dq_time_offset=0.0,
                           ):
         '''
         '''
@@ -284,6 +291,20 @@ class sonObj(object):
         if time_table:
             sonDF = self._filterTime(sonDF, time_table)
 
+        ####################
+        # Data Quality Filter
+        if dq_table:
+            sonDF = self._filterDQ(
+                sonDF,
+                dq_table,
+                dq_time_field,
+                dq_flag_field,
+                dq_keep_values,
+                dq_src_utc_offset,
+                dq_target_utc_offset,
+                dq_time_offset,
+            )
+
         return sonDF
     
     # ======================================================================
@@ -302,6 +323,107 @@ class sonObj(object):
                 df.loc[t, 'filter'] = False
 
         return df
+
+
+    # ======================================================================
+    def _filterDQ(self,
+                  sonDF,
+                  dq_table,
+                  dq_time_field,
+                  dq_flag_field,
+                  dq_keep_values,
+                  dq_src_utc_offset,
+                  dq_target_utc_offset,
+                  dq_time_offset,
+                  ):
+        '''
+        Filter sonar pings using a data-quality (DQ) log CSV.
+
+        Each row in the DQ log is treated as a state-change event: the flag
+        recorded at time T applies to every sonar ping from T until the next
+        event row.  Pings that occur before the first DQ event are removed.
+        '''
+
+        filtDQCol   = 'filter_dq'
+        filtCol     = 'filter'
+        dqTimeCol   = '_dq_ts'
+
+        if not filtCol in sonDF.columns:
+            sonDF[filtCol] = True
+
+        # ── Load DQ log ──────────────────────────────────────────────────
+        dqDF = pd.read_csv(dq_table)
+
+        # ── Mark which DQ rows should be kept ────────────────────────────
+        if isinstance(dq_keep_values, str):
+            dq_keep_values = [dq_keep_values]
+        dqDF['_dq_keep'] = dqDF[dq_flag_field].isin(dq_keep_values)
+
+        # ── Parse DQ timestamps ──────────────────────────────────────────
+        try:
+            dqDF[dqTimeCol] = pd.to_datetime(
+                dqDF[dq_time_field], utc=True
+            ).dt.tz_convert(None).astype('int64') / 1e9
+            dqDF[dqTimeCol] += (dq_target_utc_offset - dq_src_utc_offset) * 3600
+
+            # ── Parse sonar timestamps ────────────────────────────────────
+            sonMerge = sonDF[['date', 'time', 'time_s']].copy()
+            sonMerge['_son_idx'] = sonDF.index
+            sonMerge['_son_ts'] = pd.to_datetime(
+                sonMerge['date'].astype(str) + ' ' + sonMerge['time'].astype(str),
+                errors='coerce',
+            )
+            sonMerge['_son_ts'] = pd.to_datetime(
+                sonMerge['_son_ts'], utc=True
+            ).dt.tz_convert(None).astype('int64') / 1e9
+            sonMerge['_son_ts'] += dq_time_offset
+
+        except Exception:
+            # Fall back to numeric time_s
+            dqDF[dqTimeCol] = pd.to_numeric(dqDF[dq_time_field], errors='coerce')
+            sonMerge = sonDF[['time_s']].copy()
+            sonMerge['_son_idx'] = sonDF.index
+            sonMerge['_son_ts'] = sonMerge['time_s'] + dq_time_offset
+
+        # ── Build sorted event table (one row per unique timestamp, last wins) ─
+        event_state = dqDF[[dqTimeCol, '_dq_keep']].copy()
+        event_state.sort_values(dqTimeCol, inplace=True)
+        event_state = event_state.groupby(dqTimeCol, as_index=False)['_dq_keep'].last()
+
+        keep_idx = self._applyDQEventState(sonMerge, event_state, dqTimeCol)
+
+        # ── Apply to sonDF ────────────────────────────────────────────────
+        sonDF[filtDQCol] = False
+        sonDF.loc[keep_idx, filtDQCol] = True
+        sonDF[filtCol] = sonDF[filtCol] & sonDF[filtDQCol]
+
+        return sonDF
+
+
+    # ======================================================================
+    def _applyDQEventState(self, son, event_state, dqTimeCol):
+        '''
+        Return the subset of sonar indices whose ping timestamp falls within a
+        "keep" state block as defined by the DQ event log.
+
+        Uses np.searchsorted so each ping inherits the state of the most-recent
+        event that preceded it.  Pings before the first event are excluded.
+        '''
+
+        event_times = event_state[dqTimeCol].to_numpy()
+        event_keep  = event_state['_dq_keep'].to_numpy()
+        son_times   = son['_son_ts'].to_numpy()
+
+        # searchsorted(side='right') - 1 gives index of last event <= ping time
+        event_idx = np.searchsorted(event_times, son_times, side='right') - 1
+
+        # Pings before the first event get event_idx == -1 → exclude
+        valid_idx = event_idx >= 0
+
+        keep_mask = np.zeros(len(son), dtype=bool)
+        keep_mask[valid_idx] = event_keep[event_idx[valid_idx]]
+
+        return son.loc[keep_mask, '_son_idx']
 
 
     # ======================================================================

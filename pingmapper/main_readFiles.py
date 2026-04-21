@@ -119,6 +119,13 @@ def read_master_func(logfilename='',
                      min_speed = False,
                      max_speed = False,
                      time_table = False,
+                     dq_table = False,
+                     dq_time_field = False,
+                     dq_flag_field = False,
+                     dq_keep_values = False,
+                     dq_src_utc_offset = 0.0,
+                     dq_target_utc_offset = 0.0,
+                     dq_time_offset = 0.0,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -1051,7 +1058,9 @@ def read_master_func(logfilename='',
 
         # Do filtering on longest recording
         son0 = portstar[maxRec]
-        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
+        df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table,
+                                      dq_table, dq_time_field, dq_flag_field, dq_keep_values,
+                                      dq_src_utc_offset, dq_target_utc_offset, dq_time_offset)
 
         # Add filter to other beam
         son1 = portstar[minRec]
@@ -1099,7 +1108,9 @@ def read_master_func(logfilename='',
 
         # Do filtering on downbeams
         for son in downbeams:
-            df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table)
+            df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table,
+                                        dq_table, dq_time_field, dq_flag_field, dq_keep_values,
+                                        dq_src_utc_offset, dq_target_utc_offset, dq_time_offset)
 
             df = df[df['filter'] == True]
 
@@ -1323,7 +1334,10 @@ def read_master_func(logfilename='',
     # Cleanup
     if psObj is not None:
         psObj._cleanup()
-    del psObj, portstar
+    if 'psObj' in locals():
+        del psObj
+    if 'portstar' in locals():
+        del portstar
 
     for son in sonObjs:
         son._cleanup()
@@ -1449,9 +1463,12 @@ def read_master_func(logfilename='',
     # Cleanup
     try:
         psObj._cleanup()
-        del psObj, portstar
-    except:
+    except Exception:
         pass
+    if 'psObj' in locals():
+        del psObj
+    if 'portstar' in locals():
+        del portstar
 
 
     ############################################################################
