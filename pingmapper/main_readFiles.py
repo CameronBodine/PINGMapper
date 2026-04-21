@@ -1323,7 +1323,10 @@ def read_master_func(logfilename='',
     # Cleanup
     if psObj is not None:
         psObj._cleanup()
-    del psObj, portstar
+    if 'psObj' in locals():
+        del psObj
+    if 'portstar' in locals():
+        del portstar
 
     for son in sonObjs:
         son._cleanup()
