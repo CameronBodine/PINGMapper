@@ -979,20 +979,20 @@ class portstarObj(object):
         self._depthZheng() or self._depthThreshold()
         '''
         
-        # Check if depth detection dependencies are available
-        if not DEPTH_DETECTION_AVAILABLE:
-            raise ImportError(
-                "TensorFlow, Transformers, and/or Doodleverse Utils are not installed. "
-                "These packages are required for automatic depth detection. "
-                "Please install them using: pip install tensorflow transformers doodleverse-utils"
-            )
-
-        # Open model configuration file
-        with open(self.configfile) as f:
-            config = json.load(f)
-        globals().update(config)
-
         if method == 1:
+            # Check if depth detection dependencies are available
+            if not DEPTH_DETECTION_AVAILABLE:
+                raise ImportError(
+                    "TensorFlow, Transformers, and/or Doodleverse Utils are not installed. "
+                    "These packages are required for ML depth detection. "
+                    "Use method=2 for binary-threshold depth picking instead."
+                )
+
+            # Open model configuration file
+            with open(self.configfile) as f:
+                config = json.load(f)
+            globals().update(config)
+
             if not hasattr(self, 'bedpickModel'):
                 # model = self._initModel(USE_GPU)
                 model = initModel(self.weights, self.configfile, USE_GPU)
@@ -1003,7 +1003,7 @@ class portstarObj(object):
         elif method == 2:
             self.port._loadSonMeta()
             self.star._loadSonMeta()
-            portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i, tileFile)
+            portDepPixCrop, starDepPixCrop, i = self._depthThreshold(i)
 
         gc.collect()
         return portDepPixCrop, starDepPixCrop, i
@@ -1391,25 +1391,31 @@ class portstarObj(object):
         for son in portstar:
             # Load sonar intensity, standardize & rescale
             son._getScanChunkSingle(chunk)
-            img = son.sonDat
-            img = standardize(img, 0, 1, True)[:,:,-1].squeeze()
+            img = standardize(np.asarray(son.sonDat)).squeeze()
+            if img.ndim == 3:
+                img = img[:, :, -1]
             W, H = img.shape[1], img.shape[0]
 
             # Get chunks sonar metadata and instrument depth
-            isChunk = son.sonMetaDF['chunk_id']==1
+            isChunk = son.sonMetaDF['chunk_id'] == chunk
             sonMeta = son.sonMetaDF[isChunk].reset_index()
-            # acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pix_m'], 0).astype(int)
-            acousticBed = round(sonMeta['inst_dep_m'] / sonMeta['pixM'], 0).astype(int)
+            acoustic_depth = pd.to_numeric(sonMeta['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            acousticBed = np.round(acoustic_depth / sonMeta['pixM'].to_numpy(dtype=float, copy=True), 0)
+            acousticBed = acousticBed[np.isfinite(acousticBed) & (acousticBed > 0)]
 
             ##################################
             # Step 1 : Acoustic Bedpick Filter
             # Use acoustic bed pick to crop image
-            bedMin = max(min(acousticBed)-50, 0)
-            bedMax = max(acousticBed)+pix_buf
+            if acousticBed.size > 0:
+                bedMin = max(int(np.nanmin(acousticBed)) - 50, 0)
+                bedMax = int(np.nanmax(acousticBed)) + pix_buf
+            else:
+                bedMin = 0
+                bedMax = H
 
             cropMask = np.ones((H, W)).astype(int)
             cropMask[:bedMin,:] = 0
-            cropMask[bedMax:,:] = 0
+            cropMask[min(bedMax, H):,:] = 0
 
             # Mask the image with bed_mask
             imgMasked = img*cropMask
@@ -1464,7 +1470,7 @@ class portstarObj(object):
             imgBinaryMask[imgBinaryMask>0] = 1 # Now set all val's greater than 0 to 1 to create the mask
 
             # Now fill in above last row filled to make sure no gaps in bed pixels
-            lastRow = bedMax
+            lastRow = min(bedMax, H - 1)
             imgBinaryMask[lastRow] = True
             for i in range(W):
                 if imgBinaryMask[lastRow-1,i] == 0:
@@ -1509,10 +1515,10 @@ class portstarObj(object):
             bed[nans] = np.interp(x(nans), x(~nans), bed[~nans])
             bed = bed.astype(int)
 
-            if son.beamName == 'ss_port':
+            if str(son.beamName).startswith('ss_port'):
                 # self.portDepDetect[chunk] = bed
                 portDepPixCrop = bed
-            elif son.beamName == 'ss_star':
+            elif str(son.beamName).startswith('ss_star'):
                 # self.starDepDetect[chunk] = bed
                 starDepPixCrop = bed
 

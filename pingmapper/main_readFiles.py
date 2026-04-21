@@ -94,6 +94,17 @@ def _is_sidescan_beam(beam_name):
     return beam_name.startswith('ss_port') or beam_name.startswith('ss_star')
 
 
+def _sidescan_group_key(beam_name):
+    beam_name = str(beam_name)
+    if beam_name.startswith('ss_port_'):
+        return beam_name[len('ss_port_'):]
+    if beam_name.startswith('ss_star_'):
+        return beam_name[len('ss_star_'):]
+    if beam_name in {'ss_port', 'ss_star'}:
+        return 'default'
+    return beam_name
+
+
 #===========================================
 def read_master_func(logfilename='',
                      project_mode=0,
@@ -355,7 +366,7 @@ def read_master_func(logfilename='',
     # Prepare Cerulean file for PINGMapper
     elif file_type == '.svlog':
         sonar_obj = cerul2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
-        detectDep = 1 # No depth in cerulean files, so set to Zheng et al. 2021
+        detectDep = 1 if DEPTH_DETECTION_AVAILABLE else 2
         instDepAvail = False
 
     # Prepare JSF file for PINGMapper
@@ -964,10 +975,15 @@ def read_master_func(logfilename='',
                     valid=True
                 elif (attMax != 0) or ("unknown" in att) or (att =="beam"):
                     valid=True
-                elif (att == "inst_dep_m") and (attAvg == 0): # Automatically detect depth if no instrument depth
-                    valid=False
-                    invalid[son.beam+"."+att] = False
-                    detectDep=1
+                elif att == "inst_dep_m":
+                    depth_values = pd.to_numeric(df[att], errors='coerce').to_numpy(dtype=float, copy=False)
+                    has_valid_instrument_depth = np.isfinite(depth_values).any() and np.nanmax(depth_values) > 0
+                    if not has_valid_instrument_depth: # Automatically detect depth if instrument depth is missing/empty
+                        valid=False
+                        invalid[son.beam+"."+att] = False
+                        detectDep = 1 if DEPTH_DETECTION_AVAILABLE else 2
+                    else:
+                        valid=True
                 else:
                     valid=False
                     invalid[son.beam+"."+att] = False
@@ -1112,17 +1128,23 @@ def read_master_func(logfilename='',
 
     start_time = time.time()
 
-    # Determine which sonObj is port/star
-    portstar = []
+    # Determine which sonObj pairs should be depth processed together.
+    sidescan_groups = {}
     for son in sonObjs:
-        beam = son.beamName
-        if _is_sidescan_beam(beam):
-            portstar.append(son)
+        beam = str(son.beamName)
+        if not _is_sidescan_beam(beam):
+            continue
 
-    psObj = None
-    chunks = np.array([], dtype=int)
+        group_key = _sidescan_group_key(beam)
+        group = sidescan_groups.setdefault(group_key, {})
+        if beam.startswith('ss_port'):
+            group['port'] = son
+        elif beam.startswith('ss_star'):
+            group['star'] = son
 
-    if len(portstar) == 0:
+    ps_depth_jobs = []
+
+    if len(sidescan_groups) == 0:
         print(
             '\n\nNo recognized side-scan channels available for depth processing. '\
             'Continuing with down-looking beams only.'
@@ -1132,20 +1154,28 @@ def read_master_func(logfilename='',
         pltBedPick = False
         remShadow = 0
     else:
-        # Create portstarObj
-        psObj = portstarObj(portstar)
+        for group_key, group in sorted(sidescan_groups.items()):
+            if 'port' not in group or 'star' not in group:
+                print(
+                    '\nSkipping side-scan depth group {} because a matching port/star pair was not found.'.format(group_key)
+                )
+                continue
 
-        chunks = []
-        for son in portstar:
-            # Get chunk id's, ignoring those with nodata
-            c = son._getChunkID()
+            psObj = portstarObj([group['port'], group['star']])
 
-            chunks.extend(c)
-            del c
+            chunks = []
+            for son in [group['port'], group['star']]:
+                c = son._getChunkID()
+                chunks.extend(c)
+                del c
 
-        chunks = np.unique(chunks).astype(int)
+            chunks = np.unique(chunks).astype(int)
+            if len(chunks) == 0:
+                continue
 
-        if len(chunks) == 0:
+            ps_depth_jobs.append((group_key, psObj, chunks))
+
+        if len(ps_depth_jobs) == 0:
             print(
                 '\n\nNo valid side-scan chunks available for depth processing. '\
                 'Continuing with down-looking beams only.'
@@ -1158,7 +1188,12 @@ def read_master_func(logfilename='',
     # # Automatically estimate depth
     if detectDep > 0:
         # Check if depth detection dependencies are available
-        if not DEPTH_DETECTION_AVAILABLE:
+        if detectDep == 1 and not DEPTH_DETECTION_AVAILABLE:
+            print('\n\nML depth detection dependencies are unavailable.')
+            print('Falling back to binary-threshold depth detection...\n')
+            detectDep = 2
+
+        if detectDep == 1 and not DEPTH_DETECTION_AVAILABLE:
             print('\n\nCannot estimate depth automatically:')
             print('TensorFlow, Transformers, and/or Doodleverse Utils are not installed.')
             print('These packages are required for automatic depth detection.')
@@ -1168,37 +1203,28 @@ def read_master_func(logfilename='',
             autoBed = False
             saveDepth = True
         else:
-            print('\n\nAutomatically estimating depth for', len(chunks), 'chunks:')
+            total_chunks = sum(len(chunks) for _, _, chunks in ps_depth_jobs)
+            print('\n\nAutomatically estimating depth for', total_chunks, 'chunks across', len(ps_depth_jobs), 'side-scan group(s):')
 
-            #Dictionary to store chunk : np.array(depth estimate)
-            psObj.portDepDetect = {}
-            psObj.starDepDetect = {}
+            for group_key, psObj, chunks in ps_depth_jobs:
+                psObj.portDepDetect = {}
+                psObj.starDepDetect = {}
 
-            # Estimate depth using:
-            # Zheng et al. 2021
-            # Load model weights and configuration file
-            if detectDep == 1:
+                if detectDep == 1:
+                    depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
+                    psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
+                    psObj.weights = os.path.join(modelDir, depthModelVer, 'weights', depthModelVer+'_fullmodel.h5')
+                    print('\n\tGroup {}: Using Zheng et al. 2021 method. Loading model: {}'.format(group_key, os.path.basename(psObj.weights)))
+                elif detectDep == 2:
+                    print('\n\tGroup {}: Using binary thresholding...'.format(group_key))
 
-                # Store configuration file and model weights
-                # These were downloaded at the beginning of the script
-                depthModelVer = 'Bedpick_Zheng2021_Segmentation_unet_v1.0'
-                psObj.configfile = os.path.join(modelDir, depthModelVer, 'config', depthModelVer+'.json')
-                psObj.weights = os.path.join(modelDir, depthModelVer, 'weights', depthModelVer+'_fullmodel.h5')
-                print('\n\tUsing Zheng et al. 2021 method. Loading model:', os.path.basename(psObj.weights))
+                r = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
 
-            # With binary thresholding
-            elif detectDep == 2:
-                print('\n\tUsing binary thresholding...')
-
-            # Parallel estimate depth for each chunk using appropriate method
-            r = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(psObj._detectDepth)(detectDep, int(chunk), USE_GPU, tileFile) for chunk in tqdm(chunks))
-
-            # store the depth predictions in the class
-            for ret in r:
-                psObj.portDepDetect[ret[2]] = ret[0]
-                psObj.starDepDetect[ret[2]] = ret[1]
-                del ret
-            del r
+                for ret in r:
+                    psObj.portDepDetect[ret[2]] = ret[0]
+                    psObj.starDepDetect[ret[2]] = ret[1]
+                    del ret
+                del r
 
             # Flag indicating depth autmatically estimated
             autoBed = True
@@ -1216,9 +1242,10 @@ def read_master_func(logfilename='',
 
     if saveDepth:
 
-        if ss_chan_avail and psObj is not None:
-            # Save detected depth to csv
-            depDF = psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail)
+        if ss_chan_avail and len(ps_depth_jobs) > 0:
+            depDF = []
+            for _, psObj, chunks in ps_depth_jobs:
+                depDF.append(psObj._saveDepth(chunks, detectDep, smthDep, adjDep, instDepAvail))
         else:
             depDF = []
 
@@ -1275,7 +1302,7 @@ def read_master_func(logfilename='',
         del depDF
 
         # Cleanup
-        if psObj is not None:
+        for _, psObj, _ in ps_depth_jobs:
             psObj._cleanup()
 
         print("\nDone!")
