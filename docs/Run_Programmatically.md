@@ -16,20 +16,48 @@ single sonar file, a batch directory, or an explicit list of files.
 from pingmapper.doWork import doWork
 
 params = {
+	# Project / Runtime
 	"project_mode": 0,
+	"threadCnt": 0,
+
+	# Survey / Sonar Basics
 	"tempC": 12.0,
 	"nchunk": 500,
 	"cropRange": 0,
+
+	# Navigation + Filtering
+	"aoi": False,
+	"max_heading_deviation": 0,
+	"max_heading_distance": 0,
+	"min_speed": 0,
+	"max_speed": 0,
+	"time_table": False,
+
+	# dqLog event-state filtering
+	"dq_table": False,
+	"dq_time_field": False,
+	"dq_flag_field": False,
+	"dq_keep_values": False,
+	"dq_src_utc_offset": 0.0,
+	"dq_target_utc_offset": 0.0,
+	"dq_time_offset": 0.0,
+
+	# Input handling
 	"exportUnknown": False,
 	"fixNoDat": False,
-	"threadCnt": 0,
+
+	# Georeferencing / Resolution
 	"pix_res_son": 0,
 	"pix_res_map": 0,
 	"x_offset": 0.0,
 	"y_offset": 0.0,
+
+	# Intensity / Tone
 	"egn": False,
 	"egn_stretch": 0,
 	"egn_stretch_factor": 1.0,
+
+	# Sonogram Exports
 	"wcp": True,
 	"wcm": False,
 	"wcr": False,
@@ -39,11 +67,15 @@ params = {
 	"tileFile": ".png",
 	"spdCor": False,
 	"maxCrop": False,
+
+	# Depth / Shadows
 	"remShadow": 0,
 	"detectDep": 0,
 	"smthDep": False,
 	"adjDep": 0.0,
 	"pltBedPick": False,
+
+	# Rectification / Mosaics
 	"rect_wcp": True,
 	"rect_wcr": False,
 	"rubberSheeting": False,
@@ -51,12 +83,16 @@ params = {
 	"rectInterpDist": 50,
 	"son_colorMap": "Greys",
 	"mosaic_nchunk": 0,
+
+	# Substrate Mapping
 	"pred_sub": False,
 	"pltSubClass": False,
 	"map_sub": False,
 	"export_poly": False,
 	"map_class_method": "max",
 	"map_predict": 0,
+
+	# Final Exports
 	"mosaic": 0,
 	"map_mosaic": 0,
 	"banklines": False,
@@ -73,6 +109,24 @@ results = doWork(
 
 print(results)
 ```
+
+### dqLog Filtering Parameters
+
+Use these parameters in `params` to filter sonar records from a data-quality log.
+
+- `dq_table`: Path to dqLog CSV file.
+- `dq_time_field`: Timestamp column name in dqLog.
+- `dq_flag_field`: Flag/status column name in dqLog.
+- `dq_keep_values`: List of values to keep (for example `['good', 'ok', 'use']`).
+- `dq_src_utc_offset`: UTC offset (hours) for dqLog timestamps.
+- `dq_target_utc_offset`: UTC offset (hours) for sonar metadata timestamps.
+- `dq_time_offset`: Additional manual time offset in seconds applied to sonar timestamps.
+
+Behavior:
+
+- dqLog rows are treated as event-state updates over time (not exact timestamp matches).
+- State is carried forward from each dqLog event until the next event.
+- dqLog filtering runs first, before heading/speed/AOI/time-table filters.
 
 
 ### Batch Directory Example
@@ -97,10 +151,12 @@ print(results)
 ```python
 from pingmapper.doWork import doWork
 
-params = {"project_mode": 1
-		  "nchunk": 500, 
-          "tempC": 12.0,
-		  "rect_wcr": True}
+params = {
+	"project_mode": 1,
+	"nchunk": 500,
+	"tempC": 12.0,
+	"rect_wcr": True,
+}
 
 results = doWork(
 	in_dir=r"Z:\path\to\survey_folder",

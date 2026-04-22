@@ -341,63 +341,188 @@ class sonObj(object):
 
         Each row in the DQ log is treated as a state-change event: the flag
         recorded at time T applies to every sonar ping from T until the next
-        event row.  Pings that occur before the first DQ event are removed.
+        event row. Pings that occur before the first DQ event are removed.
         '''
 
-        filtDQCol   = 'filter_dq'
-        filtCol     = 'filter'
-        dqTimeCol   = '_dq_ts'
+        filtDQCol = 'filter_dq'
+        filtCol = 'filter'
+        dqTimeCol = '_dq_ts'
 
-        if not filtCol in sonDF.columns:
+        if not dq_time_field:
+            raise ValueError('dq_time_field is required when dq_table is provided.')
+        if not dq_flag_field:
+            raise ValueError('dq_flag_field is required when dq_table is provided.')
+
+        keep_vals = self._normalizeDQKeepValues(dq_keep_values)
+        if len(keep_vals) == 0:
+            raise ValueError('dq_keep_values must contain at least one value to keep.')
+
+        sonDF = sonDF.copy()
+        sonDF[filtDQCol] = False
+
+        if filtCol not in sonDF.columns:
             sonDF[filtCol] = True
 
-        # ── Load DQ log ──────────────────────────────────────────────────
         dqDF = pd.read_csv(dq_table)
+        missing_cols = [c for c in [dq_time_field, dq_flag_field] if c not in dqDF.columns]
+        if missing_cols:
+            raise ValueError('dqLog missing required column(s): {}'.format(', '.join(missing_cols)))
 
-        # ── Mark which DQ rows should be kept ────────────────────────────
-        if isinstance(dq_keep_values, str):
-            dq_keep_values = [dq_keep_values]
-        dqDF['_dq_keep'] = dqDF[dq_flag_field].isin(dq_keep_values)
+        dqTimes, dqKind = self._coerceDQTimestampSeries(dqDF[dq_time_field], dq_time_field)
+        sonTimes, sonKind = self._getSonarFilterTimestamp(sonDF)
 
-        # ── Parse DQ timestamps ──────────────────────────────────────────
-        try:
-            dqDF[dqTimeCol] = pd.to_datetime(
-                dqDF[dq_time_field], utc=True
-            ).dt.tz_convert(None).astype('int64') / 1e9
-            dqDF[dqTimeCol] += (dq_target_utc_offset - dq_src_utc_offset) * 3600
-
-            # ── Parse sonar timestamps ────────────────────────────────────
-            sonMerge = sonDF[['date', 'time', 'time_s']].copy()
-            sonMerge['_son_idx'] = sonDF.index
-            sonMerge['_son_ts'] = pd.to_datetime(
-                sonMerge['date'].astype(str) + ' ' + sonMerge['time'].astype(str),
-                errors='coerce',
+        if dqKind != sonKind:
+            raise ValueError(
+                'dqLog timestamp type ({}) does not match sonar timestamp type ({}).'.format(dqKind, sonKind)
             )
-            sonMerge['_son_ts'] = pd.to_datetime(
-                sonMerge['_son_ts'], utc=True
-            ).dt.tz_convert(None).astype('int64') / 1e9
-            sonMerge['_son_ts'] += dq_time_offset
 
-        except Exception:
-            # Fall back to numeric time_s
-            dqDF[dqTimeCol] = pd.to_numeric(dqDF[dq_time_field], errors='coerce')
-            sonMerge = sonDF[['time_s']].copy()
-            sonMerge['_son_idx'] = sonDF.index
-            sonMerge['_son_ts'] = sonMerge['time_s'] + dq_time_offset
+        if dqKind == 'datetime':
+            dqTimes = self._shiftDQDatetimeToTargetOffset(
+                dqTimes,
+                dq_src_utc_offset,
+                dq_target_utc_offset,
+            )
 
-        # ── Build sorted event table (one row per unique timestamp, last wins) ─
+        dqDF = dqDF.copy()
+        dqDF[dqTimeCol] = dqTimes
+        dqDF = dqDF[dqDF[dqTimeCol].notna()].copy()
+        if dqDF.empty:
+            raise ValueError('dqLog contained no valid timestamps after parsing {}.'.format(dq_time_field))
+
+        offset = float(dq_time_offset)
+        if sonKind == 'datetime':
+            sonTimes = sonTimes + pd.to_timedelta(offset, unit='s')
+        else:
+            sonTimes = sonTimes + offset
+
+        sonMerge = pd.DataFrame({
+            '_son_idx': sonDF.index,
+            '_son_ts': sonTimes,
+        })
+        sonMerge = sonMerge[sonMerge['_son_ts'].notna()].copy()
+
+        dqDF['_dq_keep'] = dqDF[dq_flag_field].map(self._normalizeDQValue).isin(keep_vals)
+
         event_state = dqDF[[dqTimeCol, '_dq_keep']].copy()
         event_state.sort_values(dqTimeCol, inplace=True)
         event_state = event_state.groupby(dqTimeCol, as_index=False)['_dq_keep'].last()
 
         keep_idx = self._applyDQEventState(sonMerge, event_state, dqTimeCol)
 
-        # ── Apply to sonDF ────────────────────────────────────────────────
-        sonDF[filtDQCol] = False
         sonDF.loc[keep_idx, filtDQCol] = True
         sonDF[filtCol] = sonDF[filtCol] & sonDF[filtDQCol]
 
         return sonDF
+
+    # ======================================================================
+    def _normalizeDQKeepValues(self, dq_keep_values):
+
+        if dq_keep_values is False or dq_keep_values is None:
+            return set()
+
+        if isinstance(dq_keep_values, str):
+            dq_keep_values = dq_keep_values.split(',')
+
+        keep_vals = set()
+        for value in dq_keep_values:
+            norm = self._normalizeDQValue(value)
+            if norm:
+                keep_vals.add(norm)
+
+        return keep_vals
+
+    # ======================================================================
+    def _normalizeDQValue(self, value):
+
+        if pd.isna(value):
+            return ''
+        return str(value).strip().lower()
+
+    # ======================================================================
+    def _coerceDQTimestampSeries(self, series, field_name):
+
+        non_na = series.dropna()
+        numeric = pd.to_numeric(series, errors='coerce')
+        if len(non_na) > 0 and numeric.notna().sum() == len(non_na):
+            return numeric, 'numeric'
+
+        dt = pd.to_datetime(series, errors='coerce')
+        if dt.notna().any():
+            try:
+                if dt.dt.tz is not None:
+                    dt = dt.dt.tz_localize(None)
+            except AttributeError:
+                pass
+            return dt, 'datetime'
+
+        if numeric.notna().any():
+            return numeric, 'numeric'
+
+        raise ValueError('Unable to parse dqLog timestamps from column: {}'.format(field_name))
+
+    # ======================================================================
+    def _shiftDQDatetimeToTargetOffset(self,
+                                       dq_times,
+                                       dq_src_utc_offset=False,
+                                       dq_target_utc_offset=False):
+
+        src_offset = self._coerceDQUtcOffset(dq_src_utc_offset, 'dq_src_utc_offset')
+        target_offset = self._coerceDQUtcOffset(dq_target_utc_offset, 'dq_target_utc_offset')
+
+        if src_offset is None and target_offset is None:
+            return dq_times
+
+        if src_offset is None or target_offset is None:
+            raise ValueError(
+                'dq_src_utc_offset and dq_target_utc_offset must both be provided when either is set.'
+            )
+
+        return dq_times + pd.to_timedelta(target_offset - src_offset, unit='h')
+
+    # ======================================================================
+    def _coerceDQUtcOffset(self, value, field_name):
+
+        if value is False or value is None or value == '':
+            return None
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise ValueError('{} must be a numeric UTC offset in hours.'.format(field_name))
+
+    # ======================================================================
+    def _getSonarFilterTimestamp(self, sonDF):
+
+        if 'date' in sonDF.columns and 'time' in sonDF.columns:
+            dt = pd.to_datetime(
+                sonDF['date'].astype(str).str.strip() + ' ' + sonDF['time'].astype(str).str.strip(),
+                errors='coerce',
+                format='mixed',
+            )
+            if dt.notna().any():
+                try:
+                    if dt.dt.tz is not None:
+                        dt = dt.dt.tz_localize(None)
+                except AttributeError:
+                    pass
+                return dt, 'datetime'
+
+        if 'time' in sonDF.columns:
+            dt = pd.to_datetime(sonDF['time'], errors='coerce', format='mixed')
+            if dt.notna().any():
+                try:
+                    if dt.dt.tz is not None:
+                        dt = dt.dt.tz_localize(None)
+                except AttributeError:
+                    pass
+                return dt, 'datetime'
+
+        if 'time_s' in sonDF.columns:
+            numeric = pd.to_numeric(sonDF['time_s'], errors='coerce')
+            if numeric.notna().any():
+                return numeric, 'numeric'
+
+        raise ValueError('Unable to determine sonar timestamps for dqLog filtering.')
 
 
     # ======================================================================
@@ -411,7 +536,7 @@ class sonObj(object):
         '''
 
         event_times = event_state[dqTimeCol].to_numpy()
-        event_keep  = event_state['_dq_keep'].to_numpy()
+        event_keep  = event_state['_dq_keep'].to_numpy(dtype=bool)
         son_times   = son['_son_ts'].to_numpy()
 
         # searchsorted(side='right') - 1 gives index of last event <= ping time

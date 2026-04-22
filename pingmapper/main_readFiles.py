@@ -1025,7 +1025,7 @@ def read_master_func(logfilename='',
     # For Filtering                                                            #
     ############################################################################
 
-    if max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table:
+    if dq_table or max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table:
 
         start_time = time.time()
 
@@ -1083,7 +1083,7 @@ def read_master_func(logfilename='',
         if df0.empty or df1.empty:
             raise ValueError(
                 '\n\nFiltering removed all side-scan pings. No metadata remains to process. '\
-                'Adjust filtering parameters (max_heading_deviation, min_speed, max_speed, aoi, time_table) '\
+                'Adjust filtering parameters (dq_table, max_heading_deviation, min_speed, max_speed, aoi, time_table) '\
                 'or reduce nchunk.'
             )
 

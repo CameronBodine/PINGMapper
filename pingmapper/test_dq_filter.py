@@ -102,6 +102,32 @@ class TestDQFilterDatetimeOffset(unittest.TestCase):
         kept = list(result[result['filter_dq'] == True].index)
         self.assertEqual(kept, [0, 1, 2])
 
+    def test_dq_filter_handles_fractional_second_sonar_times(self):
+        stub = _make_stub([
+            {'date': '2025-08-10', 'time': '08:04:07', 'time_s': 0.0},
+            {'date': '2025-08-10', 'time': '08:04:07.064000', 'time_s': 0.064},
+            {'date': '2025-08-10', 'time': '08:04:07.130000', 'time_s': 0.130},
+            {'date': '2025-08-10', 'time': '08:04:07.195000', 'time_s': 0.195},
+        ])
+
+        path = _dq_csv([
+            {'ts': '2025/08/10 12:04:07', 'flag': 'Use'},
+        ])
+
+        result = stub._filterDQ(
+            stub.sonMetaDF,
+            dq_table=path,
+            dq_time_field='ts',
+            dq_flag_field='flag',
+            dq_keep_values=['Use'],
+            dq_src_utc_offset=0.0,
+            dq_target_utc_offset=-4.0,
+            dq_time_offset=0.0,
+        )
+
+        kept = list(result[result['filter_dq'] == True].index)
+        self.assertEqual(kept, [0, 1, 2, 3])
+
 
 class TestDQFilterNumericTime(unittest.TestCase):
     """Falls back to numeric time_s when datetime parse fails."""
