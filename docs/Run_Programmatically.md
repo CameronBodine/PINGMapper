@@ -129,6 +129,27 @@ Behavior:
 - dqLog filtering runs first, before heading/speed/AOI/time-table filters.
 
 
+### Batch Script (Recommended)
+
+For repeatable batch runs, use the ready-to-edit script at
+`pingmapper/nonGUI_batch_main.py`.
+
+Start by updating these values:
+
+- `in_dir`: root folder that contains your sonar recordings.
+- `out_dir`: output root where project folders will be created.
+- `project_mode`: usually `1` to overwrite existing batch outputs.
+- `prefix` / `suffix`: optional naming controls for generated project folders.
+- `preserve_subdirs`: set `True` to mirror input folder structure under `out_dir`.
+- dq settings (`dq_table`, `dq_time_field`, `dq_flag_field`, `dq_keep_values`, offsets) if using dq filtering.
+
+Then run:
+
+```python
+python pingmapper/nonGUI_batch_main.py
+```
+
+
 ### Batch Directory Example
 ### Explicit List of Files Example
 
