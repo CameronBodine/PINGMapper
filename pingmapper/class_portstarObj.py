@@ -1199,12 +1199,44 @@ class portstarObj(object):
         # Find ping-wise water column width from min and max depth prediction
         Wp = maxDepths+minDepths
 
-        # Try cropping so water column ~1/3 of target size area
-        WCProp = 1/3
+        # Try cropping so water column ~1/4 of target size area.
+        # Keeping less water column generally improves bed segmentation stability.
+        WCProp = 1/4
 
         # Buffers so we don't crop too much
         WwcBuf = 150
         WsBuf = 150
+
+        # Use instrument depth to constrain max bed search depth when available.
+        # This helps avoid far-range false positives when returns are only valid
+        # near the center (e.g., shallow channels with large configured range).
+        # inst_depth_mult=3.0 means max search depth = 3x instrument depth, which
+        # keeps the water column at roughly 25% of each side's range.
+        inst_depth_mult = 3.0
+
+        if not hasattr(self.port, 'sonMetaDF'):
+            self.port._loadSonMeta()
+        if not hasattr(self.star, 'sonMetaDF'):
+            self.star._loadSonMeta()
+
+        portChunk = self.port.sonMetaDF[self.port.sonMetaDF['chunk_id'] == i]
+        starChunk = self.star.sonMetaDF[self.star.sonMetaDF['chunk_id'] == i]
+
+        portInstM = pd.to_numeric(portChunk['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starInstM = pd.to_numeric(starChunk['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        portPixM = pd.to_numeric(portChunk['pixM'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starPixM = pd.to_numeric(starChunk['pixM'], errors='coerce').to_numpy(dtype=float, copy=True)
+
+        portInstPix = np.where((portInstM > 0) & (portPixM > 0), portInstM / portPixM, np.nan)
+        starInstPix = np.where((starInstM > 0) & (starPixM > 0), starInstM / starPixM, np.nan)
+
+        instPix = np.concatenate((portInstPix, starInstPix))
+        validInstPix = instPix[np.isfinite(instPix) & (instPix > 0)]
+        if validInstPix.size > 0:
+            instMedPix = np.nanmedian(validInstPix)
+            maxDepByInst = instMedPix * inst_depth_mult
+            if np.isfinite(maxDepByInst) and maxDepByInst > 0:
+                maxDep = min(maxDep, maxDepByInst)
 
         # Sum Wp to determine area of water column
         WpArea = np.nansum(Wp)
@@ -1235,16 +1267,31 @@ class portstarObj(object):
         if Ws > (C-(Wwc/2)):
             Ws = int( C - (Wwc/2) - (W/2) - WsBuf)
 
+        # If Ws is negative, inst_depth * mult exceeds the recorded range.
+        # Pad the far-range side with zeros so the crop proportions are correct.
+        # Zero columns = no acoustic return, which the model interprets as bed,
+        # anchoring the pick at the data boundary when depth approaches range.
+        pad_far = 0
+        if Ws < 0:
+            pad_far = int(-Ws)
+            Ws = 0
+
         # Crop the original sonogram
         ## Port Crop
         lC = Ws # left side crop
         rC = int(C - (Wwc/2)) # right side crop
         portCrop = son3bnd[:, lC:rC,:]
+        if pad_far > 0:
+            _pad = np.zeros((portCrop.shape[0], pad_far, portCrop.shape[2]), dtype=np.uint8)
+            portCrop = np.concatenate((_pad, portCrop), axis=1)  # extend far range (left)
 
         ## Star Crop
         lC = int(C + (Wwc/2)) # left side crop
         rC = int(N - Ws) # right side crop
         starCrop = son3bnd[:, lC:rC, :]
+        if pad_far > 0:
+            _pad = np.zeros((starCrop.shape[0], pad_far, starCrop.shape[2]), dtype=np.uint8)
+            starCrop = np.concatenate((starCrop, _pad), axis=1)  # extend far range (right)
 
 
         ## Concatenate port & star crop
@@ -1277,8 +1324,9 @@ class portstarObj(object):
         # Calculate depth from prediction
         portDepPixCrop, starDepPixCrop = self._findBed(crop_label) # get pixel location of bed
 
-        # add Wwc/2 to get final estimate at original sonogram dimensions
-        portDepPixFinal = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) )
+        # add Wwc/2 to get final estimate at original sonogram dimensions.
+        # Subtract pad_far from port since padding shifted its columns left.
+        portDepPixFinal = np.flip( np.asarray(portDepPixCrop) + int(Wwc/2) - pad_far )
         starDepPixFinal = np.flip( np.asarray(starDepPixCrop) + int(Wwc/2) )
 
         #############
@@ -1748,6 +1796,69 @@ class portstarObj(object):
 
             portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
             starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
+
+        # Outlier and jump filtering for ML depth picks.
+        # Flag and remove implausible spikes before interpolation.
+        if detectDep == 1:
+            def _rolling_median(vals, window=31):
+                return pd.Series(vals).rolling(window=window, center=True, min_periods=1).median().to_numpy()
+
+            def _flag_depth_outliers(depth, inst_depth, inst_depth_mult=3.0):
+                # inst_depth_mult matches the crop-step multiplier: flag any pick
+                # deeper than mult * instrument depth.  Proportional cap handles
+                # shallow water far better than a fixed offset (e.g., at 1.4 m
+                # depth, inst + 5 m = 6.4 m cap vs inst * 3 = 4.2 m cap).
+                depth = np.asarray(depth, dtype=float)
+                inst_depth = np.asarray(inst_depth, dtype=float)
+                flags = np.zeros(depth.shape, dtype=bool)
+
+                valid = np.isfinite(depth) & (depth > 0)
+                if valid.any():
+                    med = _rolling_median(depth)
+                    resid = np.abs(depth - med)
+                    mad = np.nanmedian(np.abs(depth[valid] - np.nanmedian(depth[valid])))
+                    spike_thr = max(1.5, 6.0 * mad if np.isfinite(mad) else 1.5)
+                    flags |= valid & (resid > spike_thr)
+
+                inst_valid = np.isfinite(inst_depth) & (inst_depth > 0)
+                flags |= valid & inst_valid & (depth > (inst_depth * inst_depth_mult))
+                return flags
+
+            portArr = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            starArr = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            portInst = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            starInst = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+
+            portFlags = _flag_depth_outliers(portArr, portInst)
+            starFlags = _flag_depth_outliers(starArr, starInst)
+
+            # If sides diverge strongly, invalidate the side farther from
+            # instrument depth so interpolation can recover continuity.
+            pair_valid = np.isfinite(portArr) & np.isfinite(starArr) & (portArr > 0) & (starArr > 0)
+            diverge = pair_valid & (np.abs(portArr - starArr) > 5.0)
+            if diverge.any():
+                portErr = np.abs(portArr - portInst)
+                starErr = np.abs(starArr - starInst)
+
+                inst_pair_valid = np.isfinite(portInst) & (portInst > 0) & np.isfinite(starInst) & (starInst > 0)
+                choose_by_inst = diverge & inst_pair_valid
+                portFlags |= choose_by_inst & (portErr >= starErr)
+                starFlags |= choose_by_inst & (starErr > portErr)
+
+                # Fallback for rows without valid instrument depth on one/both sides.
+                fallback = diverge & (~inst_pair_valid)
+                if fallback.any():
+                    pmed = _rolling_median(portArr)
+                    smed = _rolling_median(starArr)
+                    presid = np.abs(portArr - pmed)
+                    sresid = np.abs(starArr - smed)
+                    portFlags |= fallback & (presid >= sresid)
+                    starFlags |= fallback & (sresid > presid)
+
+            portArr[portFlags] = np.nan
+            starArr[starFlags] = np.nan
+            portDF['dep_m'] = portArr
+            starDF['dep_m'] = starArr
 
         # Interpolate over nan's (and set zeros to nan)
         portDep = portDF['dep_m'].to_numpy(copy=True)
