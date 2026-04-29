@@ -1448,6 +1448,34 @@ class portstarObj(object):
             isChunk = son.sonMetaDF['chunk_id'] == chunk
             sonMeta = son.sonMetaDF[isChunk].reset_index()
             acoustic_depth = pd.to_numeric(sonMeta['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+            acoustic_med = pd.Series(acoustic_depth).rolling(window=31, center=True, min_periods=1).median().to_numpy()
+            acoustic_resid = np.abs(acoustic_depth - acoustic_med)
+            acoustic_valid = np.isfinite(acoustic_depth) & (acoustic_depth > 0)
+            acoustic_bad = np.zeros(acoustic_depth.shape, dtype=bool)
+            if acoustic_valid.any():
+                resid_valid = acoustic_resid[acoustic_valid]
+                resid_center = np.nanmedian(resid_valid)
+                resid_mad = np.nanmedian(np.abs(resid_valid - resid_center))
+                resid_thr = max(0.5, 6.0 * resid_mad if np.isfinite(resid_mad) else 0.5)
+                acoustic_bad |= acoustic_valid & (acoustic_resid > resid_thr)
+
+            if acoustic_depth.size >= 3:
+                prev_step = acoustic_depth[1:-1] - acoustic_depth[:-2]
+                next_step = acoustic_depth[2:] - acoustic_depth[1:-1]
+                step_mag = np.abs(np.concatenate((prev_step, next_step)))
+                step_mag = step_mag[np.isfinite(step_mag)]
+                if step_mag.size > 0:
+                    step_center = np.nanmedian(step_mag)
+                    step_mad = np.nanmedian(np.abs(step_mag - step_center))
+                    jump_thr = max(0.5, 6.0 * step_mad if np.isfinite(step_mad) else 0.5)
+                    acoustic_bad[1:-1] |= (
+                        acoustic_valid[1:-1] & acoustic_valid[:-2] & acoustic_valid[2:] &
+                        (np.abs(prev_step) > jump_thr) &
+                        (np.abs(next_step) > jump_thr) &
+                        ((prev_step * next_step) < 0)
+                    )
+
+            acoustic_depth = np.where(acoustic_bad, np.nan, acoustic_depth)
             acousticBed = np.round(acoustic_depth / sonMeta['pixM'].to_numpy(dtype=float, copy=True), 0)
             acousticBed = acousticBed[np.isfinite(acousticBed) & (acousticBed > 0)]
 
@@ -1455,8 +1483,8 @@ class portstarObj(object):
             # Step 1 : Acoustic Bedpick Filter
             # Use acoustic bed pick to crop image
             if acousticBed.size > 0:
-                bedMin = max(int(np.nanmin(acousticBed)) - 50, 0)
-                bedMax = int(np.nanmax(acousticBed)) + pix_buf
+                bedMin = max(int(np.nanpercentile(acousticBed, 5)) - 50, 0)
+                bedMax = int(np.nanpercentile(acousticBed, 95)) + pix_buf
             else:
                 bedMin = 0
                 bedMax = H
@@ -1618,6 +1646,82 @@ class portstarObj(object):
                 return '0 pixels'
             return str(float(adjDep) / float(valid_pix.iloc[0])) + ' pixels'
 
+        def _rolling_median(vals, window=31):
+            return pd.Series(vals).rolling(window=window, center=True, min_periods=1).median().to_numpy()
+
+        def _flag_depth_outliers(depth, inst_depth=None, inst_depth_mult=None,
+                     resid_floor_m=0.5, jump_floor_m=0.5,
+                     iterative_jump=False):
+            depth = np.asarray(depth, dtype=float)
+            flags = np.zeros(depth.shape, dtype=bool)
+
+            valid = np.isfinite(depth) & (depth > 0)
+            if not valid.any():
+                return flags
+
+            med = _rolling_median(depth)
+            resid = np.abs(depth - med)
+            resid_valid = resid[valid]
+            resid_center = np.nanmedian(resid_valid)
+            resid_mad = np.nanmedian(np.abs(resid_valid - resid_center))
+            resid_thr = max(resid_floor_m, 6.0 * resid_mad if np.isfinite(resid_mad) else resid_floor_m)
+            flags |= valid & (resid > resid_thr)
+
+            if depth.size >= 3:
+                prev_step = depth[1:-1] - depth[:-2]
+                next_step = depth[2:] - depth[1:-1]
+                step_mag = np.abs(np.concatenate((prev_step, next_step)))
+                step_mag = step_mag[np.isfinite(step_mag)]
+                if step_mag.size > 0:
+                    step_center = np.nanmedian(step_mag)
+                    step_mad = np.nanmedian(np.abs(step_mag - step_center))
+                    jump_thr = max(jump_floor_m, 6.0 * step_mad if np.isfinite(step_mad) else jump_floor_m)
+                    spike_mid = (
+                        valid[1:-1] & valid[:-2] & valid[2:] &
+                        (np.abs(prev_step) > jump_thr) &
+                        (np.abs(next_step) > jump_thr) &
+                        ((prev_step * next_step) < 0)
+                    )
+                    flags[1:-1] |= spike_mid
+
+            # Acoustic depth failures often persist as a step change rather than
+            # a single-ping spike (e.g., 2.4 m -> 6.3 m for many consecutive
+            # records). Iteratively flagging the later side of large jumps peels
+            # back those runs until continuity is restored.
+            if iterative_jump:
+                work = depth.copy()
+                max_iter = max(1, depth.size)
+                for _ in range(max_iter):
+                    valid_work = np.isfinite(work) & (work > 0)
+                    valid_idx = np.flatnonzero(valid_work)
+                    if valid_idx.size < 2:
+                        break
+
+                    step_vals = np.abs(np.diff(work[valid_idx]))
+                    step_vals = step_vals[np.isfinite(step_vals)]
+                    if step_vals.size == 0:
+                        break
+
+                    step_center = np.nanmedian(step_vals)
+                    step_mad = np.nanmedian(np.abs(step_vals - step_center))
+                    jump_thr = max(jump_floor_m, 6.0 * step_mad if np.isfinite(step_mad) else jump_floor_m)
+
+                    diffs = np.abs(np.diff(work[valid_idx]))
+                    bad_step_pos = np.flatnonzero(np.isfinite(diffs) & (diffs > jump_thr))
+                    if bad_step_pos.size == 0:
+                        break
+
+                    new_bad_idx = valid_idx[bad_step_pos + 1]
+                    flags[new_bad_idx] = True
+                    work[new_bad_idx] = np.nan
+
+            if inst_depth is not None and inst_depth_mult is not None:
+                inst_depth = np.asarray(inst_depth, dtype=float)
+                inst_valid = np.isfinite(inst_depth) & (inst_depth > 0)
+                flags |= valid & inst_valid & (depth > (inst_depth * inst_depth_mult))
+
+            return flags
+
         def _sync_trackline_depth(beam_obj, beam_df):
             trk_file = os.path.join(beam_obj.metaDir, 'Trackline_Smth_' + beam_obj.beamName + '.csv')
             if not os.path.exists(trk_file):
@@ -1634,6 +1738,8 @@ class portstarObj(object):
                 depth_cols.append('dep_m_smth')
             if 'dep_m_adjBy' in beam_df.columns:
                 depth_cols.append('dep_m_adjBy')
+            if 'dep_m_interp' in beam_df.columns:
+                depth_cols.append('dep_m_interp')
 
             depth_df = beam_df[depth_cols].drop_duplicates(subset=['record_num'], keep='last').set_index('record_num')
             trk_df = trk_df.set_index('record_num')
@@ -1645,6 +1751,8 @@ class portstarObj(object):
                 trk_df['dep_m_smth'] = depth_df['dep_m_smth']
             if 'dep_m_adjBy' in depth_df.columns:
                 trk_df['dep_m_adjBy'] = depth_df['dep_m_adjBy']
+            if 'dep_m_interp' in depth_df.columns:
+                trk_df['dep_m_interp'] = depth_df['dep_m_interp']
 
             trk_df.reset_index().to_csv(trk_file, index=False, float_format='%.14f')
 
@@ -1797,40 +1905,23 @@ class portstarObj(object):
             portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
             starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
 
-        # Outlier and jump filtering for ML depth picks.
-        # Flag and remove implausible spikes before interpolation.
-        if detectDep == 1:
-            def _rolling_median(vals, window=31):
-                return pd.Series(vals).rolling(window=window, center=True, min_periods=1).median().to_numpy()
+        # Outlier and jump filtering before interpolation.
+        # detectDep=0: continuity-only acoustic QC.
+        # detectDep=1/2: continuity QC plus instrument-depth proportional cap.
+        portArr = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starArr = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        portInst = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        starInst = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
 
-            def _flag_depth_outliers(depth, inst_depth, inst_depth_mult=3.0):
-                # inst_depth_mult matches the crop-step multiplier: flag any pick
-                # deeper than mult * instrument depth.  Proportional cap handles
-                # shallow water far better than a fixed offset (e.g., at 1.4 m
-                # depth, inst + 5 m = 6.4 m cap vs inst * 3 = 4.2 m cap).
-                depth = np.asarray(depth, dtype=float)
-                inst_depth = np.asarray(inst_depth, dtype=float)
-                flags = np.zeros(depth.shape, dtype=bool)
+        portFlags = np.zeros(portArr.shape, dtype=bool)
+        starFlags = np.zeros(starArr.shape, dtype=bool)
 
-                valid = np.isfinite(depth) & (depth > 0)
-                if valid.any():
-                    med = _rolling_median(depth)
-                    resid = np.abs(depth - med)
-                    mad = np.nanmedian(np.abs(depth[valid] - np.nanmedian(depth[valid])))
-                    spike_thr = max(1.5, 6.0 * mad if np.isfinite(mad) else 1.5)
-                    flags |= valid & (resid > spike_thr)
-
-                inst_valid = np.isfinite(inst_depth) & (inst_depth > 0)
-                flags |= valid & inst_valid & (depth > (inst_depth * inst_depth_mult))
-                return flags
-
-            portArr = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-            starArr = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-            portInst = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-            starInst = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-
-            portFlags = _flag_depth_outliers(portArr, portInst)
-            starFlags = _flag_depth_outliers(starArr, starInst)
+        if detectDep == 0:
+            portFlags |= _flag_depth_outliers(portArr, iterative_jump=True)
+            starFlags |= _flag_depth_outliers(starArr, iterative_jump=True)
+        elif detectDep in (1, 2):
+            portFlags |= _flag_depth_outliers(portArr, portInst, inst_depth_mult=3.0)
+            starFlags |= _flag_depth_outliers(starArr, starInst, inst_depth_mult=3.0)
 
             # If sides diverge strongly, invalidate the side farther from
             # instrument depth so interpolation can recover continuity.
@@ -1855,14 +1946,17 @@ class portstarObj(object):
                     portFlags |= fallback & (presid >= sresid)
                     starFlags |= fallback & (sresid > presid)
 
-            portArr[portFlags] = np.nan
-            starArr[starFlags] = np.nan
-            portDF['dep_m'] = portArr
-            starDF['dep_m'] = starArr
+        portArr[portFlags] = np.nan
+        starArr[starFlags] = np.nan
+        portDF['dep_m'] = portArr
+        starDF['dep_m'] = starArr
 
         # Interpolate over nan's (and set zeros to nan)
         portDep = portDF['dep_m'].to_numpy(copy=True)
         starDep = starDF['dep_m'].to_numpy(copy=True)
+
+        portInterp = np.isnan(portDep) | (portDep == 0)
+        starInterp = np.isnan(starDep) | (starDep == 0)
 
         portDep[portDep == 0] = np.nan
         starDep[starDep == 0] = np.nan
@@ -1873,6 +1967,7 @@ class portstarObj(object):
         else:
             portDep[nans] = 0
         portDF['dep_m'] = portDep
+        portDF['dep_m_interp'] = portInterp.astype(np.uint8)
 
         nans, x = np.isnan(starDep), lambda z: z.nonzero()[0]
         if (~nans).any():
@@ -1880,6 +1975,7 @@ class portstarObj(object):
         else:
             starDep[nans] = 0
         starDF['dep_m'] = starDep
+        starDF['dep_m_interp'] = starInterp.astype(np.uint8)
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
@@ -1889,18 +1985,23 @@ class portstarObj(object):
 
         try:
             # Take average of both estimates to store with downlooking sonar csv
-            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
+            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy', 'dep_m_interp'])
             depDF['dep_m'] = np.nanmean([portDF['dep_m'].to_numpy(), starDF['dep_m'].to_numpy()], axis=0)
             depDF['dep_m_Method'] = portDF['dep_m_Method']
             depDF['dep_m_smth'] = portDF['dep_m_smth']
             depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
+            depDF['dep_m_interp'] = np.maximum(
+                pd.to_numeric(portDF['dep_m_interp'], errors='coerce').fillna(0).to_numpy(dtype=np.uint8, copy=True),
+                pd.to_numeric(starDF['dep_m_interp'], errors='coerce').fillna(0).to_numpy(dtype=np.uint8, copy=True)
+            )
         except:
             # In case port and star are not same length
-            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy'])
+            depDF = pd.DataFrame(columns=['dep_m', 'dep_m_Method', 'dep_m_smth', 'dep_m_adjBy', 'dep_m_interp'])
             depDF['dep_m'] = portDF['dep_m']
             depDF['dep_m_Method'] = portDF['dep_m_Method']
             depDF['dep_m_smth'] = portDF['dep_m_smth']
             depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
+            depDF['dep_m_interp'] = portDF['dep_m_interp']
 
         del portDF, starDF
         gc.collect()
