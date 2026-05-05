@@ -1651,8 +1651,9 @@ class portstarObj(object):
             return pd.Series(vals).rolling(window=window, center=True, min_periods=1).median().to_numpy()
 
         def _flag_depth_outliers(depth, inst_depth=None, inst_depth_mult=None,
-                 resid_floor_m=0.5, jump_floor_m=0.5,
-                 iterative_jump=False, iterative_max_iter=64):
+             resid_floor_m=0.5, jump_floor_m=0.5,
+             iterative_jump=False, iterative_max_iter=64,
+             iterative_jump_floor_m=None):
             depth = np.asarray(depth, dtype=float)
             flags = np.zeros(depth.shape, dtype=bool)
 
@@ -1691,6 +1692,8 @@ class portstarObj(object):
             # back those runs until continuity is restored.
             if iterative_jump:
                 work = depth.copy()
+                if iterative_jump_floor_m is None:
+                    iterative_jump_floor_m = jump_floor_m
                 # Cap iterations so very large tracks do not degrade to near O(n^2)
                 # behavior when many jump-like artifacts are present.
                 max_iter = max(1, int(iterative_max_iter))
@@ -1707,7 +1710,7 @@ class portstarObj(object):
 
                     step_center = np.nanmedian(step_vals)
                     step_mad = np.nanmedian(np.abs(step_vals - step_center))
-                    jump_thr = max(jump_floor_m, 6.0 * step_mad if np.isfinite(step_mad) else jump_floor_m)
+                    jump_thr = max(iterative_jump_floor_m, 6.0 * step_mad if np.isfinite(step_mad) else iterative_jump_floor_m)
 
                     diffs = np.abs(np.diff(work[valid_idx]))
                     bad_step_pos = np.flatnonzero(np.isfinite(diffs) & (diffs > jump_thr))
@@ -1816,8 +1819,20 @@ class portstarObj(object):
                     arr[nans] = np.interp(x[nans], x[~nans], arr[~nans])
                 return arr
 
-            portPreFlags = _flag_depth_outliers(portInstDepth, iterative_jump=True, iterative_max_iter=512)
-            starPreFlags = _flag_depth_outliers(starInstDepth, iterative_jump=True, iterative_max_iter=512)
+            # Keep one-ping spike sensitivity, but require a much larger jump for
+            # iterative run peeling so true depth regime changes are not over-flagged.
+            portPreFlags = _flag_depth_outliers(
+                portInstDepth,
+                iterative_jump=True,
+                iterative_max_iter=512,
+                iterative_jump_floor_m=4.0,
+            )
+            starPreFlags = _flag_depth_outliers(
+                starInstDepth,
+                iterative_jump=True,
+                iterative_max_iter=512,
+                iterative_jump_floor_m=4.0,
+            )
             portInstDepth[portPreFlags] = np.nan
             starInstDepth[starPreFlags] = np.nan
             portInstDepth = _fill_nans_linear(portInstDepth)
@@ -1958,8 +1973,8 @@ class portstarObj(object):
         starFlags = np.zeros(starArr.shape, dtype=bool)
 
         if detectDep == 0:
-            portFlags |= _flag_depth_outliers(portArr, iterative_jump=True)
-            starFlags |= _flag_depth_outliers(starArr, iterative_jump=True)
+            portFlags |= _flag_depth_outliers(portArr, iterative_jump=True, iterative_jump_floor_m=4.0)
+            starFlags |= _flag_depth_outliers(starArr, iterative_jump=True, iterative_jump_floor_m=4.0)
         elif detectDep in (1, 2):
             portFlags |= _flag_depth_outliers(portArr, portInst, inst_depth_mult=3.0)
             starFlags |= _flag_depth_outliers(starArr, starInst, inst_depth_mult=3.0)
