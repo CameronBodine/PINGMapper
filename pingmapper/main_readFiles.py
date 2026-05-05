@@ -126,6 +126,8 @@ def read_master_func(logfilename='',
                      dq_src_utc_offset = 0.0,
                      dq_target_utc_offset = 0.0,
                      dq_time_offset = 0.0,
+                     filter_coord_outliers = True,
+                     coord_iqr_scale = 3.0,
                      tempC=10,
                      nchunk=500,
                      cropRange=0,
@@ -1025,7 +1027,7 @@ def read_master_func(logfilename='',
     # For Filtering                                                            #
     ############################################################################
 
-    if dq_table or max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table:
+    if dq_table or max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table or filter_coord_outliers:
 
         start_time = time.time()
 
@@ -1060,7 +1062,8 @@ def read_master_func(logfilename='',
         son0 = portstar[maxRec]
         df0 = son0._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table,
                                       dq_table, dq_time_field, dq_flag_field, dq_keep_values,
-                                      dq_src_utc_offset, dq_target_utc_offset, dq_time_offset)
+                                      dq_src_utc_offset, dq_target_utc_offset, dq_time_offset,
+                                      filter_coord_outliers=filter_coord_outliers, coord_iqr_scale=coord_iqr_scale)
 
         # Add filter to other beam
         son1 = portstar[minRec]
@@ -1110,7 +1113,8 @@ def read_master_func(logfilename='',
         for son in downbeams:
             df = son._doSonarFiltering(max_heading_deviation, max_heading_distance, min_speed, max_speed, aoi, time_table,
                                         dq_table, dq_time_field, dq_flag_field, dq_keep_values,
-                                        dq_src_utc_offset, dq_target_utc_offset, dq_time_offset)
+                                        dq_src_utc_offset, dq_target_utc_offset, dq_time_offset,
+                                        filter_coord_outliers=filter_coord_outliers, coord_iqr_scale=coord_iqr_scale)
 
             df = df[df['filter'] == True]
 

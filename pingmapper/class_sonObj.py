@@ -260,6 +260,8 @@ class sonObj(object):
                           dq_src_utc_offset=0.0,
                           dq_target_utc_offset=0.0,
                           dq_time_offset=0.0,
+                          filter_coord_outliers=True,
+                          coord_iqr_scale=3.0,
                           ):
         '''
         '''
@@ -270,6 +272,11 @@ class sonObj(object):
 
         # print('len', len(sonDF))
         # print(sonDF)
+
+        ##############################
+        # GPS Coordinate Outlier Filter
+        if filter_coord_outliers:
+            sonDF = self._filterCoordOutliers(sonDF, iqr_scale=coord_iqr_scale)
 
         #############################
         # Do Heading Deviation Filter
@@ -730,6 +737,57 @@ class sonObj(object):
         if max_speed > 0:
             # sonDF = sonDF[sonDF['speed_ms'] <= max_speed]
             sonDF.loc[sonDF[speed_col] > max_speed, filtCol] = False
+
+        return sonDF
+
+    # ======================================================================
+    def _filterCoordOutliers(self,
+                              sonDF,
+                              iqr_scale=3.0):
+        '''
+        Flag pings with extreme GPS coordinate outliers using the IQR method
+        on the lon and lat columns.  For each coordinate field, pings that fall
+        outside  Q1 - iqr_scale*IQR .. Q3 + iqr_scale*IQR  are marked False
+        in the 'filter' column.
+
+        ----------
+        Parameters
+        ----------
+        sonDF : DataFrame
+            Ping metadata dataframe.
+        iqr_scale : float
+            Multiplier applied to the IQR to set the outlier fence.
+            Default 3.0 (flags only extreme outliers).
+
+        -------
+        Returns
+        -------
+        sonDF with 'filter' column updated.
+        '''
+
+        filtCol = 'filter'
+
+        if filtCol not in sonDF.columns:
+            sonDF[filtCol] = True
+
+        for coord_col in ['lon', 'lat']:
+            if coord_col not in sonDF.columns:
+                continue
+
+            vals = sonDF[coord_col]
+            q1 = vals.quantile(0.25)
+            q3 = vals.quantile(0.75)
+            iqr = q3 - q1
+
+            lower = q1 - iqr_scale * iqr
+            upper = q3 + iqr_scale * iqr
+
+            outlier_mask = (vals < lower) | (vals > upper)
+            n_flagged = outlier_mask.sum()
+            if n_flagged > 0:
+                print(f"\n  _filterCoordOutliers: flagged {n_flagged} pings with {coord_col} outside "
+                      f"[{lower:.6f}, {upper:.6f}]")
+            sonDF.loc[outlier_mask, filtCol] = False
 
         return sonDF
 

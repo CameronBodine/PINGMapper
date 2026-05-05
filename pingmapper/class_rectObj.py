@@ -2151,6 +2151,7 @@ class rectObj(sonObj):
 
         # Open smoothed trackline/range extent file
         trkMeta = pd.read_csv(trkMetaFile)
+        trkMeta = self._sanitizeProjectedTrackMeta(trkMeta, wgs=wgs)
 
         # Create geodataframe
         gdf = gpd.GeoDataFrame(
@@ -2165,6 +2166,59 @@ class rectObj(sonObj):
         del trkMetaFile        
 
         return
+
+    #===========================================================================
+    def _sanitizeProjectedTrackMeta(self, trkMeta, wgs=False):
+
+        if wgs:
+            return trkMeta
+
+        trkMeta = trkMeta.copy()
+
+        def _reproject_from_lonlat(df, lon_col, lat_col, x_col, y_col):
+            if lon_col not in df.columns or lat_col not in df.columns:
+                return df
+
+            lon = pd.to_numeric(df[lon_col], errors='coerce')
+            lat = pd.to_numeric(df[lat_col], errors='coerce')
+            valid_lonlat = lon.notna() & lat.notna()
+            if not valid_lonlat.any():
+                return df
+
+            need_xy = pd.Series(False, index=df.index)
+            if x_col not in df.columns or y_col not in df.columns:
+                need_xy[:] = True
+            else:
+                x = pd.to_numeric(df[x_col], errors='coerce')
+                y = pd.to_numeric(df[y_col], errors='coerce')
+
+                # EPSG:326xx eastings should be positive and reasonably bounded.
+                # Rebuild projected XY when stored values are missing or obviously invalid.
+                need_xy = (
+                    x.isna() |
+                    y.isna() |
+                    (x <= 0) |
+                    (x > 1000000) |
+                    (y <= 0)
+                ) & valid_lonlat
+
+            if not need_xy.any():
+                return df
+
+            geo = gpd.GeoDataFrame(
+                df.loc[need_xy, [lon_col, lat_col]].copy(),
+                geometry=gpd.points_from_xy(lon[need_xy], lat[need_xy]),
+                crs='EPSG:4326',
+            ).to_crs(self.humDat['epsg'])
+
+            df.loc[need_xy, x_col] = geo.geometry.x.to_numpy()
+            df.loc[need_xy, y_col] = geo.geometry.y.to_numpy()
+            return df
+
+        trkMeta = _reproject_from_lonlat(trkMeta, 'trk_lons', 'trk_lats', 'trk_utm_es', 'trk_utm_ns')
+        trkMeta = _reproject_from_lonlat(trkMeta, 'range_lons', 'range_lats', 'range_es', 'range_ns')
+
+        return trkMeta
     
     #===========================================================================
     def _exportCovShp(self,
@@ -2212,6 +2266,7 @@ class rectObj(sonObj):
         # dfs = [df1, df2]
 
         df1 = pd.read_csv(self.smthTrkFile)
+        df1 = self._sanitizeProjectedTrackMeta(df1, wgs=wgs)
         dfs = [df1]
 
         filt = 0
