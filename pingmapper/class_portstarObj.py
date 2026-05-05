@@ -31,6 +31,7 @@
 
 
 import os, sys
+import time
 
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1650,8 +1651,8 @@ class portstarObj(object):
             return pd.Series(vals).rolling(window=window, center=True, min_periods=1).median().to_numpy()
 
         def _flag_depth_outliers(depth, inst_depth=None, inst_depth_mult=None,
-                     resid_floor_m=0.5, jump_floor_m=0.5,
-                     iterative_jump=False):
+                 resid_floor_m=0.5, jump_floor_m=0.5,
+                 iterative_jump=False, iterative_max_iter=64):
             depth = np.asarray(depth, dtype=float)
             flags = np.zeros(depth.shape, dtype=bool)
 
@@ -1690,7 +1691,9 @@ class portstarObj(object):
             # back those runs until continuity is restored.
             if iterative_jump:
                 work = depth.copy()
-                max_iter = max(1, depth.size)
+                # Cap iterations so very large tracks do not degrade to near O(n^2)
+                # behavior when many jump-like artifacts are present.
+                max_iter = max(1, int(iterative_max_iter))
                 for _ in range(max_iter):
                     valid_work = np.isfinite(work) & (work > 0)
                     valid_idx = np.flatnonzero(valid_work)
@@ -1756,14 +1759,30 @@ class portstarObj(object):
 
             trk_df.reset_index().to_csv(trk_file, index=False, float_format='%.14f')
 
+        depth_timer_start = time.perf_counter()
+        depth_timer_last = depth_timer_start
+        beam_pair = '{} / {}'.format(self.port.beamName, self.star.beamName)
+
+        def _depth_timing(label):
+            nonlocal depth_timer_last
+            now = time.perf_counter()
+            print('\tDepth timing [{}] {}: {:.2f}s'.format(beam_pair, label, now - depth_timer_last))
+            depth_timer_last = now
+
         # Load sonar metadata file
         self.port._loadSonMeta()
         portDF = self.port.sonMetaDF
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
+        _depth_timing('load metadata')
 
         # Get all chunks
         chunks = pd.unique(portDF['chunk_id'])
+
+        # Track points invalidated during pre-smoothing QC so output metadata
+        # reflects all flagged depth values, not only post-smoothing flags.
+        portPreFlags = np.zeros(len(portDF), dtype=bool)
+        starPreFlags = np.zeros(len(starDF), dtype=bool)
 
         if detectDep == 0:
             def _depth_series(df):
@@ -1785,6 +1804,24 @@ class portstarObj(object):
 
             portInstDepth = np.where(portValid, portInstDepth, portMetaDepth)
             starInstDepth = np.where(starValid, starInstDepth, starMetaDepth)
+
+            # Flag outliers on raw instrument depth BEFORE smoothing so sharp
+            # jumps (e.g. sonar lock-on to a false deep target) are caught on
+            # the un-blurred signal rather than on the smoothed ramp they become
+            # after savgol. NaNs are linearly filled so savgol has no gaps.
+            def _fill_nans_linear(arr):
+                nans = np.isnan(arr) | (arr <= 0)
+                x = np.arange(len(arr))
+                if nans.any() and (~nans).any():
+                    arr[nans] = np.interp(x[nans], x[~nans], arr[~nans])
+                return arr
+
+            portPreFlags = _flag_depth_outliers(portInstDepth, iterative_jump=True, iterative_max_iter=512)
+            starPreFlags = _flag_depth_outliers(starInstDepth, iterative_jump=True, iterative_max_iter=512)
+            portInstDepth[portPreFlags] = np.nan
+            starInstDepth[starPreFlags] = np.nan
+            portInstDepth = _fill_nans_linear(portInstDepth)
+            starInstDepth = _fill_nans_linear(starInstDepth)
 
             if smthDep:
                 # print("\nSmoothing depth values...")
@@ -1818,6 +1855,7 @@ class portstarObj(object):
 
             portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
             starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
+            _depth_timing('prepare instrument depth')
 
         elif detectDep > 0:
             # Prepare depth detection dictionaries
@@ -1904,12 +1942,15 @@ class portstarObj(object):
 
             portDF['dep_m_adjBy'] = _format_depth_adjustment(portDF['pixM'])
             starDF['dep_m_adjBy'] = _format_depth_adjustment(starDF['pixM'])
+            _depth_timing('prepare detected depth')
 
         # Outlier and jump filtering before interpolation.
         # detectDep=0: continuity-only acoustic QC.
         # detectDep=1/2: continuity QC plus instrument-depth proportional cap.
         portArr = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
         starArr = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
+        portRawArr = portArr.copy()
+        starRawArr = starArr.copy()
         portInst = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
         starInst = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
 
@@ -1949,14 +1990,17 @@ class portstarObj(object):
         portArr[portFlags] = np.nan
         starArr[starFlags] = np.nan
         portDF['dep_m'] = portArr
+        portDF['dep_m_raw'] = portRawArr
         starDF['dep_m'] = starArr
+        starDF['dep_m_raw'] = starRawArr
+        _depth_timing('outlier and jump filtering')
 
         # Interpolate over nan's (and set zeros to nan)
         portDep = portDF['dep_m'].to_numpy(copy=True)
         starDep = starDF['dep_m'].to_numpy(copy=True)
 
-        portInterp = np.isnan(portDep) | (portDep == 0)
-        starInterp = np.isnan(starDep) | (starDep == 0)
+        portInterp = np.isnan(portDep) | (portDep == 0) | portPreFlags
+        starInterp = np.isnan(starDep) | (starDep == 0) | starPreFlags
 
         portDep[portDep == 0] = np.nan
         starDep[starDep == 0] = np.nan
@@ -1976,12 +2020,14 @@ class portstarObj(object):
             starDep[nans] = 0
         starDF['dep_m'] = starDep
         starDF['dep_m_interp'] = starInterp.astype(np.uint8)
+        _depth_timing('interpolate depth')
 
         # Export to csv
         portDF.to_csv(self.port.sonMetaFile, index=False, float_format='%.14f')
         starDF.to_csv(self.star.sonMetaFile, index=False, float_format='%.14f')
         _sync_trackline_depth(self.port, portDF)
         _sync_trackline_depth(self.star, starDF)
+        _depth_timing('write metadata and trackline')
 
         try:
             # Take average of both estimates to store with downlooking sonar csv
@@ -2002,6 +2048,9 @@ class portstarObj(object):
             depDF['dep_m_smth'] = portDF['dep_m_smth']
             depDF['dep_m_adjBy'] = portDF['dep_m_adjBy']
             depDF['dep_m_interp'] = portDF['dep_m_interp']
+
+        _depth_timing('build return depth dataframe')
+        print('\tDepth timing [{}] total: {:.2f}s'.format(beam_pair, time.perf_counter() - depth_timer_start))
 
         del portDF, starDF
         gc.collect()
@@ -2059,20 +2108,65 @@ class portstarObj(object):
         self.star._loadSonMeta()
         starDF = self.star.sonMetaDF
 
-        portDF = portDF.loc[portDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
-        starDF = starDF.loc[starDF['chunk_id'] == i, ['inst_dep_m', 'dep_m', 'pixM']]
+        def _depth_to_pixels(df, depth_col):
+            depth = pd.to_numeric(df[depth_col], errors='coerce').to_numpy(dtype=float, copy=True)
+            pix = pd.to_numeric(df['pixM'], errors='coerce').to_numpy(dtype=float, copy=True)
+            return np.divide(
+                depth,
+                pix,
+                out=np.full(depth.shape, np.nan, dtype=float),
+                where=np.isfinite(pix) & (pix != 0)
+            )
+
+        def _pad_to_match(values, reference):
+            diff = reference.shape[0] - values.shape[0]
+            if diff > 0:
+                values = np.append(values, reference[-diff:])
+            return values
+
+        portCols = ['inst_dep_m', 'dep_m', 'pixM']
+        starCols = ['inst_dep_m', 'dep_m', 'pixM']
+        if 'dep_m_interp' in portDF.columns:
+            portCols.append('dep_m_interp')
+        if 'dep_m_raw' in portDF.columns:
+            portCols.append('dep_m_raw')
+        if 'dep_m_interp' in starDF.columns:
+            starCols.append('dep_m_interp')
+        if 'dep_m_raw' in starDF.columns:
+            starCols.append('dep_m_raw')
+
+        portDF = portDF.loc[portDF['chunk_id'] == i, portCols]
+        starDF = starDF.loc[starDF['chunk_id'] == i, starCols]
+
+        detectDepMode = int(getattr(self.port, 'detectDep', getattr(self.star, 'detectDep', -1)))
 
         portInstDepth = pd.to_numeric(portDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
         portMetaDepth = pd.to_numeric(portDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-        portInstDepth = np.where(np.isfinite(portInstDepth) & (portInstDepth > 0), portInstDepth, portMetaDepth)
-        portInst = np.nan_to_num(portInstDepth / portDF['pixM'].to_numpy(dtype=float), nan=0.0).astype(int)
-        portAuto = (portDF['dep_m'] / portDF['pixM']).to_numpy(dtype=int, copy=True)
+        if not np.isfinite(portInstDepth).any():
+            portInstDepth = portMetaDepth.copy()
+        portDF = portDF.copy()
+        portDF['inst_depth_plot'] = portInstDepth
+        portInst = np.nan_to_num(_depth_to_pixels(portDF, 'inst_depth_plot'), nan=0.0)
+        portAuto = _depth_to_pixels(portDF, 'dep_m')
+        portRaw = _depth_to_pixels(portDF, 'dep_m_raw') if 'dep_m_raw' in portDF.columns else portAuto.copy()
+        if 'dep_m_interp' in portDF.columns:
+            portInterp = pd.to_numeric(portDF['dep_m_interp'], errors='coerce').fillna(0).to_numpy(dtype=np.uint8, copy=True).astype(bool)
+        else:
+            portInterp = np.zeros(portAuto.shape, dtype=bool)
 
         starInstDepth = pd.to_numeric(starDF['inst_dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
         starMetaDepth = pd.to_numeric(starDF['dep_m'], errors='coerce').to_numpy(dtype=float, copy=True)
-        starInstDepth = np.where(np.isfinite(starInstDepth) & (starInstDepth > 0), starInstDepth, starMetaDepth)
-        starInst = np.nan_to_num(starInstDepth / starDF['pixM'].to_numpy(dtype=float), nan=0.0).astype(int)
-        starAuto = (starDF['dep_m'] / starDF['pixM']).to_numpy(dtype=int, copy=True)
+        if not np.isfinite(starInstDepth).any():
+            starInstDepth = starMetaDepth.copy()
+        starDF = starDF.copy()
+        starDF['inst_depth_plot'] = starInstDepth
+        starInst = np.nan_to_num(_depth_to_pixels(starDF, 'inst_depth_plot'), nan=0.0)
+        starAuto = _depth_to_pixels(starDF, 'dep_m')
+        starRaw = _depth_to_pixels(starDF, 'dep_m_raw') if 'dep_m_raw' in starDF.columns else starAuto.copy()
+        if 'dep_m_interp' in starDF.columns:
+            starInterp = pd.to_numeric(starDF['dep_m_interp'], errors='coerce').fillna(0).to_numpy(dtype=np.uint8, copy=True).astype(bool)
+        else:
+            starInterp = np.zeros(starAuto.shape, dtype=bool)
 
         # Ensure port/star same length
         if (portAuto.shape[0] != starAuto.shape[0]):
@@ -2080,27 +2174,37 @@ class portstarObj(object):
             sL = starAuto.shape[0]
             # Add rows to shortest array from longest array
             if (pL > sL):
-                starAuto = np.append(starAuto, portAuto[(sL-pL):])
-                starInst = np.append(starInst, portInst[(sL-pL):])
+                starAuto = _pad_to_match(starAuto, portAuto)
+                starInst = _pad_to_match(starInst, portInst)
+                starRaw = _pad_to_match(starRaw, portRaw)
+                starInterp = _pad_to_match(starInterp, portInterp)
             else:
-                portAuto = np.append(portAuto, starAuto[(pL-sL):])
-                portInst = np.append(portInst, starInst[(pL-sL):])
+                portAuto = _pad_to_match(portAuto, starAuto)
+                portInst = _pad_to_match(portInst, starInst)
+                portRaw = _pad_to_match(portRaw, starRaw)
+                portInterp = _pad_to_match(portInterp, starInterp)
 
         # Relocate depths relative to horizontal center of image
         c = int(mergeSon.shape[1]/2)
 
         portInst = c - portInst
         portAuto = c - portAuto
+        portRaw = c - portRaw
 
         starInst = c + starInst
         starAuto = c + starAuto
+        starRaw = c + starRaw
 
         # maybe flip???
         portInst = np.flip(portInst)
         portAuto = np.flip(portAuto)
+        portRaw = np.flip(portRaw)
+        portInterp = np.flip(portInterp)
 
         starInst = np.flip(starInst)
         starAuto = np.flip(starAuto)
+        starRaw = np.flip(starRaw)
+        starInterp = np.flip(starInterp)
 
         #############
         # Export Plot
@@ -2127,14 +2231,31 @@ class portstarObj(object):
         outFile = os.path.join(outDir, projName+'_Bedpick_'+addZero+str(i)+tileFile)
 
         plt.imshow(mergeSon, cmap='gray')
-        if acousticBed:
-            plt.plot(portInst, y, 'r-.', lw=1, label='Acoustic Depth')
-            plt.plot(starInst, y, 'r-.', lw=1)
-            del portInst, starInst
-        if autoBed:
-            plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
-            plt.plot(starAuto, y, 'b-.', lw=1)
-            del portAuto, starAuto
+        if detectDepMode == 0:
+            if acousticBed:
+                portInstGood = np.where(~portInterp, portInst, np.nan)
+                starInstGood = np.where(~starInterp, starInst, np.nan)
+                portInstBad = np.where(portInterp, portInst, np.nan)
+                starInstBad = np.where(starInterp, starInst, np.nan)
+                portInterpDepth = np.where(portInterp, portAuto, np.nan)
+                starInterpDepth = np.where(starInterp, starAuto, np.nan)
+
+                plt.plot(portInstGood, y, '-.', color='lime', lw=1, label='Instrument Depth (Good)')
+                plt.plot(starInstGood, y, '-.', color='lime', lw=1)
+                plt.plot(portInstBad, y, '-.', color='red', lw=1, label='Instrument Depth (Flagged)')
+                plt.plot(starInstBad, y, '-.', color='red', lw=1)
+                plt.plot(portInterpDepth, y, '-.', color='yellow', lw=1, label='Interpolated Depth')
+                plt.plot(starInterpDepth, y, '-.', color='yellow', lw=1)
+                del portInstGood, starInstGood, portInstBad, starInstBad, portInterpDepth, starInterpDepth
+        else:
+            if acousticBed:
+                plt.plot(portInst, y, 'r-.', lw=1, label='Instrument Depth')
+                plt.plot(starInst, y, 'r-.', lw=1)
+            if autoBed:
+                plt.plot(portAuto, y, 'b-.', lw=1, label='Auto Depth')
+                plt.plot(starAuto, y, 'b-.', lw=1)
+
+        del portInst, starInst, portAuto, starAuto, portRaw, starRaw, portInterp, starInterp
 
         plt.legend(loc = 'lower right', prop={'size':4}) # create the plot legend
         plt.savefig(outFile, dpi=300, bbox_inches='tight')
