@@ -675,7 +675,16 @@ class sonObj(object):
         if not filtCol in sonDF.columns:
             sonDF[filtCol] = True
 
-        time_table = pd.read_csv(time_table)
+        # Guard against bool/test toggles; only load when a real table is provided.
+        if isinstance(time_table, (bool, np.bool_)) or time_table is None:
+            return sonDF
+        if isinstance(time_table, str) and time_table.strip() == '':
+            return sonDF
+
+        if isinstance(time_table, pd.DataFrame):
+            time_table = time_table.copy()
+        else:
+            time_table = pd.read_csv(time_table)
 
         for i, row in time_table.iterrows():
 
