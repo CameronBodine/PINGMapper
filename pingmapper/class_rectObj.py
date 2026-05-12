@@ -1427,7 +1427,9 @@ class rectObj(sonObj):
         if len(dfOut) == 0:
             return
 
-        dfAll = pd.concat(dfOut, ignore_index=True)
+        # Preserve (record_num, son_idx) index created per ping; downstream
+        # processing resets this index back to columns before sorting.
+        dfAll = pd.concat(dfOut)
         if dfAll.empty:
             return
 
