@@ -1,0 +1,51 @@
+field,field_origin,exported_default,used_in_pingverter,used_in_pingmapper,classification,notes
+record_num,SON_header,true,true,true,used_in_pingmapper,Primary per-ping identifier used widely in merge and rectification
+time_s,SON_header,true,true,true,used_in_pingmapper,Used for timing and time-based filtering
+utm_e,SON_header,true,true,true,used_in_pingmapper,Used as source coordinate in track smoothing defaults
+utm_n,SON_header,true,true,true,used_in_pingmapper,Used as source coordinate in track smoothing defaults
+gps1,SON_header,true,false,false,not_used_downstream,Parsed and exported but not used in current workflows
+instr_heading,SON_header,true,true,true,used_in_pingmapper,Used for COG fallback and ping bearing calculations
+gps2,SON_header,true,false,false,not_used_downstream,Parsed and exported but not used in current workflows
+speed_ms,SON_header,true,true,true,used_in_pingmapper,Used in speed filters and in trk distance derivation
+unknown_134,SON_header_model_specific,true,false,false,not_used_downstream,Only present for some header layouts
+inst_dep_m,SON_header,true,true,true,used_in_pingmapper,Core depth signal for bedpick and downstream depth logic
+unknown_136,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_137,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_138,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_139,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_140,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_141,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_142,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_143,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+beam,SON_header,true,true,true,used_in_pingmapper,Used in missing-ping repair and beam regrouping logic
+volt_scale,SON_header,true,true,true,used_in_pingmapper,Used in missing-ping repair cleanup path
+f,SON_header,true,true,true,used_in_pingmapper,Used in missing-ping repair cleanup path and unit conversion
+unknown_83,SON_header,true,false,false,not_used_downstream,Kept only if exportUnknown true for unknown fields
+unknown_84,SON_header,true,false,false,not_used_downstream,Kept only if exportUnknown true for unknown fields
+unknown_149,SON_header,true,false,false,not_used_downstream,Kept only if exportUnknown true for unknown fields
+e_err_m,SON_header,true,true,false,used_in_pingverter_only,Used to compute hdop in converter but not consumed by PingMapper
+n_err_m,SON_header,true,true,false,used_in_pingverter_only,Used to compute hdop in converter but not consumed by PingMapper
+unknown_152,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_153,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_154,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_155,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_156,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_157,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_158,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+unknown_159,SON_header_model_specific,false,false,false,not_used_downstream,Only present in 152-byte header and dropped by default
+ping_cnt,SON_header,true,true,true,used_in_pingmapper,Core sample-count field used for reads and range/depth logic
+index,derived_from_son_frame_offsets,true,true,true,used_in_pingmapper,Frame byte offset used to seek ping samples
+son_offset,derived_from_header_size,true,true,true,used_in_pingmapper,Header byte offset used with index for sample reads
+chunk_id,derived_chunking,true,true,true,used_in_pingmapper,Primary chunk partition key across processing and rectification
+max_range,derived_from_ping_cnt_pixM,true,true,false,used_in_pingverter_only,Used by PingVerter frame export manifest fields
+hdop,derived_from_e_n_errors,true,true,false,used_in_pingverter_only,Computed in converter only
+lon,derived_from_utm,true,true,true,used_in_pingmapper,Primary track coordinate for smoothing and geospatial filtering
+lat,derived_from_utm,true,true,true,used_in_pingmapper,Primary track coordinate for smoothing and geospatial filtering
+e,derived_reprojected_utm,true,true,false,used_in_pingverter_only,Produced in converter but PingMapper uses lon lat and smoothed utm_es utm_ns
+n,derived_reprojected_utm,true,true,false,used_in_pingverter_only,Produced in converter but PingMapper uses lon lat and smoothed utm_es utm_ns
+tempC,derived_from_user_temp,true,true,false,used_in_pingverter_only,Used in PingVerter frame export temperature field
+date,derived_from_time,true,true,true,used_in_pingmapper,Used in datetime normalization paths
+time,derived_from_time,true,true,true,used_in_pingmapper,Used in datetime normalization paths
+trk_dist,derived_from_time_speed,true,true,true,used_in_pingmapper,Used in along-track operations and summaries
+transect,derived_default_and_filters,true,true,true,used_in_pingmapper,Used for transect filtering and chunk-transect interactions
+pixM,derived_pixel_size,true,true,true,used_in_pingmapper,Core pixel-to-meter scale used throughout depth and rectification workflows
