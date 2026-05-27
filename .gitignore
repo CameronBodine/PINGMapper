@@ -5,6 +5,7 @@ testData/*
 /src/__pycache__/*
 exampleData/*
 models
+.data
 
 main_batch.py
 main_batchFolder.py
