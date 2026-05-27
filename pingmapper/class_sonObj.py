@@ -1931,11 +1931,14 @@ class sonObj(object):
         return bool(getattr(self, 'export_colormap_uint8', True))
 
     # ======================================================================
-    def _reserve_zero_for_nodata(self, data):
+    def _reserve_zero_for_nodata(self, data, preserve_zeros=False):
         arr = np.asarray(data)
 
         if arr.size == 0:
             return arr
+
+        if preserve_zeros:
+            return arr.copy()
 
         out = arr.copy()
 

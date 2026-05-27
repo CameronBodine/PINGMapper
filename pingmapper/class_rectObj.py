@@ -327,7 +327,7 @@ class rectObj(sonObj):
                     if self.egn_stretch > 0:
                         self._egnDoStretch()
 
-            img = self._reserve_zero_for_nodata(self.sonDat)
+            img = self._reserve_zero_for_nodata(self.sonDat, preserve_zeros=True)
             img = self._prepare_export_uint16(img)
             vals = img[img > 0]
             if vals.size == 0:
@@ -1861,7 +1861,7 @@ class rectObj(sonObj):
             col = df[xPix].to_numpy().astype(int)
             data = df[sonCol].to_numpy()
             if son:
-                data = self._reserve_zero_for_nodata(data)
+                data = self._reserve_zero_for_nodata(data, preserve_zeros=True)
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2721,7 +2721,7 @@ class rectObj(sonObj):
 
             img = self.sonDat.copy()
             if son:
-                img = self._reserve_zero_for_nodata(img)
+                img = self._reserve_zero_for_nodata(img, preserve_zeros=True)
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2812,7 +2812,7 @@ class rectObj(sonObj):
 
             img = self.sonDat
             if son:
-                img = self._reserve_zero_for_nodata(img)
+                img = self._reserve_zero_for_nodata(img, preserve_zeros=True)
             apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
