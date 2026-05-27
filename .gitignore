@@ -218,3 +218,6 @@ cython_debug/
 .pixi/
 # Pixi lock
 pixi.lock
+
+# Local test and development data
+.data/
