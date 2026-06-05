@@ -105,5 +105,7 @@ full = { features = ["ml"], solve-group = "default" }
 pingmapper = "python -m pingwizard"
 gui = "python -m pingmapper gui"
 gui-batch = "python -m pingmapper gui_batch"
+check = "python -m pingmapper check"
+test-unit = "python -m pingmapper test_unit"
 test = "python -m pingmapper test"
 test-large = "python -m pingmapper test_large"

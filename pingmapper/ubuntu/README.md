@@ -13,7 +13,11 @@
 
 `pip install -r ubuntu/requirements.txt`
 
-`python ./test_PINGMapper.py 1`
+`python -m pingmapper check`
+
+Optional longer end-to-end processing test (downloads sample data and runs full pipeline):
+
+`python -m pingmapper test`
 
 ## Afterward, this is required to start PINGMapper again
 

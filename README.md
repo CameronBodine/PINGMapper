@@ -130,6 +130,20 @@ python -m pingmapper gui
    pixi run -e full gui    # GUI with ML support
    ```
 
+### Verify Installation
+
+Run a lightweight self-check (same check used in CI):
+
+```bash
+python -m pingmapper check
+```
+
+Optional longer end-to-end processing validation:
+
+```bash
+python -m pingmapper test
+```
+
 ## Ready to get started?
 
 Follow the installation and testing instructions to [Get Started!](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted)

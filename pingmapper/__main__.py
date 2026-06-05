@@ -49,5 +49,12 @@ def main(process):
         from pingmapper.test_PINGMapper import test
         test(2)
 
+    elif process in ('check', 'test_unit'):
+        print('\n\nRunning PINGMapper self-check...\n\n')
+        from pingmapper.self_check import run_self_check
+        return run_self_check(verbose=True)
+
+    return 0
+
 if __name__ == "__main__":
-    main(to_do)
+    sys.exit(main(to_do))
