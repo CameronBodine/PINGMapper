@@ -155,6 +155,12 @@ Recommended routine verification is to run the included tests from PINGWizard. I
 python -m pingmapper check
 ```
 
+Direct unit-test invocation (same lightweight suite run by `check`):
+
+```bash
+python -m unittest pingmapper.test_dq_filter pingmapper.test_cli_self_check -v
+```
+
 Optional longer end-to-end processing validation:
 
 ```bash

@@ -20,6 +20,11 @@ REQUIRED_MODULES = [
     "pingverter",
 ]
 
+UNIT_TEST_MODULES = [
+    "pingmapper.test_dq_filter",
+    "pingmapper.test_cli_self_check",
+]
+
 
 def _missing_required_modules() -> list[str]:
     """Return required modules that fail to import."""
@@ -46,7 +51,7 @@ def run_self_check(verbose: bool = True) -> int:
 
     print("Dependency import checks passed.")
 
-    suite = unittest.defaultTestLoader.loadTestsFromName("pingmapper.test_dq_filter")
+    suite = unittest.defaultTestLoader.loadTestsFromNames(UNIT_TEST_MODULES)
     runner = unittest.TextTestRunner(verbosity=2 if verbose else 1)
     result = runner.run(suite)
 

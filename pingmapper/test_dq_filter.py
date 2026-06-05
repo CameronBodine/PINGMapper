@@ -199,5 +199,204 @@ class TestDQFilterEventStateBlocks(unittest.TestCase):
         self.assertEqual(kept, [2, 3, 6])
 
 
+class TestDQFilterValidation(unittest.TestCase):
+    """Input validation and parsing error cases for DQ filtering."""
+
+    def test_missing_dq_time_field_raises(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}])
+        path = _dq_csv([{'ts': 1.0, 'flag': 'Use'}])
+
+        with self.assertRaisesRegex(ValueError, 'dq_time_field is required'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='',
+                dq_flag_field='flag',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+    def test_missing_dq_flag_field_raises(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}])
+        path = _dq_csv([{'ts': 1.0, 'flag': 'Use'}])
+
+        with self.assertRaisesRegex(ValueError, 'dq_flag_field is required'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+    def test_missing_required_csv_column_raises(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}])
+        path = _dq_csv([{'ts': 1.0, 'not_flag': 'Use'}])
+
+        with self.assertRaisesRegex(ValueError, 'dqLog missing required column'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='flag',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+    def test_timestamp_type_mismatch_raises(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}, {'time_s': 3.0}])
+        path = _dq_csv([{'ts': '2024-01-01T00:00:00Z', 'flag': 'Use'}])
+
+        with self.assertRaisesRegex(ValueError, 'timestamp type'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='flag',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+    def test_empty_keep_values_raise(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}])
+        path = _dq_csv([{'ts': 1.0, 'flag': 'Use'}])
+
+        with self.assertRaisesRegex(ValueError, 'dq_keep_values must contain at least one value'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='flag',
+                dq_keep_values=[],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+
+class TestDQKeepValueNormalization(unittest.TestCase):
+    """Normalization of dq_keep_values and DQ flag values."""
+
+    def test_keep_values_normalize_case_and_whitespace(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}, {'time_s': 3.0}])
+        path = _dq_csv([
+            {'ts': 1.5, 'flag': '  usE  '},
+        ])
+
+        result = stub._filterDQ(
+            stub.sonMetaDF,
+            dq_table=path,
+            dq_time_field='ts',
+            dq_flag_field='flag',
+            dq_keep_values='  use  , keep ',
+            dq_src_utc_offset=0.0,
+            dq_target_utc_offset=0.0,
+            dq_time_offset=0.0,
+        )
+
+        kept = list(result[result['filter_dq'] == True].index)
+        self.assertEqual(kept, [1, 2])
+
+
+class TestDQUtcOffsetValidation(unittest.TestCase):
+    """Validation around UTC offset parameters for datetime DQ logs."""
+
+    def test_setting_only_one_utc_offset_raises(self):
+        stub = _make_stub([
+            {'date': '2024-01-01', 'time': '00:00:01', 'time_s': 1.0},
+            {'date': '2024-01-01', 'time': '00:00:02', 'time_s': 2.0},
+        ])
+        path = _dq_csv([
+            {'ts': '2024-01-01 00:00:00', 'flag': 'Use'},
+        ])
+
+        with self.assertRaisesRegex(ValueError, 'must both be provided'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='flag',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset=0.0,
+                dq_target_utc_offset=None,
+                dq_time_offset=0.0,
+            )
+
+    def test_non_numeric_utc_offset_raises(self):
+        stub = _make_stub([
+            {'date': '2024-01-01', 'time': '00:00:01', 'time_s': 1.0},
+            {'date': '2024-01-01', 'time': '00:00:02', 'time_s': 2.0},
+        ])
+        path = _dq_csv([
+            {'ts': '2024-01-01 00:00:00', 'flag': 'Use'},
+        ])
+
+        with self.assertRaisesRegex(ValueError, 'must be a numeric UTC offset'):
+            stub._filterDQ(
+                stub.sonMetaDF,
+                dq_table=path,
+                dq_time_field='ts',
+                dq_flag_field='flag',
+                dq_keep_values=['Use'],
+                dq_src_utc_offset='east',
+                dq_target_utc_offset=0.0,
+                dq_time_offset=0.0,
+            )
+
+
+class TestDQEventBoundaries(unittest.TestCase):
+    """Boundary behavior around event timestamps and duplicate event rows."""
+
+    def test_ping_exactly_at_event_time_kept(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}, {'time_s': 3.0}])
+        path = _dq_csv([
+            {'ts': 2.0, 'flag': 'Use'},
+        ])
+
+        result = stub._filterDQ(
+            stub.sonMetaDF,
+            dq_table=path,
+            dq_time_field='ts',
+            dq_flag_field='flag',
+            dq_keep_values=['Use'],
+            dq_src_utc_offset=0.0,
+            dq_target_utc_offset=0.0,
+            dq_time_offset=0.0,
+        )
+
+        kept = list(result[result['filter_dq'] == True].index)
+        self.assertEqual(kept, [1, 2])
+
+    def test_duplicate_event_timestamp_last_row_wins(self):
+        stub = _make_stub([{'time_s': 1.0}, {'time_s': 2.0}, {'time_s': 3.0}])
+        path = _dq_csv([
+            {'ts': 2.0, 'flag': 'Use'},
+            {'ts': 2.0, 'flag': 'NoUse'},
+        ])
+
+        result = stub._filterDQ(
+            stub.sonMetaDF,
+            dq_table=path,
+            dq_time_field='ts',
+            dq_flag_field='flag',
+            dq_keep_values=['Use'],
+            dq_src_utc_offset=0.0,
+            dq_target_utc_offset=0.0,
+            dq_time_offset=0.0,
+        )
+
+        kept = list(result[result['filter_dq'] == True].index)
+        self.assertEqual(kept, [])
+
+
 if __name__ == '__main__':
     unittest.main()
