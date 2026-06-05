@@ -31,6 +31,15 @@
 
 `PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific data collectors, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
 
+## PING Ecosystem
+
+`PINGMapper` is part of the [**PING Ecosystem**](https://github.com/PINGEcosystem): a coordinated set of tools for installation, conversion, quality checks, and mapping workflows.
+
+- [PINGMapper](https://github.com/CameronBodine/PINGMapper): Core sonar processing and mapping package
+- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller): Recommended installer and environment bootstrap
+- [PINGWizard](https://github.com/CameronBodine/PINGWizard): Point-and-click interface for testing, updates, and routine processing
+- [PINGVerter](https://github.com/CameronBodine/PINGVerter): Sonar data conversion utilities
+
 ## Learn More Now!
 Check out PING-Mapper's [website](https://cameronbodine.github.io/PINGMapper/) for most up to date information:
 
@@ -90,7 +99,7 @@ A manuscript detailing the automated substrate mapping features made availabe in
 
 ### v3.0 - 4.0
 
-Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEcosystem.md) is made possible through mentorship, partnerships, and financial support listed below.
+Continued support for PINGMapper and tools in the [PING Ecosystem](#ping-ecosystem) is made possible through mentorship, partnerships, and financial support listed below.
 
 **Primary Developer:** [Dr. Cameron S. Bodine](https://github.com/CameronBodine)
 
@@ -175,9 +184,12 @@ Follow the installation and testing instructions to [Get Started!](https://camer
 
 If you are interested in partnering on future developments, please reach out to [Cameron Bodine](https://cameronbodine.github.io/).
 
-# PING-Mapper is part of the Doodleverse!
+# PING-Mapper is part of the PING Ecosystem
+
+
+PINGMapper is developed and distributed alongside companion PING tools (PINGInstaller, PINGWizard, and PINGVerter) to provide a complete end-to-end workflow.
+
+PINGMapper also leverages components from the Doodleverse ecosystem for geoscientific image segmentation workflows. Learn more on [GitHub](https://github.com/Doodleverse).
+
 ![153729377-e16d0679-ca0d-4d0d-a9f9-90306ba2f871](https://github.com/CameronBodine/PINGMapper/assets/54146655/54df6fdd-26a6-4c26-9cab-9fc834e60ed1)
-
-The Doodleverse is an opinionated collection of Python packages designed for geoscientific image segmentation. Find out more on [GitHub](https://github.com/Doodleverse).
-
 
