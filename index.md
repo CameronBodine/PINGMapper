@@ -13,13 +13,16 @@ Open-source interface for processing recreation-grade side scan sonar datasets a
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
 
-[Get started now](./docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Get started now](./docs/gettingstarted/gettingstarted.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [Troubleshooting](./docs/Troubleshooting.md){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/CameronBodine/PINGMapper){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
 ## Overview
 
 `PINGMapper` is an open-source Python interface for reading and processing side scan sonar datasets and reproducibly mapping benthic habitat features. `PINGMapper` transforms recreation-grade sonar systems (i.e. fishfinders) into scientific instruments, allowing researchers and citizens alike to reproducibly map their aquatic system with minimal expertise in data processing.
+
+{: .g2k }
+> Recommended workflow: install [Miniforge](https://conda-forge.org/download/), run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) to set up the `ping` environment, and launch [PINGWizard](https://github.com/CameronBodine/PINGWizard) to test, update, and run `PINGMapper`.
 
 ### Key Functionality
 - [PINGVerter](https://github.com/CameronBodine/PINGVerter) - A Python-based convertor for sonar logs collected with consumer-grade fishfinders.
@@ -162,15 +165,17 @@ See the [v3.0.0 release notes](https://github.com/CameronBodine/PINGMapper/relea
 
 - PINGMapper is a PyPi package
   - [![PyPI - Version](https://img.shields.io/pypi/v/pingmapper?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingmapper/)
-- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Light-weight application for installing PING ecosystem (PINGMapper, etc.)
+- [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) - Recommended installer for setting up and updating the PING ecosystem (PINGMapper, etc.) in a Miniforge-managed environment.
     - [![PyPI - Version](https://img.shields.io/pypi/v/pinginstaller?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pinginstaller/)
-- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Light-weight interface for running PING ecosystem (PINGMapper, etc.)
+- [PINGWizard](https://github.com/CameronBodine/PINGWizard) - Recommended point-and-click interface for testing, updating, and running the PING ecosystem (PINGMapper, etc.)
     - [![PyPI - Version](https://img.shields.io/pypi/v/pingwizard?style=flat-square&label=Latest%20Version%20(PyPi))](https://pypi.org/project/pingwizard/)
 
 
 ## Ready to get started?
 
-Follow the installation and testing instructions to [Get Started!](./docs/gettingstarted/gettingstarted.md)
+Follow the installation and testing instructions to [Get Started!](./docs/gettingstarted/gettingstarted.md) The recommended path is Miniforge -> PINGInstaller -> PINGWizard.
+
+If something goes wrong during installation, testing, or processing, start with [Troubleshooting](./docs/Troubleshooting.md).
 
 # Acknowledgements
 

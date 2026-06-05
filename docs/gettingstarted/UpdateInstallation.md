@@ -24,9 +24,9 @@ Update `PINGMapper` & dependencies to the latest version.
 {: .warning }
 > If you have not installed PINGInstaller previously and used a version of PINGMapper < 4.0, you will want to follow the [installation](./Installation.md) instructions.
 
-If you have installed a previous version of PING-Mapper (>=4.0), follow these instructions to update to the latest version.
+If you have installed a previous version of PING-Mapper (>=4.0), follow these instructions to update to the latest version. The recommended workflow is to update with `PINGInstaller` and continue launching the software through `PINGWizard`.
 
-## Option 1
+## Option 1 - Update from PINGWizard
 
 Launch PINGWizard *([Click here to learn how](./PINGWizard.md))*:
 
@@ -36,9 +36,9 @@ Press `Update`:
 
 <img src="../../assets/install/pingwizard_update.PNG"/>
 
-## Option 2
+## Option 2 - Update from the prompt
 
-Open the Anaconda Powershell prompt and run the following:
+Open the Miniforge Prompt and run the following:
 
 ```bash
 conda activate ping
@@ -48,9 +48,9 @@ python -m pinginstaller
 Alternatively run as a single command:
 
 ```base
-cond run -n ping python -m pinginstaller
+conda run -n ping python -m pinginstaller
 ```
 
 ## All Done!
 
-It is recommended that you [run the tests](./Testing.md) to make sure everything is working correctly.
+It is recommended that you [run the tests](./Testing.md) from `PINGWizard` to make sure everything is working correctly.

@@ -26,16 +26,16 @@ Get `PINGMapper` up and running on your computer.
 {: .g2k }
 > You **do not** need to know Python to use PINGMapper! After issuing a few simple commands, all interactions with PINGMapper will be point-and-click.
 
-`PINGMapper` uses `conda` to ensure the installation is configured correctly. Specifically, `conda` is used to create a [virtual environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) called `ping`, a container storing all the correct versions of of the required dependencies, that ensures `PINGMapper` runs as expected.
+`PINGMapper` uses `conda` to ensure the installation is configured correctly. Specifically, `conda` is used to create a [virtual environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#) called `ping`, a container storing the correct versions of the required dependencies so `PINGMapper` runs as expected.
 
- `Conda` comes in several flavors, however, we will use [Miniforge](https://conda-forge.org/download/) as it is free for anyone to use.
+`Conda` comes in several flavors, however, the recommended option for `PINGMapper` is [Miniforge](https://conda-forge.org/download/) because it is free for anyone to use.
 
  - [Miniforge](https://conda-forge.org/download/): *Free for all*; [License](https://github.com/conda-forge/miniforge?tab=License-1-ov-file#readme)
 
  {: .g2k }
- > Existing users may have previously used Miniconda or Anaconda. Due to changes is licensing, it is recommended that you transition to Miniforge, an open-source alternative.
+ > Existing users may have previously used Miniconda or Anaconda. Due to licensing changes, it is recommended that you transition to Miniforge, an open-source alternative.
 
-This tutorial will demonstrate how to install and configure `PINGMapper`. After installing Miniforge, we will install and run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller). `PINGInstaller` automatically creates the `ping` environment, installs the appropriate packages from the [PING Ecosystem](../PINGEcosystem.md) ([PINGMapper](https://github.com/CameronBodine/PINGMapper), [PINGWizard](https://github.com/CameronBodine/PINGWizard), [PINGVerter](https://github.com/CameronBodine/PINGVerter), etc.), and other necessary dependencies.
+This tutorial demonstrates the recommended way to install and configure `PINGMapper`: install Miniforge, then run [PINGInstaller](https://github.com/CameronBodine/PINGInstaller), then use [PINGWizard](https://github.com/CameronBodine/PINGWizard) to launch and manage the software. `PINGInstaller` automatically creates the `ping` environment, installs the appropriate packages from the [PING Ecosystem](../PINGEcosystem.md) ([PINGMapper](https://github.com/CameronBodine/PINGMapper), [PINGWizard](https://github.com/CameronBodine/PINGWizard), [PINGVerter](https://github.com/CameronBodine/PINGVerter), etc.), and installs other necessary dependencies.
 
 Let's get started!
 
@@ -51,7 +51,7 @@ Click `Next` and you will see the license agreement:
 
 <img src="../../assets/install/miniforge_install_2.PNG"/>
 
-After reviewing the license agreement, you must select `I Agree` to continue with the installation. After you agree, you will have an option to install Miniconda for `Just Me` or `All Users`. 
+After reviewing the license agreement, you must select `I Agree` to continue with the installation. After you agree, you will have an option to install Miniforge for `Just Me` or `All Users`. 
 
 <img src="../../assets/install/miniforge_install_3.PNG"/>
 
@@ -63,19 +63,19 @@ Accept the default installation location and click `Next`. This will open the Ad
 
 <img src="../../assets/install/miniforge_install_5.PNG"/>
 
-We will accept the default options, shown above, and click `Next`. Once installation is complete, you will see the following window indicating Miniconda was successfully installed:
+We will accept the default options, shown above, and click `Next`. Once installation is complete, you will see the following window indicating Miniforge was successfully installed:
 
 <img src="../../assets/install/miniforge_install_6.PNG"/>
 
 Click `Finish` to close the window.
 
-## Step 2
+## Step 2 - Open Miniforge Prompt
 
-Now for the scary part! We are going to open a command prompt so that we can submit a series of commands to Miniforge. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
+Next, open the Miniforge command prompt so you can run the installer commands. If you want to gain some familiarity with navigating with the prompt, you can watch this video:
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/9zMWXD-xoxc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
-Miniforge is a command prompt that we will use to install and run PINGMapper. On Windows, click the start button and scroll through your installed applications until you find `Miniforge Prompt`. 
+On Windows, click the start button and scroll through your installed applications until you find `Miniforge Prompt`. 
 
 <img src="../../assets/install/miniforge_run.png"/>
 
@@ -83,12 +83,12 @@ Click the icon to open the prompt.
 
 <img src="../../assets/install/shellmini_1a.PNG"/>
 
-## Step 2
+## Step 3 - Install PINGInstaller
 
 {: .g2k }
 > Installing PINGInstaller in the `base` environment will only download the PINGInstaller package and make no further changes.
 
-A package called [PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is used to install and setup PINGMapper. We will install `PINGInstaller` with the following command and pressing `Enter`:
+[PINGInstaller](https://github.com/CameronBodine/PINGInstaller) is the recommended tool for installing and setting up `PINGMapper`. Install `PINGInstaller` with the following command and press `Enter`:
 
 ```bash
 pip install pinginstaller -U
@@ -96,9 +96,9 @@ pip install pinginstaller -U
 
 <img src="../../assets/install/shellmini_install_pinginstaller.PNG"/>
 
-## Step 3
+## Step 4 - Run PINGInstaller
 
-By running `PINGInstaller`, a new conda environment called `ping` will be created, and all dependencies will be installed into `ping`. Add the following command and press `Enter`:
+By running `PINGInstaller`, a new conda environment called `ping` will be created, and the required dependencies for the PING ecosystem will be installed into `ping`. Add the following command and press `Enter`:
 
 ```bash
 python -m pinginstaller
@@ -110,11 +110,11 @@ Installation will take approximately **5-10 minutes**. You should see something 
 
 <img src="../../assets/install/shellmini_pinginstaller_finish.PNG"/>
 
-At the end of the install process, a window will prompt you where to save the `bat` or `sh` shortcut file. Browse to the desired location and click `Submit`.
+At the end of the install process, a window will prompt you where to save the `bat` or `sh` shortcut file used to launch `PINGWizard`. Browse to the desired location and click `Submit`.
 
 <img src="../../assets/install/shortcut_gui.PNG"/>
 
 
 ## That's It!
 
-PINGMapper is now ready to go. [Launch PINGWizard](./PINGWizard.md), a new interface for PINGMapper, to start processing data.
+PINGMapper is now ready to go. The recommended next step is to [launch PINGWizard](./PINGWizard.md), the point-and-click interface for testing, updating, and processing data with `PINGMapper`.

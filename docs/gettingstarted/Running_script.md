@@ -13,10 +13,13 @@ nav_exclude: true
 
 After you have [tested](./Testing.md) `PING-Mapper` on the sample datasets, you are ready to process your own sonar recordings! Two scripts have been included with `PING-Mapper` and are found in the top-level directory. The first is `main.py` which allows you to process a single sonar recording. It is recommended that you start with this script when first processing sonar recordings with the software. A second script called `main_batchDirectory.py` provides an example of how to batch process many sonar recordings at once. Both approaches are covered below.
 
+{: .g2k }
+> `PINGWizard` remains the recommended workflow for most users. The script-based approach below is intended for users who specifically want to edit and run processing scripts manually.
+
 ## Process single sonar recording
 
 ### Step 1
-1. Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
+1. Open Miniforge Prompt. Navigate to the `PINGMapper` directory using the `cd` command. Ensure the prompt is in the top level of the `PINGMapper` directory. For example:
 ```
 cd C:\users\Cam\MyPythonRepos\PINGMapper
 ```
@@ -357,7 +360,7 @@ python main_myscript.py
 PING-Mapper includes a script which will find all sonar recordings in a directory (even subdirectories!) and batch process them. This is useful if you have spent a day on the water collecting multiple sonar recordings. Just point this script at the top-most folder, provide an output directory for processed files, and PING-Mapper will do the rest!
 
 ### Step 1
-1. Open the Anaconda Prompt (*Windows users: Anaconda Powershell Prompt is preferred*). Navigate to the `PINGMapper` directory using the `cd` command. Ensure your Anaconda prompt is in the top level of `PINGMapper` directory. For example:
+1. Open Miniforge Prompt. Navigate to the `PINGMapper` directory using the `cd` command. Ensure the prompt is in the top level of the `PINGMapper` directory. For example:
 ```
 cd C:\users\Cam\MyPythonRepos\PINGMapper
 ```

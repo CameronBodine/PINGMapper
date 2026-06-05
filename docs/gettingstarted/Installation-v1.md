@@ -8,6 +8,9 @@ nav_exclude: true
 
 # Installation Instructions (Legacy v1.0)
 
+{: .warning }
+> This page is retained for historical reference only. For current installations, use the recommended workflow in [Installation](./Installation.md): Miniforge -> PINGInstaller -> PINGWizard.
+
 {: .g2k }
 > If you are comfortable with Git and the command prompt, check out the [Minimal Installation](./InstallationMinimal.md) instructions!
 

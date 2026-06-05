@@ -25,6 +25,7 @@ Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utiliti
 
 `PINGWizard` is a light-weight interface for launching `PINGMapper` utilities, including running the [tests](Testing.md), processing a [sonar log](./Running.md#process-single-sonar-log), batch process [multiple sonar logs](./Running.md#batch-process-multiple-sonar-recordings), and [updating](./UpdateInstallation.md) the installation.
 
+For most users, `PINGWizard` is the recommended way to interact with the PING ecosystem after installation. It keeps common tasks point-and-click while `PINGInstaller` manages setup and updates behind the scenes.
 
 
 
@@ -34,7 +35,8 @@ Light-weight interface for running [PING Ecosystem](../PINGEcosystem.md) utiliti
 
 
 
-There are two options for launching PINGWizard: a) [with a shortcut](#option-a---shortcut) or b) [command prompt](#option-b---conda-command-prompt).
+
+There are two options for launching PINGWizard: a) [with a shortcut](#option-a---shortcut) or b) [from the Miniforge/conda prompt](#option-b---conda-command-prompt).
 
 ### Option A - Shortcut
 
@@ -54,7 +56,7 @@ On Linux/Mac OS, open a command prompt, change directory to where you saved the 
 
 #### Option B - Conda Command Prompt
 
-Open the Conda Command Prompt used during [installation](./Installation.md). Activate the `ping` environment and launching PINGWizard by entering the following and pressing `Enter`:
+Open the Miniforge Prompt used during [installation](./Installation.md). Launch PINGWizard by entering the following and pressing `Enter`:
 
 ```bash
 conda run -n ping python -m pingwizard
@@ -73,3 +75,5 @@ Press one of the buttons to:
 - [Test PINGMapper](./Testing.md) on a [small dataset](./Testing.md#small-dataset-test) *Recommended if you just installed/updated PINGMapper*.
 - [Test PINGMapper](./Testing.md) on a [large dataset](./Testing.md#large-dataset-test) *Recommended if you just installed/updated PINGMapper*.
 - [Update PINGMapper](./UpdateInstallation.md) *Recommended to run routinely*.
+
+If you are new to `PINGMapper`, this is the recommended place to start after installation.

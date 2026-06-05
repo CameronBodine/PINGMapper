@@ -16,7 +16,7 @@ Test PINGMapper on sample datasets.
 
 ---
 
-Once you have [installed](./Installation.md) `PING-Mapper`, you can test the installation by processing two example datasets. The first is a [small](#small-dataset-test) dataset collected in Marble Canyon, AZ, USA. This is the fastest way to see if the software is performing as expected. A second test can be carried out on a [large](#large-dataset-test). The large dataset is included to see how the software performs on a typical sonar recording. 
+Once you have [installed](./Installation.md) `PING-Mapper`, the recommended way to verify the installation is to use `PINGWizard` to process the included example datasets. The first is a [small](#small-dataset-test) dataset collected in Marble Canyon, AZ, USA. This is the fastest way to see if the software is performing as expected. A second test can be carried out on a [large](#large-dataset-test). The large dataset is included to see how the software performs on a typical sonar recording. 
 
 ## Small Dataset Test
 
@@ -31,13 +31,16 @@ Press the `Small Dataset` button:
 <img src="../../assets/running/pingwizard_test.PNG"/>
 
 ### Step 3
-Once complete, explore the outputs in the `Test-Small-DS` on your desktop `C:\User\ThisGuy\Desktop\Test-Small-DS` or in the base your user folder `C:\User\ThisGuy\Test-Small-DS`.
+Once complete, explore the outputs in the `Test-Small-DS` folder created by `PINGWizard`, typically on your desktop or in your user folder.
 
 {: .warning }
-> If you receive a `ModuleNotFoundError`, try the [troubleshooting steps](../faq.md/#modulenotfounderror)
+> If you receive a `ModuleNotFoundError`, try the [troubleshooting steps](../Troubleshooting.md#modulenotfounderror)
+
+{: .g2k }
+> Advanced users can also run tests from the prompt if needed, but `PINGWizard` remains the recommended workflow for routine verification.
 
 {: .warning }
-> If you receive an error, check the [FAQ](../faq.md). If the FAQ does not address your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose). 
+> If you receive an error, check [Troubleshooting](../Troubleshooting.md) first, then the [FAQ](../faq.md). If neither page addresses your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose). 
 > 
 > [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose){: .btn .btn-red }
 
@@ -54,13 +57,13 @@ Press the `Large Dataset` button:
 <img src="../../assets/running/pingwizard_test_large.PNG"/>
 
 ### Step 3
-Once complete, explore the outputs in the `Test-Large-DS` on your desktop `C:\User\ThisGuy\Desktop\Test-Large-DS` or in the base your user folder `C:\User\ThisGuy\Test-Large-DS`.
+Once complete, explore the outputs in the `Test-Large-DS` folder created by `PINGWizard`, typically on your desktop or in your user folder.
 
 {: .warning }
-> If you receive a `ModuleNotFoundError`, try the [troubleshooting steps](../faq.md/#modulenotfounderror)
+> If you receive a `ModuleNotFoundError`, try the [troubleshooting steps](../Troubleshooting.md#modulenotfounderror)
 
 {: .warning }
-> If you receive an error, check the [FAQ](../faq.md). If the FAQ does not address your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose). 
+> If you receive an error, check [Troubleshooting](../Troubleshooting.md) first, then the [FAQ](../faq.md). If neither page addresses your issue, please [submit a new issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose). 
 > 
 > [Submit Issue](https://github.com/CameronBodine/PINGMapper/issues/new/choose){: .btn .btn-red }
 

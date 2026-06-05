@@ -15,13 +15,13 @@ nav_exclude: true
 > Ubuntu users can consider an [alternative installation](https://github.com/CameronBodine/PINGMapper/tree/main/ubuntu) method.
 
 ## Step 1
-Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html). When prompted, select the option to install for "me" insted of "all users". This will install miniconda into your user folder. 
+Install [Miniforge](https://conda-forge.org/download/). When prompted, select the option to install for "me" instead of "all users". This will install Miniforge into your user folder.
 
 ## Step 2
-Open Anaconda Powershell Prompt or Anaconda Prompt.
+Open Miniforge Prompt.
 
 {: .g2k }
-> Windows Users: Go to the start menu and search for 'Anaconda'.
+> Windows users: Go to the start menu and search for `Miniforge Prompt`.
 
 ## Step 3
 Update conda:

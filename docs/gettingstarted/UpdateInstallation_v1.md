@@ -8,6 +8,9 @@ nav_exclude: true
 
 # Updating PINGMapper (Legacy v1.0)
 
+{: .warning }
+> This page is retained for historical reference only. For current updates, use [Update Installation](./UpdateInstallation.md) and the recommended workflow: update with PINGInstaller and continue using PINGWizard.
+
 If you have installed a previous version of PING-Mapper, follow these instructions to update to the latest version.
 
 ## Step 1

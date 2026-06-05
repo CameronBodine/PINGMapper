@@ -11,3 +11,6 @@ permalink: docs/gettingstarted
 
 Find out how to get `PING-Mapper` installed on your computer, run tests on sample recordings, and run on your own data.
 {: .fs-6 .fw-300 }
+
+{: .g2k }
+> If you run into problems during installation, testing, or export, see [Troubleshooting](../Troubleshooting.md).
