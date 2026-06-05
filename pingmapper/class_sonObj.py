@@ -1819,14 +1819,6 @@ class sonObj(object):
 
     # ======================================================================
     def _prepare_export_uint16(self, data):
-        cached = getattr(self, 'sonDat16', None)
-        if cached is not None:
-            try:
-                if cached.shape == data.shape:
-                    return cached.astype(np.uint16, copy=False)
-            except Exception:
-                pass
-
         arr = np.asarray(data)
 
         if arr.dtype == np.uint16:
