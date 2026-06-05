@@ -104,7 +104,24 @@ Continued support for PINGMapper and tools in the [PING Ecosystem](./docs/PINGEc
 
 ## Quick Start
 
-### Option A: Conda
+Recommended workflow: install Miniforge, use PINGInstaller to set up the `ping` environment, and launch PINGWizard for testing, updates, and routine processing.
+
+### Recommended: Miniforge + PINGInstaller + PINGWizard
+
+Please see [Getting Started](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted) for full instructions. In short:
+
+```bash
+pip install pinginstaller -U
+python -m pinginstaller
+```
+
+After installation completes, launch PINGWizard using the shortcut created by PINGInstaller, or run:
+
+```bash
+conda run -n ping python -m pingwizard
+```
+
+### Alternative: Direct conda environment
 
 Please see [Getting Started](https://cameronbodine.github.io/PINGMapper/docs/gettingstarted) for full instructions, or simply run:
 
@@ -114,9 +131,9 @@ conda activate ping
 python -m pingmapper gui
 ```
 
-### Option B: Pixi
+### Optional: Pixi
 
-[Pixi](https://pixi.sh) manages all dependencies (including GDAL) automatically from a single `pyproject.toml`.
+[Pixi](https://pixi.sh) is available for users who prefer that workflow, but it is not the recommended installation path.
 
 1. [Install pixi](https://pixi.sh)
 2. Clone and run:
@@ -132,7 +149,7 @@ python -m pingmapper gui
 
 ### Verify Installation
 
-Run a lightweight self-check (same check used in CI):
+Recommended routine verification is to run the included tests from PINGWizard. If you want a prompt-based check, run the lightweight self-check below:
 
 ```bash
 python -m pingmapper check
