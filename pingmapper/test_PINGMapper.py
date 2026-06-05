@@ -72,7 +72,7 @@ def test(ds):
     #     ds = int(sys.argv[1])
     # else:
     #     print("\n\nERROR: \nPlease enter argument to choose which test file to process:")
-    #     print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
+    #     print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python -m pingmapper test <1 or 2>\n\n")
     #     sys.exit()
 
     #################
@@ -87,7 +87,7 @@ def test(ds):
         download_name = 'sample_recording'
     else:
         print("\n\nERROR: \nPlease enter argument to choose which test file to process:")
-        print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python test_PINGMapper.py <1 or 2>\n\n")
+        print("1 = Short recording \n2 = Long recording \n\nSYNTAX: python -m pingmapper test <1 or 2>\n\n")
         sys.exit()
 
     repo_root = PACKAGE_DIR
