@@ -45,17 +45,6 @@ See [Troubleshooting: ModuleNotFoundError](./Troubleshooting.md#modulenotfounder
 - XTF recordings: `.xtf`
 - SDF recordings: `.sdf`
 
-For Humminbird&reg;, the software has been designed to work with side imaging models broadly, and has been specifically tested with the following models:
-
-- 998
-- 1198
-- 1199
-- Helix
-- Solix
-- Onix
-
-Humminbird&reg; models such as Apex are also supported through the current format-based workflow.
-
 If `PINGMapper` doesn't work for one of these supported formats, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues) and include the manufacturer, file format, and a sample of the folder structure if possible.
 
 ## What Humminbird&reg; should I purchase?
