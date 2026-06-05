@@ -35,7 +35,17 @@ See [Troubleshooting: ModuleNotFoundError](./Troubleshooting.md#modulenotfounder
 {: .warning }
 > Compatibility with third-party sonar instruments and software does not convey endorsement by PING-Mapper authors.
 
-The software has been designed to work with any Humminbird&reg; side imaging model, but has been specifically tested with the following models:
+`PINGMapper` currently supports the following sonar recording formats:
+
+- Humminbird&reg; side imaging recordings: `.DAT`
+- Lowrance&reg; recordings: `.sl2`, `.sl3`
+- Garmin&reg; recordings: `.RSD`
+- Cerulean&reg; Omniscan 450SS recordings: `.svlog`
+- JSF recordings: `.jsf`
+- XTF recordings: `.xtf`
+- SDF recordings: `.sdf`
+
+For Humminbird&reg;, the software has been designed to work with side imaging models broadly, and has been specifically tested with the following models:
 
 - 998
 - 1198
@@ -44,7 +54,9 @@ The software has been designed to work with any Humminbird&reg; side imaging mod
 - Solix
 - Onix
 
-If `PING-Mapper` doesn't work for your Humminbird&reg; recording, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues).
+Humminbird&reg; models such as Apex are also supported through the current format-based workflow.
+
+If `PINGMapper` doesn't work for one of these supported formats, submit an [Issue](https://github.com/CameronBodine/PINGMapper/issues) and include the manufacturer, file format, and a sample of the folder structure if possible.
 
 ## What Humminbird&reg; should I purchase?
 
