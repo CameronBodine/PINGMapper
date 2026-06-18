@@ -2213,6 +2213,8 @@ class rectObj(sonObj):
                 crs='EPSG:4326',
             ).to_crs(self.humDat['epsg'])
 
+            df[x_col] = df[x_col].astype(float)
+            df[y_col] = df[y_col].astype(float)
             df.loc[need_xy, x_col] = geo.geometry.x.to_numpy()
             df.loc[need_xy, y_col] = geo.geometry.y.to_numpy()
             return df

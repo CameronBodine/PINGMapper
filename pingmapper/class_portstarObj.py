@@ -1981,26 +1981,34 @@ class portstarObj(object):
 
             # If sides diverge strongly, invalidate the side farther from
             # instrument depth so interpolation can recover continuity.
-            pair_valid = np.isfinite(portArr) & np.isfinite(starArr) & (portArr > 0) & (starArr > 0)
-            diverge = pair_valid & (np.abs(portArr - starArr) > 5.0)
-            if diverge.any():
-                portErr = np.abs(portArr - portInst)
-                starErr = np.abs(starArr - starInst)
+            # Port and star may have different ping counts; only compare the
+            # overlapping rows.
+            min_len = min(len(portArr), len(starArr))
+            pA = portArr[:min_len]
+            sA = starArr[:min_len]
+            pI = portInst[:min_len]
+            sI = starInst[:min_len]
 
-                inst_pair_valid = np.isfinite(portInst) & (portInst > 0) & np.isfinite(starInst) & (starInst > 0)
+            pair_valid = np.isfinite(pA) & np.isfinite(sA) & (pA > 0) & (sA > 0)
+            diverge = pair_valid & (np.abs(pA - sA) > 5.0)
+            if diverge.any():
+                portErr = np.abs(pA - pI)
+                starErr = np.abs(sA - sI)
+
+                inst_pair_valid = np.isfinite(pI) & (pI > 0) & np.isfinite(sI) & (sI > 0)
                 choose_by_inst = diverge & inst_pair_valid
-                portFlags |= choose_by_inst & (portErr >= starErr)
-                starFlags |= choose_by_inst & (starErr > portErr)
+                portFlags[:min_len] |= choose_by_inst & (portErr >= starErr)
+                starFlags[:min_len] |= choose_by_inst & (starErr > portErr)
 
                 # Fallback for rows without valid instrument depth on one/both sides.
                 fallback = diverge & (~inst_pair_valid)
                 if fallback.any():
-                    pmed = _rolling_median(portArr)
-                    smed = _rolling_median(starArr)
-                    presid = np.abs(portArr - pmed)
-                    sresid = np.abs(starArr - smed)
-                    portFlags |= fallback & (presid >= sresid)
-                    starFlags |= fallback & (sresid > presid)
+                    pmed = _rolling_median(pA)
+                    smed = _rolling_median(sA)
+                    presid = np.abs(pA - pmed)
+                    sresid = np.abs(sA - smed)
+                    portFlags[:min_len] |= fallback & (presid >= sresid)
+                    starFlags[:min_len] |= fallback & (sresid > presid)
 
         portArr[portFlags] = np.nan
         starArr[starFlags] = np.nan
