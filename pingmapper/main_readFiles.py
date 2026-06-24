@@ -30,6 +30,7 @@
 # SOFTWARE.
 
 import os, sys
+import re
 
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -103,6 +104,575 @@ def _sidescan_group_key(beam_name):
     if beam_name in {'ss_port', 'ss_star'}:
         return 'default'
     return beam_name
+
+
+def _extract_chunk_id_from_path(path):
+    name = os.path.splitext(os.path.basename(path))[0]
+    match = re.search(r'_(\d+)$', name)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def _sort_tile_paths(paths):
+    def _key(path):
+        chunk_id = _extract_chunk_id_from_path(path)
+        if chunk_id is None:
+            return (1, os.path.basename(path))
+        return (0, chunk_id)
+
+    return sorted(paths, key=_key)
+
+
+def _to_bgr8(img):
+    if img is None:
+        return None
+
+    if img.dtype == np.uint16:
+        img = (img / 257.0).astype(np.uint8)
+    elif img.dtype != np.uint8:
+        arr = np.asarray(img, dtype=np.float32)
+        finite = np.isfinite(arr)
+        if finite.any():
+            lo = arr[finite].min()
+            hi = arr[finite].max()
+            if hi > lo:
+                arr = (arr - lo) / (hi - lo)
+            else:
+                arr = np.zeros_like(arr)
+        else:
+            arr = np.zeros_like(arr)
+        img = (arr * 255.0).clip(0, 255).astype(np.uint8)
+
+    if img.ndim == 2:
+        return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+    if img.ndim == 3 and img.shape[2] == 4:
+        return cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
+    return img
+
+
+def _resize_height(img, target_h):
+    if img.shape[0] == target_h:
+        return img
+
+    h, w = img.shape[:2]
+    if h <= 0 or w <= 0 or target_h <= 0:
+        return img
+
+    new_w = max(1, int(round(w * (target_h / float(h)))))
+    return cv2.resize(img, (new_w, target_h), interpolation=cv2.INTER_AREA)
+
+
+def _resize_width(img, target_w):
+    if img.shape[1] == target_w:
+        return img
+
+    h, w = img.shape[:2]
+    if h <= 0 or w <= 0 or target_w <= 0:
+        return img
+
+    new_h = max(1, int(round(h * (target_w / float(w)))))
+    return cv2.resize(img, (target_w, new_h), interpolation=cv2.INTER_AREA)
+
+
+def _downscale_if_needed(img, max_dim=20000):
+    h, w = img.shape[:2]
+    max_hw = max(h, w)
+    if max_hw <= max_dim:
+        return img
+
+    scale = float(max_dim) / float(max_hw)
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+    print(f"\n\tDownscaling waterfall from {w}x{h} to {new_w}x{new_h} to control memory usage.")
+    return cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+
+def _fit_width(img, max_w):
+    h, w = img.shape[:2]
+    if w <= max_w:
+        return img
+    scale = float(max_w) / float(w)
+    new_h = max(1, int(round(h * scale)))
+    return cv2.resize(img, (max_w, new_h), interpolation=cv2.INTER_AREA)
+
+
+def _collect_mode_tile_paths(son, mode):
+    mode_dir = os.path.join(son.projDir, son.beamName, mode)
+    if not os.path.exists(mode_dir):
+        return []
+
+    exts = ['*.png', '*.jpg', '*.jpeg', '*.tif', '*.tiff']
+    paths = []
+    for ext in exts:
+        paths.extend(glob(os.path.join(mode_dir, ext)))
+
+    return _sort_tile_paths(paths)
+
+
+def _get_chunk_range_map(son):
+    chunk_range = {}
+    try:
+        meta_path = getattr(son, 'sonMetaFile', None)
+        if not meta_path or not os.path.exists(meta_path):
+            return chunk_range
+
+        df = pd.read_csv(meta_path, usecols=['chunk_id', 'ping_cnt', 'pixM'])
+        if len(df) == 0:
+            return chunk_range
+
+        df['chunk_id'] = pd.to_numeric(df['chunk_id'], errors='coerce')
+        df['ping_cnt'] = pd.to_numeric(df['ping_cnt'], errors='coerce')
+        df['pixM'] = pd.to_numeric(df['pixM'], errors='coerce')
+        df = df.dropna(subset=['chunk_id', 'ping_cnt', 'pixM'])
+        if len(df) == 0:
+            return chunk_range
+
+        # Approximate chunk range in meters from ping count and pixel size.
+        df['range_m'] = df['ping_cnt'] * df['pixM']
+        grouped = df.groupby('chunk_id', as_index=False)['range_m'].median()
+        for _, row in grouped.iterrows():
+            cid = int(row['chunk_id'])
+            rng = float(row['range_m'])
+            if np.isfinite(rng) and rng > 0:
+                chunk_range[cid] = rng
+    except Exception:
+        return {}
+
+    return chunk_range
+
+
+def _range_reference_m(chunk_range_map):
+    if not chunk_range_map:
+        return None
+    vals = [float(v) for v in chunk_range_map.values() if np.isfinite(v) and float(v) > 0]
+    if len(vals) == 0:
+        return None
+    return float(np.median(vals))
+
+
+def _pad_to_height(img, target_h):
+    h, w = img.shape[:2]
+    if h >= target_h:
+        return img
+    pad_h = target_h - h
+    return cv2.copyMakeBorder(img, 0, pad_h, 0, 0, cv2.BORDER_CONSTANT, value=0)
+
+
+def _pad_to_height_center(img, target_h):
+    h, w = img.shape[:2]
+    if h >= target_h:
+        return img
+    pad_h = target_h - h
+    top = pad_h // 2
+    bottom = pad_h - top
+    return cv2.copyMakeBorder(img, top, bottom, 0, 0, cv2.BORDER_CONSTANT, value=0)
+
+
+def _pad_to_width(img, target_w):
+    h, w = img.shape[:2]
+    if w >= target_w:
+        return img
+    pad_w = target_w - w
+    return cv2.copyMakeBorder(img, 0, 0, 0, pad_w, cv2.BORDER_CONSTANT, value=0)
+
+
+def _scale_tile_by_range(img, tile_path, chunk_range_map=None, ref_range_m=None, base_h=None):
+    if img is None:
+        return None
+    if not (chunk_range_map and ref_range_m and base_h):
+        return img
+
+    chunk_id = _extract_chunk_id_from_path(tile_path)
+    if chunk_id is None:
+        return img
+
+    rng = chunk_range_map.get(chunk_id, None)
+    if rng is None or (not np.isfinite(rng)) or rng <= 0:
+        return img
+
+    scale = float(rng) / float(ref_range_m)
+    scale = max(0.25, min(4.0, scale))
+    target_h = max(1, int(round(base_h * scale)))
+    return _resize_height(img, target_h)
+
+
+def _build_strip_from_tiles(tile_paths, chunk_range_map=None, ref_range_m=None):
+    if len(tile_paths) == 0:
+        return None
+
+    imgs = []
+    base_h = None
+    if ref_range_m is None:
+        ref_range_m = _range_reference_m(chunk_range_map)
+
+    for path in tile_paths:
+        img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            continue
+
+        if base_h is None:
+            base_h = img.shape[0]
+
+        if chunk_range_map and ref_range_m and base_h:
+            chunk_id = _extract_chunk_id_from_path(path)
+            rng = chunk_range_map.get(chunk_id, None)
+            if rng is not None and np.isfinite(rng) and rng > 0:
+                scale = float(rng) / float(ref_range_m)
+                scale = max(0.25, min(4.0, scale))
+                target_h = max(1, int(round(base_h * scale)))
+                img = _resize_height(img, target_h)
+
+        imgs.append(img)
+
+    if len(imgs) == 0:
+        return None
+
+    # Preserve range-driven vertical scaling by padding each tile to common max height.
+    max_h = max(img.shape[0] for img in imgs)
+    imgs = [_pad_to_height(img, max_h) for img in imgs]
+    strip = cv2.hconcat(imgs)
+    return strip
+
+
+def _build_sidescan_combined(port_tiles, star_tiles, port_range_map=None, star_range_map=None, ref_range_m=None):
+    if len(port_tiles) == 0 or len(star_tiles) == 0:
+        return None
+
+    def _map_by_chunk(paths):
+        mapped = {}
+        for p in paths:
+            cid = _extract_chunk_id_from_path(p)
+            if cid is not None:
+                mapped[int(cid)] = p
+        return mapped
+
+    port_by_chunk = _map_by_chunk(port_tiles)
+    star_by_chunk = _map_by_chunk(star_tiles)
+
+    # Newest chunk first so most recent data appears at the top of the waterfall.
+    common = sorted(set(port_by_chunk.keys()) & set(star_by_chunk.keys()), reverse=True)
+    if len(common) == 0:
+        pair_paths = list(zip(port_tiles, star_tiles))
+        pair_paths = list(reversed(pair_paths))
+    else:
+        pair_paths = [(port_by_chunk[c], star_by_chunk[c]) for c in common]
+
+    # Baseline heights for range-based scaling.
+    base_h_port = None
+    base_h_star = None
+    for p_path, s_path in pair_paths:
+        if base_h_port is None:
+            p_img = cv2.imread(p_path, cv2.IMREAD_UNCHANGED)
+            if p_img is not None:
+                base_h_port = p_img.shape[0]
+        if base_h_star is None:
+            s_img = cv2.imread(s_path, cv2.IMREAD_UNCHANGED)
+            if s_img is not None:
+                base_h_star = s_img.shape[0]
+        if (base_h_port is not None) and (base_h_star is not None):
+            break
+
+    rows = []
+    for p_path, s_path in pair_paths:
+        p_img = cv2.imread(p_path, cv2.IMREAD_UNCHANGED)
+        s_img = cv2.imread(s_path, cv2.IMREAD_UNCHANGED)
+        if p_img is None or s_img is None:
+            continue
+
+        p_img = _scale_tile_by_range(p_img, p_path, port_range_map, ref_range_m, base_h_port)
+        s_img = _scale_tile_by_range(s_img, s_path, star_range_map, ref_range_m, base_h_star)
+
+        # Apply side-scan waterfall geometry: rotate both CCW, then flip port to place nadir at center.
+        p_img = cv2.rotate(p_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        s_img = cv2.rotate(s_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        p_img = cv2.flip(p_img, 1)
+
+        p_img = _to_bgr8(p_img)
+        s_img = _to_bgr8(s_img)
+
+        row_h = max(p_img.shape[0], s_img.shape[0])
+        # Align each chunk pair on the vertical centerline.
+        p_img = _pad_to_height_center(p_img, row_h)
+        s_img = _pad_to_height_center(s_img, row_h)
+
+        # Keep chunk row widths comparable before vertical stacking.
+        row = cv2.hconcat([p_img, s_img])
+        rows.append(row)
+
+    if len(rows) == 0:
+        return None
+
+    max_w = max(r.shape[1] for r in rows)
+    rows = [_pad_to_width(r, max_w) for r in rows]
+    return cv2.vconcat(rows)
+
+
+def _window_positions(length, window_size, stride, reverse=False):
+    if length <= window_size:
+        positions = [0]
+    else:
+        positions = list(range(0, length - window_size + 1, stride))
+        if positions[-1] != (length - window_size):
+            positions.append(length - window_size)
+
+    if reverse:
+        positions = list(reversed(positions))
+
+    return positions
+
+
+def _export_scrolling_video(
+    img,
+    out_video,
+    axis='x',
+    reverse=False,
+    fps=10,
+    target_size=(1920, 1080),
+    stride=64,
+):
+    os.makedirs(os.path.dirname(out_video), exist_ok=True)
+
+    h, w = img.shape[:2]
+    target_w, target_h = int(target_size[0]), int(target_size[1])
+    target_w = max(64, target_w)
+    target_h = max(64, target_h)
+
+    # Derive crop window from target resolution while preserving aspect ratio.
+    target_aspect = target_w / float(target_h)
+    win_w = min(w, target_w)
+    win_h = min(h, target_h)
+    if win_w <= 0 or win_h <= 0:
+        return
+
+    cur_aspect = win_w / float(win_h)
+    if cur_aspect > target_aspect:
+        win_w = max(1, int(round(win_h * target_aspect)))
+    else:
+        win_h = max(1, int(round(win_w / target_aspect)))
+
+    # If image is larger than target, prefer at least target-sized crop on scroll axis.
+    if axis == 'y' and h >= target_h:
+        win_h = target_h
+        win_w = min(w, max(1, int(round(win_h * target_aspect))))
+    elif axis != 'y' and w >= target_w:
+        win_w = target_w
+        win_h = min(h, max(1, int(round(win_w / target_aspect))))
+
+    # Ensure stride is valid and not too tiny for large windows.
+    stride = int(stride)
+    if stride <= 0:
+        stride = max(1, (win_h if axis == 'y' else win_w) // 10)
+    if axis == 'y':
+        win = min(win_h, h)
+        positions = _window_positions(h, win, stride, reverse=reverse)
+        first_frame = img[positions[0]:positions[0] + win, :win_w]
+    else:
+        win = min(win_w, w)
+        positions = _window_positions(w, win, stride, reverse=reverse)
+        first_frame = img[:win_h, positions[0]:positions[0] + win]
+
+    first_frame_bgr = _to_bgr8(first_frame)
+    frame_h, frame_w = target_h, target_w
+    writer = cv2.VideoWriter(
+        out_video,
+        cv2.VideoWriter_fourcc(*'mp4v'),
+        max(1, int(fps)),
+        (frame_w, frame_h),
+    )
+
+    if not writer.isOpened():
+        print(f"\n\tWARNING: Could not open video writer for {out_video}")
+        return
+
+    for pos in positions:
+        if axis == 'y':
+            frame = img[pos:pos + win, :win_w]
+        else:
+            frame = img[:win_h, pos:pos + win]
+
+        frame_bgr = _to_bgr8(frame)
+        if frame_bgr.shape[0] != frame_h or frame_bgr.shape[1] != frame_w:
+            frame_bgr = cv2.resize(frame_bgr, (frame_w, frame_h), interpolation=cv2.INTER_AREA)
+        writer.write(frame_bgr)
+
+    writer.release()
+
+
+def _export_waterfall_products(
+    sonObjs,
+    wcp,
+    wcm,
+    wcr,
+    wco,
+    mode_selection='auto',
+    ss_image=False,
+    ss_video=False,
+    di_image=False,
+    di_video=False,
+    fps=10,
+    video_resolution='1080p',
+    stride=64,
+):
+    if not (ss_image or ss_video or di_image or di_video):
+        return
+
+    mode_flags = {
+        'wcp': bool(wcp),
+        'wcm': bool(wcm),
+        'src': bool(wcr),
+        'wco': bool(wco),
+    }
+
+    mode_selection = str(mode_selection).strip().lower()
+    if mode_selection in {'wcp', 'src', 'wcp+src'}:
+        if mode_selection == 'wcp':
+            modes = ['wcp']
+        elif mode_selection == 'src':
+            modes = ['src']
+        else:
+            modes = ['wcp', 'src']
+    else:
+        modes = [m for m, enabled in mode_flags.items() if enabled]
+
+    if len(modes) == 0:
+        print('\n\tWaterfall export requested, but no sonogram tile modes are enabled (wcp/wcm/wcr/wco). Skipping.')
+        return
+
+    res_key = str(video_resolution).strip().lower()
+    if res_key in {'4k', '2160p'}:
+        target_size = (3840, 2160)
+    elif res_key in {'1080p', 'fhd'}:
+        target_size = (1920, 1080)
+    elif res_key in {'720p', 'hd'}:
+        target_size = (1280, 720)
+    elif res_key in {'4xxp', '480p'}:
+        target_size = (854, 480)
+    else:
+        target_size = (1920, 1080)
+
+    print('\nGenerating waterfall products...')
+
+    # Group side-scan beams into port/star pairs by suffix key.
+    ss_groups = {}
+    down_beams = []
+    for son in sonObjs:
+        beam = str(getattr(son, 'beamName', ''))
+        if _is_sidescan_beam(beam):
+            key = _sidescan_group_key(beam)
+            group = ss_groups.setdefault(key, {})
+            if beam.startswith('ss_port'):
+                group['port'] = son
+            elif beam.startswith('ss_star'):
+                group['star'] = son
+        else:
+            down_beams.append(son)
+
+    # Side-scan: combine port/star into one waterfall and scroll top -> bottom.
+    if ss_image or ss_video:
+        ss_any = False
+        for group_key, group in sorted(ss_groups.items()):
+            if 'port' not in group or 'star' not in group:
+                continue
+
+            proj_dir = group['port'].projDir
+            port_range_map = _get_chunk_range_map(group['port'])
+            star_range_map = _get_chunk_range_map(group['star'])
+            shared_ref = _range_reference_m(port_range_map)
+            if shared_ref is None:
+                shared_ref = _range_reference_m(star_range_map)
+
+            for mode in modes:
+                port_tiles = _collect_mode_tile_paths(group['port'], mode)
+                star_tiles = _collect_mode_tile_paths(group['star'], mode)
+                if len(port_tiles) == 0 or len(star_tiles) == 0:
+                    continue
+
+                ss_any = True
+
+                combined = _build_sidescan_combined(
+                    port_tiles,
+                    star_tiles,
+                    port_range_map=port_range_map,
+                    star_range_map=star_range_map,
+                    ref_range_m=shared_ref,
+                )
+                if combined is None:
+                    continue
+
+                # Ensure both port and star fully fit inside output frame width.
+                combined = _fit_width(combined, target_size[0])
+                combined = _downscale_if_needed(combined)
+
+                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'sidescan', str(group_key), mode)
+                os.makedirs(out_dir, exist_ok=True)
+
+                if ss_image:
+                    cv2.imwrite(os.path.join(out_dir, 'waterfall.png'), combined)
+
+                if ss_video:
+                    _export_scrolling_video(
+                        combined,
+                        os.path.join(out_dir, 'waterfall_scroll_t2b.mp4'),
+                        axis='y',
+                        reverse=False,
+                        fps=fps,
+                        target_size=target_size,
+                        stride=stride,
+                    )
+
+        if not ss_any:
+            print('\n\tNo side-scan tiles found for requested waterfall mode(s).')
+            print('\tEnable or select matching mode(s), e.g., WCP and/or SRC.')
+
+    # Down-imaging: generate per-beam waterfall and scroll right -> left.
+    if di_image or di_video:
+        di_any = False
+        for son in down_beams:
+            beam = str(getattr(son, 'beamName', 'unknown_beam'))
+            proj_dir = son.projDir
+            down_range_map = _get_chunk_range_map(son)
+            down_ref = _range_reference_m(down_range_map)
+
+            for mode in modes:
+                tiles = _collect_mode_tile_paths(son, mode)
+                if len(tiles) == 0:
+                    continue
+
+                di_any = True
+
+                strip = _build_strip_from_tiles(
+                    tiles,
+                    chunk_range_map=down_range_map,
+                    ref_range_m=down_ref,
+                )
+                if strip is None:
+                    continue
+
+                strip = _downscale_if_needed(strip)
+
+                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'down_imaging', beam, mode)
+                os.makedirs(out_dir, exist_ok=True)
+
+                if di_image:
+                    cv2.imwrite(os.path.join(out_dir, 'waterfall.png'), strip)
+
+                if di_video:
+                    _export_scrolling_video(
+                        strip,
+                        os.path.join(out_dir, 'waterfall_scroll_r2l.mp4'),
+                        axis='x',
+                        reverse=True,
+                        fps=fps,
+                        target_size=target_size,
+                        stride=stride,
+                    )
+
+        if not di_any:
+            print('\n\tNo down-imaging tiles found for requested waterfall mode(s).')
+            print('\tEnable or select matching mode(s), e.g., WCP and/or SRC.')
 
 
 #===========================================
@@ -179,6 +749,14 @@ def read_master_func(logfilename='',
                      map_mosaic=0,
                      banklines=False,
                      side_scan_only=False,
+                     waterfall_ss_image=False,
+                     waterfall_ss_video=False,
+                     waterfall_di_image=False,
+                     waterfall_di_video=False,
+                     waterfall_video_fps=10,
+                     waterfall_video_resolution='1080p',
+                     waterfall_mode_selection='auto',
+                     waterfall_window_stride=64,
                      return_context=False,
                      **kwargs):
 
@@ -589,6 +1167,17 @@ def read_master_func(logfilename='',
     ############################################################################
     # Decode DAT file (varies by model)                                        #
     ############################################################################
+
+    wf_mode = str(waterfall_mode_selection).strip().lower()
+    wf_requested = bool(waterfall_ss_image) or bool(waterfall_ss_video) or bool(waterfall_di_image) or bool(waterfall_di_video)
+    if wf_requested:
+        if wf_mode == 'wcp':
+            wcp = True
+        elif wf_mode == 'src':
+            wcr = True
+        elif wf_mode == 'wcp+src':
+            wcp = True
+            wcr = True
 
     if (project_mode != 2):
 
@@ -1705,6 +2294,32 @@ def read_master_func(logfilename='',
 
         del son
         print("\nDone!")
+        print("Time (s):", round(time.time() - start_time, ndigits=1))
+        printUsage()
+
+    if bool(waterfall_ss_image) or bool(waterfall_ss_video) or bool(waterfall_di_image) or bool(waterfall_di_video):
+        start_time = time.time()
+        print("\nGenerating waterfall image/video exports...")
+        try:
+            _export_waterfall_products(
+                sonObjs,
+                wcp=wcp,
+                wcm=wcm,
+                wcr=wcr,
+                wco=wco,
+                mode_selection=waterfall_mode_selection,
+                ss_image=bool(waterfall_ss_image),
+                ss_video=bool(waterfall_ss_video),
+                di_image=bool(waterfall_di_image),
+                di_video=bool(waterfall_di_video),
+                fps=int(waterfall_video_fps),
+                video_resolution=str(waterfall_video_resolution),
+                stride=int(waterfall_window_stride),
+            )
+        except Exception as e:
+            print(f"\nWaterfall export failed: {e}")
+
+        print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))
         printUsage()
 

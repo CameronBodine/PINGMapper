@@ -382,6 +382,84 @@ def gui(batch: bool):
     layout.append([text_tile])
     layout.append([col_tile_1, sg.VerticalSeparator(), col_tile_2, sg.VerticalSeparator(), col_tile_3])
 
+    ############################
+    # Waterfall Image/Video Exports
+
+    text_waterfall = sg.Text('Waterfall Image/Video Exports\n', font=("Helvetica", 14, "underline"))
+
+    tip_wf_ss_img = ml_tip('Export combined side-scan waterfall image (port+star), arranged for top-to-bottom scrolling.')
+    tip_wf_ss_vid = ml_tip('Export side-scan scrolling video (top to bottom) from combined port+star waterfall.')
+    tip_wf_di_img = ml_tip('Export down-imaging waterfall image for each down-looking beam.')
+    tip_wf_di_vid = ml_tip('Export down-imaging scrolling video (right to left) for each down-looking beam.')
+    tip_wf_fps = ml_tip('Waterfall video frame rate (frames per second).')
+    tip_wf_res = ml_tip('Video output resolution preset for waterfall videos.')
+    tip_wf_mode = ml_tip('Tile mode(s) used for waterfall export. Auto uses currently enabled tile exports.')
+    tip_wf_stride = ml_tip('Window step in pixels per frame (larger = faster scrolling).')
+
+    check_wf_ss_img = sg.Checkbox(
+        'Side-scan Waterfall Image (Port+Star Combined)',
+        key='waterfall_ss_image',
+        default=default_params.get('waterfall_ss_image', False),
+        tooltip=tip_wf_ss_img,
+    )
+    check_wf_ss_vid = sg.Checkbox(
+        'Side-scan Waterfall Video (Top -> Bottom)',
+        key='waterfall_ss_video',
+        default=default_params.get('waterfall_ss_video', False),
+        tooltip=tip_wf_ss_vid,
+    )
+    check_wf_di_img = sg.Checkbox(
+        'Down-imaging Waterfall Image',
+        key='waterfall_di_image',
+        default=default_params.get('waterfall_di_image', False),
+        tooltip=tip_wf_di_img,
+    )
+    check_wf_di_vid = sg.Checkbox(
+        'Down-imaging Waterfall Video (Right -> Left)',
+        key='waterfall_di_video',
+        default=default_params.get('waterfall_di_video', False),
+        tooltip=tip_wf_di_vid,
+    )
+
+    text_wf_fps = sg.Text('Video FPS', size=(20,1))
+    in_wf_fps = sg.Input(
+        key='waterfall_video_fps',
+        default_text=default_params.get('waterfall_video_fps', 10),
+        size=(10,1),
+        tooltip=tip_wf_fps,
+    )
+
+    text_wf_res = sg.Text('Video Resolution', size=(20,1))
+    combo_wf_res = sg.Combo(
+        ['4K', '1080p', '720p', '4xxp'],
+        key='waterfall_video_resolution',
+        default_value=default_params.get('waterfall_video_resolution', '1080p'),
+        tooltip=tip_wf_res,
+    )
+
+    text_wf_mode = sg.Text('Waterfall Mode(s)', size=(20,1))
+    combo_wf_mode = sg.Combo(
+        ['Auto (enabled exports)', 'WCP', 'SRC', 'WCP+SRC'],
+        key='waterfall_mode_selection',
+        default_value=default_params.get('waterfall_mode_selection', 'Auto (enabled exports)'),
+        tooltip=tip_wf_mode,
+    )
+
+    text_wf_stride = sg.Text('Window Stride [px]', size=(20,1))
+    in_wf_stride = sg.Input(
+        key='waterfall_window_stride',
+        default_text=default_params.get('waterfall_window_stride', 64),
+        size=(10,1),
+        tooltip=tip_wf_stride,
+    )
+
+    col_wf_1 = sg.Column([[check_wf_ss_img], [check_wf_ss_vid], [check_wf_di_img], [check_wf_di_vid]], pad=0)
+    col_wf_2 = sg.Column([[text_wf_fps, in_wf_fps], [text_wf_res, combo_wf_res], [text_wf_mode, combo_wf_mode], [text_wf_stride, in_wf_stride]], pad=0)
+
+    layout.append([sg.HorizontalSeparator()])
+    layout.append([text_waterfall])
+    layout.append([col_wf_1, sg.VerticalSeparator(), col_wf_2])
+
     ########################
     # Depth & Shadow Removal
 
@@ -695,6 +773,12 @@ def gui(batch: bool):
         map_mosaic = int(map_mosaic)
 
 
+        wf_mode = values['waterfall_mode_selection']
+        if wf_mode == 'Auto (enabled exports)':
+            wf_mode = 'auto'
+        else:
+            wf_mode = str(wf_mode).strip().lower()
+
         params = {
             # 'humFile':values[0],
             # 'projDir':os.path.join(values[1], values[2]),
@@ -753,6 +837,14 @@ def gui(batch: bool):
             'map_mosaic':map_mosaic,
             'banklines':values['banklines'],
             'coverage':values['coverage']
+            , 'waterfall_ss_image':values['waterfall_ss_image']
+            , 'waterfall_ss_video':values['waterfall_ss_video']
+            , 'waterfall_di_image':values['waterfall_di_image']
+            , 'waterfall_di_video':values['waterfall_di_video']
+            , 'waterfall_video_fps':int(values['waterfall_video_fps'])
+            , 'waterfall_video_resolution':values['waterfall_video_resolution']
+            , 'waterfall_mode_selection':wf_mode
+            , 'waterfall_window_stride':int(values['waterfall_window_stride'])
         }
 
         globals().update(params)
