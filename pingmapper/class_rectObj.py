@@ -2409,7 +2409,7 @@ class rectObj(sonObj):
         NA
         '''
         filterIntensity = False
-        pix_res = self.pix_res_son
+        pix_res = self.pix_res_son if son else self.pix_res_map
         do_resize = True
 
         # # Set pixel resolution
@@ -2786,7 +2786,7 @@ class rectObj(sonObj):
             del out, img
 
             if do_resize:
-                self._pixresResize(gtiff)
+                self._pixresResize(gtiff, son=son)
 
         if self.rect_wcr:
             if son:
@@ -2932,7 +2932,7 @@ class rectObj(sonObj):
             del out
 
             if do_resize:
-                self._pixresResize(gtiff)
+                self._pixresResize(gtiff, son=son)
 
         gc.collect()
 

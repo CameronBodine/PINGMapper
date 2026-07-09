@@ -714,8 +714,18 @@ class portstarObj(object):
                 except:
                     pass
 
-            # First built a vrt
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
+            # For substrate/prediction mosaics, enforce configured map resolution.
+            force_map_res = (not son) and (self.port.pix_res_map != 0)
+            if force_map_res:
+                vrt_options = gdal.BuildVRTOptions(
+                    resampleAlg=resampleAlg,
+                    bandList=bands_to_use,
+                    xRes=self.port.pix_res_map,
+                    yRes=self.port.pix_res_map,
+                    targetAlignedPixels=True,
+                )
+            else:
+                vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Create GeoTiff from vrt
@@ -733,7 +743,10 @@ class portstarObj(object):
             # gdal.Translate(outTIF, ds, xRes=xRes, yRes=yRes, **kwargs)
 
             # Create geotiff
-            gdal.Translate(outTIF, ds, **kwargs)
+            if force_map_res:
+                gdal.Translate(outTIF, ds, xRes=self.port.pix_res_map, yRes=self.port.pix_res_map, **kwargs)
+            else:
+                gdal.Translate(outTIF, ds, **kwargs)
 
             # Generate overviews
             if overview:
@@ -841,7 +854,17 @@ class portstarObj(object):
 
             # Build VRT
             # vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands, xRes=xRes, yRes=yRes)
-            vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
+            force_map_res = (not son) and (self.port.pix_res_map != 0)
+            if force_map_res:
+                vrt_options = gdal.BuildVRTOptions(
+                    resampleAlg=resampleAlg,
+                    bandList=bands_to_use,
+                    xRes=self.port.pix_res_map,
+                    yRes=self.port.pix_res_map,
+                    targetAlignedPixels=True,
+                )
+            else:
+                vrt_options = gdal.BuildVRTOptions(resampleAlg=resampleAlg, bandList = bands_to_use)
             gdal.BuildVRT(outVRT, imgs, options=vrt_options)
 
             # Generate overviews
