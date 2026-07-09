@@ -29,7 +29,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import os, sys
+import os, sys, re
 
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1066,9 +1066,12 @@ class mapSubObj(rectObj):
 
         # Extract chunkID from filename and store in dict
         for n in npzs:
-            c = os.path.basename(n)
-            c = c.split('.')[0]
-            c = int(c.split('_')[-1])
+            c = os.path.splitext(os.path.basename(n))[0]
+            match = re.search(r'_(\d+)$', c)
+            if match is None:
+                continue
+
+            c = int(match.group(1))
             toMap[c] = n
 
         del npzDir, npzs
