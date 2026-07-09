@@ -352,7 +352,8 @@ def _build_sidescan_combined(port_tiles, star_tiles, port_range_map=None, star_r
     port_by_chunk = _map_by_chunk(port_tiles)
     star_by_chunk = _map_by_chunk(star_tiles)
 
-    # Newest chunk first so most recent data appears at the top of the waterfall.
+    # Newest chunk first so newer data sits at the top of the stitched waterfall,
+    # while the oldest chunk remains at the bottom for the initial video frame.
     common = sorted(set(port_by_chunk.keys()) & set(star_by_chunk.keys()), reverse=True)
     if len(common) == 0:
         pair_paths = list(zip(port_tiles, star_tiles))
@@ -606,7 +607,7 @@ def _export_waterfall_products(
                 combined = _fit_width(combined, target_size[0])
                 combined = _downscale_if_needed(combined)
 
-                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'sidescan', str(group_key), mode)
+                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'sidescan', mode)
                 os.makedirs(out_dir, exist_ok=True)
 
                 if ss_image:
@@ -617,7 +618,7 @@ def _export_waterfall_products(
                         combined,
                         os.path.join(out_dir, 'waterfall_scroll_t2b.mp4'),
                         axis='y',
-                        reverse=False,
+                        reverse=True,
                         fps=fps,
                         target_size=target_size,
                         stride=stride,
@@ -653,18 +654,18 @@ def _export_waterfall_products(
 
                 strip = _downscale_if_needed(strip)
 
-                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'down_imaging', beam, mode)
+                out_dir = os.path.join(proj_dir, 'waterfall_exports', 'down_imaging', mode)
                 os.makedirs(out_dir, exist_ok=True)
 
                 if di_image:
-                    cv2.imwrite(os.path.join(out_dir, 'waterfall.png'), strip)
+                    cv2.imwrite(os.path.join(out_dir, f'{beam}_waterfall.png'), strip)
 
                 if di_video:
                     _export_scrolling_video(
                         strip,
-                        os.path.join(out_dir, 'waterfall_scroll_r2l.mp4'),
+                        os.path.join(out_dir, f'{beam}_waterfall_scroll.mp4'),
                         axis='x',
-                        reverse=True,
+                        reverse=False,
                         fps=fps,
                         target_size=target_size,
                         stride=stride,
