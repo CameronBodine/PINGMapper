@@ -1500,7 +1500,7 @@ class sonObj(object):
             # plt.savefig(outfile)
 
             norm_data = data / 255.0
-            colored_data = plt.cm.get_cmap(self.sonogram_colorMap)(norm_data)
+            colored_data = plt.get_cmap(self.sonogram_colorMap)(norm_data)
             colored_data = (colored_data[:, :, :3] * 255).astype('uint8')
             data = colored_data
 

@@ -1968,7 +1968,7 @@ class rectObj(sonObj):
                     use_uint8_rgb = self._export_colormap_as_uint8()
                     if source_scale_bounds is not None:
                         norm_data = self._normalize_with_bounds(sonRect_raw16, source_scale_bounds[0], source_scale_bounds[1])
-                        cmap = plt.cm.get_cmap(self.son_colorMap_name)(norm_data)
+                        cmap = plt.get_cmap(self.son_colorMap_name)(norm_data)
                         if use_uint8_rgb:
                             sonRect_out = np.clip(cmap[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
@@ -2769,9 +2769,9 @@ class rectObj(sonObj):
                     if source_scale_bounds is not None:
                         norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
                         if use_uint8_rgb:
-                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                            out16 = np.clip(plt.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
-                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                            out16 = np.clip(plt.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
                         valid_mask = out16_raw > 0
                         out16[valid_mask] = np.maximum(out16[valid_mask], 1)
                     else:
@@ -2914,9 +2914,9 @@ class rectObj(sonObj):
                     if source_scale_bounds is not None:
                         norm_data = self._normalize_with_bounds(out16_raw, source_scale_bounds[0], source_scale_bounds[1])
                         if use_uint8_rgb:
-                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
+                            out16 = np.clip(plt.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 255.0, 0, 255).astype(np.uint8)
                         else:
-                            out16 = np.clip(plt.cm.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
+                            out16 = np.clip(plt.get_cmap(self.son_colorMap_name)(norm_data)[:, :, :3] * 65535.0, 0, 65535).astype(np.uint16)
                         valid_mask = out16_raw > 0
                         out16[valid_mask] = np.maximum(out16[valid_mask], 1)
                     else:

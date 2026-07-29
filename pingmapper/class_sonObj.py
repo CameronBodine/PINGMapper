@@ -1872,7 +1872,7 @@ class sonObj(object):
         return out
 
     def _colorize_array_batched(self, norm_data, valid_mask, cmap_name, scale_max, out_dtype):
-        cmap = plt.cm.get_cmap(cmap_name)
+        cmap = plt.get_cmap(cmap_name)
         height, width = norm_data.shape
         out = np.zeros((height, width, 3), dtype=out_dtype)
 

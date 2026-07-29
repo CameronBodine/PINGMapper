@@ -880,7 +880,7 @@ class mapSubObj(rectObj):
             ax.imshow(son, cmap='gray')
 
             # Prepare color map
-            color_map = plt.cm.get_cmap('viridis')
+            color_map = plt.get_cmap('viridis')
 
             im = ax.imshow(c, cmap=color_map, alpha=0.5, vmin=minSoft, vmax=maxSoft)
             ax.axis('off')
