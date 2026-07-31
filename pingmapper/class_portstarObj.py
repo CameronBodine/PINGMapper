@@ -3185,7 +3185,11 @@ class portstarObj(object):
 
         for feature in dst_layer:
             subID = str(int(feature.GetField('Substrate')))
-            subName = MY_CLASS_NAMES[subID]
+            subName = MY_CLASS_NAMES.get(subID)
+            if subName is None:
+                print("\n\tWARNING: Unexpected substrate value '{}' found in raster. "
+                      "This value is not in the model config and will be removed from output.".format(subID))
+                subName = 'Unknown'
             feature.SetField('Name', subName)
             dst_layer.SetFeature(feature)
 
@@ -3204,10 +3208,12 @@ class portstarObj(object):
             feature.SetField("Area_m", area)
             dst_layer.SetFeature(feature)
 
-        # Delete NoData Polygon
+        # Delete NoData and any unexpected-value polygons
         # https://gis.stackexchange.com/questions/254444/deleting-selected-features-from-vector-ogr-in-gdal-python
+        valid_sub_ids = [int(k) for k in MY_CLASS_NAMES.keys() if int(k) != 0]
+        invalid_filter = "Substrate NOT IN ({})".format(','.join(str(v) for v in valid_sub_ids))
         layer = dst_ds.GetLayer()
-        layer.SetAttributeFilter("Substrate = 0")
+        layer.SetAttributeFilter(invalid_filter)
 
         for feat in layer:
             layer.DeleteFeature(feat.GetFID())
