@@ -686,10 +686,34 @@ class sonObj(object):
         else:
             time_table = pd.read_csv(time_table)
 
+        if 'start_seconds' not in time_table.columns or 'end_seconds' not in time_table.columns:
+            raise ValueError("time_table must contain 'start_seconds' and 'end_seconds' columns.")
+
+        # Normalize to numeric and drop unusable rows.
+        time_table['start_seconds'] = pd.to_numeric(time_table['start_seconds'], errors='coerce')
+        time_table['end_seconds'] = pd.to_numeric(time_table['end_seconds'], errors='coerce')
+        time_table = time_table.dropna(subset=['start_seconds', 'end_seconds'])
+
+        if time_table.empty:
+            return sonDF
+
+        son_time = pd.to_numeric(sonDF[time_col], errors='coerce')
+        son_min = son_time.min()
+
+        # Auto-detect relative clip ranges when sonar time is epoch-like and
+        # clip-table values are small. This allows 0..N seconds-from-start.
+        tt_max = np.nanmax(np.abs(time_table[['start_seconds', 'end_seconds']].to_numpy(dtype=float)))
+        use_relative_seconds = np.isfinite(son_min) and son_min > 1e8 and np.isfinite(tt_max) and tt_max < 1e7
+
+        offset = float(son_min) if use_relative_seconds else 0.0
+
         for i, row in time_table.iterrows():
 
-            start = row['start_seconds']
-            end = row['end_seconds']
+            start = float(row['start_seconds']) + offset
+            end = float(row['end_seconds']) + offset
+
+            if end < start:
+                start, end = end, start
 
             # dfFilt = sonDF[(sonDF['time_s'] >= start) & (sonDF['time_s'] <= end)]
             sonDF.loc[(sonDF[time_col] >= start) & (sonDF[time_col] <= end) & (sonDF[filtCol] == True), filtTimeCol] = True

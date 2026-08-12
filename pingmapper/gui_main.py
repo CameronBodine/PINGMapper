@@ -207,7 +207,7 @@ def gui(batch: bool):
     tip_speed_min = ml_tip('Minimum vessel speed filter in m/s. 0=no minimum speed filter.')
     tip_speed_max = ml_tip('Maximum vessel speed filter in m/s. 0=no maximum speed filter.')
     tip_aoi = ml_tip('Optional polygon shapefile (.shp) to spatially filter sonar records to area of interest.')
-    tip_time_filter = ml_tip('Option to filter sonar records by time range using start/end seconds.')
+    tip_time_filter = ml_tip('Filter by start/end time ranges. Use either relative seconds from recording start (e.g., 0-2000) or absolute Unix seconds.')
     # Cropping
     text_crop = sg.Text('Crop Range [m]', size=(22,1))
     in_crop = sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1), tooltip=tip_crop)
@@ -280,6 +280,9 @@ def gui(batch: bool):
     tip_egn_factor = ml_tip('Percent clip amount used by EGN Stretch Factor when Percent Clip is selected.')
     tip_gamma = ml_tip('Tone curve control. <1 brightens mid-tones, >1 darkens mid-tones.')
     tip_gain = ml_tip('Linear brightness multiplier. >1 brightens overall intensity, <1 darkens.')
+    tip_db = ml_tip('Apply 20*log10 transform before final 8-bit mapping. Helps reveal low-amplitude detail.')
+    tip_clahe = ml_tip('Apply adaptive histogram equalization (CLAHE) after dB transform for local contrast boost.')
+    tip_clahe_clip = ml_tip('CLAHE clip limit. Lower values are gentler; higher values increase local contrast.')
     # EGN
     check_egn = sg.Checkbox('Empiracal Gain Normalization (EGN)', key='egn', default=default_params['egn'], tooltip=tip_egn)
 
@@ -306,8 +309,36 @@ def gui(batch: bool):
         default_value=float(default_params['tone_gain']),
         tooltip=tip_gain,
     )
+    check_sonar_db = sg.Checkbox(
+        'Display dB Transform',
+        key='sonar_db_transform',
+        default=default_params.get('sonar_db_transform', False),
+        tooltip=tip_db,
+    )
+    check_sonar_clahe = sg.Checkbox(
+        'Display CLAHE',
+        key='sonar_clahe',
+        default=default_params.get('sonar_clahe', False),
+        tooltip=tip_clahe,
+    )
+    text_clahe_clip = sg.Text('CLAHE Clip Limit', size=(20,1))
+    in_clahe_clip = sg.Input(
+        key='sonar_clahe_clip_limit',
+        default_text=default_params.get('sonar_clahe_clip_limit', 0.01),
+        size=(10,1),
+        tooltip=tip_clahe_clip,
+    )
 
-    col_egn_1 = sg.Column([[text_egn_gamma, slide_egn_gamma], [text_egn_gain, slide_egn_gain]], pad=0)
+    col_egn_1 = sg.Column(
+        [
+            [text_egn_gamma, slide_egn_gamma],
+            [text_egn_gain, slide_egn_gain],
+            [check_sonar_db],
+            [check_sonar_clahe],
+            [text_clahe_clip, in_clahe_clip],
+        ],
+        pad=0,
+    )
     col_egn_2 = sg.Column([[check_egn], [text_egn_stretch, combo_egn_stretch], [text_egn_factor, in_egn_factor]], pad=0)
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
@@ -804,6 +835,9 @@ def gui(batch: bool):
             'egn_stretch_factor':float(values['egn_stretch_factor']),
             'tone_gamma':float(values['tone_gamma']),
             'tone_gain':float(values['tone_gain']),
+            'sonar_db_transform':values['sonar_db_transform'],
+            'sonar_clahe':values['sonar_clahe'],
+            'sonar_clahe_clip_limit':float(values['sonar_clahe_clip_limit']),
             'wcp':values['wcp'],
             'wcm':values['wcm'],
             'wcr':values['wcr'],

@@ -718,6 +718,9 @@ def read_master_func(logfilename='',
                      egn_stretch_factor=1,
                      tone_gamma=1.0,
                      tone_gain=1.0,
+                     sonar_db_transform=False,
+                     sonar_clahe=False,
+                     sonar_clahe_clip_limit=0.01,
                      wcp=False,
                      wcm=False,
                      wcr=False,
@@ -1038,6 +1041,9 @@ def read_master_func(logfilename='',
         son.son8bit = sonar_obj.son8bit
         if hasattr(sonar_obj, 'sample_dtype'):
             son.sample_dtype = sonar_obj.sample_dtype
+        elif file_type == '.svlog':
+            # Cerulean pwr_results are uint16 values in little-endian order.
+            son.sample_dtype = '<u2'
         if hasattr(sonar_obj, 'export_raw_16bit'):
             son.export_raw_16bit = sonar_obj.export_raw_16bit
         if hasattr(son, 'sample_dtype'):
@@ -1201,6 +1207,9 @@ def read_master_func(logfilename='',
             son.cropRange = cropRange
             son.tone_gamma = tone_gamma
             son.tone_gain = tone_gain
+            son.sonar_db_transform = bool(sonar_db_transform)
+            son.sonar_clahe = bool(sonar_clahe)
+            son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
             # Do range crop, if necessary
             if cropRange > 0.0:
                 if file_type == '.xtf' and _is_sidescan_beam(getattr(son, 'beamName', '')):
@@ -1394,6 +1403,9 @@ def read_master_func(logfilename='',
             son.wcp = wcp
             son.tone_gamma = tone_gamma
             son.tone_gain = tone_gain
+            son.sonar_db_transform = bool(sonar_db_transform)
+            son.sonar_clahe = bool(sonar_clahe)
+            son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
 
             beam = son.beamName
             if wcr:

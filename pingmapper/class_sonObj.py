@@ -30,6 +30,7 @@
 # SOFTWARE.
 
 import os, sys
+from skimage import exposure
 
 # Add 'pingmapper' to the path, may not need after pypi package...
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -708,10 +709,34 @@ class sonObj(object):
         else:
             time_table = pd.read_csv(time_table)
 
+        if 'start_seconds' not in time_table.columns or 'end_seconds' not in time_table.columns:
+            raise ValueError("time_table must contain 'start_seconds' and 'end_seconds' columns.")
+
+        # Normalize to numeric and drop unusable rows.
+        time_table['start_seconds'] = pd.to_numeric(time_table['start_seconds'], errors='coerce')
+        time_table['end_seconds'] = pd.to_numeric(time_table['end_seconds'], errors='coerce')
+        time_table = time_table.dropna(subset=['start_seconds', 'end_seconds'])
+
+        if time_table.empty:
+            return sonDF
+
+        son_time = pd.to_numeric(sonDF[time_col], errors='coerce')
+        son_min = son_time.min()
+
+        # Auto-detect relative clip ranges when sonar time is epoch-like and
+        # clip-table values are small. This allows 0..N seconds-from-start.
+        tt_max = np.nanmax(np.abs(time_table[['start_seconds', 'end_seconds']].to_numpy(dtype=float)))
+        use_relative_seconds = np.isfinite(son_min) and son_min > 1e8 and np.isfinite(tt_max) and tt_max < 1e7
+
+        offset = float(son_min) if use_relative_seconds else 0.0
+
         for i, row in time_table.iterrows():
 
-            start = row['start_seconds']
-            end = row['end_seconds']
+            start = float(row['start_seconds']) + offset
+            end = float(row['end_seconds']) + offset
+
+            if end < start:
+                start, end = end, start
 
             # dfFilt = sonDF[(sonDF['time_s'] >= start) & (sonDF['time_s'] <= end)]
             sonDF.loc[(sonDF[time_col] >= start) & (sonDF[time_col] <= end) & (sonDF[filtCol] == True), filtTimeCol] = True
@@ -1238,6 +1263,19 @@ class sonObj(object):
                         if np.isfinite(wf) and wf > 0:
                             dat = dat * (2.0 ** (-float(wf)))
 
+                if bool(getattr(self, '_use_cerulean_power_scale', False)):
+                    dat = dat.astype(np.float32, copy=False)
+                    if hasattr(self, 'minPwrDb') and hasattr(self, 'maxPwrDb') and i < len(self.minPwrDb) and i < len(self.maxPwrDb):
+                        min_db = self.minPwrDb[i]
+                        max_db = self.maxPwrDb[i]
+                        if np.isfinite(min_db) and np.isfinite(max_db) and (max_db > min_db):
+                            # Issue #206: Cerulean pwr_results[] are normalized
+                            # uint16 values that must be rescaled with min/max dB.
+                            dat_db = float(min_db) + (dat / 65535.0) * (float(max_db) - float(min_db))
+                            # Keep values non-negative for downstream intensity
+                            # processing while preserving the per-ping dB span.
+                            dat = dat_db - float(min_db)
+
                 n_samples = min(len(dat), sonDat.shape[0])
                 if n_samples <= 0:
                     skipped_reads += 1
@@ -1267,6 +1305,82 @@ class sonObj(object):
 
         self.sonDat = self._convert_son_dat_to_uint8(sonDat)
         return
+
+    def _apply_display_enhancements(self, sonDat):
+        """Optional display-stage intensity transforms before uint8 mapping.
+
+        These transforms are intended to improve perceptual contrast of exported
+        sonograms while keeping the processing pipeline opt-in and backward-
+        compatible by default.
+        """
+        use_db = bool(getattr(self, 'sonar_db_transform', False))
+        use_clahe = bool(getattr(self, 'sonar_clahe', False))
+
+        if not use_db and not use_clahe:
+            return sonDat
+
+        arr = np.asarray(sonDat, dtype=np.float32)
+        if arr.size == 0:
+            return arr
+
+        arr[~np.isfinite(arr)] = 0.0
+        arr[arr < 0] = 0.0
+
+        valid = arr > 0
+        if not np.any(valid):
+            return arr
+
+        if use_db:
+            # Use the smallest positive intensity as the log floor to avoid
+            # collapsing zeros to -inf and to preserve relative low amplitudes.
+            floor = float(np.nanmin(arr[valid]))
+            if (not np.isfinite(floor)) or floor <= 0:
+                floor = 1.0
+            arr = np.maximum(arr, floor)
+            arr = 20.0 * np.log10(arr)
+            arr = arr - np.nanmin(arr)
+
+        if use_clahe:
+            max_val = float(np.nanmax(arr))
+            if np.isfinite(max_val) and max_val > 0:
+                arr01 = np.clip(arr / max_val, 0.0, 1.0)
+                clip_limit = float(getattr(self, 'sonar_clahe_clip_limit', 0.01))
+                if (not np.isfinite(clip_limit)) or clip_limit <= 0:
+                    clip_limit = 0.01
+                try:
+                    arr01 = exposure.equalize_adapthist(arr01, clip_limit=clip_limit)
+                    arr = np.asarray(arr01, dtype=np.float32)
+                except MemoryError:
+                    arr = self._apply_clahe_chunked(arr01, clip_limit)
+                except np.core._exceptions._ArrayMemoryError:
+                    arr = self._apply_clahe_chunked(arr01, clip_limit)
+
+        # Preserve no-data convention for empty samples.
+        arr[~valid] = 0.0
+        return arr
+
+    def _apply_clahe_chunked(self, arr01, clip_limit):
+        """Apply CLAHE in row-wise stripes to reduce peak memory usage."""
+        src = np.asarray(arr01, dtype=np.float32)
+        h, w = src.shape
+        if h == 0 or w == 0:
+            return src
+
+        # Keep per-stripe working set bounded. equalize_adapthist promotes to
+        # float64 internally, so we target moderate stripe sizes.
+        stripe_rows = int(getattr(self, 'sonar_clahe_rows_per_chunk', 512))
+        if stripe_rows <= 0:
+            stripe_rows = 512
+        stripe_rows = min(stripe_rows, h)
+
+        out = np.empty_like(src, dtype=np.float32)
+        for start in range(0, h, stripe_rows):
+            end = min(start + stripe_rows, h)
+            stripe = src[start:end, :]
+            stripe_eq = exposure.equalize_adapthist(stripe, clip_limit=clip_limit)
+            out[start:end, :] = np.asarray(stripe_eq, dtype=np.float32)
+
+        return out
 
     def _apply_tvg(self, sonDat):
         sonDat = np.asarray(sonDat, dtype=np.float32)
@@ -1979,7 +2093,8 @@ class sonObj(object):
                     k,
                     imgOutPrefix,
                     tileFile='.jpg',
-                    colormap=False):
+                    colormap=False,
+                    apply_display_enhancement=True):
         '''
         Using currently saved ping ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
@@ -2016,7 +2131,15 @@ class sonObj(object):
             data = self._prepare_export_uint16(self.sonDat)
             data = self._reserve_zero_for_nodata(data)
         else:
-            data = self.sonDat.astype('uint8') # Get the sonar data
+            arr = self.sonDat
+            if apply_display_enhancement and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False))):
+                arr = self._apply_display_enhancements(arr)
+
+            if np.issubdtype(np.asarray(arr).dtype, np.floating):
+                data = self._convert_son_dat_to_uint8(arr)
+            else:
+                data = np.clip(arr, 0, 255).astype(np.uint8)
+
             data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
@@ -2039,7 +2162,8 @@ class sonObj(object):
                     k,
                     imgOutPrefix,
                     tileFile='.jpg',
-                    colormap=False):
+                    colormap=False,
+                    apply_display_enhancement=True):
         '''
         Using currently saved ping ping returns stored in self.sonDAT,
         saves an unrectified image of the sonar echogram.
@@ -2077,7 +2201,15 @@ class sonObj(object):
             data = self._prepare_export_uint16(self.sonDat)
             data = self._reserve_zero_for_nodata(data)
         else:
-            data = self.sonDat.astype('uint8') # Get the sonar data
+            arr = self.sonDat
+            if apply_display_enhancement and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False))):
+                arr = self._apply_display_enhancements(arr)
+
+            if np.issubdtype(np.asarray(arr).dtype, np.floating):
+                data = self._convert_son_dat_to_uint8(arr)
+            else:
+                data = np.clip(arr, 0, 255).astype(np.uint8)
+
             data = self._reserve_zero_for_nodata(data)
 
         # File name zero padding
@@ -2147,40 +2279,44 @@ class sonObj(object):
         if self.wcp:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
+            pre_spd_enhance = (not export_16bit) and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit, pre_spd_enhance=pre_spd_enhance)
 
             if self.sonDat is not np.nan:
-                self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wcp', tileFile=tileFile, colormap=True, apply_display_enhancement=not pre_spd_enhance)
             else:
                 pass
 
         if self.wcm:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
+            pre_spd_enhance = (not export_16bit) and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, mask_wc=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit, pre_spd_enhance=pre_spd_enhance)
 
             if self.sonDat is not np.nan:
-                self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wcm', tileFile=tileFile, colormap=True, apply_display_enhancement=not pre_spd_enhance)
             else:
                 pass
 
         if self.wcr_src:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
+            pre_spd_enhance = (not export_16bit) and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_shdw=mask_shdw, src=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit, pre_spd_enhance=pre_spd_enhance)
 
             if self.sonDat is not np.nan:
-                self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='src', tileFile=tileFile, colormap=True, apply_display_enhancement=not pre_spd_enhance)
             else:
                 pass
 
         if self.wco:
             # Do speed correction
             export_16bit = bool(getattr(self, 'export_16bit', False)) and not bool(getattr(self, 'son8bit', False))
-            self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit)
+            pre_spd_enhance = (not export_16bit) and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)))
+            self._doSpdCor(chunk, spdCor=spdCor, mask_bed=True, maxCrop=maxCrop, do_egn=self.egn, stretch_wcp=True, integer=not export_16bit, pre_spd_enhance=pre_spd_enhance)
 
             if self.sonDat is not np.nan:
-                self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True)
+                self._writeTilesPlot(chunk, imgOutPrefix='wco', tileFile=tileFile, colormap=True, apply_display_enhancement=not pre_spd_enhance)
             else:
                 pass
 
@@ -2200,7 +2336,8 @@ class sonObj(object):
                   son=True, 
                   integer=True, 
                   do_egn=False, 
-                  stretch_wcp=False):
+                  stretch_wcp=False,
+                  pre_spd_enhance=False):
 
         if not hasattr(self, 'sonMetaDF'):
             self._loadSonMeta()
@@ -2247,6 +2384,10 @@ class sonObj(object):
                 _ = self._WCO(sonMeta)
 
             sonDat = self.sonDat
+
+            if pre_spd_enhance and not export_16bit:
+                sonDat = self._apply_display_enhancements(sonDat)
+                self.sonDat = sonDat
 
             if spdCor == 0:
                 # Don't do speed correction
@@ -2310,7 +2451,12 @@ class sonObj(object):
                                 clip=False, preserve_range=True)#.astype('uint8')
 
             if integer:
-                self.sonDat = sonDat.astype('uint8')
+                if pre_spd_enhance and np.issubdtype(np.asarray(sonDat).dtype, np.floating):
+                    # CLAHE outputs 0..1 floats; convert with robust scaling so
+                    # display-enhanced data does not collapse to near-black.
+                    self.sonDat = self._convert_son_dat_to_uint8(sonDat)
+                else:
+                    self.sonDat = sonDat.astype('uint8')
             else:
                 self.sonDat = sonDat
 
@@ -2413,6 +2559,12 @@ class sonObj(object):
             self._use_jsf_weighting = True
             self._ensure_jsf_global_scale_max(sonMetaAll)
 
+        self._use_cerulean_power_scale = False
+        if 'min_pwr_db' in sonMeta.columns and 'max_pwr_db' in sonMeta.columns:
+            self.minPwrDb = pd.to_numeric(sonMeta['min_pwr_db'], errors='coerce').to_numpy(dtype=float)
+            self.maxPwrDb = pd.to_numeric(sonMeta['max_pwr_db'], errors='coerce').to_numpy(dtype=float)
+            self._use_cerulean_power_scale = True
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
         # Do PPDRC filter
@@ -2427,7 +2579,12 @@ class sonObj(object):
             del self.bytesPerSample
         if hasattr(self, 'weightingFactor'):
             del self.weightingFactor
+        if hasattr(self, 'minPwrDb'):
+            del self.minPwrDb
+        if hasattr(self, 'maxPwrDb'):
+            del self.maxPwrDb
         self._use_jsf_weighting = False
+        self._use_cerulean_power_scale = False
 
         return
     
@@ -2477,6 +2634,12 @@ class sonObj(object):
             self._use_jsf_weighting = True
             self._ensure_jsf_global_scale_max(sonMetaAll_full)
 
+        self._use_cerulean_power_scale = False
+        if 'min_pwr_db' in sonMeta.columns and 'max_pwr_db' in sonMeta.columns:
+            self.minPwrDb = pd.to_numeric(sonMeta['min_pwr_db'], errors='coerce').to_numpy(dtype=float)
+            self.maxPwrDb = pd.to_numeric(sonMeta['max_pwr_db'], errors='coerce').to_numpy(dtype=float)
+            self._use_cerulean_power_scale = True
+
         # Load chunk's sonar data into memory
         self._loadSonChunk()
 
@@ -2489,7 +2652,12 @@ class sonObj(object):
             del self.bytesPerSample
         if hasattr(self, 'weightingFactor'):
             del self.weightingFactor
+        if hasattr(self, 'minPwrDb'):
+            del self.minPwrDb
+        if hasattr(self, 'maxPwrDb'):
+            del self.maxPwrDb
         self._use_jsf_weighting = False
+        self._use_cerulean_power_scale = False
 
         return
 
