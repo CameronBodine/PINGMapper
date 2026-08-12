@@ -321,6 +321,12 @@ def gui(batch: bool):
         default=default_params.get('sonar_clahe', False),
         tooltip=tip_clahe,
     )
+    check_sonar_clahe_global = sg.Checkbox(
+        'Global CLAHE reference',
+        key='sonar_clahe_global',
+        default=default_params.get('sonar_clahe_global', True),
+        tooltip='Use one project-wide intensity reference before CLAHE so chunk brightness stays consistent. This adds a prepass, but reduces chunk-to-chunk contrast shifts.',
+    )
     text_clahe_clip = sg.Text('CLAHE Clip Limit', size=(20,1))
     in_clahe_clip = sg.Input(
         key='sonar_clahe_clip_limit',
@@ -335,6 +341,7 @@ def gui(batch: bool):
             [text_egn_gain, slide_egn_gain],
             [check_sonar_db],
             [check_sonar_clahe],
+            [check_sonar_clahe_global],
             [text_clahe_clip, in_clahe_clip],
         ],
         pad=0,
@@ -837,6 +844,7 @@ def gui(batch: bool):
             'tone_gain':float(values['tone_gain']),
             'sonar_db_transform':values['sonar_db_transform'],
             'sonar_clahe':values['sonar_clahe'],
+            'sonar_clahe_global':values['sonar_clahe_global'],
             'sonar_clahe_clip_limit':float(values['sonar_clahe_clip_limit']),
             'wcp':values['wcp'],
             'wcm':values['wcm'],

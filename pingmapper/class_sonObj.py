@@ -1319,6 +1319,44 @@ class sonObj(object):
         if not use_db and not use_clahe:
             return sonDat
 
+        arr = self._apply_display_db_transform(sonDat)
+        if arr.size == 0:
+            return arr
+
+        valid = arr > 0
+        if not np.any(valid):
+            return arr
+
+        if use_clahe:
+            clip_limit = float(getattr(self, 'sonar_clahe_clip_limit', 0.01))
+            if (not np.isfinite(clip_limit)) or clip_limit <= 0:
+                clip_limit = 0.01
+
+            global_bounds = None
+            if bool(getattr(self, 'sonar_clahe_global', True)):
+                global_bounds = self._ensure_clahe_global_bounds()
+
+            if global_bounds is not None:
+                arr01 = self._normalize_with_bounds(arr, global_bounds[0], global_bounds[1])
+            else:
+                max_val = float(np.nanmax(arr))
+                if not (np.isfinite(max_val) and max_val > 0):
+                    return arr
+                arr01 = np.clip(arr / max_val, 0.0, 1.0)
+
+            try:
+                arr01 = exposure.equalize_adapthist(arr01, clip_limit=clip_limit)
+                arr = np.asarray(arr01, dtype=np.float32) * 255.0
+            except MemoryError:
+                arr = self._apply_clahe_chunked(arr01, clip_limit)
+            except np.core._exceptions._ArrayMemoryError:
+                arr = self._apply_clahe_chunked(arr01, clip_limit)
+
+        # Preserve no-data convention for empty samples.
+        arr[~valid] = 0.0
+        return arr
+
+    def _apply_display_db_transform(self, sonDat):
         arr = np.asarray(sonDat, dtype=np.float32)
         if arr.size == 0:
             return arr
@@ -1330,7 +1368,7 @@ class sonObj(object):
         if not np.any(valid):
             return arr
 
-        if use_db:
+        if bool(getattr(self, 'sonar_db_transform', False)):
             # Use the smallest positive intensity as the log floor to avoid
             # collapsing zeros to -inf and to preserve relative low amplitudes.
             floor = float(np.nanmin(arr[valid]))
@@ -1340,24 +1378,72 @@ class sonObj(object):
             arr = 20.0 * np.log10(arr)
             arr = arr - np.nanmin(arr)
 
-        if use_clahe:
-            max_val = float(np.nanmax(arr))
-            if np.isfinite(max_val) and max_val > 0:
-                arr01 = np.clip(arr / max_val, 0.0, 1.0)
-                clip_limit = float(getattr(self, 'sonar_clahe_clip_limit', 0.01))
-                if (not np.isfinite(clip_limit)) or clip_limit <= 0:
-                    clip_limit = 0.01
-                try:
-                    arr01 = exposure.equalize_adapthist(arr01, clip_limit=clip_limit)
-                    arr = np.asarray(arr01, dtype=np.float32)
-                except MemoryError:
-                    arr = self._apply_clahe_chunked(arr01, clip_limit)
-                except np.core._exceptions._ArrayMemoryError:
-                    arr = self._apply_clahe_chunked(arr01, clip_limit)
-
-        # Preserve no-data convention for empty samples.
         arr[~valid] = 0.0
         return arr
+
+    def _ensure_clahe_global_bounds(self):
+        if not bool(getattr(self, 'sonar_clahe_global', True)):
+            return None
+
+        cache = getattr(self, '_sonar_clahe_global_bounds', None)
+        if isinstance(cache, tuple) and len(cache) == 2:
+            lo, hi = cache
+            if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
+                return cache
+
+        if not hasattr(self, 'sonMetaDF'):
+            self._loadSonMeta()
+
+        if not hasattr(self, 'sonMetaDF') or self.sonMetaDF is None or len(self.sonMetaDF) == 0:
+            return None
+
+        saved_sonDat = getattr(self, 'sonDat', None)
+        saved_sonDat16 = getattr(self, 'sonDat16', None)
+        saved_pingMax = getattr(self, 'pingMax', None)
+
+        chunk_ids = pd.unique(self.sonMetaDF['chunk_id'])
+        sample_cap = int(getattr(self, 'sonar_clahe_global_sample_cap', 200000))
+        if sample_cap <= 0:
+            sample_cap = 200000
+
+        sampled_vals = []
+        for chunk in chunk_ids:
+            self._getScanChunkSingle(int(chunk))
+            arr = self._apply_display_db_transform(self.sonDat)
+            valid = arr > 0
+            if not np.any(valid):
+                continue
+
+            vals = arr[valid].astype(np.float32, copy=False)
+            if vals.size > sample_cap:
+                idx = np.linspace(0, vals.size - 1, sample_cap, dtype=np.int64)
+                vals = vals[idx]
+            sampled_vals.append(vals)
+
+        if len(sampled_vals) == 0:
+            self.sonDat = saved_sonDat
+            self.sonDat16 = saved_sonDat16
+            self.pingMax = saved_pingMax
+            return None
+
+        pooled = np.concatenate(sampled_vals)
+        lo = float(np.nanpercentile(pooled, 1.0))
+        hi = float(np.nanpercentile(pooled, 99.5))
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            lo = float(np.nanmin(pooled))
+            hi = float(np.nanmax(pooled))
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            self.sonDat = saved_sonDat
+            self.sonDat16 = saved_sonDat16
+            self.pingMax = saved_pingMax
+            return None
+
+        self._sonar_clahe_global_bounds = (lo, hi)
+        self.sonDat = saved_sonDat
+        self.sonDat16 = saved_sonDat16
+        self.pingMax = saved_pingMax
+        return self._sonar_clahe_global_bounds
 
     def _apply_clahe_chunked(self, arr01, clip_limit):
         """Apply CLAHE in row-wise stripes to reduce peak memory usage."""
@@ -1378,7 +1464,7 @@ class sonObj(object):
             end = min(start + stripe_rows, h)
             stripe = src[start:end, :]
             stripe_eq = exposure.equalize_adapthist(stripe, clip_limit=clip_limit)
-            out[start:end, :] = np.asarray(stripe_eq, dtype=np.float32)
+            out[start:end, :] = np.asarray(stripe_eq, dtype=np.float32) * 255.0
 
         return out
 

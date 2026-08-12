@@ -2724,6 +2724,8 @@ class rectObj(sonObj):
             img = self.sonDat.copy()
             if son:
                 img = self._reserve_zero_for_nodata(img, preserve_zeros=True)
+                if bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)):
+                    img = self._apply_display_enhancements(img)
             apply_post_rect_colormap = use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2746,6 +2748,8 @@ class rectObj(sonObj):
             # https://stackoverflow.com/questions/47930428/how-to-rotate-an-array-by-%C2%B1-180-in-an-efficient-way
             out = np.flip(np.flip(np.flip(out,1),0),1)
             if use_16bit:
+                out = out.astype(np.float32)
+            elif bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)):
                 out = out.astype(np.float32)
             else:
                 out = out.astype('uint8')
@@ -2780,7 +2784,10 @@ class rectObj(sonObj):
                     out16 = out16_raw
                 self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
             else:
-                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                if bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)):
+                    out8 = self._convert_son_dat_to_uint8(out)
+                else:
+                    out8 = np.clip(out, 0, 255).astype(np.uint8)
                 self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=self.son_colorMap)
 
             del out, img
@@ -2815,6 +2822,8 @@ class rectObj(sonObj):
             img = self.sonDat
             if son:
                 img = self._reserve_zero_for_nodata(img, preserve_zeros=True)
+                if bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False)):
+                    img = self._apply_display_enhancements(img)
             apply_post_rect_colormap = son and use_16bit and self._rect_colormap_selected(son=son)
             source_scale_bounds = None
             if apply_post_rect_colormap:
@@ -2887,6 +2896,8 @@ class rectObj(sonObj):
             out = np.flip(np.flip(np.flip(out,1),0),1)
             if son and use_16bit:
                 out = out.astype(np.float32)
+            elif son and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False))):
+                out = out.astype(np.float32)
             else:
                 out = out.astype('uint8')
 
@@ -2926,7 +2937,10 @@ class rectObj(sonObj):
                 self._write_rect_geotiff(gtiff, out16, epsg, transform, colormap=None)
             else:
                 colormap = self.son_colorMap if son else class_colormap
-                out8 = np.clip(out, 0, 255).astype(np.uint8)
+                if son and (bool(getattr(self, 'sonar_db_transform', False)) or bool(getattr(self, 'sonar_clahe', False))):
+                    out8 = self._convert_son_dat_to_uint8(out)
+                else:
+                    out8 = np.clip(out, 0, 255).astype(np.uint8)
                 self._write_rect_geotiff(gtiff, out8, epsg, transform, colormap=colormap)
 
             del out

@@ -126,6 +126,10 @@ def rectify_master_func(logfilename='',
                         egn_stretch_factor=1,
                         tone_gamma=1.0,
                         tone_gain=1.0,
+                        sonar_db_transform=False,
+                        sonar_clahe=False,
+                        sonar_clahe_global=True,
+                        sonar_clahe_clip_limit=0.01,
                         wcp=False,
                         wcm=False,
                         wcr=False,
@@ -368,6 +372,12 @@ def rectify_master_func(logfilename='',
         son.rect_wcr = rect_wcr
         son.export_16bit = bool(export_16bit) and (not bool(getattr(son, 'son8bit', True)))
         son.export_colormap_uint8 = bool(export_colormap_uint8)
+        son.sonar_db_transform = bool(sonar_db_transform)
+        son.sonar_clahe = bool(sonar_clahe)
+        son.sonar_clahe_global = bool(sonar_clahe_global)
+        son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
+        if son.sonar_clahe:
+            son._ensure_clahe_global_bounds()
 
     # ############################################################################
     # # Rectify Heading sonar imagery - Pingwise, not Rubbersheeting             #
@@ -462,6 +472,12 @@ def rectify_master_func(logfilename='',
     for son in portstar:
         son.rect_wcp = rect_wcp
         son.rect_wcr = rect_wcr
+        son.sonar_db_transform = bool(sonar_db_transform)
+        son.sonar_clahe = bool(sonar_clahe)
+        son.sonar_clahe_global = bool(sonar_clahe_global)
+        son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
+        if son.sonar_clahe:
+            son._ensure_clahe_global_bounds()
 
     if (rect_wcp and rubberSheeting) or (rect_wcr and rubberSheeting):
         # Always use COG for rubber sheeting

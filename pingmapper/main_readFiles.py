@@ -720,6 +720,7 @@ def read_master_func(logfilename='',
                      tone_gain=1.0,
                      sonar_db_transform=False,
                      sonar_clahe=False,
+                     sonar_clahe_global=True,
                      sonar_clahe_clip_limit=0.01,
                      wcp=False,
                      wcm=False,
@@ -1209,7 +1210,10 @@ def read_master_func(logfilename='',
             son.tone_gain = tone_gain
             son.sonar_db_transform = bool(sonar_db_transform)
             son.sonar_clahe = bool(sonar_clahe)
+            son.sonar_clahe_global = bool(sonar_clahe_global)
             son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
+            if son.sonar_clahe:
+                son._ensure_clahe_global_bounds()
             # Do range crop, if necessary
             if cropRange > 0.0:
                 if file_type == '.xtf' and _is_sidescan_beam(getattr(son, 'beamName', '')):
@@ -1405,7 +1409,10 @@ def read_master_func(logfilename='',
             son.tone_gain = tone_gain
             son.sonar_db_transform = bool(sonar_db_transform)
             son.sonar_clahe = bool(sonar_clahe)
+            son.sonar_clahe_global = bool(sonar_clahe_global)
             son.sonar_clahe_clip_limit = float(sonar_clahe_clip_limit)
+            if son.sonar_clahe:
+                son._ensure_clahe_global_bounds()
 
             beam = son.beamName
             if wcr:
