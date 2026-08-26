@@ -554,18 +554,22 @@ class rectObj(sonObj):
                 fb[lats] = fb[ylat]
 
             if es not in fb.columns:
-                if xutm in fb.columns:
-                    fb[es] = fb[xutm]
-                elif lons in fb.columns and lats in fb.columns:
+                if lons in fb.columns and lats in fb.columns:
+                    # Prefer projecting lon/lat through self.trans (the correct
+                    # target EPSG) rather than reusing a raw xutm column, which
+                    # may hold a different (e.g. Humminbird-internal Web Mercator)
+                    # coordinate system and silently corrupt downstream geometry.
                     e_fb, _ = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
                     fb[es] = e_fb
+                elif xutm in fb.columns:
+                    fb[es] = fb[xutm]
 
             if ns not in fb.columns:
-                if yutm in fb.columns:
-                    fb[ns] = fb[yutm]
-                elif lons in fb.columns and lats in fb.columns:
+                if lons in fb.columns and lats in fb.columns:
                     _, n_fb = self.trans(fb[lons].to_numpy(), fb[lats].to_numpy())
                     fb[ns] = n_fb
+                elif yutm in fb.columns:
+                    fb[ns] = fb[yutm]
 
             if 'cog' not in fb.columns:
                 if 'instr_heading' in fb.columns:
@@ -1098,6 +1102,26 @@ class rectObj(sonObj):
                         smthChunk.rename(columns={'range_lon': 'range_lons', 'range_lat': 'range_lats'}, inplace=True)
                     else:
                         continue
+
+                # Guard against spline overshoot: the linear spline fit to range
+                # extent coordinates can extrapolate far beyond the sonar's actual
+                # range near gaps left by upstream filtering (time/speed/coord
+                # outlier filters). Fall back to the geometrically-derived
+                # (un-smoothed) range extent point for any ping whose smoothed
+                # point lands unreasonably far from its trackline origin.
+                if {'record_num', 'range_lon', 'range_lat', 'utm_es', 'utm_ns', 'range'}.issubset(schunkDF.columns):
+                    e_smth_chk, n_smth_chk = self.trans(smthChunk['range_lons'].to_numpy(), smthChunk['range_lats'].to_numpy())
+                    chk = schunkDF[['record_num', 'utm_es', 'utm_ns', 'range', 'range_lon', 'range_lat']].set_index('record_num')
+                    chk = chk.reindex(smthChunk['record_num'].to_numpy())
+
+                    dist = np.hypot(e_smth_chk - chk['utm_es'].to_numpy(), n_smth_chk - chk['utm_ns'].to_numpy())
+                    max_expected = np.maximum(chk['range'].to_numpy(), 1.0) * 3.0 + 50.0
+                    bad = np.isfinite(dist) & (dist > max_expected)
+                    n_bad = int(np.sum(bad))
+                    if n_bad > 0:
+                        print(f"\n  _interpRangeCoords: corrected {n_bad} spline-overshoot range extent point(s) in chunk {chunk}.")
+                        smthChunk.loc[bad, 'range_lons'] = chk['range_lon'].to_numpy()[bad]
+                        smthChunk.loc[bad, 'range_lats'] = chk['range_lat'].to_numpy()[bad]
 
                 rs_chunks.append(smthChunk.copy())
 
@@ -2999,6 +3023,34 @@ class rectObj(sonObj):
 
         # Set output name
         f_out = f.replace('temp.tif', '.tif')
+
+        # Sanity check the georeferenced extent before warping. A corrupt/outlier
+        # coordinate upstream can produce a geotransform spanning thousands of km,
+        # which causes gdal.Warp to attempt allocating a raster with an absurd
+        # pixel count (surfacing as a misleading "free disk space" GDAL error).
+        src = gdal.Open(f)
+        if src is not None:
+            gt = src.GetGeoTransform()
+            width_m = abs(gt[1]) * src.RasterXSize
+            height_m = abs(gt[5]) * src.RasterYSize
+            src = None
+
+            est_cols = width_m / pix_res
+            est_rows = height_m / pix_res
+
+            _MAX_PIXELS = 5e8  # ~500 million pixels safety cap
+            if est_cols * est_rows > _MAX_PIXELS:
+                print(
+                    f"\nWARNING: Skipping pixel resolution resize for {os.path.basename(f)}. "
+                    f"Georeferenced extent ({width_m:.1f} x {height_m:.1f} m) at {pix_res} m resolution "
+                    f"would require ~{est_cols*est_rows:,.0f} pixels. This indicates a corrupt or outlier "
+                    f"ping coordinate in this chunk. Keeping the un-resized GeoTiff instead."
+                )
+                try:
+                    os.rename(f, f_out)
+                except OSError:
+                    pass
+                return
 
         # Reopen f and warp to pix_res
         t = gdal.Warp(f_out, f, xRes = pix_res, yRes = pix_res, targetAlignedPixels=True)

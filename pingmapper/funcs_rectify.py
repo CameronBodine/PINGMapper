@@ -149,11 +149,44 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
             #     filter = int(nchunk*0.1)
 
             # print('\n\n\ntransect:', name, 'filter:', filter)
+            # Snapshot raw coordinates before _interpTrack() may drop duplicates
+            # in-place, so we can validate/repair the smoothed output below.
+            raw_lon = group['lon'].copy()
+            raw_lat = group['lat'].copy()
+
             smoothed = son._interpTrack(df=group, dropDup=True, filt=filter, deg=3)
 
             # smooth trackline fit
             # if smoothed is not None:
             if len(smoothed.columns) > 4:
+                # Guard against cubic spline overshoot (Runge's phenomenon) across
+                # long or gappy transects (e.g. gaps left by time/speed/coord
+                # outlier filters). Fall back to the raw GPS fix for any ping
+                # whose smoothed position was displaced further than the
+                # transect's own spatial extent would allow.
+                raw_e, raw_n = son.trans(raw_lon.to_numpy(), raw_lat.to_numpy())
+                raw_e = pd.Series(raw_e, index=raw_lon.index).reindex(smoothed.index).to_numpy()
+                raw_n = pd.Series(raw_n, index=raw_lat.index).reindex(smoothed.index).to_numpy()
+
+                smth_e, smth_n = son.trans(smoothed['lons'].to_numpy(), smoothed['lats'].to_numpy())
+
+                dist = np.hypot(smth_e - raw_e, smth_n - raw_n)
+                span = np.hypot(np.nanmax(raw_e) - np.nanmin(raw_e), np.nanmax(raw_n) - np.nanmin(raw_n))
+                max_allowed = max(span, 50.0) * 2.0
+
+                bad = np.isfinite(dist) & (dist > max_allowed)
+                n_bad = int(np.sum(bad))
+                if n_bad > 0:
+                    print(f"\n  smoothTrackline: corrected {n_bad} spline-overshoot trackline point(s) in transect {name}.")
+                    fix_lon = pd.Series(raw_lon.to_numpy(), index=raw_lon.index).reindex(smoothed.index).to_numpy()
+                    fix_lat = pd.Series(raw_lat.to_numpy(), index=raw_lat.index).reindex(smoothed.index).to_numpy()
+                    smoothed.loc[bad, 'lons'] = fix_lon[bad]
+                    smoothed.loc[bad, 'lats'] = fix_lat[bad]
+                    if 'utm_es' in smoothed.columns and 'utm_ns' in smoothed.columns:
+                        e_fix, n_fix = son.trans(smoothed.loc[bad, 'lons'].to_numpy(), smoothed.loc[bad, 'lats'].to_numpy())
+                        smoothed.loc[bad, 'utm_es'] = e_fix
+                        smoothed.loc[bad, 'utm_ns'] = n_fix
+
                 smoothed['transect'] = int(name)
                 sDF = pd.concat([sDF, smoothed], ignore_index=False)
 
@@ -165,6 +198,7 @@ def smoothTrackline(projDir='', x_offset='', y_offset='', nchunk ='', cog=True, 
                 transect_dropped.append(name)
 
             del smoothed
+
 
         # Save sonDF
         if len(transect_dropped) > 0:
