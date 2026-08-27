@@ -1356,6 +1356,16 @@ class sonObj(object):
         arr[~valid] = 0.0
         return arr
 
+    def _normalize_with_bounds(self, data, lo, hi):
+        arr = np.asarray(data, dtype=np.float32)
+        arr[~np.isfinite(arr)] = 0.0
+
+        if (not np.isfinite(lo)) or (not np.isfinite(hi)) or hi <= lo:
+            return np.clip(arr, 0.0, 1.0).astype(np.float32)
+
+        norm = (arr - float(lo)) / (float(hi) - float(lo))
+        return np.clip(norm, 0.0, 1.0).astype(np.float32)
+
     def _apply_display_db_transform(self, sonDat):
         arr = np.asarray(sonDat, dtype=np.float32)
         if arr.size == 0:
