@@ -346,17 +346,25 @@ def rectify_master_func(logfilename='',
     if coverage:
         start_time = time.time()
         print("\nExporting coverage and trackline shapefiles:\n")
-        portstar[0]._exportTrkShp()
+        projName = os.path.basename(projDir)
+        shpDir = os.path.join(projDir, 'meta', 'shapefiles')
+        os.makedirs(shpDir, exist_ok=True)
 
-        trk_files = []
+        trk_gdf = portstar[0]._exportTrkShp()
+        trk_gdf.to_file(os.path.join(shpDir, projName+'_trackline.shp'))
+        del trk_gdf
+
+        cov_gdfs = []
         for son in portstar:
-            # trk_files.append(son.smthTrkFile)
+            cov = son._exportCovShp()
+            if cov is not None:
+                cov_gdfs.append(cov)
 
-            son._exportCovShp()
-
-        # print(trk_files)
-
-        # portstar[0]._exportCovShp(trk_files)
+        if len(cov_gdfs) > 0:
+            cov_gdf = pd.concat(cov_gdfs, ignore_index=True)
+            cov_gdf.to_file(os.path.join(shpDir, projName+'_coverage.shp'))
+            del cov_gdf
+        del cov_gdfs
 
         print("Done!")
         print("Time (s):", round(time.time() - start_time, ndigits=1))

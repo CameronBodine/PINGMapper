@@ -2185,13 +2185,10 @@ class rectObj(sonObj):
         )
         del trkMeta
 
-        # Save to shp
-        trkMetaShp = os.path.basename(trkMetaFile).replace('csv', 'shp')
-        trkMetaShp = os.path.join(outDir, trkMetaShp)
-        gdf.to_file(trkMetaShp)
-        del trkMetaFile        
+        gdf['project'] = os.path.basename(self.projDir)
+        gdf['beam'] = self.beamName
 
-        return
+        return gdf
 
     #===========================================================================
     def _sanitizeProjectedTrackMeta(self, trkMeta, wgs=False):
@@ -2356,7 +2353,7 @@ class rectObj(sonObj):
             del chunk_geom
 
         if 'gdf' not in locals() or len(gdf) == 0:
-            return
+            return None
 
         gdf['chunk_id'] = gdf.index
 
@@ -2371,13 +2368,10 @@ class rectObj(sonObj):
 
         # gdf['geometry'] = gdf.buffer(-10, join_style=2)
 
-        # Save to shapefile
-        projName = os.path.basename(self.projDir)
-        outFile = os.path.join(self.metaDir, 'shapefiles', projName+"_"+beam+"_coverage.shp")
-        gdf.to_file(outFile)
-        del gdf
+        gdf['project'] = os.path.basename(self.projDir)
+        gdf['side'] = 'port' if beam.startswith('ss_port') else ('star' if beam.startswith('ss_star') else beam)
 
-        return
+        return gdf
             
     ############################################################################
     # Rectify sonar imagery - Rubbersheeting                                   #
