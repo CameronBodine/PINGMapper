@@ -8,17 +8,17 @@ every recording, so each pass is keyed "<project>:<transect>".
 
 1. Batch folder - every project under ROOT with a sonar_mosaic/ folder:
 
-    python -m pingmapper.utils.main_mosaic ROOT [--kind wcr|wcp]
+    python -m pingmapper.main_mosaic ROOT [--kind wcr|wcp]
         [--method quality] [--out merged.tif] [--source] [--list]
 
 2. Manifest CSV - any rasters, from any source (columns: tif, meta_csv, and
    optionally key, transect). One row per pass; meta_csv may be blank for
    methods that do not need tracks:
 
-    python -m pingmapper.utils.main_mosaic --manifest passes.csv ...
+    python -m pingmapper.main_mosaic --manifest passes.csv ...
 
 From Python: merge_mosaics(root=..., method=...) (see below).
-With no arguments, a FreeSimpleGUI window opens (python -m pingmapper.utils.main_mosaic).
+With no arguments, a FreeSimpleGUI window opens (python -m pingmapper.main_mosaic).
 
 Common options: --swatch E N SIZE_M (small test area), --plateau-end,
 --far-floor, --nadir-per-depth, --depth-window.
@@ -32,10 +32,7 @@ import re
 import sys
 
 import pandas as pd
-# Prefer this checkout over any installed pingmapper (repo root = 3 levels up).
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from pingmapper.utils import mosaic_quality as mq
+from pingmapper import mosaic_quality as mq
 
 
 def discover_batch(root, kind='wcr', log=print):
@@ -144,7 +141,7 @@ def merge_mosaics(root=None, manifest=None, out_tif=None, kind='wcr', method='qu
     Programmatic entry point. Give a batch folder `root` or a `manifest` CSV;
     returns the merged TIF path.
 
-        from pingmapper.utils.main_mosaic import merge_mosaics
+        from pingmapper.main_mosaic import merge_mosaics
         merge_mosaics(root='Z:/outputs', method='quality', workers=4)
     """
     if not root and not manifest:
@@ -254,7 +251,9 @@ def gui():
 
 
 def main(argv=None):
-    if argv is None and len(sys.argv) == 1:
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
         return gui()
     ap = argparse.ArgumentParser(description='Merge sonar mosaics from many recordings.')
     ap.add_argument('root', nargs='?', help='batch output folder containing projects')

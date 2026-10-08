@@ -346,7 +346,12 @@ def gui(batch: bool):
         ],
         pad=0,
     )
-    col_egn_2 = sg.Column([[check_egn], [text_egn_stretch, combo_egn_stretch], [text_egn_factor, in_egn_factor]], pad=0)
+    tip_global_egn = ml_tip('Batch only. Pool the EGN curve and stretch bounds across ALL recordings (processed twice: read, then export) so every recording gets identical gain and contrast. Turns EGN on.')
+    tip_global_sampling = ml_tip('Share of chunks used to build the pooled curve: low is fastest (~1% error), high is most exact.')
+    check_global_egn = sg.Checkbox('Global EGN across recordings', key='global_egn', default=False, tooltip=tip_global_egn, visible=batch)
+    text_global_sampling = sg.Text('Global EGN Sampling', size=(20,1), visible=batch)
+    combo_global_sampling = sg.Combo(['low', 'moderate', 'high'], key='egn_sampling', default_value='low', readonly=True, tooltip=tip_global_sampling, visible=batch)
+    col_egn_2 = sg.Column([[check_egn], [text_egn_stretch, combo_egn_stretch], [text_egn_factor, in_egn_factor], [check_global_egn], [text_global_sampling, combo_global_sampling]], pad=0)
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
     layout.append([text_egn])
@@ -577,7 +582,9 @@ def gui(batch: bool):
     check_mq = sg.Checkbox('Sonar-quality mosaic merge (best look per pixel)', key='mosaic_quality', default=str(default_params.get('mosaic_quality','False')).lower()=='true', tooltip='Also write a *_mosaic_quality.tif where each pixel comes from the pass that viewed it best.')
     combo_mq_method = sg.Combo(['quality','first','last','mean','median','min','max'], key='mosaic_method', default_value=default_params.get('mosaic_method','quality'), tooltip='Overlap rule for the merged mosaic')
     col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_meth, combo_rect_meth], [text_rect_interp, slide_rect_interp]], pad=0)
-    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk], [check_mq, combo_mq_method]], pad=0)
+    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk], [check_mq, combo_mq_method],
+                               [sg.Text('Range smoothing (pings) [1=off]', size=(30,1)), sg.Input(key='mq_range_smooth', default_text=str(default_params.get('mq_range_smooth', 1)), size=(10,1), tooltip='Rolling median (pings) that steadies each ping max range along track; larger = smoother swath edge.')],
+                               [sg.Text('Edge feather (m) [0=off]', size=(30,1)), sg.Input(key='mq_edge_feather', default_text=str(default_params.get('mq_edge_feather', 0.0)), size=(10,1), tooltip='Metres before a pass far edge over which its trust tapers, so a neighbouring pass takes over gradually.')]], pad=0)
     
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
@@ -873,6 +880,8 @@ def gui(batch: bool):
             'mosaic_nchunk':int(values['mosaic_nchunk']),
             'mosaic_quality':values['mosaic_quality'],
             'mosaic_method':values['mosaic_method'],
+            'mq_range_smooth':int(values['mq_range_smooth'] or 1),
+            'mq_edge_feather':float(values['mq_edge_feather'] or 0),
             'pred_sub':values['pred_sub'],
             'pltSubClass':values['pltSubClass'],
             'map_sub':values['map_sub'],
@@ -896,6 +905,18 @@ def gui(batch: bool):
         globals().update(params)
 
         from pingmapper.doWork import doWork
+
+        if batch and values.get('global_egn'):
+            from pingmapper.batch_global_egn import process_with_global_egn
+            gparams = dict(params)
+            gparams['egn'] = True
+            process_with_global_egn(
+                in_dir=inDir, out_dir=outDir, params=gparams,
+                sampling=values.get('egn_sampling', 'low'),
+                prefix=values['prefix'], suffix=values['suffix'],
+                preserve_subdirs=values.get('preserve_subdirs', False),
+            )
+            return
 
         doWork(
             in_file=(values['inFile'] if not batch else None),

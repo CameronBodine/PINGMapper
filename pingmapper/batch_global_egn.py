@@ -7,14 +7,14 @@ Phase 3  re-open each project (project_mode=2) with EGN from the pooled file
 Phase 4  optionally merge the resulting mosaics
 
 Usage:
-    from pingmapper.utils.batch_global_egn import process_with_global_egn
+    from pingmapper.batch_global_egn import process_with_global_egn
     process_with_global_egn(in_dir, out_dir, params, sampling='moderate')
 """
 
 import os
 
 from pingmapper.doWork import doWork
-from pingmapper.utils import global_egn
+from pingmapper import global_egn
 
 # Output-producing steps that are deferred until the global EGN is ready.
 _DEFERRED_OFF = {
@@ -58,7 +58,7 @@ def process_with_global_egn(in_dir=None, out_dir=None, params=None, sampling='mo
 
     mosaic = None
     if merge:
-        from pingmapper.utils import main_mosaic
+        from pingmapper import main_mosaic
         mosaic = main_mosaic.merge_mosaics(root=out_dir, **(merge_kw or {}))
 
     return {'phase1': r1, 'phase3': r3, 'means_file': means_file, 'mosaic': mosaic}

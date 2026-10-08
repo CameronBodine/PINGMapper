@@ -2111,7 +2111,7 @@ def read_master_func(logfilename='',
         print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
         global_stats = None
         if egn_means_file:
-            from pingmapper.utils import global_egn
+            from pingmapper import global_egn
             global_stats = global_egn.load_stats(egn_means_file)
         for son in sonObjs:
             if _is_sidescan_beam(son.beamName):
@@ -2129,12 +2129,12 @@ def read_master_func(logfilename='',
 
                 if egn_means_file:
                     # Use curve pooled across recordings (utils/global_egn.py)
-                    from pingmapper.utils import global_egn
+                    from pingmapper import global_egn
                     print('\n\tUsing global EGN means from', egn_means_file)
                     son.egn_bed_means, son.egn_wc_means = global_egn.load(egn_means_file, son.beamName)
                 else:
                     # Calculate range-wise mean intensity for each (sampled) chunk
-                    from pingmapper.utils import global_egn
+                    from pingmapper import global_egn
                     mean_chunks = global_egn.select_chunks(chunks, egn_sampling)
                     print('\n\tCalculating range-wise mean intensity for', len(mean_chunks), 'of', len(chunks), 'chunks...')
                     chunk_means = Parallel(n_jobs=safe_n_jobs(len(mean_chunks), threadCnt))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(mean_chunks))

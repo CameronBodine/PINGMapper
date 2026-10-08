@@ -49,6 +49,13 @@ def main(process):
         from pingmapper.test_PINGMapper import test
         test(2)
 
+    # Merge mosaics from many recordings (sonar-quality merge)
+    elif process == 'mosaic':
+        print('\n\nLaunching mosaic merge...\n\n')
+        from pingmapper.main_mosaic import main as mosaic_main
+        import sys
+        mosaic_main(sys.argv[2:])
+
     elif process in ('check', 'test_unit'):
         print('\n\nRunning PINGMapper self-check...\n\n')
         from pingmapper.self_check import run_self_check

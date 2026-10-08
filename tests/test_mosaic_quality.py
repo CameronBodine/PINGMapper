@@ -1,4 +1,4 @@
-"""Synthetic checks for pingmapper.utils.mosaic_quality (run with pytest or directly)."""
+"""Synthetic checks for pingmapper.mosaic_quality (run with pytest or directly)."""
 import os
 import tempfile
 
@@ -7,7 +7,7 @@ import pandas as pd
 import rasterio
 from rasterio.transform import from_origin
 
-from pingmapper.utils import mosaic_quality as mq
+from pingmapper import mosaic_quality as mq
 
 QUIET = dict(log=lambda *a, **k: None)
 
@@ -107,7 +107,7 @@ def test_other_methods():
 
 def test_batch_and_manifest():
     import shutil
-    from pingmapper.utils import main_mosaic as bm
+    from pingmapper import main_mosaic as bm
     with tempfile.TemporaryDirectory() as root:
         # Two recordings, each with transect 0 only; transect ids collide.
         for name, y, val in (("recA", 30.0, 10), ("recB", 70.0, 200)):
@@ -158,7 +158,7 @@ def test_range_smooth_and_edge_feather():
 
 def test_global_egn_pooling():
     import numpy as np, tempfile, os
-    from pingmapper.utils import global_egn as g
+    from pingmapper import global_egn as g
     assert g.select_chunks(range(10),'high')==list(range(10))
     assert g.select_chunks(range(10),'low')==[0,9] and g.select_chunks(range(1),'low')==[0]
     cms=[(np.array([1.,2,3]),np.array([1.,1,1])),(np.array([3.,4]),np.array([3.,3]))]

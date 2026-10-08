@@ -133,7 +133,7 @@ IN_DIR = r"C:\Users\cbodine\Downloads\NewRiver\SonarRecording"
 OUT_DIR = r"C:\Users\cbodine\Downloads\NewRiver"
 
 if GLOBAL_EGN:
-    from pingmapper.utils.batch_global_egn import process_with_global_egn
+    from pingmapper.batch_global_egn import process_with_global_egn
     results = process_with_global_egn(
         in_dir=IN_DIR,
         out_dir=OUT_DIR,

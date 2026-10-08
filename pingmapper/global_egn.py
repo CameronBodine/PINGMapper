@@ -9,7 +9,7 @@ recording is normalised with the same curve.
 
 Typical use (recordings already read, i.e. a ``meta`` folder exists):
 
-    from pingmapper.utils import global_egn
+    from pingmapper import global_egn
     global_egn.build('C:/proj/out', 'C:/proj/egn_global.npz', sampling='low')
 
 then reprocess with ``egn=True``, ``egn_means_file='C:/proj/egn_global.npz'``

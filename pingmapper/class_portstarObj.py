@@ -428,12 +428,12 @@ class portstarObj(object):
     def _qualityMergeSonar(self, mosaicsByTransect, quality_params=None, method='quality', source=False):
         '''
         Merge per-transect sonar mosaics so each pixel keeps the look from the
-        pass that saw it best (see pingmapper.utils.mosaic_quality).
+        pass that saw it best (see pingmapper.mosaic_quality).
 
         mosaicsByTransect : {transect_id: path to that transect's mosaic}
         '''
         import re
-        from pingmapper.utils import mosaic_quality as mq
+        from pingmapper import mosaic_quality as mq
 
         if len(mosaicsByTransect) < 2:
             return None
