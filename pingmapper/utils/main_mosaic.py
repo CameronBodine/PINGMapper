@@ -8,14 +8,16 @@ every recording, so each pass is keyed "<project>:<transect>".
 
 1. Batch folder - every project under ROOT with a sonar_mosaic/ folder:
 
-    python -m pingmapper.utils.main_mosaic_quality ROOT [--kind wcr|wcp]
+    python -m pingmapper.utils.main_mosaic ROOT [--kind wcr|wcp]
         [--method quality] [--out merged.tif] [--source] [--list]
 
 2. Manifest CSV - any rasters, from any source (columns: tif, meta_csv, and
    optionally key, transect). One row per pass; meta_csv may be blank for
    methods that do not need tracks:
 
-    python -m pingmapper.utils.main_mosaic_quality --manifest passes.csv ...
+    python -m pingmapper.utils.main_mosaic --manifest passes.csv ...
+
+With no arguments, a FreeSimpleGUI window opens (python -m pingmapper.utils.main_mosaic).
 
 Common options: --swatch E N SIZE_M (small test area), --plateau-end,
 --far-floor, --nadir-per-depth, --depth-window.
@@ -26,6 +28,7 @@ import argparse
 import glob
 import os
 import re
+import sys
 
 import pandas as pd
 
@@ -132,7 +135,86 @@ def run(root, kind='wcr', out_tif=None, **kw):
     return merge_entries(entries, out_tif, **kw)
 
 
+def gui():
+    """FreeSimpleGUI front end for the batch / manifest merge."""
+    import threading
+    import FreeSimpleGUI as sg
+
+    d = mq.DEFAULT_PARAMS
+    pk = [k for k in d]
+    layout = [
+        [sg.Text('Batch folder'), sg.In(key='root', size=(60, 1)), sg.FolderBrowse()],
+        [sg.Text('or Manifest CSV'), sg.In(key='manifest', size=(57, 1)),
+         sg.FileBrowse(file_types=(('CSV', '*.csv'),))],
+        [sg.Text('Output TIF'), sg.In(key='out', size=(61, 1)),
+         sg.SaveAs(file_types=(('GeoTIFF', '*.tif'),), default_extension='.tif')],
+        [sg.Text('Mosaic kind'), sg.Combo(['wcr', 'wcp'], 'wcr', key='kind', readonly=True),
+         sg.Text('Method'), sg.Combo(list(mq.MERGE_METHODS), 'quality', key='method', readonly=True),
+         sg.Text('Workers'), sg.Spin(list(range(1, 33)), min(4, os.cpu_count() or 1), key='workers', size=(4, 1)),
+         sg.Checkbox('Write source raster', key='source')],
+        [sg.Text('Swatch (optional): E'), sg.In(key='sw_e', size=(10, 1)), sg.Text('N'),
+         sg.In(key='sw_n', size=(10, 1)), sg.Text('Size m'), sg.In(key='sw_s', size=(8, 1))],
+        [sg.Frame('Quality parameters', [[sg.Text(k), sg.In(str(d[k]), key='p_' + k, size=(8, 1))]
+                                         for k in pk])],
+        [sg.Multiline(size=(90, 12), key='log', disabled=True, autoscroll=True)],
+        [sg.Button('List passes'), sg.Button('Run'), sg.Button('Quit')],
+    ]
+    win = sg.Window('PINGMapper Mosaic Merge', layout, finalize=True)
+    busy = False
+
+    def collect(v):
+        params = {k: type(d[k])(v['p_' + k]) for k in pk}
+        if v['manifest']:
+            entries = read_manifest(v['manifest'])
+            base = os.path.dirname(os.path.abspath(v['manifest']))
+        elif v['root']:
+            entries = discover_batch(v['root'], v['kind'], lambda m: win.write_event_value('-LOG-', m))
+            base = v['root']
+        else:
+            raise ValueError('choose a batch folder or a manifest')
+        out = v['out'] or os.path.join(base, 'merged_mosaic', 'merged_%s.tif' % v['method'])
+        sw = None
+        if v['sw_e'] and v['sw_n'] and v['sw_s']:
+            sw = (float(v['sw_e']), float(v['sw_n']), float(v['sw_s']))
+        return entries, out, params, sw
+
+    def work(v):
+        try:
+            entries, out, params, sw = collect(v)
+            log = lambda m: win.write_event_value('-LOG-', str(m))
+            merge_entries(entries, out, params, v['method'], sw, v['source'],
+                          log=log, workers=int(v['workers']))
+            win.write_event_value('-DONE-', 'Done: ' + out)
+        except Exception as e:
+            win.write_event_value('-DONE-', 'Error: %s' % e)
+
+    while True:
+        ev, v = win.read()
+        if ev in (sg.WIN_CLOSED, 'Quit'):
+            break
+        if ev == '-LOG-':
+            win['log'].print(v[ev])
+        elif ev == '-DONE-':
+            win['log'].print(v[ev])
+            busy = False
+        elif ev == 'List passes' and not busy:
+            try:
+                entries = read_manifest(v['manifest']) if v['manifest'] else discover_batch(
+                    v['root'], v['kind'], lambda m: win['log'].print(m))
+                for e in entries:
+                    win['log'].print(e['key'], e['tif'])
+                win['log'].print('%d passes' % len(entries))
+            except Exception as e:
+                win['log'].print('Error: %s' % e)
+        elif ev == 'Run' and not busy:
+            busy = True
+            threading.Thread(target=work, args=(dict(v),), daemon=True).start()
+    win.close()
+
+
 def main(argv=None):
+    if argv is None and len(sys.argv) == 1:
+        return gui()
     ap = argparse.ArgumentParser(description='Merge sonar mosaics from many recordings.')
     ap.add_argument('root', nargs='?', help='batch output folder containing projects')
     ap.add_argument('--manifest', help='CSV of passes instead of folder discovery')

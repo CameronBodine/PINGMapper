@@ -107,7 +107,7 @@ def test_other_methods():
 
 def test_batch_and_manifest():
     import shutil
-    from pingmapper.utils import main_mosaic_quality as bm
+    from pingmapper.utils import main_mosaic as bm
     with tempfile.TemporaryDirectory() as root:
         # Two recordings, each with transect 0 only; transect ids collide.
         for name, y, val in (("recA", 30.0, 10), ("recB", 70.0, 200)):
