@@ -102,6 +102,8 @@ params = {
 	"mq_far_floor": 0.35,
 	"mq_nadir_per_depth": 1.0,
 	"mq_depth_window": 51,
+	"mq_range_smooth": 1,
+	"mq_edge_feather": 0.0,
 
 	# ------------------------------------------------------------------
 	# Substrate Mapping

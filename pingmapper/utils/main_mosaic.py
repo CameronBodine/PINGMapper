@@ -168,6 +168,8 @@ def gui():
         'far_floor': 'Trust (0-1] given to the very farthest pixels. Lower = far-range pixels yield more readily to another pass.',
         'nadir_per_depth': 'Width of the untrusted strip under the boat, in multiples of water depth. Trust ramps from 0 at the track to full at depth x this value. 0 disables it.',
         'depth_window': 'Number of pings in the rolling median used to smooth depth. Larger = steadier depth, slower response to real depth changes.',
+         'range_smooth': "Number of pings in the rolling median that steadies each ping's max range along track. Larger = smoother swath edge. 1 = off.",
+         'edge_feather': "Metres before a pass's far edge over which its trust tapers toward 0, so a neighbouring pass takes over gradually. 0 = off.",
     }
     tip_root = 'Folder holding the PINGMapper outputs; every <project>/sonar_mosaic is searched.'
     tip_manifest = 'CSV with columns tif, meta_csv (optional key, transect). Used instead of the batch folder.'

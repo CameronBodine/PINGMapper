@@ -132,7 +132,30 @@ def test_batch_and_manifest():
             assert r.read(1)[50, 50] == 200
 
 
+def test_range_smooth_and_edge_feather():
+    import numpy as np
+    import pandas as pd
+    n = 200
+    df = pd.DataFrame({"e": np.arange(n, dtype=float), "n": np.zeros(n),
+                       "max_range": np.where(np.arange(n) % 5 == 0, 30.0, 20.0)})
+    raw = mq.transect_tracks_from_df(df, log=lambda *a, **k: None)[0]["far"]
+    sm = mq.transect_tracks_from_df(df, log=lambda *a, **k: None,
+                                    params={"range_smooth": 9})[0]["far"]
+    assert np.ptp(sm[10:-10]) < np.ptp(raw[10:-10])
+    r = np.array([5.0, 19.0, 19.9])
+    a = mq.sonar_quality(r, 1.0, 20.0)
+    b = mq.sonar_quality(r, 1.0, 20.0, edge_feather=5.0)
+    assert b[0] == a[0] and b[2] < a[2] * 0.2 and (b > 0).all()
+    for bad in ({"range_smooth": 0}, {"edge_feather": -1}):
+        try:
+            mq.resolve_params(bad)
+            raise AssertionError
+        except ValueError:
+            pass
+
+
 if __name__ == "__main__":
+    test_range_smooth_and_edge_feather()
     test_batch_and_manifest()
     test_other_methods()
     test_best_look_wins_and_mapping_is_explicit()

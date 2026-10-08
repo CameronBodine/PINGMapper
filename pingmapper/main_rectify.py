@@ -165,6 +165,8 @@ def rectify_master_func(logfilename='',
                         mq_far_floor=0.35,
                         mq_nadir_per_depth=1.0,
                         mq_depth_window=51,
+                        mq_range_smooth=1,
+                        mq_edge_feather=0.0,
                         mosaic=False,
                         map_mosaic=0,
                         banklines=False,
@@ -573,7 +575,9 @@ def rectify_master_func(logfilename='',
                                             quality_params={'plateau_end': mq_plateau_end,
                                                             'far_floor': mq_far_floor,
                                                             'nadir_per_depth': mq_nadir_per_depth,
-                                                            'depth_window': mq_depth_window})
+                                                            'depth_window': mq_depth_window,
+                                                            'range_smooth': mq_range_smooth,
+                                                            'edge_feather': mq_edge_feather})
             else:
                 psObj._createMosaic(mosaic, overview, threadCnt, son=True, maxChunk=mosaic_nchunk)
             del psObj

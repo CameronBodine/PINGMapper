@@ -75,6 +75,12 @@ DEFAULT_PARAMS = {
     "far_floor": SONAR_FAR_FLOOR,
     "nadir_per_depth": SONAR_NADIR_PER_DEPTH,
     "depth_window": SONAR_DEPTH_WINDOW_PINGS,
+    # Pings in the rolling median that steadies each ping's max range along
+    # track, so the swath edge stops jittering. 1 = off.
+    "range_smooth": 1,
+    # Metres before a pass's far edge over which its score tapers to near 0, so
+    # another pass takes over gradually. 0 = off.
+    "edge_feather": 0.0,
 }
 
 
@@ -90,6 +96,11 @@ def resolve_params(params=None) -> dict:
         raise ValueError("far_floor must be in (0, 1]")
     if p["nadir_per_depth"] < 0:
         raise ValueError("nadir_per_depth must be >= 0")
+    p["range_smooth"], p["edge_feather"] = int(p["range_smooth"]), float(p["edge_feather"])
+    if p["range_smooth"] < 1:
+        raise ValueError("range_smooth must be >= 1")
+    if p["edge_feather"] < 0:
+        raise ValueError("edge_feather must be >= 0")
     if p["depth_window"] < 1:
         raise ValueError("depth_window must be >= 1")
     return p
@@ -201,6 +212,9 @@ def transect_tracks_from_df(df, log=print, params=None, name="metadata") -> dict
             depth = np.zeros(len(group))
         slant = group["max_range"].fillna(group["max_range"].median()).to_numpy(dtype=float)
         far = np.nan_to_num(np.sqrt(np.maximum(slant ** 2 - depth ** 2, 0.0)))
+        if p["range_smooth"] > 1:
+            far = (pd.Series(far).rolling(p["range_smooth"], center=True, min_periods=1)
+                   .median().to_numpy(dtype=float))
         points = np.column_stack((group["e"].to_numpy(dtype=float),
                                   group["n"].to_numpy(dtype=float)))
         tracks[int(transect)] = {
@@ -210,6 +224,7 @@ def transect_tracks_from_df(df, log=print, params=None, name="metadata") -> dict
             "far": far,
             "plateau_end": p["plateau_end"],
             "far_floor": p["far_floor"],
+            "edge_feather": p["edge_feather"],
             "reach": float(far.max()),
         }
         summary.append(f"#{int(transect)} {len(points):,} pings "
@@ -221,7 +236,8 @@ def transect_tracks_from_df(df, log=print, params=None, name="metadata") -> dict
 
 
 def sonar_quality(ground_range, nadir_m, max_range_m,
-                  plateau_end=SONAR_PLATEAU_END, far_floor=SONAR_FAR_FLOOR):
+                  plateau_end=SONAR_PLATEAU_END, far_floor=SONAR_FAR_FLOOR,
+                  edge_feather=0.0):
     """
     How far to trust a side-scan pixel sitting `ground_range` metres off its own
     trackline. Near 0 = only if nothing else covers this ground, 1 = the good
@@ -259,7 +275,13 @@ def sonar_quality(ground_range, nadir_m, max_range_m,
     ramp = np.clip(r / nadir, 1e-3, 1.0)
     decline = 1.0 - (1.0 - far_floor) * np.clip(
         (r - plateau) / np.maximum(far - plateau, 1e-3), 0.0, 1.0)
-    return np.minimum(ramp, decline).astype("float32")
+    q = np.minimum(ramp, decline)
+    if edge_feather > 0:
+        # Taper over the last edge_feather metres to max range; kept above 0
+        # so the pass still wins where nothing else covers the ground.
+        t = np.clip((far - r) / edge_feather, 0.0, 1.0)
+        q = q * (0.02 + 0.98 * t)
+    return q.astype("float32")
 
 
 def quality_cell(res_m: float) -> float:
@@ -314,7 +336,8 @@ def quality_for(track, xs, ys, cell: float):
     grid = sonar_quality(distance, track["nadir"][nearest],
                          track["far"][nearest],
                          track.get("plateau_end", SONAR_PLATEAU_END),
-                         track.get("far_floor", SONAR_FAR_FLOOR)).reshape(len(gy), len(gx))
+                         track.get("far_floor", SONAR_FAR_FLOOR),
+                         track.get("edge_feather", 0.0)).reshape(len(gy), len(gx))
 
     # The grid is separable - one row index per row, one column index per
     # column - so this is four outer-product gathers rather than a resample.
