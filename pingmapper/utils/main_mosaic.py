@@ -204,7 +204,7 @@ def gui():
             entries = read_manifest(v['manifest'])
             base = os.path.dirname(os.path.abspath(v['manifest']))
         elif v['root']:
-            entries = discover_batch(v['root'], v['kind'], lambda m: win.write_event_value('-LOG-', m))
+            entries = discover_batch(v['root'], v['kind'], lambda m, **_: win.write_event_value('-LOG-', str(m)))
             base = v['root']
         else:
             raise ValueError('choose a batch folder or a manifest')
@@ -217,7 +217,7 @@ def gui():
     def work(v):
         try:
             entries, out, params, sw = collect(v)
-            log = lambda m: win.write_event_value('-LOG-', str(m))
+            log = lambda m, **_: win.write_event_value('-LOG-', str(m))
             merge_entries(entries, out, params, v['method'], sw, v['source'],
                           log=log, workers=int(v['workers']))
             win.write_event_value('-DONE-', 'Done: ' + out)
@@ -236,7 +236,7 @@ def gui():
         elif ev == 'List passes' and not busy:
             try:
                 entries = read_manifest(v['manifest']) if v['manifest'] else discover_batch(
-                    v['root'], v['kind'], lambda m: win['log'].print(m))
+                    v['root'], v['kind'], lambda m, **_: win['log'].print(m))
                 for e in entries:
                     win['log'].print(e['key'], e['tif'])
                 win['log'].print('%d passes' % len(entries))
