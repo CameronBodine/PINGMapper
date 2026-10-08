@@ -59,6 +59,7 @@ def process_with_global_egn(in_dir=None, out_dir=None, params=None, sampling='mo
     mosaic = None
     if merge:
         from pingmapper import main_mosaic
-        mosaic = main_mosaic.merge_mosaics(root=out_dir, **(merge_kw or {}))
+        kw = dict(colormap=params.get('son_colorMap'), **(merge_kw or {}))
+        mosaic = main_mosaic.merge_mosaics(root=out_dir, **kw)
 
     return {'phase1': r1, 'phase3': r3, 'means_file': means_file, 'mosaic': mosaic}

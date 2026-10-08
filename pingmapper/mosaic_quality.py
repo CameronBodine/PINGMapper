@@ -492,10 +492,26 @@ MERGE_METHODS = ("quality", "first", "last", "mean", "median", "min", "max")
 SELECTING_METHODS = ("quality", "first", "last")
 
 
+def sonar_palette(name):
+    """GeoTIFF palette for a matplotlib colormap name, built the way PINGMapper
+    builds its rectified-tile palette. None / 'none' / 'false' / '' -> None."""
+    if name is None or str(name).strip().lower() in ("", "none", "false"):
+        return None
+    from matplotlib import colormaps
+    try:
+        cmap = colormaps.get_cmap(name)
+    except Exception:
+        print("****WARNING*****\n", name, "is not a valid colormap.\nSetting to Greys...")
+        cmap = colormaps.get_cmap("Greys_r")
+    rgba = np.rint(cmap(np.linspace(0, 1, 256)) * 255).astype("uint8")
+    return {i: tuple(int(c) for c in rgba[i]) for i in range(255)}
+
+
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
                            nodata=0, bounds=None, method="quality", source_tif=None,
-                           window_index=True, tile_px=SONAR_TILE_PX, workers=None, feather=0.0):
+                           window_index=True, tile_px=SONAR_TILE_PX, workers=None, feather=0.0,
+                           colormap=None):
     """
     Nothing is held for a whole pass. Each pass is first cut into tile
     windows (see pass_tiles) and only tiles holding data are kept; the output
@@ -506,6 +522,8 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     window_index: True writes <out>_tiles.csv (every source tile and its
     footprint) and <out>_windows.csv (each output window and the passes/tiles
     overlapping it); a str is used as the windows path, False/None skips.
+    colormap: matplotlib colormap name; embeds a palette in a single-band
+    uint8 output (as PINGMapper's rectified tiles do). Ignored otherwise.
     workers: output windows computed at once (threads; default min(4, CPUs)).
     budget_mb is shared between them, so peak memory stays near budget_mb.
     Windows are written in order by the calling thread only.
@@ -695,6 +713,12 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                             blockxsize=SONAR_MERGE_BLOCK, blockysize=SONAR_MERGE_BLOCK,
                             BIGTIFF="IF_SAFER", sparse_ok=True)
               if source_tif else contextlib.nullcontext()) as src_dst:
+            palette = sonar_palette(colormap)
+            if palette is not None:
+                if count == 1 and np.dtype(dtype) == np.uint8:
+                    dst.write_colormap(1, palette)
+                else:
+                    log('      colormap ignored: output is not single-band uint8')
             def compute(wi, window):
                 top, left = int(window.row_off), int(window.col_off)
                 # The running best value, the score that won it, and which

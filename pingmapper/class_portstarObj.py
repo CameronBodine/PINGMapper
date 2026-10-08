@@ -442,7 +442,8 @@ class portstarObj(object):
         first = next(iter(mosaicsByTransect.values()))
         out = re.sub(r'_mosaic_\d+\.tif$', '_mosaic_%s.tif' % method, first)
         src = out.replace('.tif', '_source.tif') if source and method in mq.SELECTING_METHODS else None
-        mq.merge_sonar_by_quality(mosaicsByTransect, out, tracks, method=method, source_tif=src)
+        mq.merge_sonar_by_quality(mosaicsByTransect, out, tracks, method=method, source_tif=src,
+                                  colormap=getattr(self.port, 'son_colorMap_name', None))
         return out
 
     #=======================================================================
