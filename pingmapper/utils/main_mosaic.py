@@ -17,6 +17,7 @@ every recording, so each pass is keyed "<project>:<transect>".
 
     python -m pingmapper.utils.main_mosaic --manifest passes.csv ...
 
+From Python: merge_mosaics(root=..., method=...) (see below).
 With no arguments, a FreeSimpleGUI window opens (python -m pingmapper.utils.main_mosaic).
 
 Common options: --swatch E N SIZE_M (small test area), --plateau-end,
@@ -133,6 +134,25 @@ def run(root, kind='wcr', out_tif=None, **kw):
         out_tif = os.path.join(root, 'merged_mosaic',
                                'merged_rect_%s_%s.tif' % (kind, suffix))
     return merge_entries(entries, out_tif, **kw)
+
+
+def merge_mosaics(root=None, manifest=None, out_tif=None, kind='wcr', method='quality',
+                  params=None, swatch=None, source=False, workers=None, log=print):
+    """
+    Programmatic entry point. Give a batch folder `root` or a `manifest` CSV;
+    returns the merged TIF path.
+
+        from pingmapper.utils.main_mosaic import merge_mosaics
+        merge_mosaics(root='Z:/outputs', method='quality', workers=4)
+    """
+    if not root and not manifest:
+        raise ValueError('give root or manifest')
+    entries = read_manifest(manifest) if manifest else discover_batch(root, kind, log)
+    if out_tif is None:
+        base = root or os.path.dirname(os.path.abspath(manifest))
+        out_tif = os.path.join(base, 'merged_mosaic', 'merged_%s.tif' % method)
+    return merge_entries(entries, out_tif, params, method, swatch, source,
+                         log=log, workers=workers)
 
 
 def gui():
