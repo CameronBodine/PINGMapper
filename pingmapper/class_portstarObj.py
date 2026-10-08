@@ -308,38 +308,10 @@ class portstarObj(object):
 
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
-                # Locate port files
-                portPath = os.path.join(self.port.outDir, 'rect_wcp')
-                port = sorted(glob(os.path.join(portPath, '*.tif')))
+                wcpToMosaic = self._transectChunkFiles('rect_wcp', _iter_groups, chunkField)
 
-                # Locate starboard files
-                starPath = os.path.join(self.star.outDir, 'rect_wcp')
-                star = sorted(glob(os.path.join(starPath, '*.tif')))
-
-                # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if (len(port) > maxChunk) and (maxChunk != 0):
-                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                    wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-                else:
-                    wcpToMosaic = [port + star]
-
-            if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
-                # Locate port files
-                portPath = os.path.join(self.port.outDir, 'rect_wcr')
-                port = sorted(glob(os.path.join(portPath, '*.tif')))
-
-                # Locate starboard files
-                starPath = os.path.join(self.star.outDir, 'rect_wcr')
-                star = sorted(glob(os.path.join(starPath, '*.tif')))
-
-                # Make multiple mosaics if number of input sonograms is greater than maxChunk
-                if (len(port) > maxChunk) and (maxChunk != 0):
-                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
-                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
-                    srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-                else:
-                    srcToMosaic = [port + star]
+            if self.port.rect_wcr: # Moscaic wcr sonograms if previousl exported
+                srcToMosaic = self._transectChunkFiles('rect_wcr', _iter_groups, chunkField)
 
         else:
             if self.port.map_sub:
@@ -371,9 +343,9 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in srcToMosaic.items())
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
@@ -388,9 +360,9 @@ class portstarObj(object):
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in srcToMosaic.items())
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
@@ -404,13 +376,60 @@ class portstarObj(object):
         return
 
 
+    #=======================================================================
+    def _transectChunkFiles(self, subdir, iter_groups, chunkField='chunk_id'):
+        '''
+        Explicit {transect_id: [chunk tifs]} for port and star combined, found
+        by transect id (not by position), so a transect with no exported
+        chunks cannot shift the others onto the wrong id.
+        '''
+        files = {}
+        for son in (self.port, self.star):
+            son._loadSonMeta()
+            sonDir = os.path.join(son.outDir, subdir)
+            for name, group in iter_groups(son.sonMetaDF):
+                try:
+                    tid = int(name)
+                except (TypeError, ValueError):
+                    tid = 0
+                for chunk in pd.unique(group[chunkField]):
+                    zero = son._addZero(chunk)
+                    imgs = glob(os.path.join(sonDir, '*_{}{}.tif'.format(zero, chunk)))
+                    if len(imgs) > 0:
+                        files.setdefault(tid, []).append(imgs[0])
+        return dict(sorted(files.items()))
+
+    #=======================================================================
+    def _qualityMergeSonar(self, mosaicsByTransect, quality_params=None):
+        '''
+        Merge per-transect sonar mosaics so each pixel keeps the look from the
+        pass that saw it best (see pingmapper.utils.mosaic_quality).
+
+        mosaicsByTransect : {transect_id: path to that transect's mosaic}
+        '''
+        import re
+        import re
+        from pingmapper.utils import mosaic_quality as mq
+
+        if len(mosaicsByTransect) < 2:
+            return None
+        self.port._loadSonMeta()
+        tracks = mq.transect_tracks_from_df(self.port.sonMetaDF, params=quality_params)
+        first = next(iter(mosaicsByTransect.values()))
+        out = re.sub(r'_mosaic_\d+\.tif$', '_mosaic_quality.tif', first)
+        mq.merge_sonar_by_quality(mosaicsByTransect, out, tracks)
+        return out
+
+    #=======================================================================
     def _createMosaicTransect(self,
                       mosaic=1,
                       overview=True,
                       threadCnt=cpu_count(),
                       son=True,
                       maxChunk = 50,
-                      cog=True):
+                      cog=True,
+                      quality_merge=False,
+                      quality_params=None):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -595,10 +614,14 @@ class portstarObj(object):
             if son:
                 if self.port.rect_wcp:
                     if len(wcpToMosaic) > 0:
-                        _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                        res = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
+                        if quality_merge:
+                            self._qualityMergeSonar({i: r[0] for i, r in zip(wcpToMosaic, res) if r}, quality_params)
                 if self.port.rect_wcr:
                     if len(srcToMosaic) > 0:
-                        _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                        res = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in srcToMosaic.items())
+                        if quality_merge:
+                            self._qualityMergeSonar({i: r[0] for i, r in zip(srcToMosaic, res) if r}, quality_params)
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
@@ -613,9 +636,9 @@ class portstarObj(object):
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in srcToMosaic.items())
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))

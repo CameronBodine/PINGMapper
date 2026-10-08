@@ -574,8 +574,9 @@ def gui(batch: bool):
     text_rect_chunk = sg.Text('# Chunks per Mosaic [0==All Chunks]', size=(30,1))
     in_rect_chunk = sg.Input(key='mosaic_nchunk', default_text=default_params['mosaic_nchunk'], size=(10,1), tooltip=tip_nchunk)
     
+    check_mq = sg.Checkbox('Sonar-quality mosaic merge (best look per pixel)', key='mosaic_quality', default=str(default_params.get('mosaic_quality','False')).lower()=='true', tooltip='Also write a *_mosaic_quality.tif where each pixel comes from the pass that viewed it best.')
     col_rect_1 = sg.Column([[check_rect_wcp], [check_rect_wcr], [check_rect_meth, combo_rect_meth], [text_rect_interp, slide_rect_interp]], pad=0)
-    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk]], pad=0)
+    col_rect_2 = sg.Column([[text_rect_pix, in_rect_pix], [text_color, combo_color], [text_rect_mosaic, combo_rect_mosaic], [text_rect_chunk, in_rect_chunk], [check_mq]], pad=0)
     
     # Add to layout
     layout.append([sg.HorizontalSeparator()])
@@ -869,6 +870,7 @@ def gui(batch: bool):
             'rectInterpDist':int(values['rectInterpDist']),
             'son_colorMap':values['son_colorMap'],
             'mosaic_nchunk':int(values['mosaic_nchunk']),
+            'mosaic_quality':values['mosaic_quality'],
             'pred_sub':values['pred_sub'],
             'pltSubClass':values['pltSubClass'],
             'map_sub':values['map_sub'],
