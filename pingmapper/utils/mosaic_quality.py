@@ -433,8 +433,17 @@ SELECTING_METHODS = ("quality", "first", "last")
 
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
-                           nodata=0, bounds=None, method="quality", source_tif=None):
+                           nodata=0, bounds=None, method="quality", source_tif=None,
+                           window_index=True):
     """
+    Passes are never all open at once. Each pass's header is read once to get
+    its footprint, the output grid is cut into windows, and every window is
+    matched to the passes whose footprint touches it. A window then opens one
+    pass at a time, reads the part it needs and closes it, so the open-handle
+    count stays at one however many recordings are merged.
+    window_index: True writes <out>_windows.csv (window geometry and the keys
+    of every pass overlapping it), a path writes it there, False/None skips.
+
     method: one of MERGE_METHODS. "quality" (default) is described below;
     "first"/"last" take the first/last pass in id order that holds data;
     "mean", "median", "min", "max" combine all overlapping passes per pixel.
@@ -497,14 +506,16 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     combine = method not in SELECTING_METHODS
     mapping = _as_mapping(tif_paths)
     ids, tif_list = list(mapping.keys()), list(mapping.values())
-    srcs = [rasterio.open(p) for p in tif_list]
-    vrts = []
+    heads = []
+    for p in tif_list:
+        with rasterio.open(p) as s:
+            heads.append((s.res, s.crs, s.count, s.dtypes[0], tuple(s.bounds)))
+    nsrc = len(tif_list)
     try:
-        res_x, res_y = srcs[0].res
-        crs = srcs[0].crs
-        count, dtype = srcs[0].count, srcs[0].dtypes[0]
-        pass_bounds = [tuple(s.bounds) if s.crs == crs
-                       else transform_bounds(s.crs, crs, *s.bounds) for s in srcs]
+        res_x, res_y = heads[0][0]
+        crs, count, dtype = heads[0][1], heads[0][2], heads[0][3]
+        pass_bounds = [h[4] if h[1] == crs else transform_bounds(h[1], crs, *h[4])
+                       for h in heads]
         # bounds=(west, south, east, north) in the mosaic CRS restricts the
         # output to a swatch; passes are only read where they overlap it.
         extent = bounds if bounds is not None else (
@@ -533,11 +544,39 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
         else:
             log("      nothing to judge the passes by - first file wins", flush=True)
 
-        vrts = [WarpedVRT(s, crs=crs, transform=transform, width=width,
-                          height=height, resampling=Resampling.nearest,
-                          src_nodata=nodata, nodata=nodata) for s in srcs]
+        def read_pass(index, win):
+            with rasterio.open(tif_list[index]) as s, \
+                 WarpedVRT(s, crs=crs, transform=transform, width=width,
+                           height=height, resampling=Resampling.nearest,
+                           src_nodata=nodata, nodata=nodata) as vrt:
+                return vrt.read(window=win)
 
-        won = np.zeros(len(srcs), dtype=np.int64)
+        overlap = []
+        for win in windows:
+            w0 = west + win.col_off * res_x
+            w1 = w0 + win.width * res_x
+            n1 = north - win.row_off * res_y
+            n0 = n1 - win.height * res_y
+            overlap.append([i for i, b in enumerate(bounds)
+                            if b[0] < w1 and b[2] > w0 and b[1] < n1 and b[3] > n0])
+        if window_index:
+            idx_path = (window_index if isinstance(window_index, str)
+                        else os.path.splitext(out_tif)[0] + "_windows.csv")
+            import csv
+            with open(idx_path, "w", newline="") as fh:
+                wr = csv.writer(fh)
+                wr.writerow(["window", "col_off", "row_off", "width", "height",
+                             "west", "south", "east", "north", "n_passes", "passes"])
+                for k, (win, ov) in enumerate(zip(windows, overlap)):
+                    w0 = west + win.col_off * res_x
+                    n1 = north - win.row_off * res_y
+                    wr.writerow([k, int(win.col_off), int(win.row_off),
+                                 int(win.width), int(win.height), w0,
+                                 n1 - win.height * res_y, w0 + win.width * res_x, n1,
+                                 len(ov), ";".join(str(ids[i]) for i in ov)])
+            log(f"      Window index: {idx_path}", flush=True)
+
+        won = np.zeros(nsrc, dtype=np.int64)
         pulse = Progress(len(windows), "merge windows")
         out_nodata = 0 if nodata is None else nodata
         with rasterio.open(out_tif, "w", driver="GTiff", height=height, width=width,
@@ -551,7 +590,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                             blockxsize=SONAR_MERGE_BLOCK, blockysize=SONAR_MERGE_BLOCK,
                             BIGTIFF="IF_SAFER", sparse_ok=True)
               if source_tif else contextlib.nullcontext()) as src_dst:
-            for window in windows:
+            for wi, window in enumerate(windows):
                 top, left = int(window.row_off), int(window.col_off)
                 # The running best value, the score that won it, and which
                 # pass it came from - for this window only.
@@ -566,7 +605,8 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 xs = west + (np.arange(left, left + shape[1]) + 0.5) * res_x
                 ys = north - (np.arange(top, top + shape[0]) + 0.5) * res_y
 
-                for index, (vrt, b) in enumerate(zip(vrts, bounds)):
+                for index in overlap[wi]:
+                    b = bounds[index]
                     # Only the part of the window this pass reaches: a narrow
                     # pass crossing a wide window costs its own area, not the
                     # window's.
@@ -576,7 +616,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     r1 = min(top + shape[0], int(math.ceil((north - b[1]) / res_y)))
                     if c0 >= c1 or r0 >= r1:
                         continue
-                    data = vrt.read(window=Window(c0, r0, c1 - c0, r1 - r0))
+                    data = read_pass(index, Window(c0, r0, c1 - c0, r1 - r0))
                     valid = _valid_mask(data, nodata)
                     if not valid.any():
                         continue
@@ -604,7 +644,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                         continue
 
                     if method == "first":
-                        q = np.full(valid.shape, len(srcs) - index, dtype="float32")
+                        q = np.full(valid.shape, nsrc - index, dtype="float32")
                     elif method == "last":
                         q = np.full(valid.shape, index + 1, dtype="float32")
                     elif tracks.get(ids[index]) is None:
@@ -649,17 +689,14 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 if covered.any():
                     dst.write(best, window=window)
                     if method in SELECTING_METHODS:
-                        won += np.bincount(who[covered], minlength=len(srcs))
+                        won += np.bincount(who[covered], minlength=nsrc)
                         if src_dst is not None:
                             src_dst.write(np.where(covered, who + 1, 0).astype("uint16"),
                                           1, window=window)
                 pulse.step()
         pulse.finish()
     finally:
-        for v in vrts:
-            v.close()
-        for s in srcs:
-            s.close()
+        pass
 
     if method in SELECTING_METHODS:
         for index, path in enumerate(tif_list):
