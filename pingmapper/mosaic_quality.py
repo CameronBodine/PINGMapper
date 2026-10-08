@@ -511,7 +511,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
                            nodata=0, bounds=None, method="quality", source_tif=None,
                            window_index=True, tile_px=SONAR_TILE_PX, workers=None, feather=0.0,
-                           colormap=None):
+                           colormap=None, feather_mode="blend", feather_sigma=2.0):
     """
     Nothing is held for a whole pass. Each pass is first cut into tile
     windows (see pass_tiles) and only tiles holding data are kept; the output
@@ -533,6 +533,11 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     passes whose scores are close, weighting each by exp((q - best_q) / feather);
     0.05-0.2 softens seams while a clearly better pass still dominates. The
     source raster still records the best-scoring pass.
+    feather_mode: "blend" (default) uses the blended value everywhere.
+    "lowpass" keeps the winning pass's fine texture and takes only the
+    low-frequency tone (Gaussian, feather_sigma metres) from the blend, so
+    seams fade without smearing detail. Needs feather > 0. Windows are read
+    with a 3-sigma halo so no seams appear at window edges.
 
     method: one of MERGE_METHODS. "quality" (default) is described below;
     "first"/"last" take the first/last pass in id order that holds data;
@@ -599,6 +604,12 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
         raise ValueError("feather must be >= 0")
     if feather > 0 and method != "quality":
         raise ValueError("feather only applies to method quality")
+    if feather_mode not in ("blend", "lowpass"):
+        raise ValueError("feather_mode must be 'blend' or 'lowpass'")
+    lowpass = feather > 0 and feather_mode == "lowpass"
+    feather_sigma = float(feather_sigma)
+    if lowpass and feather_sigma <= 0:
+        raise ValueError("feather_sigma must be > 0")
     mapping = _as_mapping(tif_paths)
     ids, tif_list = list(mapping.keys()), list(mapping.values())
     heads = []
@@ -656,12 +667,14 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
         # overlap[k] = [(pass index, bbox of that pass's tiles in the window,
         # tile ids)], so a pass crossing the window costs only the stretch of
         # it that is really there.
+        sigma_px = feather_sigma / max(res_x, res_y) if lowpass else 0.0
+        halo = int(math.ceil(3 * sigma_px)) if lowpass else 0
         overlap = []
         for win in windows:
-            w0 = west + win.col_off * res_x
-            w1 = w0 + win.width * res_x
-            n1 = north - win.row_off * res_y
-            n0 = n1 - win.height * res_y
+            w0 = west + (win.col_off - halo) * res_x
+            w1 = w0 + (win.width + 2 * halo) * res_x
+            n1 = north - (win.row_off - halo) * res_y
+            n0 = n1 - (win.height + 2 * halo) * res_y
             hits = []
             for i, ts in enumerate(all_tiles):
                 sel = [(k, t["bounds"]) for k, t in enumerate(ts)
@@ -719,7 +732,13 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     dst.write_colormap(1, palette)
                 else:
                     log('      colormap ignored: output is not single-band uint8')
-            def compute(wi, window):
+            def compute(wi, out_window):
+                window = out_window
+                if halo:
+                    h0, v0 = max(0, int(out_window.col_off) - halo), max(0, int(out_window.row_off) - halo)
+                    h1 = min(width, int(out_window.col_off + out_window.width) + halo)
+                    v1 = min(height, int(out_window.row_off + out_window.height) + halo)
+                    window = Window(h0, v0, h1 - h0, v1 - v0)
                 top, left = int(window.row_off), int(window.col_off)
                 # The running best value, the score that won it, and which
                 # pass it came from - for this window only.
@@ -827,9 +846,27 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     soft = f_acc / np.maximum(f_w, 1e-12)
                     if np.issubdtype(np.dtype(dtype), np.integer):
                         soft = np.maximum(np.rint(soft), 1)
+                    if lowpass:
+                        from scipy.ndimage import gaussian_filter
+                        m = (best_q > 0).astype("float32")
+                        den = np.maximum(gaussian_filter(m, sigma_px, mode="nearest"), 1e-6)
+                        out = np.empty(best.shape, dtype="float32")
+                        for b in range(best.shape[0]):
+                            hard = best[b].astype("float32")
+                            low_h = gaussian_filter(hard * m, sigma_px, mode="nearest") / den
+                            low_s = gaussian_filter(soft[b] * m, sigma_px, mode="nearest") / den
+                            out[b] = low_s + (hard - low_h)
+                        soft = out
+                        if np.issubdtype(np.dtype(dtype), np.integer):
+                            info = np.iinfo(dtype)
+                            soft = np.clip(np.rint(soft), 1, info.max)
                     best = np.where(f_w > 0, soft, out_nodata).astype(dtype)
                 covered = best_q > 0
-                return window, best, who, covered
+                if halo:
+                    r = slice(int(out_window.row_off) - top, int(out_window.row_off + out_window.height) - top)
+                    c = slice(int(out_window.col_off) - left, int(out_window.col_off + out_window.width) - left)
+                    best, who, covered = best[:, r, c], who[r, c], covered[r, c]
+                return out_window, best, who, covered
 
             from collections import deque
             from concurrent.futures import ThreadPoolExecutor

@@ -32,6 +32,12 @@ import re
 import sys
 
 import pandas as pd
+
+# Add 'pingmapper' to the path, may not need after pypi package...
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.append(PACKAGE_DIR)
+
 from pingmapper import mosaic_quality as mq
 
 
@@ -85,7 +91,8 @@ def read_manifest(path):
 
 
 def merge_entries(entries, out_tif, params=None, method='quality', swatch=None,
-                  source=False, log=print, workers=None, feather=0.0, colormap=None):
+                  source=False, log=print, workers=None, feather=0.0, colormap=None,
+                  feather_mode='blend', feather_sigma=2.0):
     """
     Merge passes described by entries (key, tif, meta_csv, transect).
     swatch: optional (easting, northing, size_m) in the mosaic CRS.
@@ -117,7 +124,8 @@ def merge_entries(entries, out_tif, params=None, method='quality', swatch=None,
     src = out_tif.replace('.tif', '_source.tif') if source else None
     mq.merge_sonar_by_quality(mapping, out_tif, tracks, log, bounds=bounds,
                               method=method, source_tif=src, workers=workers, feather=feather,
-                              colormap=colormap)
+                              colormap=colormap, feather_mode=feather_mode,
+                              feather_sigma=feather_sigma)
     if src and method in mq.SELECTING_METHODS:
         # source_id n in the raster is the n-th pass here (position + 1).
         pd.DataFrame({'source_id': range(1, len(mapping) + 1),
@@ -138,7 +146,7 @@ def run(root, kind='wcr', out_tif=None, **kw):
 
 def merge_mosaics(root=None, manifest=None, out_tif=None, kind='wcr', method='quality',
                   params=None, swatch=None, source=False, workers=None, log=print, feather=0.0,
-                  colormap=None):
+                  colormap=None, feather_mode='blend', feather_sigma=2.0):
     """
     Programmatic entry point. Give a batch folder `root` or a `manifest` CSV;
     returns the merged TIF path.
@@ -153,7 +161,8 @@ def merge_mosaics(root=None, manifest=None, out_tif=None, kind='wcr', method='qu
         base = root or os.path.dirname(os.path.abspath(manifest))
         out_tif = os.path.join(base, 'merged_mosaic', 'merged_%s.tif' % method)
     return merge_entries(entries, out_tif, params, method, swatch, source,
-                         log=log, workers=workers, feather=feather, colormap=colormap)
+                         log=log, workers=workers, feather=feather, colormap=colormap,
+                         feather_mode=feather_mode, feather_sigma=feather_sigma)
 
 
 def gui():
@@ -178,6 +187,7 @@ def gui():
     tip_workers = 'Output windows processed at once. More is faster; the memory budget is shared among them.'
     tip_source = 'Also write a raster (and CSV key table) recording which pass supplied each pixel.'
     tip_feather = 'Seam softening. 0 = one best pass per pixel (hard seams). 0.05-0.2 blends passes whose quality scores are close; quality method only.'
+    tip_fmode = 'blend = blended value everywhere (softens texture). lowpass = keep the best pass texture, blend only low-frequency tone over this Gaussian sigma. Needs Feather > 0.'
     tip_cmap = 'Matplotlib colormap embedded as a palette in the output (same as the PINGMapper Colormap option). None = plain grayscale. Single-band 8-bit output only.'
     tip_swatch = 'Merge only a square test area centred on E, N (mosaic CRS units) with this side length in metres.'
     pk = [k for k in d]
@@ -192,6 +202,8 @@ def gui():
          sg.Text('Workers'), sg.Spin(list(range(1, 33)), min(4, os.cpu_count() or 1), key='workers', size=(4, 1), tooltip=tip_workers),
          sg.Text('Feather'), sg.In('0', key='feather', size=(5, 1), tooltip=tip_feather),
          sg.Checkbox('Write source raster', key='source', tooltip=tip_source)],
+        [sg.Text('Feather mode'), sg.Combo(['blend', 'lowpass'], 'blend', key='feather_mode', readonly=True, tooltip=tip_fmode),
+         sg.Text('Lowpass sigma (m)'), sg.In('2.0', key='feather_sigma', size=(5, 1), tooltip=tip_fmode)],
         [sg.Text('Colormap'), sg.Combo(['None', 'Greys', 'Greys_r', 'viridis', 'magma', 'inferno', 'plasma', 'cividis', 'copper', 'bone', 'YlOrBr', 'gist_earth'], 'None', key='colormap', tooltip=tip_cmap)],
         [sg.Text('Swatch (optional): E'), sg.In(key='sw_e', size=(10, 1), tooltip=tip_swatch), sg.Text('N'),
          sg.In(key='sw_n', size=(10, 1), tooltip=tip_swatch), sg.Text('Size m'), sg.In(key='sw_s', size=(8, 1), tooltip=tip_swatch)],
@@ -225,7 +237,9 @@ def gui():
             log = lambda m, **_: win.write_event_value('-LOG-', str(m))
             merge_entries(entries, out, params, v['method'], sw, v['source'],
                           log=log, workers=int(v['workers']),
-                          feather=float(v['feather'] or 0), colormap=v['colormap'])
+                          feather=float(v['feather'] or 0), colormap=v['colormap'],
+                          feather_mode=v['feather_mode'],
+                          feather_sigma=float(v['feather_sigma'] or 2.0))
             win.write_event_value('-DONE-', 'Done: ' + out)
         except Exception as e:
             win.write_event_value('-DONE-', 'Error: %s' % e)
@@ -271,6 +285,10 @@ def main(argv=None):
     ap.add_argument('--workers', type=int, default=None, help='windows processed at once')
     ap.add_argument('--feather', type=float, default=0.0,
                     help='blend passes with close scores (0 = hard seams; try 0.1)')
+    ap.add_argument('--feather-mode', choices=['blend', 'lowpass'], default='blend',
+                    help='lowpass keeps best-pass texture and blends only low-frequency tone')
+    ap.add_argument('--feather-sigma', type=float, default=2.0,
+                    help='lowpass Gaussian sigma in metres')
     ap.add_argument('--colormap', default=None, help='matplotlib colormap name embedded as palette (e.g. Greys, viridis)')
     ap.add_argument('--list', action='store_true', help='list passes found and exit')
     for k, d in mq.DEFAULT_PARAMS.items():
@@ -289,7 +307,8 @@ def main(argv=None):
     out = a.out or os.path.join(a.root or os.path.dirname(os.path.abspath(a.manifest)),
                                 'merged_mosaic', 'merged_%s.tif' % a.method)
     print(merge_entries(entries, out, params, a.method, a.swatch, a.source, workers=a.workers, feather=a.feather,
-                        colormap=a.colormap))
+                        colormap=a.colormap, feather_mode=a.feather_mode,
+                        feather_sigma=a.feather_sigma))
 
 
 if __name__ == '__main__':

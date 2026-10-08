@@ -176,7 +176,39 @@ def test_global_egn_pooling():
     print('ok')
     
 
+def test_lowpass_feather_keeps_texture_and_is_window_independent():
+    from scipy.ndimage import gaussian_filter
+    tracks = mq.transect_tracks_from_df(_meta(), **QUIET)
+    rng = np.random.default_rng(1)
+    with tempfile.TemporaryDirectory() as d:
+        a = (60 + rng.integers(-30, 30, (1, 100, 100))).astype("uint8")
+        b = (160 + rng.integers(-30, 30, (1, 100, 100))).astype("uint8")
+        _write(os.path.join(d, "a.tif"), a, 0, 100)
+        _write(os.path.join(d, "b.tif"), b, 0, 100)
+        paths = {0: os.path.join(d, "a.tif"), 1: os.path.join(d, "b.tif")}
+        outs = {}
+        for name, kw in (("hard", {}), ("blend", dict(feather=0.5)),
+                         ("low", dict(feather=0.5, feather_mode="lowpass", feather_sigma=3.0)),
+                         ("low_small", dict(feather=0.5, feather_mode="lowpass", feather_sigma=3.0,
+                                            budget_mb=0.002, workers=1))):
+            outs[name] = os.path.join(d, name + ".tif")
+            if name == "low_small":
+                saved, mq.SONAR_MERGE_BLOCK = mq.SONAR_MERGE_BLOCK, 16
+            try:
+                mq.merge_sonar_by_quality(paths, outs[name], tracks, window_index=False, **QUIET, **kw)
+            finally:
+                if name == "low_small":
+                    mq.SONAR_MERGE_BLOCK = saved
+        img = {k: rasterio.open(v).read(1).astype("float32") for k, v in outs.items()}
+        hf = lambda x: (x - gaussian_filter(x, 2))[5:25, 20:80].std()
+        assert hf(img["low"]) > 0.8 * hf(img["hard"]) > hf(img["blend"]) * 0.0
+        assert hf(img["low"]) > hf(img["blend"])
+        assert np.abs(img["low"] - img["low_small"]).max() <= 1
+    print("ok")
+
+
 if __name__ == "__main__":
+    test_lowpass_feather_keeps_texture_and_is_window_independent()
     test_range_smooth_and_edge_feather()
     test_batch_and_manifest()
     test_other_methods()
