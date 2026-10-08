@@ -427,6 +427,44 @@ def mask_mosaics_to_plateau(tif_paths: list, out_dir: str, tracks: dict,
     return out_paths
 
 
+SONAR_TILE_PX = 2048        # source pass is indexed in tiles this many px square
+
+
+def pass_tiles(path, crs, tile_px=SONAR_TILE_PX, nodata=0):
+    """
+    Cut one pass into a grid of tile windows and return those holding data,
+    as dicts: col_off, row_off, width, height, bounds=(w, s, e, n) in `crs`.
+
+    A transect that runs 50 km is a long thin diagonal; its bounding box is
+    mostly empty. Indexing it by tile gives the merge the real footprint, so a
+    window of the output only ever touches the stretches of the pass that
+    actually lie in it. Emptiness is tested on a decimated read (averaged,
+    so thin data is not missed), and only one tile is in memory at a time.
+    """
+    from rasterio.windows import Window, bounds as win_bounds
+    from rasterio.warp import transform_bounds
+
+    tiles = []
+    isnan_nd = isinstance(nodata, float) and np.isnan(nodata)
+    with rasterio.open(path) as src:
+        for r in range(0, src.height, tile_px):
+            for c in range(0, src.width, tile_px):
+                w, h = min(tile_px, src.width - c), min(tile_px, src.height - r)
+                win = Window(c, r, w, h)
+                if nodata is not None:
+                    shape = (src.count, max(1, h // 8), max(1, w // 8))
+                    small = src.read(window=win, out_shape=shape,
+                                     resampling=Resampling.nearest if isnan_nd else Resampling.average,
+                                     out_dtype="float32")
+                    if not _valid_mask(small, nodata).any():
+                        continue
+                b = win_bounds(win, src.transform)
+                if src.crs != crs:
+                    b = transform_bounds(src.crs, crs, *b)
+                tiles.append(dict(col_off=c, row_off=r, width=w, height=h, bounds=tuple(b)))
+    return tiles
+
+
 MERGE_METHODS = ("quality", "first", "last", "mean", "median", "min", "max")
 SELECTING_METHODS = ("quality", "first", "last")
 
@@ -434,15 +472,17 @@ SELECTING_METHODS = ("quality", "first", "last")
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
                            nodata=0, bounds=None, method="quality", source_tif=None,
-                           window_index=True):
+                           window_index=True, tile_px=SONAR_TILE_PX):
     """
-    Passes are never all open at once. Each pass's header is read once to get
-    its footprint, the output grid is cut into windows, and every window is
-    matched to the passes whose footprint touches it. A window then opens one
-    pass at a time, reads the part it needs and closes it, so the open-handle
-    count stays at one however many recordings are merged.
-    window_index: True writes <out>_windows.csv (window geometry and the keys
-    of every pass overlapping it), a path writes it there, False/None skips.
+    Nothing is held for a whole pass. Each pass is first cut into tile
+    windows (see pass_tiles) and only tiles holding data are kept; the output
+    grid is cut into windows; each output window is matched to the tiles that
+    touch it. A window then opens one pass at a time and reads only the
+    stretch of it that lies inside, so memory depends on the window and tile
+    size, never on how long a transect is, and one file is open at a time.
+    window_index: True writes <out>_tiles.csv (every source tile and its
+    footprint) and <out>_windows.csv (each output window and the passes/tiles
+    overlapping it); a str is used as the windows path, False/None skips.
 
     method: one of MERGE_METHODS. "quality" (default) is described below;
     "first"/"last" take the first/last pass in id order that holds data;
@@ -514,19 +554,23 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     try:
         res_x, res_y = heads[0][0]
         crs, count, dtype = heads[0][1], heads[0][2], heads[0][3]
-        pass_bounds = [h[4] if h[1] == crs else transform_bounds(h[1], crs, *h[4])
-                       for h in heads]
+        all_tiles = [pass_tiles(p, crs, tile_px, nodata) for p in tif_list]
+        pass_bounds = [(min(t["bounds"][0] for t in ts), min(t["bounds"][1] for t in ts),
+                        max(t["bounds"][2] for t in ts), max(t["bounds"][3] for t in ts))
+                       if ts else None for ts in all_tiles]
+        have = [b for b in pass_bounds if b is not None]
+        if not have:
+            raise ValueError("no pass holds any data")
         # bounds=(west, south, east, north) in the mosaic CRS restricts the
         # output to a swatch; passes are only read where they overlap it.
         extent = bounds if bounds is not None else (
-            min(b[0] for b in pass_bounds), min(b[1] for b in pass_bounds),
-            max(b[2] for b in pass_bounds), max(b[3] for b in pass_bounds))
+            min(b[0] for b in have), min(b[1] for b in have),
+            max(b[2] for b in have), max(b[3] for b in have))
         west, north = extent[0], extent[3]
         width = int(round((extent[2] - west) / res_x))
         height = int(round((north - extent[1]) / res_y))
         if width <= 0 or height <= 0:
             raise ValueError("merge extent is empty")
-        bounds = pass_bounds
         transform = rasterio.transform.from_origin(west, north, res_x, res_y)
         cell = quality_cell(max(res_x, res_y))
         windows = list(work_windows(width, height, budget_mb))
@@ -551,30 +595,51 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            src_nodata=nodata, nodata=nodata) as vrt:
                 return vrt.read(window=win)
 
+        # overlap[k] = [(pass index, bbox of that pass's tiles in the window,
+        # tile ids)], so a pass crossing the window costs only the stretch of
+        # it that is really there.
         overlap = []
         for win in windows:
             w0 = west + win.col_off * res_x
             w1 = w0 + win.width * res_x
             n1 = north - win.row_off * res_y
             n0 = n1 - win.height * res_y
-            overlap.append([i for i, b in enumerate(bounds)
-                            if b[0] < w1 and b[2] > w0 and b[1] < n1 and b[3] > n0])
+            hits = []
+            for i, ts in enumerate(all_tiles):
+                sel = [(k, t["bounds"]) for k, t in enumerate(ts)
+                       if t["bounds"][0] < w1 and t["bounds"][2] > w0
+                       and t["bounds"][1] < n1 and t["bounds"][3] > n0]
+                if sel:
+                    hits.append((i, (min(b[0] for _, b in sel), min(b[1] for _, b in sel),
+                                     max(b[2] for _, b in sel), max(b[3] for _, b in sel)),
+                                 [k for k, _ in sel]))
+            overlap.append(hits)
         if window_index:
-            idx_path = (window_index if isinstance(window_index, str)
-                        else os.path.splitext(out_tif)[0] + "_windows.csv")
             import csv
+            base = os.path.splitext(out_tif)[0]
+            idx_path = window_index if isinstance(window_index, str) else base + "_windows.csv"
+            with open(base + "_tiles.csv", "w", newline="") as fh:
+                wr = csv.writer(fh)
+                wr.writerow(["pass", "tile", "col_off", "row_off", "width", "height",
+                             "west", "south", "east", "north", "tif"])
+                for i, ts in enumerate(all_tiles):
+                    for k, t in enumerate(ts):
+                        wr.writerow([ids[i], k, t["col_off"], t["row_off"], t["width"],
+                                     t["height"], *t["bounds"], tif_list[i]])
             with open(idx_path, "w", newline="") as fh:
                 wr = csv.writer(fh)
                 wr.writerow(["window", "col_off", "row_off", "width", "height",
-                             "west", "south", "east", "north", "n_passes", "passes"])
-                for k, (win, ov) in enumerate(zip(windows, overlap)):
+                             "west", "south", "east", "north", "n_passes", "passes", "tiles"])
+                for k, (win, hits) in enumerate(zip(windows, overlap)):
                     w0 = west + win.col_off * res_x
                     n1 = north - win.row_off * res_y
                     wr.writerow([k, int(win.col_off), int(win.row_off),
                                  int(win.width), int(win.height), w0,
                                  n1 - win.height * res_y, w0 + win.width * res_x, n1,
-                                 len(ov), ";".join(str(ids[i]) for i in ov)])
-            log(f"      Window index: {idx_path}", flush=True)
+                                 len(hits), ";".join(str(ids[i]) for i, _, _ in hits),
+                                 ";".join("%s#%s" % (ids[i], "+".join(map(str, tl)))
+                                          for i, _, tl in hits)])
+            log(f"      Tile index: {base}_tiles.csv; window index: {idx_path}", flush=True)
 
         won = np.zeros(nsrc, dtype=np.int64)
         pulse = Progress(len(windows), "merge windows")
@@ -605,8 +670,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 xs = west + (np.arange(left, left + shape[1]) + 0.5) * res_x
                 ys = north - (np.arange(top, top + shape[0]) + 0.5) * res_y
 
-                for index in overlap[wi]:
-                    b = bounds[index]
+                for index, b, _tiles in overlap[wi]:
                     # Only the part of the window this pass reaches: a narrow
                     # pass crossing a wide window costs its own area, not the
                     # window's.
