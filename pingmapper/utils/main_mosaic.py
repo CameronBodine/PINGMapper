@@ -163,20 +163,34 @@ def gui():
     import FreeSimpleGUI as sg
 
     d = mq.DEFAULT_PARAMS
+    tips = {
+        'plateau_end': "Fraction (0-1) of a ping's max range out to which a pixel is fully trusted. Past it, trust declines toward far_floor.",
+        'far_floor': 'Trust (0-1] given to the very farthest pixels. Lower = far-range pixels yield more readily to another pass.',
+        'nadir_per_depth': 'Width of the untrusted strip under the boat, in multiples of water depth. Trust ramps from 0 at the track to full at depth x this value. 0 disables it.',
+        'depth_window': 'Number of pings in the rolling median used to smooth depth. Larger = steadier depth, slower response to real depth changes.',
+    }
+    tip_root = 'Folder holding the PINGMapper outputs; every <project>/sonar_mosaic is searched.'
+    tip_manifest = 'CSV with columns tif, meta_csv (optional key, transect). Used instead of the batch folder.'
+    tip_out = 'Merged GeoTIFF to write. Blank = merged_mosaic/merged_<method>.tif in the batch folder.'
+    tip_kind = 'wcr = water column removed; wcp = water column present.'
+    tip_method = 'quality = best look per pixel (needs meta CSVs); first/last = pass order; mean/median/min/max = per-pixel statistic.'
+    tip_workers = 'Output windows processed at once. More is faster; the memory budget is shared among them.'
+    tip_source = 'Also write a raster (and CSV key table) recording which pass supplied each pixel.'
+    tip_swatch = 'Merge only a square test area centred on E, N (mosaic CRS units) with this side length in metres.'
     pk = [k for k in d]
     layout = [
-        [sg.Text('Batch folder'), sg.In(key='root', size=(60, 1)), sg.FolderBrowse()],
-        [sg.Text('or Manifest CSV'), sg.In(key='manifest', size=(57, 1)),
+        [sg.Text('Batch folder'), sg.In(key='root', size=(60, 1), tooltip=tip_root), sg.FolderBrowse(tooltip=tip_root)],
+        [sg.Text('or Manifest CSV'), sg.In(key='manifest', size=(57, 1), tooltip=tip_manifest),
          sg.FileBrowse(file_types=(('CSV', '*.csv'),))],
-        [sg.Text('Output TIF'), sg.In(key='out', size=(61, 1)),
+        [sg.Text('Output TIF'), sg.In(key='out', size=(61, 1), tooltip=tip_out),
          sg.SaveAs(file_types=(('GeoTIFF', '*.tif'),), default_extension='.tif')],
-        [sg.Text('Mosaic kind'), sg.Combo(['wcr', 'wcp'], 'wcr', key='kind', readonly=True),
-         sg.Text('Method'), sg.Combo(list(mq.MERGE_METHODS), 'quality', key='method', readonly=True),
-         sg.Text('Workers'), sg.Spin(list(range(1, 33)), min(4, os.cpu_count() or 1), key='workers', size=(4, 1)),
-         sg.Checkbox('Write source raster', key='source')],
-        [sg.Text('Swatch (optional): E'), sg.In(key='sw_e', size=(10, 1)), sg.Text('N'),
-         sg.In(key='sw_n', size=(10, 1)), sg.Text('Size m'), sg.In(key='sw_s', size=(8, 1))],
-        [sg.Frame('Quality parameters', [[sg.Text(k), sg.In(str(d[k]), key='p_' + k, size=(8, 1))]
+        [sg.Text('Mosaic kind'), sg.Combo(['wcr', 'wcp'], 'wcr', key='kind', readonly=True, tooltip=tip_kind),
+         sg.Text('Method'), sg.Combo(list(mq.MERGE_METHODS), 'quality', key='method', readonly=True, tooltip=tip_method),
+         sg.Text('Workers'), sg.Spin(list(range(1, 33)), min(4, os.cpu_count() or 1), key='workers', size=(4, 1), tooltip=tip_workers),
+         sg.Checkbox('Write source raster', key='source', tooltip=tip_source)],
+        [sg.Text('Swatch (optional): E'), sg.In(key='sw_e', size=(10, 1), tooltip=tip_swatch), sg.Text('N'),
+         sg.In(key='sw_n', size=(10, 1), tooltip=tip_swatch), sg.Text('Size m'), sg.In(key='sw_s', size=(8, 1), tooltip=tip_swatch)],
+        [sg.Frame('Quality parameters', [[sg.Text(k, tooltip=tips[k]), sg.In(str(d[k]), key='p_' + k, size=(8, 1), tooltip=tips[k])]
                                          for k in pk])],
         [sg.Multiline(size=(90, 12), key='log', disabled=True, autoscroll=True)],
         [sg.Button('List passes'), sg.Button('Run'), sg.Button('Quit')],
