@@ -472,7 +472,7 @@ SELECTING_METHODS = ("quality", "first", "last")
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
                            nodata=0, bounds=None, method="quality", source_tif=None,
-                           window_index=True, tile_px=SONAR_TILE_PX):
+                           window_index=True, tile_px=SONAR_TILE_PX, workers=None):
     """
     Nothing is held for a whole pass. Each pass is first cut into tile
     windows (see pass_tiles) and only tiles holding data are kept; the output
@@ -483,6 +483,9 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     window_index: True writes <out>_tiles.csv (every source tile and its
     footprint) and <out>_windows.csv (each output window and the passes/tiles
     overlapping it); a str is used as the windows path, False/None skips.
+    workers: output windows computed at once (threads; default min(4, CPUs)).
+    budget_mb is shared between them, so peak memory stays near budget_mb.
+    Windows are written in order by the calling thread only.
 
     method: one of MERGE_METHODS. "quality" (default) is described below;
     "first"/"last" take the first/last pass in id order that holds data;
@@ -573,7 +576,10 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
             raise ValueError("merge extent is empty")
         transform = rasterio.transform.from_origin(west, north, res_x, res_y)
         cell = quality_cell(max(res_x, res_y))
-        windows = list(work_windows(width, height, budget_mb))
+        if workers is None:
+            workers = min(4, os.cpu_count() or 1)
+        workers = max(1, int(workers))
+        windows = list(work_windows(width, height, budget_mb / workers))
         log(f"      Output grid {width:,} x {height:,} px at {res_x:.4f} m, "
             f"in {len(windows):,} window(s) of at most "
             f"{windows[0].width:,} x {windows[0].height:,}", flush=True)
@@ -655,7 +661,7 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                             blockxsize=SONAR_MERGE_BLOCK, blockysize=SONAR_MERGE_BLOCK,
                             BIGTIFF="IF_SAFER", sparse_ok=True)
               if source_tif else contextlib.nullcontext()) as src_dst:
-            for wi, window in enumerate(windows):
+            def compute(wi, window):
                 top, left = int(window.row_off), int(window.col_off)
                 # The running best value, the score that won it, and which
                 # pass it came from - for this window only.
@@ -748,16 +754,33 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                                     else med, out_nodata).astype(dtype)
                     best_q = ok.any(axis=0).astype("float32")
                 covered = best_q > 0
+                return window, best, who, covered
+
+            from collections import deque
+            from concurrent.futures import ThreadPoolExecutor
+
+            def write(result):
+                window, best, who, covered = result
                 # A window no pass reaches is left unwritten; the file is
                 # sparse and reads it back as 0.
                 if covered.any():
                     dst.write(best, window=window)
                     if method in SELECTING_METHODS:
-                        won += np.bincount(who[covered], minlength=nsrc)
+                        won[:] += np.bincount(who[covered], minlength=nsrc)
                         if src_dst is not None:
                             src_dst.write(np.where(covered, who + 1, 0).astype("uint16"),
                                           1, window=window)
                 pulse.step()
+
+            # At most `workers` windows are in flight or waiting to be written.
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                pending = deque()
+                for wi, window in enumerate(windows):
+                    if len(pending) >= workers:
+                        write(pending.popleft().result())
+                    pending.append(pool.submit(compute, wi, window))
+                while pending:
+                    write(pending.popleft().result())
         pulse.finish()
     finally:
         pass

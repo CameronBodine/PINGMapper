@@ -82,7 +82,7 @@ def read_manifest(path):
 
 
 def merge_entries(entries, out_tif, params=None, method='quality', swatch=None,
-                  source=False, log=print):
+                  source=False, log=print, workers=None):
     """
     Merge passes described by entries (key, tif, meta_csv, transect).
     swatch: optional (easting, northing, size_m) in the mosaic CRS.
@@ -113,7 +113,7 @@ def merge_entries(entries, out_tif, params=None, method='quality', swatch=None,
     log('Merging %d passes (%s) -> %s' % (len(mapping), method, out_tif))
     src = out_tif.replace('.tif', '_source.tif') if source else None
     mq.merge_sonar_by_quality(mapping, out_tif, tracks, log, bounds=bounds,
-                              method=method, source_tif=src)
+                              method=method, source_tif=src, workers=workers)
     if src and method in mq.SELECTING_METHODS:
         # source_id n in the raster is the n-th pass here (position + 1).
         pd.DataFrame({'source_id': range(1, len(mapping) + 1),
@@ -142,6 +142,7 @@ def main(argv=None):
     ap.add_argument('--source', action='store_true',
                     help='also write which-pass-won raster (+ key table CSV)')
     ap.add_argument('--swatch', nargs=3, type=float, metavar=('E', 'N', 'SIZE_M'))
+    ap.add_argument('--workers', type=int, default=None, help='windows processed at once')
     ap.add_argument('--list', action='store_true', help='list passes found and exit')
     for k, d in mq.DEFAULT_PARAMS.items():
         ap.add_argument('--' + k.replace('_', '-'), type=type(d), default=d)
@@ -158,7 +159,7 @@ def main(argv=None):
         return
     out = a.out or os.path.join(a.root or os.path.dirname(os.path.abspath(a.manifest)),
                                 'merged_mosaic', 'merged_%s.tif' % a.method)
-    print(merge_entries(entries, out, params, a.method, a.swatch, a.source))
+    print(merge_entries(entries, out, params, a.method, a.swatch, a.source, workers=a.workers))
 
 
 if __name__ == '__main__':
