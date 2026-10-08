@@ -167,6 +167,12 @@ def test_global_egn_pooling():
     f=os.path.join(tempfile.mkdtemp(),'e.npz'); g.save(f,g.pool({'ss_port':cms}))
     b,w=g.load(f,'ss_port'); assert list(b)==[2,3,3]
     assert len(g.fit_length(b,5))==5
+    mm=g.combine_minmax([((0.,2.),(1.,3.)),((-1.,1.),(0.5,4.))])
+    assert float(mm['bed_min'])==-1. and float(mm['wc_max'])==4.
+    assert g.load_stats(f) is None
+    st=dict(mm,wcp_hist=np.ones(255),wcr_hist=np.ones(255))
+    g.save(f,g.pool({'ss_port':cms}),st)
+    ls=g.load_stats(f); assert float(ls['bed_max'])==2. and ls['wcp_hist'].sum()==255
     print('ok')
     
 

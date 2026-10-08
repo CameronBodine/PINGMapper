@@ -74,25 +74,36 @@ def pool(chunk_means_by_beam):
     return out
 
 
-def save(path, pooled):
+def save(path, pooled, stats=None):
+    """Write pooled means and optional global stats (min/max, histograms)."""
     arrs = {}
     for beam, d in pooled.items():
         arrs[beam + '__bed'] = d['bed']
         arrs[beam + '__wc'] = d['wc']
         arrs[beam + '__n'] = np.array(d['n_chunks'])
+    for k, v in (stats or {}).items():
+        arrs['stats__' + k] = np.asarray(v)
     np.savez(path, **arrs)
 
 
 def load(path, beam):
-    '''Return (bed_means, wc_means) for a beam name such as ss_port.'''
+    """Return (bed_means, wc_means) for a beam name such as ss_port."""
     with np.load(path) as z:
         if beam + '__bed' not in z:
             raise KeyError("%s has no EGN curve for %s" % (path, beam))
         return z[beam + '__bed'].copy(), z[beam + '__wc'].copy()
 
 
+def load_stats(path):
+    """Global min/max and histograms, or None if the file has none."""
+    with np.load(path) as z:
+        out = {k[7:]: z[k].copy() for k in z.files if k.startswith('stats__')}
+    need = ('bed_min', 'bed_max', 'wc_min', 'wc_max', 'wcp_hist', 'wcr_hist')
+    return out if all(k in out for k in need) else None
+
+
 def fit_length(means, n):
-    '''Trim or pad (by repeating the last value) a curve to n bins.'''
+    """Trim or pad (by repeating the last value) a curve to n bins."""
     means = np.asarray(means, dtype=float)
     if means.shape[0] >= n:
         return means[:n]
@@ -100,52 +111,124 @@ def fit_length(means, n):
     return np.concatenate([means, pad])
 
 
-def recording_chunk_means(meta_file, sampling='high', log=print):
-    '''Sampled chunk means for one sidescan beam of a processed recording.'''
+def combine_minmax(min_max):
+    """Global bed/wc min and max from per-chunk _egnCalcMinMax results."""
+    bmin = [m[0][0] for m in min_max]
+    bmax = [m[0][1] for m in min_max]
+    wmin = [m[1][0] for m in min_max]
+    wmax = [m[1][1] for m in min_max]
+    with np.errstate(all='ignore'):
+        return {'bed_min': np.nanmin(bmin), 'bed_max': np.nanmax(bmax),
+                'wc_min': np.nanmin(wmin), 'wc_max': np.nanmax(wmax)}
+
+
+def _open_son(meta_file):
     from pingmapper.class_rectObj import rectObj
     son = rectObj(meta_file)
-    chunks = son._getChunkID()
-    chunks = chunks[:-1] if len(chunks) > 1 else chunks
-    chunks = select_chunks(chunks, sampling)
     son.egn = True
     son.tvg = False
+    return son
+
+
+def _sampled_chunks(son, sampling):
+    chunks = son._getChunkID()
+    chunks = chunks[:-1] if len(chunks) > 1 else chunks
+    return select_chunks(chunks, sampling)
+
+
+def _per_chunk(son, fn, chunks):
     out = []
     for c in chunks:
-        son._loadSonMeta()  # the chunk routine frees it
-        out.append(son._egnCalcChunkMeans(c))
-    return son.beamName, out
+        son._loadSonMeta()  # the chunk routines free it
+        out.append(fn(c))
+    return out
 
 
-def build(root, out_file, sampling='high', log=print):
-    '''
-    Pool EGN means from every recording folder under root (each holding a
-    ``meta`` folder). Port and starboard are pooled separately. Returns
-    the pooled dict and writes out_file.
-    '''
+def recording_chunk_means(meta_file, sampling='high', log=print):
+    """Sampled chunk means for one sidescan beam of a processed recording."""
+    son = _open_son(meta_file)
+    chunks = _sampled_chunks(son, sampling)
+    return son.beamName, _per_chunk(son, son._egnCalcChunkMeans, chunks)
+
+
+def _meta_files(root):
+    files = []
+    for d in sorted(glob.glob(os.path.join(root, '*'))):
+        if os.path.isdir(os.path.join(d, 'meta')):
+            files += sorted(glob.glob(os.path.join(d, 'meta', '*_ss_*_meta.meta')))
+    return files
+
+
+def build(root, out_file, sampling='high', stats=True, log=print):
+    """
+    Pool EGN from every recording folder under root (each holding a ``meta``
+    folder). Port and starboard are pooled separately.
+
+    Stage 1 pools the range-wise means. If stats is True, stage 2 finds the
+    global min/max after EGN and stage 3 sums the corrected histograms, so the
+    contrast stretch is also shared by all recordings. Everything is written
+    to out_file, and the pooled means dict is returned.
+    """
     by_beam = {}
-    dirs = sorted(d for d in glob.glob(os.path.join(root, '*'))
-                  if os.path.isdir(os.path.join(d, 'meta')))
-    for d in dirs:
-        for mf in sorted(glob.glob(os.path.join(d, 'meta', '*_ss_*_meta.meta'))):
-            try:
-                beam, cms = recording_chunk_means(mf, sampling, log)
-            except Exception as e:
-                log('skip %s: %r' % (mf, e))
-                continue
-            by_beam.setdefault(beam, []).extend(cms)
-            log('%s %s: %d chunks' % (os.path.basename(d), beam, len(cms)))
+    good = []
+    for mf in _meta_files(root):
+        name = os.path.basename(os.path.dirname(os.path.dirname(mf)))
+        try:
+            beam, cms = recording_chunk_means(mf, sampling, log)
+        except Exception as e:
+            log('skip %s: %r' % (mf, e))
+            continue
+        by_beam.setdefault(beam, []).extend(cms)
+        good.append(mf)
+        log('means %s %s: %d chunks' % (name, beam, len(cms)))
     if not by_beam:
         raise RuntimeError('No processed recordings found under %s' % root)
     pooled = pool(by_beam)
-    save(out_file, pooled)
+
+    extra = None
+    if stats:
+        extra = _pool_stats(good, pooled, sampling, log)
+    save(out_file, pooled, extra)
     log('wrote %s' % out_file)
     return pooled
+
+
+def _pool_stats(meta_files, pooled, sampling, log):
+    def prep(mf):
+        son = _open_son(mf)
+        son.egn_bed_means = pooled[son.beamName]['bed']
+        son.egn_wc_means = pooled[son.beamName]['wc']
+        return son
+
+    mm = []
+    for mf in meta_files:
+        son = prep(mf)
+        mm += _per_chunk(son, son._egnCalcMinMax, _sampled_chunks(son, sampling))
+        log('min/max %s' % os.path.basename(mf))
+    stats = combine_minmax(mm)
+
+    wcp = np.zeros(255)
+    wcr = np.zeros(255)
+    for mf in meta_files:
+        son = prep(mf)
+        son.egn_bed_min, son.egn_bed_max = stats['bed_min'], stats['bed_max']
+        son.egn_wc_min, son.egn_wc_max = stats['wc_min'], stats['wc_max']
+        son.remShadow = getattr(son, 'remShadow', 0)
+        for a, b in _per_chunk(son, son._egnCalcHist, _sampled_chunks(son, sampling)):
+            wcp += a
+            wcr += b
+        log('histogram %s' % os.path.basename(mf))
+    stats['wcp_hist'] = wcp
+    stats['wcr_hist'] = wcr
+    return stats
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Pool EGN across recordings.')
     ap.add_argument('root', help='Folder holding processed recording folders')
     ap.add_argument('out', help='Output .npz file')
+    ap.add_argument('--no-stats', action='store_true',
+                    help='Pool only the means (skip global min/max and stretch)')
     ap.add_argument('--sampling', default='high',
                     help='low, moderate, high or a fraction 0-1')
     a = ap.parse_args(argv)
@@ -154,7 +237,7 @@ def main(argv=None):
         s = float(s)
     except ValueError:
         pass
-    build(a.root, a.out, s)
+    build(a.root, a.out, s, stats=not a.no_stats)
 
 
 if __name__ == '__main__':

@@ -2093,6 +2093,10 @@ def read_master_func(logfilename='',
     if egn:
         start_time = time.time()
         print("\nPerforming empirical gain normalization (EGN) on sonar intensities:\n")
+        global_stats = None
+        if egn_means_file:
+            from pingmapper.utils import global_egn
+            global_stats = global_egn.load_stats(egn_means_file)
         for son in sonObjs:
             if _is_sidescan_beam(son.beamName):
                 print('\n\tCalculating EGN for', son.beamName)
@@ -2124,13 +2128,19 @@ def read_master_func(logfilename='',
                     son._egnCalcGlobalMeans(chunk_means)
                     del chunk_means
 
-                # Calculate egn min and max for each chunk
-                print('\n\tCalculating EGN min and max values for each chunk...')
-                min_max = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcMinMax)(i) for i in tqdm(chunks))
+                if global_stats is not None:
+                    son.egn_bed_min = float(global_stats['bed_min'])
+                    son.egn_bed_max = float(global_stats['bed_max'])
+                    son.egn_wc_min = float(global_stats['wc_min'])
+                    son.egn_wc_max = float(global_stats['wc_max'])
+                else:
+                    # Calculate egn min and max for each chunk
+                    print('\n\tCalculating EGN min and max values for each chunk...')
+                    min_max = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcMinMax)(i) for i in tqdm(chunks))
 
-                # Calculate global min max for each channel
-                son._egnCalcGlobalMinMax(min_max)
-                del min_max
+                    # Calculate global min max for each channel
+                    son._egnCalcGlobalMinMax(min_max)
+                    del min_max
 
                 son._cleanup()
                 son._pickleSon()
@@ -2173,6 +2183,8 @@ def read_master_func(logfilename='',
         # Need to calculate histogram if egn_stretch is greater then 0
         if egn_stretch > 0:
             for son in sonObjs:
+                if global_stats is not None:
+                    break
                 if _is_sidescan_beam(son.beamName):
                     # Determine what chunks to process
                     chunks = son._getChunkID()
@@ -2189,10 +2201,14 @@ def read_master_func(logfilename='',
             egn_wcp_hist = np.zeros((255))
             egn_wcr_hist = np.zeros((255))
 
-            for son in sonObjs:
-                if _is_sidescan_beam(son.beamName):
-                    egn_wcp_hist += son.egn_wcp_hist
-                    egn_wcr_hist += son.egn_wcr_hist
+            if global_stats is not None:
+                egn_wcp_hist += global_stats['wcp_hist']
+                egn_wcr_hist += global_stats['wcr_hist']
+            else:
+                for son in sonObjs:
+                    if _is_sidescan_beam(son.beamName):
+                        egn_wcp_hist += son.egn_wcp_hist
+                        egn_wcr_hist += son.egn_wcr_hist
 
             for son in sonObjs:
                 if _is_sidescan_beam(son.beamName):
