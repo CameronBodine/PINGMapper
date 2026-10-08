@@ -308,10 +308,38 @@ class portstarObj(object):
 
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
-                wcpToMosaic = self._transectChunkFiles('rect_wcp', _iter_groups, chunkField)
+                # Locate port files
+                portPath = os.path.join(self.port.outDir, 'rect_wcp')
+                port = sorted(glob(os.path.join(portPath, '*.tif')))
 
-            if self.port.rect_wcr: # Moscaic wcr sonograms if previousl exported
-                srcToMosaic = self._transectChunkFiles('rect_wcr', _iter_groups, chunkField)
+                # Locate starboard files
+                starPath = os.path.join(self.star.outDir, 'rect_wcp')
+                star = sorted(glob(os.path.join(starPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if (len(port) > maxChunk) and (maxChunk != 0):
+                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                else:
+                    wcpToMosaic = [port + star]
+
+            if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
+                # Locate port files
+                portPath = os.path.join(self.port.outDir, 'rect_wcr')
+                port = sorted(glob(os.path.join(portPath, '*.tif')))
+
+                # Locate starboard files
+                starPath = os.path.join(self.star.outDir, 'rect_wcr')
+                star = sorted(glob(os.path.join(starPath, '*.tif')))
+
+                # Make multiple mosaics if number of input sonograms is greater than maxChunk
+                if (len(port) > maxChunk) and (maxChunk != 0):
+                    port = [port[i:i+maxChunk] for i in range(0, len(port), maxChunk)]
+                    star = [star[i:i+maxChunk] for i in range(0, len(star), maxChunk)]
+                    srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+                else:
+                    srcToMosaic = [port + star]
 
         else:
             if self.port.map_sub:
@@ -343,9 +371,9 @@ class portstarObj(object):
         if mosaic == 1:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in srcToMosaic.items())
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))
@@ -360,9 +388,9 @@ class portstarObj(object):
         elif mosaic == 2:
             if son:
                 if self.port.rect_wcp:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
+                    _ = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([wcp], overview, i, son=son) for i, wcp in enumerate(wcpToMosaic))
                 if self.port.rect_wcr:
-                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in srcToMosaic.items())
+                    _ = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([src], overview, i, son=son) for i, src in enumerate(srcToMosaic))
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicVRT)([sub], overview, i, son=son) for i, sub in enumerate(subToMosaic))
@@ -372,9 +400,6 @@ class portstarObj(object):
                     bands = self._getBandCount(predictToMosaic[0][0])
                     for i, pred in enumerate(predictToMosaic):
                         _ = Parallel(n_jobs=safe_n_jobs(bands, threadCnt), verbose=10)(delayed(self._mosaicVRT)([pred], overview, i, bands=[c], son=True) for c in range(1,bands+1))
-
-        return
-
 
     #=======================================================================
     def _transectChunkFiles(self, subdir, iter_groups, chunkField='chunk_id'):
@@ -407,7 +432,6 @@ class portstarObj(object):
 
         mosaicsByTransect : {transect_id: path to that transect's mosaic}
         '''
-        import re
         import re
         from pingmapper.utils import mosaic_quality as mq
 
@@ -479,93 +503,10 @@ class portstarObj(object):
 
         if son:
             if self.port.rect_wcp: # Moscaic wcp sonograms if previousl exported
-                self.port._loadSonMeta()
-                df = self.port.sonMetaDF
+                wcpToMosaic = self._transectChunkFiles('rect_wcp', _iter_groups, chunkField)
 
-                portPath = os.path.join(self.port.outDir, 'rect_wcp')
-
-                port = []
-                for name, group in _iter_groups(df):
-                    chunks = pd.unique(group[chunkField])
-                    port_transect = []
-                    for chunk in chunks:
-                        zero = self.port._addZero(chunk)
-                        img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
-                        imgs = glob(img_path)
-                        if len(imgs) == 0:
-                            continue
-                        port_transect.append(imgs[0])
-                    if len(port_transect) > 0:
-                        port.append(port_transect)
-
-                self.star._loadSonMeta()
-                df = self.star.sonMetaDF
-
-                starPath = os.path.join(self.star.outDir, 'rect_wcp')
-
-                star = []
-                for name, group in _iter_groups(df):
-                    chunks = pd.unique(group[chunkField])
-                    star_transect = []
-                    for chunk in chunks:
-                        zero = self.port._addZero(chunk)
-                        img_path = os.path.join(starPath, '*_{}{}.tif'.format(zero, chunk))
-                        imgs = glob(img_path)
-                        if len(imgs) == 0:
-                            continue
-                        star_transect.append(imgs[0])
-                    if len(star_transect) > 0:
-                        star.append(star_transect)
-
-                wcpToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
-
-            if self.port.rect_wcr: # Moscaic wcp sonograms if previousl exported
-
-                self.port._loadSonMeta()
-                df = self.port.sonMetaDF
-
-                portPath = os.path.join(self.port.outDir, 'rect_wcr')
-
-                port = []
-                for name, group in _iter_groups(df):
-                    chunks = pd.unique(group[chunkField])
-                    port_transect = []
-                    for chunk in chunks:
-                        # try:
-                        zero = self.port._addZero(chunk)
-                        img_path = os.path.join(portPath, '*_{}{}.tif'.format(zero, chunk))
-                        imgs = glob(img_path)
-                        if len(imgs) == 0:
-                            continue
-                        port_transect.append(imgs[0])
-                        # except:
-                        #     pass
-                    if len(port_transect) > 0:
-                        port.append(port_transect)
-
-                self.star._loadSonMeta()
-                df = self.star.sonMetaDF
-
-                starPath = os.path.join(self.star.outDir, 'rect_wcr')
-
-                star = []
-                for name, group in _iter_groups(df):
-                    chunks = pd.unique(group[chunkField])
-                    star_transect = []
-                    for chunk in chunks:
-                        # try:
-                        zero = self.star._addZero(chunk)
-                        img_path = os.path.join(starPath, '*_{}{}.tif'.format(zero, chunk))
-                        imgs = glob(img_path)
-                        if len(imgs) == 0:
-                            continue
-                        star_transect.append(imgs[0])
-                        # except:
-                        #     pass
-                    if len(star_transect) > 0:
-                        star.append(star_transect)
-
-                srcToMosaic = [list(itertools.chain(*i)) for i in zip(port, star)]
+            if self.port.rect_wcr: # Moscaic wcr sonograms if previousl exported
+                srcToMosaic = self._transectChunkFiles('rect_wcr', _iter_groups, chunkField)
 
         else:
             if self.port.map_sub:
