@@ -32,6 +32,8 @@ import re
 import sys
 
 import pandas as pd
+# Prefer this checkout over any installed pingmapper (repo root = 3 levels up).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from pingmapper.utils import mosaic_quality as mq
 
