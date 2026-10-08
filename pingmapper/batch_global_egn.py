@@ -27,7 +27,7 @@ _DEFERRED_OFF = {
 
 def process_with_global_egn(in_dir=None, out_dir=None, params=None, sampling='moderate',
                             in_files=None, prefix='', suffix='', preserve_subdirs=False,
-                            means_file=None, merge=False, merge_kw=None, log=print):
+                            means_file=None, merge=False, merge_kw=None, log=print, workers=None):
     """Process recordings with a single EGN curve pooled across all of them.
 
     ``params`` are the normal doWork parameters (egn is forced on in phase 3).
@@ -49,7 +49,7 @@ def process_with_global_egn(in_dir=None, out_dir=None, params=None, sampling='mo
 
     means_file = means_file or os.path.join(out_dir, 'global_egn.npz')
     log('Phase 2/3: pooling EGN across %d recordings (%s sampling)' % (len(ok), sampling))
-    global_egn.build(out_dir, means_file, sampling, log=log)
+    global_egn.build(out_dir, means_file, sampling, log=log, workers=workers)
 
     log('Phase 3/3: applying global EGN and exporting')
     p3 = dict(params, project_mode=2, egn=True, egn_means_file=means_file)

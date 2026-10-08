@@ -20,6 +20,7 @@ import os
 import sys
 import glob
 import argparse
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
@@ -159,7 +160,50 @@ def _meta_files(root):
     return files
 
 
-def build(root, out_file, sampling='high', stats=True, log=print):
+def _default_workers():
+    # Serial by default: the chunk routines already use joblib internally, and
+    # spawned processes re-import the heavy classes, which loses on small sets.
+    return 1
+
+
+def _run(fn, jobs, workers):
+    '''Run fn over jobs (tuples), in order, serially or in worker processes.'''
+    if workers <= 1 or len(jobs) <= 1:
+        return [fn(*j) for j in jobs]
+    with ProcessPoolExecutor(max_workers=min(workers, len(jobs))) as ex:
+        return list(ex.map(fn, *zip(*jobs)))
+
+
+def _means_job(mf, sampling):
+    return recording_chunk_means(mf, sampling)
+
+
+def _minmax_job(mf, pooled, sampling):
+    son = _prep(mf, pooled)
+    return _per_chunk(son, son._egnCalcMinMax, _sampled_chunks(son, sampling))
+
+
+def _hist_job(mf, pooled, stats, sampling):
+    son = _prep(mf, pooled)
+    son.egn_bed_min, son.egn_bed_max = stats['bed_min'], stats['bed_max']
+    son.egn_wc_min, son.egn_wc_max = stats['wc_min'], stats['wc_max']
+    son.remShadow = getattr(son, 'remShadow', 0)
+    wcp = np.zeros(255)
+    wcr = np.zeros(255)
+    for a, b in _per_chunk(son, son._egnCalcHist, _sampled_chunks(son, sampling)):
+        wcp += a
+        wcr += b
+    return wcp, wcr
+
+
+def _prep(mf, pooled):
+    son = _open_son(mf)
+    son.egn_bed_means = pooled[son.beamName]['bed']
+    son.egn_wc_means = pooled[son.beamName]['wc']
+    return son
+
+
+def build(root, out_file, sampling='high', stats=True, log=print, workers=None):
     """
     Pool EGN from every recording folder under root (each holding a ``meta``
     folder). Port and starboard are pooled separately.
@@ -168,16 +212,22 @@ def build(root, out_file, sampling='high', stats=True, log=print):
     global min/max after EGN and stage 3 sums the corrected histograms, so the
     contrast stretch is also shared by all recordings. Everything is written
     to out_file, and the pooled means dict is returned.
+
+    Within each stage the recordings/beams are independent, so they are
+    processed by ``workers`` processes (default 1 = serial; >1 helps only for many recordings).
+    The stages themselves depend on each other and run in order.
     """
+    workers = _default_workers() if workers is None else int(workers)
     by_beam = {}
     good = []
-    for mf in _meta_files(root):
+    files = _meta_files(root)
+    try:
+        results = _run(_means_job, [(mf, sampling) for mf in files], workers)
+    except Exception as e:
+        log('parallel means failed (%r); retrying serially' % (e,))
+        results = _run(_means_job, [(mf, sampling) for mf in files], 1)
+    for mf, (beam, cms) in zip(files, results):
         name = os.path.basename(os.path.dirname(os.path.dirname(mf)))
-        try:
-            beam, cms = recording_chunk_means(mf, sampling, log)
-        except Exception as e:
-            log('skip %s: %r' % (mf, e))
-            continue
         by_beam.setdefault(beam, []).extend(cms)
         good.append(mf)
         log('means %s %s: %d chunks' % (name, beam, len(cms)))
@@ -187,36 +237,25 @@ def build(root, out_file, sampling='high', stats=True, log=print):
 
     extra = None
     if stats:
-        extra = _pool_stats(good, pooled, sampling, log)
+        extra = _pool_stats(good, pooled, sampling, log, workers)
     save(out_file, pooled, extra)
     log('wrote %s' % out_file)
     return pooled
 
 
-def _pool_stats(meta_files, pooled, sampling, log):
-    def prep(mf):
-        son = _open_son(mf)
-        son.egn_bed_means = pooled[son.beamName]['bed']
-        son.egn_wc_means = pooled[son.beamName]['wc']
-        return son
-
+def _pool_stats(meta_files, pooled, sampling, log, workers=1):
     mm = []
-    for mf in meta_files:
-        son = prep(mf)
-        mm += _per_chunk(son, son._egnCalcMinMax, _sampled_chunks(son, sampling))
+    for chunk_mm, mf in zip(_run(_minmax_job, [(mf, pooled, sampling) for mf in meta_files], workers), meta_files):
+        mm += chunk_mm
         log('min/max %s' % os.path.basename(mf))
     stats = combine_minmax(mm)
 
     wcp = np.zeros(255)
     wcr = np.zeros(255)
-    for mf in meta_files:
-        son = prep(mf)
-        son.egn_bed_min, son.egn_bed_max = stats['bed_min'], stats['bed_max']
-        son.egn_wc_min, son.egn_wc_max = stats['wc_min'], stats['wc_max']
-        son.remShadow = getattr(son, 'remShadow', 0)
-        for a, b in _per_chunk(son, son._egnCalcHist, _sampled_chunks(son, sampling)):
-            wcp += a
-            wcr += b
+    jobs = [(mf, pooled, stats, sampling) for mf in meta_files]
+    for (a, b), mf in zip(_run(_hist_job, jobs, workers), meta_files):
+        wcp += a
+        wcr += b
         log('histogram %s' % os.path.basename(mf))
     stats['wcp_hist'] = wcp
     stats['wcr_hist'] = wcr
@@ -229,6 +268,7 @@ def main(argv=None):
     ap.add_argument('out', help='Output .npz file')
     ap.add_argument('--no-stats', action='store_true',
                     help='Pool only the means (skip global min/max and stretch)')
+    ap.add_argument('--workers', type=int, default=None, help='processes across recordings (default 1)')
     ap.add_argument('--sampling', default='high',
                     help='low, moderate, high or a fraction 0-1')
     a = ap.parse_args(argv)
@@ -237,7 +277,7 @@ def main(argv=None):
         s = float(s)
     except ValueError:
         pass
-    build(a.root, a.out, s, stats=not a.no_stats)
+    build(a.root, a.out, s, stats=not a.no_stats, workers=a.workers)
 
 
 if __name__ == '__main__':
