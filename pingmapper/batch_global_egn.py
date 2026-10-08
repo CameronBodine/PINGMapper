@@ -21,7 +21,7 @@ _DEFERRED_OFF = {
     'egn': False, 'wcp': False, 'wcm': False, 'wcr': False, 'wco': False,
     'rect_wcp': False, 'rect_wcr': False, 'pred_sub': False, 'map_sub': False,
     'export_poly': False, 'pltSubClass': False, 'banklines': False,
-    'coverage': False, 'mosaic_quality': False,
+    'coverage': False,
 }
 
 
