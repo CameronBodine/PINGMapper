@@ -105,7 +105,35 @@ def test_other_methods():
             raise AssertionError("expected ValueError")
 
 
+def test_batch_and_manifest():
+    import shutil
+    from pingmapper.utils import main_mosaic_quality as bm
+    with tempfile.TemporaryDirectory() as root:
+        # Two recordings, each with transect 0 only; transect ids collide.
+        for name, y, val in (("recA", 30.0, 10), ("recB", 70.0, 200)):
+            proj = os.path.join(root, name)
+            os.makedirs(os.path.join(proj, "sonar_mosaic")); os.makedirs(os.path.join(proj, "meta"))
+            _write(os.path.join(proj, "sonar_mosaic", name + "_x_rect_wcr_mosaic_0.tif"),
+                   np.full((1, 100, 100), val, dtype="uint8"), 0, 100)
+            df = _meta(); df = df[df.transect == (0 if y == 30.0 else 1)].copy(); df["transect"] = 0
+            df.to_csv(os.path.join(proj, "meta", "B002_ss_port_meta.csv"), index=False)
+        entries = bm.discover_batch(root, "wcr", **QUIET)
+        assert [e["key"] for e in entries] == ["recA:0", "recB:0"]
+        out = bm.run(root, "wcr", source=True, **QUIET)
+        with rasterio.open(out) as r:
+            m = r.read(1)
+        assert m[60, 50] == 10 and m[30, 50] == 200
+        assert os.path.exists(out.replace(".tif", "_source.csv"))
+        # Manifest, no metadata, any method that needs none.
+        man = os.path.join(root, "m.csv")
+        pd.DataFrame({"tif": [e["tif"] for e in entries]}).to_csv(man, index=False)
+        out2 = bm.merge_entries(bm.read_manifest(man), os.path.join(root, "o.tif"), method="max", **QUIET)
+        with rasterio.open(out2) as r:
+            assert r.read(1)[50, 50] == 200
+
+
 if __name__ == "__main__":
+    test_batch_and_manifest()
     test_other_methods()
     test_best_look_wins_and_mapping_is_explicit()
     test_multiband_uint16_and_swatch()
