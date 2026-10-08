@@ -472,7 +472,7 @@ SELECTING_METHODS = ("quality", "first", "last")
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
                            nodata=0, bounds=None, method="quality", source_tif=None,
-                           window_index=True, tile_px=SONAR_TILE_PX, workers=None):
+                           window_index=True, tile_px=SONAR_TILE_PX, workers=None, feather=0.0):
     """
     Nothing is held for a whole pass. Each pass is first cut into tile
     windows (see pass_tiles) and only tiles holding data are kept; the output
@@ -486,6 +486,12 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     workers: output windows computed at once (threads; default min(4, CPUs)).
     budget_mb is shared between them, so peak memory stays near budget_mb.
     Windows are written in order by the calling thread only.
+
+    feather: 0 (default) keeps the single best look per pixel, so seams
+    between passes are hard. A value above 0 (quality method only) blends
+    passes whose scores are close, weighting each by exp((q - best_q) / feather);
+    0.05-0.2 softens seams while a clearly better pass still dominates. The
+    source raster still records the best-scoring pass.
 
     method: one of MERGE_METHODS. "quality" (default) is described below;
     "first"/"last" take the first/last pass in id order that holds data;
@@ -547,6 +553,11 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     if source_tif and method not in SELECTING_METHODS:
         raise ValueError("source_tif needs method quality, first or last")
     combine = method not in SELECTING_METHODS
+    feather = float(feather or 0.0)
+    if feather < 0:
+        raise ValueError("feather must be >= 0")
+    if feather > 0 and method != "quality":
+        raise ValueError("feather only applies to method quality")
     mapping = _as_mapping(tif_paths)
     ids, tif_list = list(mapping.keys()), list(mapping.values())
     heads = []
@@ -670,6 +681,9 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 best_q = np.zeros(shape, dtype="float32")
                 who = np.zeros(shape, dtype="uint16")
                 stack = []
+                if feather > 0:
+                    f_acc = np.zeros((count,) + shape, dtype="float32")
+                    f_w = np.zeros(shape, dtype="float32")
                 if method in ("mean", "median"):
                     acc = np.zeros((count,) + shape, dtype="float64")
                     n_acc = np.zeros(shape, dtype="int32")
@@ -725,6 +739,15 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     view_v = best[:, rows, cols]
                     view_q = best_q[rows, cols]
                     view_w = who[rows, cols]
+                    if feather > 0:
+                        # Streaming soft-max: weights are relative to the
+                        # running best score, rescaled when it rises.
+                        new_m = np.where(valid, np.maximum(view_q, q), view_q)
+                        k_old = np.exp((view_q - new_m) / feather)
+                        k_new = np.where(valid, np.exp((q - new_m) / feather), 0.0).astype("float32")
+                        f_acc[:, rows, cols] = (f_acc[:, rows, cols] * k_old
+                                                + np.where(valid, data, 0) * k_new)
+                        f_w[rows, cols] = f_w[rows, cols] * k_old + k_new
                     wins = valid & (q > view_q)
                     view_v[:, wins] = data[:, wins]
                     view_q[wins] = q[wins]
@@ -753,6 +776,11 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     best = np.where(ok, np.rint(med) if np.issubdtype(np.dtype(dtype), np.integer)
                                     else med, out_nodata).astype(dtype)
                     best_q = ok.any(axis=0).astype("float32")
+                if feather > 0:
+                    soft = f_acc / np.maximum(f_w, 1e-12)
+                    if np.issubdtype(np.dtype(dtype), np.integer):
+                        soft = np.maximum(np.rint(soft), 1)
+                    best = np.where(f_w > 0, soft, out_nodata).astype(dtype)
                 covered = best_q > 0
                 return window, best, who, covered
 
