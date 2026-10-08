@@ -96,6 +96,7 @@ params = {
 	"son_colorMap": "Greys",
 	"mosaic_nchunk": 0,
 	"mosaic_quality": False,
+	"mosaic_method": "quality",
 	"mq_plateau_end": 0.6,
 	"mq_far_floor": 0.35,
 	"mq_nadir_per_depth": 1.0,

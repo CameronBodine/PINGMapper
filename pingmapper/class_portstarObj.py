@@ -400,7 +400,7 @@ class portstarObj(object):
         return dict(sorted(files.items()))
 
     #=======================================================================
-    def _qualityMergeSonar(self, mosaicsByTransect, quality_params=None):
+    def _qualityMergeSonar(self, mosaicsByTransect, quality_params=None, method='quality'):
         '''
         Merge per-transect sonar mosaics so each pixel keeps the look from the
         pass that saw it best (see pingmapper.utils.mosaic_quality).
@@ -416,8 +416,8 @@ class portstarObj(object):
         self.port._loadSonMeta()
         tracks = mq.transect_tracks_from_df(self.port.sonMetaDF, params=quality_params)
         first = next(iter(mosaicsByTransect.values()))
-        out = re.sub(r'_mosaic_\d+\.tif$', '_mosaic_quality.tif', first)
-        mq.merge_sonar_by_quality(mosaicsByTransect, out, tracks)
+        out = re.sub(r'_mosaic_\d+\.tif$', '_mosaic_%s.tif' % method, first)
+        mq.merge_sonar_by_quality(mosaicsByTransect, out, tracks, method=method)
         return out
 
     #=======================================================================
@@ -429,7 +429,8 @@ class portstarObj(object):
                       maxChunk = 50,
                       cog=True,
                       quality_merge=False,
-                      quality_params=None):
+                      quality_params=None,
+                      quality_method='quality'):
         '''
         Main function to mosaic exported rectified sonograms into a mosaic. If
         overview=True, overviews of the mosaic will be built, enhancing view
@@ -616,12 +617,12 @@ class portstarObj(object):
                     if len(wcpToMosaic) > 0:
                         res = Parallel(n_jobs=safe_n_jobs(len(wcpToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([wcp], overview, i, son=son) for i, wcp in wcpToMosaic.items())
                         if quality_merge:
-                            self._qualityMergeSonar({i: r[0] for i, r in zip(wcpToMosaic, res) if r}, quality_params)
+                            self._qualityMergeSonar({i: r[0] for i, r in zip(wcpToMosaic, res) if r}, quality_params, quality_method)
                 if self.port.rect_wcr:
                     if len(srcToMosaic) > 0:
                         res = Parallel(n_jobs=safe_n_jobs(len(srcToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([src], overview, i, son=son) for i, src in srcToMosaic.items())
                         if quality_merge:
-                            self._qualityMergeSonar({i: r[0] for i, r in zip(srcToMosaic, res) if r}, quality_params)
+                            self._qualityMergeSonar({i: r[0] for i, r in zip(srcToMosaic, res) if r}, quality_params, quality_method)
             else:
                 if self.port.map_sub:
                     _ = Parallel(n_jobs=safe_n_jobs(len(subToMosaic), threadCnt), verbose=10)(delayed(self._mosaicGtiff)([sub], overview=overview, i=i, son=son) for i, sub in enumerate(subToMosaic))

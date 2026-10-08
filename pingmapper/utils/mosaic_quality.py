@@ -11,8 +11,10 @@ PR #5, MIT licensed) following PINGMapper issue #210. Lifted here with the
 algorithm unchanged; only the progress reporter was replaced.
 """
 
+import contextlib
 import math
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -425,10 +427,20 @@ def mask_mosaics_to_plateau(tif_paths: list, out_dir: str, tracks: dict,
     return out_paths
 
 
+MERGE_METHODS = ("quality", "first", "last", "mean", "median", "min", "max")
+SELECTING_METHODS = ("quality", "first", "last")
+
+
 def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            log=print, budget_mb: float = SONAR_MERGE_BUDGET_MB,
-                           nodata=0, bounds=None):
+                           nodata=0, bounds=None, method="quality", source_tif=None):
     """
+    method: one of MERGE_METHODS. "quality" (default) is described below;
+    "first"/"last" take the first/last pass in id order that holds data;
+    "mean", "median", "min", "max" combine all overlapping passes per pixel.
+    source_tif: optional path for a uint16 raster of which pass won each pixel
+    (transect position + 1, 0 = none); only for quality/first/last.
+
     Merge overlapping mosaics by quality: at each pixel, keep the look from
     the pass that saw that ground best.
 
@@ -478,6 +490,11 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
     # tif_paths is {transect_id: path} or a list (transect id = position).
     # Keys select each pass's track, so a transect skipped for lack of chunks
     # cannot shift the others onto the wrong trackline.
+    if method not in MERGE_METHODS:
+        raise ValueError(f"method must be one of {MERGE_METHODS}, got {method!r}")
+    if source_tif and method not in SELECTING_METHODS:
+        raise ValueError("source_tif needs method quality, first or last")
+    combine = method not in SELECTING_METHODS
     mapping = _as_mapping(tif_paths)
     ids, tif_list = list(mapping.keys()), list(mapping.values())
     srcs = [rasterio.open(p) for p in tif_list]
@@ -505,7 +522,9 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
         log(f"      Output grid {width:,} x {height:,} px at {res_x:.4f} m, "
             f"in {len(windows):,} window(s) of at most "
             f"{windows[0].width:,} x {windows[0].height:,}", flush=True)
-        if tracks:
+        if method != "quality":
+            log(f"      method: {method}", flush=True)
+        elif tracks:
             log("      best look wins", flush=True)
             for index in ids:
                 if index not in tracks:
@@ -525,7 +544,13 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                            count=count, dtype=dtype, crs=crs, transform=transform,
                            nodata=nodata, compress="lzw", tiled=True,
                            blockxsize=SONAR_MERGE_BLOCK, blockysize=SONAR_MERGE_BLOCK,
-                           BIGTIFF="IF_SAFER", sparse_ok=True) as dst:
+                           BIGTIFF="IF_SAFER", sparse_ok=True) as dst, \
+             (rasterio.open(source_tif, "w", driver="GTiff", height=height, width=width,
+                            count=1, dtype="uint16", crs=crs, transform=transform,
+                            nodata=0, compress="lzw", tiled=True,
+                            blockxsize=SONAR_MERGE_BLOCK, blockysize=SONAR_MERGE_BLOCK,
+                            BIGTIFF="IF_SAFER", sparse_ok=True)
+              if source_tif else contextlib.nullcontext()) as src_dst:
             for window in windows:
                 top, left = int(window.row_off), int(window.col_off)
                 # The running best value, the score that won it, and which
@@ -534,6 +559,10 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 best = np.full((count,) + shape, out_nodata, dtype=dtype)
                 best_q = np.zeros(shape, dtype="float32")
                 who = np.zeros(shape, dtype="uint16")
+                stack = []
+                if method in ("mean", "median"):
+                    acc = np.zeros((count,) + shape, dtype="float64")
+                    n_acc = np.zeros(shape, dtype="int32")
                 xs = west + (np.arange(left, left + shape[1]) + 0.5) * res_x
                 ys = north - (np.arange(top, top + shape[0]) + 0.5) * res_y
 
@@ -554,11 +583,34 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                     rows = slice(r0 - top, r1 - top)
                     cols = slice(c0 - left, c1 - left)
 
-                    track = tracks.get(ids[index])
-                    if track is None:
+                    if combine:
+                        if method == "mean":
+                            n_acc[rows, cols] += valid
+                            acc[:, rows, cols] += np.where(valid, data, 0)
+                        elif method == "median":
+                            full = np.full((count,) + shape, np.nan, dtype="float32")
+                            full[:, rows, cols] = np.where(valid, data, np.nan)
+                            stack.append(full)
+                        else:
+                            view_v = best[:, rows, cols]
+                            seen = best_q[rows, cols] > 0
+                            # Multi-band: compare the band sum so a pixel keeps one pass's bands.
+                            new_s = data.astype("float64").sum(axis=0)
+                            old_s = view_v.astype("float64").sum(axis=0)
+                            better = new_s > old_s if method == "max" else new_s < old_s
+                            take = valid & (~seen | better)
+                            view_v[:, take] = data[:, take]
+                            best_q[rows, cols] = np.maximum(best_q[rows, cols], valid)
+                        continue
+
+                    if method == "first":
+                        q = np.full(valid.shape, len(srcs) - index, dtype="float32")
+                    elif method == "last":
+                        q = np.full(valid.shape, index + 1, dtype="float32")
+                    elif tracks.get(ids[index]) is None:
                         q = np.full(valid.shape, 0.5, dtype="float32")
                     else:
-                        q = quality_for(track, xs[cols], ys[rows], cell)
+                        q = quality_for(tracks[ids[index]], xs[cols], ys[rows], cell)
 
                     view_v = best[:, rows, cols]
                     view_q = best_q[rows, cols]
@@ -578,12 +630,29 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
                 #       best = np.where(best_q > 0, best / np.maximum(best_q, 1e-6), 0.0)
                 #   best = np.where(best_q > 0, np.maximum(np.rint(best), 1), 0).astype("uint8")
 
+                if method == "mean":
+                    n_pix = np.maximum(n_acc, 1)
+                    best = np.where(n_acc > 0, np.rint(acc / n_pix) if np.issubdtype(np.dtype(dtype), np.integer)
+                                    else acc / n_pix, out_nodata).astype(dtype)
+                    best_q = n_acc.astype("float32")
+                elif method == "median" and stack:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", RuntimeWarning)
+                        med = np.nanmedian(np.stack(stack), axis=0)
+                    ok = ~np.isnan(med)
+                    best = np.where(ok, np.rint(med) if np.issubdtype(np.dtype(dtype), np.integer)
+                                    else med, out_nodata).astype(dtype)
+                    best_q = ok.any(axis=0).astype("float32")
                 covered = best_q > 0
                 # A window no pass reaches is left unwritten; the file is
                 # sparse and reads it back as 0.
                 if covered.any():
                     dst.write(best, window=window)
-                    won += np.bincount(who[covered], minlength=len(srcs))
+                    if method in SELECTING_METHODS:
+                        won += np.bincount(who[covered], minlength=len(srcs))
+                        if src_dst is not None:
+                            src_dst.write(np.where(covered, who + 1, 0).astype("uint16"),
+                                          1, window=window)
                 pulse.step()
         pulse.finish()
     finally:
@@ -592,11 +661,14 @@ def merge_sonar_by_quality(tif_paths, out_tif: str, tracks: dict,
         for s in srcs:
             s.close()
 
-    for index, path in enumerate(tif_list):
-        log(f"      [{ids[index]}] {os.path.basename(path)}: "
-            f"{int(won[index]):,} px kept")
-    how = "quality" if tracks else "file order"
-    log(f"      {int(won.sum()):,} px carry data, decided by {how}")
+    if method in SELECTING_METHODS:
+        for index, path in enumerate(tif_list):
+            log(f"      [{ids[index]}] {os.path.basename(path)}: "
+                f"{int(won[index]):,} px kept")
+    if method in SELECTING_METHODS:
+        how = "quality" if (tracks and method == "quality") else \
+            ("file order" if method == "quality" else method)
+        log(f"      {int(won.sum()):,} px carry data, decided by {how}")
     log(f"      Saved: {out_tif}  ({os.path.getsize(out_tif) / 1e6:,.0f} MB)")
 
 

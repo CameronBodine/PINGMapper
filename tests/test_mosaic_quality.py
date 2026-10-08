@@ -81,7 +81,32 @@ def test_params_and_mask():
         assert (m == 0).any() and (m > 0).any()
 
 
+def test_other_methods():
+    with tempfile.TemporaryDirectory() as d:
+        paths = _setup(d)  # transect 1 -> 200, transect 0 -> 10; overlap in rows 30..70
+        def run(method, **kw):
+            out = os.path.join(d, method + ".tif")
+            mq.merge_sonar_by_quality(paths, out, {}, method=method, **kw, **QUIET)
+            with rasterio.open(out) as r:
+                return r.read(1)[50, 50]
+        # dict order is {1: b(200), 0: a(10)}, so "first" is b and "last" is a
+        assert run("first") == 200 and run("last") == 10
+        assert run("max") == 200 and run("min") == 10
+        assert run("mean") == 105 and run("median") == 105
+        src = os.path.join(d, "src.tif")
+        run("quality", source_tif=src)
+        with rasterio.open(src) as r:
+            assert set(np.unique(r.read(1))) <= {0, 1, 2}
+        try:
+            run("bogus")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("expected ValueError")
+
+
 if __name__ == "__main__":
+    test_other_methods()
     test_best_look_wins_and_mapping_is_explicit()
     test_multiband_uint16_and_swatch()
     test_params_and_mask()
