@@ -716,6 +716,8 @@ def read_master_func(logfilename='',
                      egn=False,
                      egn_stretch=0,
                      egn_stretch_factor=1,
+                     egn_means_file='',
+                     egn_sampling='high',
                      tone_gamma=1.0,
                      tone_gain=1.0,
                      sonar_db_transform=False,
@@ -2105,14 +2107,22 @@ def read_master_func(logfilename='',
                 # Load sonMetaDF
                 son._loadSonMeta()
 
-                # Calculate range-wise mean intensity for each chunk
-                print('\n\tCalculating range-wise mean intensity for each chunk...')
-                chunk_means = Parallel(n_jobs=safe_n_jobs(len(chunks), threadCnt))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(chunks))
+                if egn_means_file:
+                    # Use curve pooled across recordings (utils/global_egn.py)
+                    from pingmapper.utils import global_egn
+                    print('\n\tUsing global EGN means from', egn_means_file)
+                    son.egn_bed_means, son.egn_wc_means = global_egn.load(egn_means_file, son.beamName)
+                else:
+                    # Calculate range-wise mean intensity for each (sampled) chunk
+                    from pingmapper.utils import global_egn
+                    mean_chunks = global_egn.select_chunks(chunks, egn_sampling)
+                    print('\n\tCalculating range-wise mean intensity for', len(mean_chunks), 'of', len(chunks), 'chunks...')
+                    chunk_means = Parallel(n_jobs=safe_n_jobs(len(mean_chunks), threadCnt))(delayed(son._egnCalcChunkMeans)(i) for i in tqdm(mean_chunks))
 
-                # Calculate global means
-                print('\n\tCalculating range-wise global means...')
-                son._egnCalcGlobalMeans(chunk_means)
-                del chunk_means
+                    # Calculate global means
+                    print('\n\tCalculating range-wise global means...')
+                    son._egnCalcGlobalMeans(chunk_means)
+                    del chunk_means
 
                 # Calculate egn min and max for each chunk
                 print('\n\tCalculating EGN min and max values for each chunk...')

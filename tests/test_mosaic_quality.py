@@ -154,6 +154,22 @@ def test_range_smooth_and_edge_feather():
             pass
 
 
+
+
+def test_global_egn_pooling():
+    import numpy as np, tempfile, os
+    from pingmapper.utils import global_egn as g
+    assert g.select_chunks(range(10),'high')==list(range(10))
+    assert g.select_chunks(range(10),'low')==[0,9] and g.select_chunks(range(1),'low')==[0]
+    cms=[(np.array([1.,2,3]),np.array([1.,1,1])),(np.array([3.,4]),np.array([3.,3]))]
+    p=g.pool({'ss_port':cms})['ss_port']
+    assert list(p['bed'])==[2,3,3] and p['n_chunks']==2
+    f=os.path.join(tempfile.mkdtemp(),'e.npz'); g.save(f,g.pool({'ss_port':cms}))
+    b,w=g.load(f,'ss_port'); assert list(b)==[2,3,3]
+    assert len(g.fit_length(b,5))==5
+    print('ok')
+    
+
 if __name__ == "__main__":
     test_range_smooth_and_edge_feather()
     test_batch_and_manifest()
@@ -161,4 +177,5 @@ if __name__ == "__main__":
     test_best_look_wins_and_mapping_is_explicit()
     test_multiband_uint16_and_swatch()
     test_params_and_mask()
+    test_global_egn_pooling()
     print("ok")
