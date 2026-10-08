@@ -945,6 +945,14 @@ def read_master_func(logfilename='',
     _, file_type = os.path.splitext(inFile)
     file_type = file_type.lower()
 
+    # Re-reading the source file regenerates the raw metadata csvs. When updating an
+    # existing project, keep the processed csvs (depths, filters, chunks).
+    _meta_backup = {}
+    if project_mode == 2:
+        for _f in glob(os.path.join(projDir, 'meta', '*_meta.csv')):
+            with open(_f, 'rb') as _fh:
+                _meta_backup[_f] = _fh.read()
+
     # Prepare Humminbird file for PINGMapper
     if file_type == '.dat':
         sonar_obj = hum2pingmapper(inFile, projDir, nchunk, tempC, exportUnknown)
@@ -979,6 +987,11 @@ def read_master_func(logfilename='',
     else:
         print('\n\nERROR!\n\nFile type {} not supported at this time.'.format(file_type))
         sys.exit()
+
+    for _f, _data in _meta_backup.items():
+        with open(_f, 'wb') as _fh:
+            _fh.write(_data)
+    del _meta_backup
 
     nav_available = bool(getattr(sonar_obj, 'has_position', True))
     side_scan_only = bool(side_scan_only)
@@ -1436,7 +1449,8 @@ def read_master_func(logfilename='',
     # Locating missing pings                                                   #
     ############################################################################
 
-    if fixNoDat:
+    # Skipped when updating an existing project (already applied; re-running drops depths)
+    if fixNoDat and project_mode != 2:
         # Open each beam df, store beam name in new field, then concatenate df's into one
         print("\nLocating missing pings and adding NoData...")
         frames = []
@@ -1638,7 +1652,9 @@ def read_master_func(logfilename='',
     # For Filtering                                                            #
     ############################################################################
 
-    if dq_table or max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table or filter_coord_outliers:
+    # Filtering rebuilds the metadata csv (dropping depths) and renumbers chunks,
+    # so it is not repeated when updating an existing project.
+    if project_mode != 2 and (dq_table or max_heading_deviation > 0 or min_speed > 0 or max_speed > 0 or aoi or time_table or filter_coord_outliers):
 
         start_time = time.time()
 

@@ -124,15 +124,35 @@ params = {
     "coverage": False,
 }
 
-results = doWork(
-    in_dir=r"C:\Users\cbodine\Downloads\NewRiver\SonarRecording",
-    out_dir=r"C:\Users\cbodine\Downloads\NewRiver",
-    proj_name=None,
-    batch=True,
-    preserve_subdirs=False,
-    prefix="",
-    suffix="",
-    params=params,
-)
+# Global EGN: process all recordings once, pool the EGN statistics across
+# them, then finish each recording with the shared correction.
+GLOBAL_EGN = False
+GLOBAL_EGN_SAMPLING = "low"  # "low", "moderate" or "high" ping sampling
+
+IN_DIR = r"C:\Users\cbodine\Downloads\NewRiver\SonarRecording"
+OUT_DIR = r"C:\Users\cbodine\Downloads\NewRiver"
+
+if GLOBAL_EGN:
+    from pingmapper.utils.batch_global_egn import process_with_global_egn
+    results = process_with_global_egn(
+        in_dir=IN_DIR,
+        out_dir=OUT_DIR,
+        params=params,
+        sampling=GLOBAL_EGN_SAMPLING,
+        prefix="",
+        suffix="",
+        preserve_subdirs=False,
+    )
+else:
+    results = doWork(
+        in_dir=IN_DIR,
+        out_dir=OUT_DIR,
+        proj_name=None,
+        batch=True,
+        preserve_subdirs=False,
+        prefix="",
+        suffix="",
+        params=params,
+    )
 
 print(results)
