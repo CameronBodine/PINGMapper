@@ -906,8 +906,13 @@ def read_master_func(logfilename='',
 
     #####################################
     # Download models if they don't exist
+    ## Also re-download when modelDir exists but is incomplete (e.g. a failed
+    ## download on an earlier run left an empty/partial directory; issue #200).
     modelDir = get_segmentation_model_dir()
-    if not os.path.exists(modelDir):
+    missingModels = segmentationModelsMissing(modelDir)
+    if missingModels:
+        if os.path.exists(modelDir):
+            print('\n\nModel directory is incomplete (missing: {}). Re-downloading...'.format(', '.join(missingModels)))
         downloadSegmentationModelsv1_0(modelDir)
 
 

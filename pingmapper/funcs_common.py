@@ -326,28 +326,73 @@ class Logger(object):
         pass
 
 # =========================================================
+def segmentationModelsMissing(modelDir):
+    '''
+    Return the list of segmentation models missing from modelDir (empty list
+    means the model directory is complete). A model counts as present when
+    both its config json and fullmodel weights exist, so a partial download
+    or extraction is detected and can be repaired by re-downloading.
+    '''
+    models = [
+        'Bedpick_Zheng2021_Segmentation_unet_v1.0',
+        'Shadow_Segmentation_unet_v1.0',
+        'EGN_Substrate_Segmentation_segformer_v1.0',
+        'Raw_Substrate_Segmentation_segformer_v1.0',
+    ]
+
+    missing = []
+    for m in models:
+        config = os.path.join(modelDir, m, 'config', m+'.json')
+        weights = os.path.join(modelDir, m, 'weights', m+'_fullmodel.h5')
+        if not os.path.exists(config) or not os.path.exists(weights):
+            missing.append(m)
+
+    return missing
+
+# =========================================================
 def downloadSegmentationModelsv1_0(modelDir):
 
-    # Create directories
-    if not os.path.exists(modelDir):
-        os.makedirs(modelDir)
+    # Download and extract into a temporary directory first, then move it into
+    ## place once complete. A failed or interrupted download therefore never
+    ## creates modelDir, so the next run will retry instead of proceeding with
+    ## an empty/partial model directory (issue #200).
+    parentDir = os.path.dirname(modelDir)
+    if parentDir and not os.path.exists(parentDir):
+        os.makedirs(parentDir)
+
+    tmpDir = modelDir+'_partial'
+    if os.path.exists(tmpDir):
+        shutil.rmtree(tmpDir)
+    os.makedirs(tmpDir)
 
     # Download
     url = 'https://zenodo.org/records/10093642/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1'
-    print('\n\nDownloading segmentation models (v1.0):\nhttps://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1')
+    print('\n\nDownloading segmentation models (v1.0):\n'+url)
 
-    filename = modelDir+'.zip'
-    r = requests.get(url, allow_redirects=True)
-    # open(filename, 'wb').write(r.content)
-    with open(filename, 'wb') as f:
-        f.write(r.content)
+    filename = tmpDir+'.zip'
+    try:
+        r = requests.get(url, allow_redirects=True, timeout=(30, 600))
+        r.raise_for_status() # An error page from Zenodo is not a zip
+        with open(filename, 'wb') as f:
+            f.write(r.content)
 
-    with zipfile.ZipFile(filename, 'r') as z_fp:
-        z_fp.extractall(modelDir)
-    os.remove(filename)
+        with zipfile.ZipFile(filename, 'r') as z_fp:
+            z_fp.extractall(tmpDir)
+    except Exception:
+        shutil.rmtree(tmpDir, ignore_errors=True)
+        raise
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
+
+    # Move completed download into place. If a previous (pre-fix or partial)
+    ## modelDir exists, clear it first so the repaired download replaces it.
+    if os.path.exists(modelDir):
+        shutil.rmtree(modelDir)
+    os.replace(tmpDir, modelDir)
 
     print('Model download success!')
-    
+
     return
 
 
