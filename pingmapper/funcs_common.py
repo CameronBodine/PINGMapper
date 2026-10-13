@@ -371,7 +371,7 @@ def get_segmentation_model_dir():
 
     if os.name == 'nt' and 'onedrive' in home_dir.lower():
         drive = os.path.splitdrive(home_dir)[0] or 'C:'
-        alt = os.path.join(drive + os.sep, 'PINGModels')
+        alt = os.path.join(drive + os.sep, '.pingmapper', 'models')
         try:
             os.makedirs(alt, exist_ok=True)
             print('Home folder is in OneDrive; storing models in {} instead.'.format(alt))
