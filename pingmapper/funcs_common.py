@@ -337,13 +337,15 @@ def downloadSegmentationModelsv1_0(modelDir):
     print('\n\nDownloading segmentation models (v1.0):\nhttps://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1')
 
     filename = modelDir+'.zip'
-    r = requests.get(url, allow_redirects=True)
-    # open(filename, 'wb').write(r.content)
-    with open(filename, 'wb') as f:
-        f.write(r.content)
+    with requests.get(url, allow_redirects=True, stream=True) as r:
+        r.raise_for_status()
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024*1024):
+                f.write(chunk)
 
+    # \\?\ prefix lets extraction exceed MAX_PATH on Windows without admin rights
     with zipfile.ZipFile(filename, 'r') as z_fp:
-        z_fp.extractall(modelDir)
+        z_fp.extractall(_long_path(modelDir))
     os.remove(filename)
 
     print('Model download success!')
@@ -355,13 +357,41 @@ def downloadSegmentationModelsv1_0(modelDir):
 def get_segmentation_model_dir():
     """
     Return the default local directory for segmentation models.
-    Models are stored in the user's home folder to avoid deep environment paths
-    that can break zip extraction on Windows.
+    Models are stored in a short path outside the environment to avoid deep
+    paths that can break zip extraction on Windows. Set PINGMAPPER_MODEL_DIR to
+    override. If the home folder is synced by OneDrive (which can lock files
+    mid-extraction), a folder at the drive root is used instead.
     """
+    override = os.environ.get('PINGMAPPER_MODEL_DIR')
+    if override:
+        return os.path.normpath(override)
+
+    model_name = 'PINGMapperv2.0_SegmentationModelsv1.0'
     home_dir = os.path.expanduser('~')
-    return os.path.normpath(
-        os.path.join(home_dir, '.pingmapper', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
-    )
+
+    if os.name == 'nt' and 'onedrive' in home_dir.lower():
+        drive = os.path.splitdrive(home_dir)[0] or 'C:'
+        alt = os.path.join(drive + os.sep, 'PINGModels')
+        try:
+            os.makedirs(alt, exist_ok=True)
+            print('Home folder is in OneDrive; storing models in {} instead.'.format(alt))
+            return os.path.normpath(os.path.join(alt, model_name))
+        except OSError:
+            print('Warning: models will be stored in OneDrive and sync may interfere.')
+
+    return os.path.normpath(os.path.join(home_dir, '.pingmapper', 'models', model_name))
+
+
+def _long_path(path):
+    """Return a \\\\?\\ prefixed absolute path on Windows; unchanged elsewhere."""
+    if os.name != 'nt':
+        return path
+    path = os.path.abspath(path)
+    if path.startswith('\\\\?\\'):
+        return path
+    if path.startswith('\\\\'):
+        return '\\\\?\\UNC\\' + path[2:]
+    return '\\\\?\\' + path
 
 
 # # =========================================================
