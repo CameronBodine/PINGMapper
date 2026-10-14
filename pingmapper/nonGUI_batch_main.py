@@ -26,6 +26,7 @@ params = {
     # Navigation + Filtering
     # ------------------------------------------------------------------
     "aoi": False,
+    "filter_coord_outliers": True,
     "max_heading_deviation": 0,
     "max_heading_distance": 0,
     "min_speed": 0,
