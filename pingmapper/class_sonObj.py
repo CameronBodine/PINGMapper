@@ -588,12 +588,24 @@ class sonObj(object):
         dist_end = dist_start + d   # Counbter for end of current window
 
         df = df.copy()
-        df[filtCol] = False
+
+        # Respect flags set by earlier filters (e.g. _filterCoordOutliers):
+        # like the other _filter* methods, this one only ANDs its verdict
+        # into the shared filter column instead of resetting it.
+        if filtCol not in df.columns:
+            df[filtCol] = True
+
+        # This filter's own per-ping verdict
+        headOK = pd.Series(False, index=df.index)
+
+        def _apply(df):
+            df[filtCol] = df[filtCol] & headOK
+            return df
 
         # If distance is invalid, do not remove all pings
         if not np.isfinite(max_dist):
-            df[filtCol] = True
-            return df
+            headOK[:] = True
+            return _apply(df)
 
         # If heading distance window covers the entire recording,
         # evaluate the complete record once.
@@ -602,17 +614,17 @@ class sonObj(object):
             head_vals = head_vals[np.isfinite(head_vals)]
 
             if len(head_vals) < 2:
-                df[filtCol] = True
-                return df
+                headOK[:] = True
+                return _apply(df)
 
             head_vals = np.deg2rad(head_vals)
             head_vals = np.unwrap(head_vals)
             vessel_dev = np.ptp(head_vals)
 
             if vessel_dev < dev:
-                df[filtCol] = True
+                headOK[:] = True
 
-            return df
+            return _apply(df)
 
         ##############################
         # Iterator through each window
@@ -643,7 +655,7 @@ class sonObj(object):
                     # Compare vessel deviation to threshold deviation
                     if vessel_dev < dev:
                         # Keep these pings
-                        df.loc[dfFilt.index, filtCol] = True
+                        headOK.loc[dfFilt.index] = True
 
                     # dist_start += win
                     # dist_start = dist_end
@@ -669,15 +681,15 @@ class sonObj(object):
             jump_idx = trk_step[(trk_step > d) & np.isfinite(trk_step)].index
 
             if len(jump_idx) > 0:
-                df.loc[jump_idx, filtCol] = False
+                headOK.loc[jump_idx] = False
 
                 prev_idx = jump_idx - 1
                 prev_idx = prev_idx[prev_idx >= df.index.min()]
                 if len(prev_idx) > 0:
-                    df.loc[prev_idx, filtCol] = False
+                    headOK.loc[prev_idx] = False
 
         try:
-            return df
+            return _apply(df)
         except:
             sys.exit('\n\n\nERROR:\nMax heading standard deviation too small.\nPlease specify a larger value.')
 
