@@ -326,42 +326,102 @@ class Logger(object):
         pass
 
 # =========================================================
-def downloadSegmentationModelsv1_0(modelDir):
+def segmentationModelsExist(modelDir):
+    """True only if the model folder was fully extracted (not just created)."""
+    return os.path.isdir(modelDir) and any(
+        f.endswith('.json')
+        for _, _, files in os.walk(modelDir) for f in files
+    )
 
-    # Create directories
-    if not os.path.exists(modelDir):
-        os.makedirs(modelDir)
 
-    # Download
+def downloadSegmentationModelsv1_0(modelDir, retries=4):
+
     url = 'https://zenodo.org/records/10093642/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1'
-    print('\n\nDownloading segmentation models (v1.0):\nhttps://zenodo.org/records/10092289/files/PINGMapperv2.0_SegmentationModelsv1.0.zip?download=1')
+    print('\n\nDownloading segmentation models (v1.0):\n{}'.format(url))
+
+    # Start clean in case a previous attempt left a partial folder
+    if os.path.exists(modelDir):
+        shutil.rmtree(_long_path(modelDir), ignore_errors=True)
+    os.makedirs(modelDir, exist_ok=True)
 
     filename = modelDir+'.zip'
-    r = requests.get(url, allow_redirects=True)
-    # open(filename, 'wb').write(r.content)
-    with open(filename, 'wb') as f:
-        f.write(r.content)
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            with requests.get(url, allow_redirects=True, stream=True, timeout=(30, 120)) as r:
+                r.raise_for_status()
+                with open(filename, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024*1024):
+                        f.write(chunk)
 
-    with zipfile.ZipFile(filename, 'r') as z_fp:
-        z_fp.extractall(modelDir)
-    os.remove(filename)
+            # Guard against error pages (e.g. 504) saved as the zip
+            if not zipfile.is_zipfile(filename):
+                raise RuntimeError('Downloaded file is not a valid zip archive.')
 
-    print('Model download success!')
-    
-    return
+            # \\?\ prefix lets extraction exceed MAX_PATH on Windows without admin rights
+            with zipfile.ZipFile(filename, 'r') as z_fp:
+                z_fp.extractall(_long_path(modelDir))
+
+            if not segmentationModelsExist(modelDir):
+                raise RuntimeError('Models were not extracted correctly.')
+
+            os.remove(filename)
+            print('Model download success!')
+            return
+        except Exception as e:
+            last_err = e
+            print('Model download attempt {} of {} failed: {}'.format(attempt, retries, e))
+            if os.path.exists(filename):
+                os.remove(filename)
+            if attempt < retries:
+                time.sleep(5 * attempt)
+
+    shutil.rmtree(_long_path(modelDir), ignore_errors=True)
+    raise RuntimeError(
+        'Unable to download segmentation models after {} attempts: {}\n'
+        'Download manually from {} and extract to {}'.format(retries, last_err, url, modelDir)
+    )
 
 
 # =========================================================
 def get_segmentation_model_dir():
     """
     Return the default local directory for segmentation models.
-    Models are stored in the user's home folder to avoid deep environment paths
-    that can break zip extraction on Windows.
+    Models are stored in a short path outside the environment to avoid deep
+    paths that can break zip extraction on Windows. Set PINGMAPPER_MODEL_DIR to
+    override. If the home folder is synced by OneDrive (which can lock files
+    mid-extraction), a folder at the drive root is used instead.
     """
+    override = os.environ.get('PINGMAPPER_MODEL_DIR')
+    if override:
+        return os.path.normpath(override)
+
+    model_name = 'PINGMapperv2.0_SegmentationModelsv1.0'
     home_dir = os.path.expanduser('~')
-    return os.path.normpath(
-        os.path.join(home_dir, '.pingmapper', 'models', 'PINGMapperv2.0_SegmentationModelsv1.0')
-    )
+
+    if os.name == 'nt' and 'onedrive' in home_dir.lower():
+        drive = os.path.splitdrive(home_dir)[0] or 'C:'
+        alt = os.path.join(drive + os.sep, '.pingmapper', 'models')
+        try:
+            os.makedirs(alt, exist_ok=True)
+            print('Home folder is in OneDrive; storing models in {} instead.'.format(alt))
+            return os.path.normpath(os.path.join(alt, model_name))
+        except OSError:
+            print('Warning: models will be stored in OneDrive and sync may interfere.')
+
+    return os.path.normpath(os.path.join(home_dir, '.pingmapper', 'models', model_name))
+
+
+def _long_path(path):
+    """Return a \\\\?\\ prefixed absolute path on Windows; unchanged elsewhere."""
+    if os.name != 'nt':
+        return path
+    path = os.path.abspath(path)
+    if path.startswith('\\\\?\\'):
+        return path
+    if path.startswith('\\\\'):
+        return '\\\\?\\UNC\\' + path[2:]
+    return '\\\\?\\' + path
 
 
 # # =========================================================

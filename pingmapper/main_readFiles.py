@@ -909,7 +909,7 @@ def read_master_func(logfilename='',
     #####################################
     # Download models if they don't exist
     modelDir = get_segmentation_model_dir()
-    if not os.path.exists(modelDir):
+    if not segmentationModelsExist(modelDir):
         downloadSegmentationModelsv1_0(modelDir)
 
 
