@@ -208,9 +208,13 @@ def gui(batch: bool):
     tip_speed_max = ml_tip('Maximum vessel speed filter in m/s. 0=no maximum speed filter.')
     tip_aoi = ml_tip('Optional polygon shapefile (.shp) to spatially filter sonar records to area of interest.')
     tip_time_filter = ml_tip('Filter by start/end time ranges. Use either relative seconds from recording start (e.g., 0-2000) or absolute Unix seconds.')
+    tip_coord_outliers = ml_tip('Remove pings whose easting/northing falls outside quartiles +/- 3*IQR of the whole recording (catches corrupt GPS fixes). Disable if genuinely surveyed areas (e.g. a side arm or sharp dog-leg) are being removed.')
     # Cropping
     text_crop = sg.Text('Crop Range [m]', size=(22,1))
     in_crop = sg.Input(key='cropRange', default_text=default_params['cropRange'], size=(10,1), tooltip=tip_crop)
+
+    # GPS coordinate outliers
+    check_coord_outliers = sg.Checkbox('Filter GPS Coordinate Outliers', key='filter_coord_outliers', default=default_params['filter_coord_outliers'], tooltip=tip_coord_outliers)
 
     # Heading
     text_heading = sg.Text('Max. Heading Deviation [deg]:', size=(22,1))
@@ -237,6 +241,7 @@ def gui(batch: bool):
     layout.append([sg.HorizontalSeparator()])
     layout.append([text_filtering])
     layout.append([text_crop, in_crop])
+    layout.append([check_coord_outliers])
     layout.append([text_heading, in_heading, sg.VerticalSeparator(), text_distance, in_distance])
     layout.append([text_speed_min, in_speed_min, sg.VerticalSeparator(), text_speed_max, in_speed_max])
     layout.append([text_aoi])
@@ -828,6 +833,7 @@ def gui(batch: bool):
             'fixNoDat':values['fixNoDat'],
             'threadCnt':float(values['threadCnt']),
             'aoi':aoi,
+            'filter_coord_outliers':values['filter_coord_outliers'],
             'max_heading_deviation':float(values['max_heading_deviation']),
             'max_heading_distance':float(values['max_heading_distance']),
             'min_speed':float(values['min_speed']),
